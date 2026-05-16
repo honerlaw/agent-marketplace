@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import date, timedelta
 from playwright.sync_api import Page
-from lib.browser import launch_browser, pause_for_2fa
+from lib.browser import launch_browser, pause_for_login, pause_for_2fa, set_status
 
 LOGIN_URL = "https://www.americanexpress.com/en-us/account/login"
 
@@ -24,10 +24,9 @@ def pull(snapshot_dir: str) -> str:
 
     pw, browser, page = launch_browser(headless=False)
     try:
-        print("[Amex] Opening login page...")
+        set_status("[Amex] Opening login page...")
         page.goto(LOGIN_URL, wait_until="load", timeout=60000)
-
-        input("[Amex] Enter your username and password, then press Enter...")
+        pause_for_login(page, "Amex")
 
         if _is_2fa_page(page):
             pause_for_2fa(page, "Amex")

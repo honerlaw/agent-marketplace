@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import date, timedelta
 from playwright.sync_api import Page
-from lib.browser import launch_browser, pause_for_2fa
+from lib.browser import launch_browser, pause_for_login, pause_for_2fa, set_status
 
 LOGIN_URL = "https://www.truist.com/login"
 
@@ -25,16 +25,15 @@ def pull(snapshot_dir: str) -> str:
 
     pw, browser, page = launch_browser(headless=False)
     try:
-        print("[Truist] Opening login page...")
+        set_status("[Truist] Opening login page...")
         page.goto(LOGIN_URL, wait_until="load", timeout=60000)
-
-        input("[Truist] Enter your username and password, then press Enter...")
+        pause_for_login(page, "Truist")
 
         if _is_2fa_page(page):
             pause_for_2fa(page, "Truist")
 
         page.wait_for_selector("[class*='account'], [id*='account-summary']", timeout=30000)
-        print("[Truist] Logged in. Navigating to transaction export...")
+        set_status("[Truist] Logged in. Navigating to transaction export...")
 
         page.click("[class*='account-tile']:first-child, [data-testid*='account']:first-child")
         page.wait_for_load_state("load")

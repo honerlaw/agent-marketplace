@@ -13,11 +13,25 @@ Pull financial transactions from bank accounts and save a dated snapshot locally
 
 ## Steps
 
-1. This script requires an interactive terminal because it pauses for login and 2FA. Ask the user to run it directly by typing into their Claude Code prompt (the `!` prefix runs in their shell):
+1. Check the user's message for a bank name. Build the command:
+   - All banks: `python3 ~/.claude/plugins/financials/scripts/pull.py`
+   - One bank:  `python3 ~/.claude/plugins/financials/scripts/pull.py <bank>`
 
-   - All banks: `! python3 ~/.claude/plugins/financials/scripts/pull.py`
-   - One bank:  `! python3 ~/.claude/plugins/financials/scripts/pull.py amex`
+2. Run the script in the **background** using the Bash tool with `run_in_background=true`.
 
-2. A browser window opens for each bank. The script pauses at login and 2FA — the user types credentials in the browser, then presses Enter in the terminal to continue.
+3. Wait ~3 seconds, then tell the user: "A browser window is opening for [bank]. Log in with your credentials, then come back here and tell me when you're done."
 
-3. Once the user shares the terminal output, report which banks succeeded, which (if any) errored, and the full path to the snapshot folder.
+4. When the user says they're logged in (or done with 2FA), signal the script to continue:
+   ```bash
+   touch /tmp/financials-continue
+   ```
+   Then read the status to see what happened next:
+   ```bash
+   cat /tmp/financials-status
+   ```
+
+5. If the status says `WAITING_2FA`, tell the user to complete 2FA in the browser and wait for them again. When ready, `touch /tmp/financials-continue` again.
+
+6. Repeat for each bank in sequence. The script processes them one at a time.
+
+7. When complete (you'll receive the background task notification), report which banks succeeded, which errored, and the snapshot folder path.

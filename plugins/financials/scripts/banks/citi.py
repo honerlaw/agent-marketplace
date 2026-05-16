@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import date, timedelta
 from playwright.sync_api import Page
-from lib.browser import launch_browser, pause_for_2fa
+from lib.browser import launch_browser, pause_for_login, pause_for_2fa, set_status
 
 LOGIN_URL = "https://online.citi.com/US/login.do"
 
@@ -25,16 +25,15 @@ def pull(snapshot_dir: str) -> str:
 
     pw, browser, page = launch_browser(headless=False)
     try:
-        print("[Citi] Opening login page...")
+        set_status("[Citi] Opening login page...")
         page.goto(LOGIN_URL, wait_until="load", timeout=60000)
-
-        input("[Citi] Enter your username and password, then press Enter...")
+        pause_for_login(page, "Citi")
 
         if _is_2fa_page(page):
             pause_for_2fa(page, "Citi")
 
         page.wait_for_selector("[class*='account-list'], [id*='accountSummary']", timeout=30000)
-        print("[Citi] Logged in. Navigating to transaction download...")
+        set_status("[Citi] Logged in. Navigating to transaction download...")
 
         page.click("[class*='account-tile']:first-child, a[id*='account']:first-child")
         page.wait_for_load_state("load")
