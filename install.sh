@@ -26,6 +26,8 @@ echo "Add to ~/.claude/settings.json:"
 echo "  \"plugins\": [\"$TARGET\"]"
 echo ""
 echo "Skills available after restart:"
+shopt -s nullglob
 for skill in "$PLUGIN_DIR"/skills/*.md; do
   echo "  /$(basename "${skill%.md}")"
 done
+shopt -u nullglob
