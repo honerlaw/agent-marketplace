@@ -75,9 +75,9 @@ PYEOF
 
 # ── 5. Done ──────────────────────────────────────────────────────────────────
 echo ""
-echo "Done! Restart Claude Code to activate. Skills available:"
+echo "Done! Restart Claude Code to activate. Commands available:"
 shopt -s nullglob
-for skill in "$PLUGIN_DIR"/skills/*.md; do
-  echo "  /$(basename "${skill%.md}")"
+for cmd in "$PLUGIN_DIR"/commands/*.md; do
+  echo "  /$(basename "${cmd%.md}")"
 done
 shopt -u nullglob

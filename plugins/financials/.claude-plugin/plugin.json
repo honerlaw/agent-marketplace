@@ -1,0 +1,7 @@
+{
+  "name": "financials",
+  "description": "Pull and analyze personal finances from Truist, Amex, and Citi",
+  "author": {
+    "name": "Derek Honerlaw"
+  }
+}
