@@ -60,7 +60,7 @@ plugin_dir      = Path(sys.argv[4])
 plugin_name     = sys.argv[5]
 marketplace     = sys.argv[6]
 plugin_key      = f"{plugin_name}@{marketplace}"
-now             = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+now             = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 # --- settings.json: enabledPlugins ---
 settings_path.parent.mkdir(parents=True, exist_ok=True)
