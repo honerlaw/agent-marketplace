@@ -1,0 +1,12 @@
+{
+  "name": "financials",
+  "version": "1.0.0",
+  "description": "Pull and analyze personal finances from Truist, Amex, and Citi",
+  "skills": [
+    "skills/pull-finances.md",
+    "skills/spending-summary.md",
+    "skills/spending-breakdown.md",
+    "skills/recurring-expenses.md",
+    "skills/cross-account.md"
+  ]
+}
