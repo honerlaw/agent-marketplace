@@ -26,7 +26,7 @@ def pull(snapshot_dir: str) -> str:
     pw, browser, page = launch_browser(headless=False)
     try:
         print("[Truist] Opening login page...")
-        page.goto(LOGIN_URL, wait_until="networkidle")
+        page.goto(LOGIN_URL, wait_until="load", timeout=60000)
 
         input("[Truist] Enter your username and password, then press Enter...")
 
@@ -37,7 +37,7 @@ def pull(snapshot_dir: str) -> str:
         print("[Truist] Logged in. Navigating to transaction export...")
 
         page.click("[class*='account-tile']:first-child, [data-testid*='account']:first-child")
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("load")
 
         page.click("[aria-label*='export'], [aria-label*='download'], button:has-text('Export')")
         page.wait_for_selector("[class*='export-modal'], [role='dialog']", timeout=10000)

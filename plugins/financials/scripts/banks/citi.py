@@ -26,7 +26,7 @@ def pull(snapshot_dir: str) -> str:
     pw, browser, page = launch_browser(headless=False)
     try:
         print("[Citi] Opening login page...")
-        page.goto(LOGIN_URL, wait_until="networkidle")
+        page.goto(LOGIN_URL, wait_until="load", timeout=60000)
 
         input("[Citi] Enter your username and password, then press Enter...")
 
@@ -37,7 +37,7 @@ def pull(snapshot_dir: str) -> str:
         print("[Citi] Logged in. Navigating to transaction download...")
 
         page.click("[class*='account-tile']:first-child, a[id*='account']:first-child")
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("load")
 
         page.click("a:has-text('Download'), button:has-text('Download Transactions')")
         page.wait_for_selector("[class*='download'], [id*='downloadForm']", timeout=10000)

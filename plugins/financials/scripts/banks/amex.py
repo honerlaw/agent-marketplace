@@ -25,7 +25,7 @@ def pull(snapshot_dir: str) -> str:
     pw, browser, page = launch_browser(headless=False)
     try:
         print("[Amex] Opening login page...")
-        page.goto(LOGIN_URL, wait_until="networkidle")
+        page.goto(LOGIN_URL, wait_until="load", timeout=60000)
 
         input("[Amex] Enter your username and password, then press Enter...")
 
@@ -41,7 +41,8 @@ def pull(snapshot_dir: str) -> str:
             page.goto(
                 f"https://www.americanexpress.com/en-us/account/download-transactions"
                 f"?startDate={fmt_start}&endDate={fmt_end}&fileType=csv",
-                wait_until="networkidle",
+                wait_until="load",
+                timeout=60000,
             )
         dl.value.save_as(str(download_path))
         print(f"[Amex] Saved -> {download_path}")
