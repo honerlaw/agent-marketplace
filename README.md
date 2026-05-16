@@ -1,16 +1,16 @@
-# Claude Marketplace
+# Agent Marketplace
 
-A personal plugin marketplace for Claude Code. Each plugin in `plugins/` is self-contained with its own skills and scripts.
+A personal plugin marketplace for AI coding agents. Each plugin in `plugins/` is self-contained with its own skills and automation scripts.
 
 ## Install a Plugin
 
 ```bash
-git clone https://github.com/<you>/claude-marketplace
-cd claude-marketplace
+git clone https://github.com/honerlaw/agent-marketplace
+cd agent-marketplace
 ./install.sh financials
 ```
 
-Add the printed path to `~/.claude/settings.json` under `"plugins"`, then restart Claude Code.
+Restart Claude Code — that's it. The installer handles Python dependencies, Playwright browser download, and Claude Code settings registration automatically.
 
 ## Update
 
