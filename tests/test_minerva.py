@@ -69,3 +69,13 @@ def test_propose_command_exists_with_frontmatter():
     assert "work/" in body
     assert "brainstorm" in body.lower() or "questions one at a time" in body.lower()
     assert "scratchpad.md" in body  # the empty scratchpad is created alongside
+
+
+def test_replan_command_exists_with_frontmatter():
+    fm, body = _read_command("replan")
+    assert fm.get("description"), "replan.md must have a description in frontmatter"
+    assert "replan.md" in body
+    assert "Original plan" in body
+    assert "What changed" in body
+    assert "New plan" in body
+    assert "most-recently-modified" in body.lower() or "most recently modified" in body.lower()
