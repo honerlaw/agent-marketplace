@@ -18,3 +18,17 @@ def test_plugin_json_exists_and_parses():
     assert data["name"] == "minerva"
     assert "description" in data and data["description"]
     assert data["author"]["name"] == "Derek Honerlaw"
+
+
+def test_marketplace_lists_minerva():
+    marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text())
+    entries = {p["name"]: p for p in marketplace["plugins"]}
+    assert "minerva" in entries, "minerva not registered in marketplace.json"
+    assert entries["minerva"]["source"] == "./plugins/minerva"
+    assert entries["minerva"]["description"], "minerva entry must have a description"
+
+
+def test_marketplace_does_not_list_feature_cycle():
+    marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text())
+    names = {p["name"] for p in marketplace["plugins"]}
+    assert "feature-cycle" not in names, "feature-cycle was superseded by minerva"

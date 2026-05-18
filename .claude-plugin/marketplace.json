@@ -11,6 +11,11 @@
       "name": "financials",
       "source": "./plugins/financials",
       "description": "Pull and analyze personal finances from Truist, Amex, and Citi"
+    },
+    {
+      "name": "minerva",
+      "source": "./plugins/minerva",
+      "description": "Durable record discipline for software work — promotion, not accumulation. Proposal → work → replan → promote, with a persistence hierarchy of decisions, proposals, and scratchpads."
     }
   ]
 }
