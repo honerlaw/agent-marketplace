@@ -79,3 +79,17 @@ def test_replan_command_exists_with_frontmatter():
     assert "What changed" in body
     assert "New plan" in body
     assert "most-recently-modified" in body.lower() or "most recently modified" in body.lower()
+
+
+def test_work_command_exists_with_frontmatter():
+    fm, body = _read_command("work")
+    assert fm.get("description"), "work.md must have a description in frontmatter"
+    # Core behaviors per spec
+    assert "scratchpad.md" in body
+    assert "proposal.md" in body
+    assert "replan.md" in body
+    # Auto-trigger of /replan on divergence
+    assert "/replan" in body
+    assert "diverge" in body.lower() or "divergence" in body.lower()
+    # Smart resume language
+    assert "resume" in body.lower() or "left off" in body.lower()
