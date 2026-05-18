@@ -93,3 +93,20 @@ def test_work_command_exists_with_frontmatter():
     assert "diverge" in body.lower() or "divergence" in body.lower()
     # Smart resume language
     assert "resume" in body.lower() or "left off" in body.lower()
+
+
+def test_promote_command_exists_with_frontmatter():
+    fm, body = _read_command("promote")
+    assert fm.get("description"), "promote.md must have a description in frontmatter"
+    # Both modes
+    assert "end-of-work" in body.lower() or "end of work" in body.lower()
+    assert "single-item" in body.lower() or "single item" in body.lower() or "with argument" in body.lower()
+    # Three-way partition language
+    assert "PROMOTE" in body
+    assert "DISCARD" in body
+    # Idempotency
+    assert "idempotent" in body.lower() or "idempotency" in body.lower()
+    # Decision file destination
+    assert "decisions/" in body
+    # Heuristic from the spec / image
+    assert "new engineer" in body.lower() or "year" in body.lower()
