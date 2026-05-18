@@ -32,3 +32,15 @@ def test_marketplace_does_not_list_feature_cycle():
     marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text())
     names = {p["name"] for p in marketplace["plugins"]}
     assert "feature-cycle" not in names, "feature-cycle was superseded by minerva"
+
+
+def test_root_readme_mentions_minerva():
+    readme = (REPO_ROOT / "README.md").read_text()
+    assert "minerva" in readme, "root README must list minerva in the plugin table"
+    for command in ["/propose", "/replan", "/work", "/promote"]:
+        assert command in readme, f"root README must mention {command}"
+
+
+def test_root_readme_does_not_mention_feature_cycle():
+    readme = (REPO_ROOT / "README.md").read_text()
+    assert "feature-cycle" not in readme, "feature-cycle was superseded by minerva"
