@@ -110,3 +110,12 @@ def test_promote_command_exists_with_frontmatter():
     assert "decisions/" in body
     # Heuristic from the spec / image
     assert "new engineer" in body.lower() or "year" in body.lower()
+
+
+def test_plugin_readme_lists_all_four_commands():
+    readme = (PLUGIN_DIR / "README.md").read_text()
+    for command in ["/propose", "/replan", "/work", "/promote"]:
+        assert command in readme, f"plugin README must list {command}"
+    # Persistence hierarchy concept should be present
+    assert "decisions" in readme.lower()
+    assert "scratchpad" in readme.lower()
