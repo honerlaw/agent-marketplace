@@ -44,3 +44,28 @@ def test_root_readme_mentions_minerva():
 def test_root_readme_does_not_mention_feature_cycle():
     readme = (REPO_ROOT / "README.md").read_text()
     assert "feature-cycle" not in readme, "feature-cycle was superseded by minerva"
+
+
+COMMANDS_DIR = PLUGIN_DIR / "commands"
+
+
+def _read_command(name: str) -> tuple[dict, str]:
+    """Parse a command markdown file's frontmatter and body."""
+    text = (COMMANDS_DIR / f"{name}.md").read_text()
+    assert text.startswith("---\n"), f"{name}.md missing frontmatter"
+    _, frontmatter, body = text.split("---\n", 2)
+    fm = {}
+    for line in frontmatter.strip().splitlines():
+        key, _, value = line.partition(":")
+        fm[key.strip()] = value.strip()
+    return fm, body
+
+
+def test_propose_command_exists_with_frontmatter():
+    fm, body = _read_command("propose")
+    assert fm.get("description"), "propose.md must have a description in frontmatter"
+    # Key behaviors from the spec
+    assert "proposal.md" in body
+    assert "work/" in body
+    assert "brainstorm" in body.lower() or "questions one at a time" in body.lower()
+    assert "scratchpad.md" in body  # the empty scratchpad is created alongside
