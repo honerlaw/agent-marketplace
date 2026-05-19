@@ -1,12 +1,13 @@
 ---
-description: Scaffold the .minerva/ directory layout for a project and add a Routing section to the agent file (CLAUDE.md / AGENTS.md / GEMINI.md). Idempotent — re-runs report per-piece status without rewriting anything in place. Run once per project before /propose.
+name: init
+description: Use when the user invokes `minerva:init`, wants to start using minerva in a project for the first time, or needs to scaffold the .minerva/ directory layout. Idempotent — re-runs report per-piece status without rewriting anything in place.
 ---
 
 One-time scaffolding for a project. Creates the `.minerva/` directory layout, verifies it's not being gitignored, and adds a Routing section to the project's agent file so other LLMs landing in the repo know where to look for prior context.
 
 ## Usage
 
-- `/init` — scaffold the current project root. No arguments.
+- `minerva:init` — scaffold the current project root. No arguments.
 
 ## Pre-flight detection
 
@@ -16,11 +17,11 @@ Before changing anything, inspect the project:
 2. **Already initialized?** Look for `.minerva/`. If it exists, you're in idempotent mode — report what's already there (folder ✓, gitignore ✓, agent file(s) ✓) and apply only the missing pieces.
 3. **Pre-existing flat layout?** If `work/` or `decisions/` exist at the project root (i.e. someone used a pre-`.minerva/` version of minerva, or set up the directories manually), do **not** touch them. Report:
    ```
-   Detected a pre-existing flat layout at <paths>. /init won't migrate it automatically.
+   Detected a pre-existing flat layout at <paths>. minerva:init won't migrate it automatically.
    To move to the .minerva/ layout, run:
      mv work .minerva/work && mv decisions .minerva/decisions
    ```
-   Continue with the rest of `/init` (folder creation, gitignore check, agent file). The flat-layout warning is informational.
+   Continue with the rest of `minerva:init` (folder creation, gitignore check, agent file). The flat-layout warning is informational.
 4. **Git repo?** If `.git/` is absent, skip the gitignore check entirely and silently. Still scaffold the folder and update the agent file.
 
 ## Step 1 — scaffold `.minerva/`
@@ -29,8 +30,8 @@ If `.minerva/` doesn't exist, create:
 
 - `.minerva/work/`
 - `.minerva/work/.gitkeep` (empty file, so git tracks the empty directory)
-- `.minerva/decisions/`
-- `.minerva/decisions/.gitkeep` (empty file)
+- `.minerva/knowledge/`
+- `.minerva/knowledge/.gitkeep` (empty file)
 
 If `.minerva/` already exists, skip whichever pieces are already in place. Don't overwrite existing `.gitkeep` files.
 
@@ -59,7 +60,7 @@ Use this exact template (verbatim, with the appended blank line at the end for r
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/decisions/` — authoritative architectural decisions. Read when starting work in this repo.
+- `.minerva/knowledge/` — concrete, past-tense knowledge artifacts: decisions made, bugs fixed, patterns discovered. Read when starting work in this repo.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
 Active work units live at `.minerva/work/NNN-<slug>/`. Invoke the `minerva:using-minerva` skill for the full methodology.
@@ -69,7 +70,7 @@ Append the Routing section at the end of the file (don't try to find a "right" s
 
 ### Detecting existing Routing section
 
-A re-run is detected by searching for the literal heading `## minerva` followed within the next ~3 lines by the substring `.minerva/decisions/`. If both are present, treat the section as already in place.
+A re-run is detected by searching for the literal heading `## minerva` followed within the next ~3 lines by the substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name). If both the heading and either substring are present, treat the section as already in place.
 
 ## Step 4 — report
 
@@ -84,11 +85,11 @@ GEMINI.md              ✓ Routing section added (or: ✓ already present; or: �
 flat layout            — none detected (or: ⚠ work/ and/or decisions/ at root — see message above)
 ```
 
-Suggest `/propose <slug>` as the next step if no work units exist yet.
+Suggest `minerva:propose` as the next step if no work units exist yet.
 
 ## Out of scope
 
-- Migrating a pre-existing flat `work/` + `decisions/` layout. `/init` only reports it; the user runs the `mv` themselves.
+- Migrating a pre-existing flat `work/` + `decisions/` layout. `minerva:init` only reports it; the user runs the `mv` themselves.
 - Authoring or rewriting CLAUDE.md / AGENTS.md content beyond the Routing section.
 - Editing `.gitignore` to remove offending patterns.
-- A `/init --refresh` mode to rewrite the Routing section when its template changes. Out of scope for v1.
+- A `minerva:init --refresh` mode to rewrite the Routing section when its template changes. Out of scope for v1.

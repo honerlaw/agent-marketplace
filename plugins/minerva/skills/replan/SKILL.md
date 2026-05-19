@@ -1,25 +1,24 @@
 ---
-description: Capture a divergence from the proposal in the current work unit. Same brainstorm-style flow as /propose, but appends a dated entry to .minerva/work/NNN-slug/replan.md rather than starting a new work unit.
+name: replan
+description: Use when the user invokes `minerva:replan`, or when work on a minerva unit has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting. Appends a dated divergence entry to .minerva/work/NNN-slug/replan.md for the current work unit.
 ---
 
 Append a dated replan entry to the current work unit when reality has diverged from the proposal.
 
 ## Usage
 
-- `/replan` — operates on the most-recently-modified `.minerva/work/NNN-*/`
-- `/replan 003-add-payments` — explicit work directory
-- `/replan add-payments` — substring match against existing work dirs
+- `minerva:replan` — operates on the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
 
 ## Target resolution
 
-1. If the user passed an exact directory name (e.g. `003-add-payments`), use `.minerva/work/<that>/`.
-2. Otherwise substring match against existing `.minerva/work/NNN-*/` entries. If exactly one match, use it; if multiple, list them and ask which.
-3. If no argument, use the most-recently-modified `.minerva/work/NNN-*/` by directory mtime.
-4. If `.minerva/work/` doesn't exist or it's empty, report "no work units found — run `/propose <slug>` first" and stop.
+1. Check current-session chat history for a mentioned work unit (e.g. a unit name, slug, or path that appeared in conversation). If one is clearly referenced, use it.
+2. Fall back to the most-recently-modified `.minerva/work/NNN-*/` by directory mtime.
+3. If multiple candidates exist and context is ambiguous, list them and ask the user which to target.
+4. If `.minerva/work/` doesn't exist or it's empty, report "no work units found — run `minerva:propose` first" and stop.
 
 ## Protocol
 
-Same brainstorming pattern as `/propose`, but framed around divergence:
+Same brainstorming pattern as `minerva:propose`, but framed around divergence:
 
 1. **Read the existing context first.** Read `proposal.md`, any prior `replan.md` entries, and the current `scratchpad.md`. The brainstorm must be grounded in what actually happened.
 2. **Frame the replan around three pieces:**
@@ -50,8 +49,8 @@ Same brainstorming pattern as `/propose`, but framed around divergence:
    **New plan**: <one or two sentences>
    ```
 
-3. Report the path and the title of the appended entry. Suggest resuming `/work` next.
+3. Report the path and the title of the appended entry. Suggest resuming `minerva:work` next.
 
 ## Out of scope
 
-This command stops at appending to `replan.md`. It does **not** invoke implementation — return control to `/work` (or its in-progress session) after writing.
+This skill stops at appending to `replan.md`. It does **not** invoke implementation — return control to `minerva:work` (or its in-progress session) after writing.

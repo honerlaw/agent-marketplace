@@ -119,9 +119,10 @@ echo "✓ Linked marketplace → $MARKETPLACE_DIR"
 
 # ── 6. Done ──────────────────────────────────────────────────────────────────
 echo ""
-echo "Done! Run /reload-plugins in Claude Code to activate. Commands available:"
+echo "Done! Run /reload-plugins in Claude Code to activate. Skills available:"
 shopt -s nullglob
-for cmd in "$PLUGIN_DIR"/commands/*.md; do
-  echo "  /$(basename "${cmd%.md}")"
+for skill_dir in "$PLUGIN_DIR"/skills/*/; do
+  skill_name="$(basename "$skill_dir")"
+  echo "  ${PLUGIN_NAME}:${skill_name}"
 done
 shopt -u nullglob
