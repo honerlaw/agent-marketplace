@@ -1,11 +1,11 @@
 ---
 name: using-minerva
-description: Use when starting work in a project that uses minerva (has work/ or decisions/ directories at the project root, or where the user has invoked any minerva: command in this session), or when the user describes starting / continuing / finishing a meaningful unit of work — features, refactors, investigations, spikes. Explains when to invoke /propose, /replan, /work, /promote and gives common scenarios. Skip for routine bugfixes, trivial edits, and one-shot Q&A.
+description: Use when starting work in a project that uses minerva (a `.minerva/` directory exists at the project root, or the user has invoked any `minerva:` command in this session), or when the user describes starting / continuing / finishing a meaningful unit of work — features, refactors, investigations, spikes. Explains when to invoke /propose, /replan, /work, /promote, /init and gives common scenarios. Skip for routine bugfixes, trivial edits, and one-shot Q&A.
 ---
 
 # Using minerva
 
-minerva is the durable-record discipline for software work in this project. It encodes a persistence hierarchy where **artifacts get promoted, not just accumulated** — significant scratchpad items become `decisions/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
+minerva is the durable-record discipline for software work in this project. It encodes a persistence hierarchy where **artifacts get promoted, not just accumulated** — significant scratchpad items become `.minerva/decisions/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
 
 The heuristic: **would a new engineer (or new agent) joining the project in a year benefit from reading this?** If yes, keep. If no, summarize and discard.
 
@@ -13,17 +13,17 @@ The heuristic: **would a new engineer (or new agent) joining the project in a ye
 
 You're in a minerva project if any of these are true:
 
-- A `work/` directory exists at the project root with `NNN-<slug>/` subdirectories.
-- A `decisions/` directory exists with `NNN-<slug>.md` files.
-- The user invoked any `minerva:` command (`/propose`, `/replan`, `/work`, `/promote`) earlier in the session.
-- `CLAUDE.md` references the persistence hierarchy or the `work/` + `decisions/` layout.
+- A `.minerva/` directory exists at the project root.
+- The user invoked any `minerva:` command (`/init`, `/propose`, `/replan`, `/work`, `/promote`) earlier in the session.
+- `CLAUDE.md`, `AGENTS.md`, or similar has a `## minerva` Routing section pointing at `.minerva/`.
 
-If none of these are true, the project isn't using minerva — don't reach for these commands unsolicited. Suggest `/propose` only when the user is clearly starting durable work that would benefit from the discipline.
+If none are true, the project isn't using minerva. Don't reach for these commands unsolicited — but if the user is clearly starting durable work that would benefit from the discipline, suggest `/init` as the entry point (it scaffolds the directory and adds a Routing section to the agent file).
 
 ## Command decision matrix
 
 | Situation | Command |
 |---|---|
+| First time using minerva in this project | `/init` |
 | Starting a new unit of work (feature, refactor, investigation, spike) | `/propose <slug>` |
 | Resuming work on an existing unit | `/work [target]` |
 | The plan still holds — keep going | (no command — continue work normally) |
@@ -31,19 +31,22 @@ If none of these are true, the project isn't using minerva — don't reach for t
 | Just hit something that's clearly a durable decision, mid-work | `/promote "<short description>"` |
 | Implementation is done — finalize the record | `/promote` (no argument) |
 
-The four commands cover the full lifecycle. Most of the time you stay in `/work` and don't touch the others.
+The five commands cover the full lifecycle. Most of the time you stay in `/work` and don't touch the others.
 
 ## The persistence hierarchy (quick reference)
 
 | Tier | Files | Read by Claude |
 |---|---|---|
-| Always-read | `CLAUDE.md`, `decisions/` | Every conversation in this project |
-| Searchable-on-demand | `work/NNN-<slug>/proposal.md`, `work/NNN-<slug>/replan.md` | Grep when relevant |
-| Ephemeral | `work/NNN-<slug>/scratchpad.md` | Live during `/work`, archived by `/promote` |
+| Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/decisions/` | Every conversation in this project |
+| Searchable-on-demand | `.minerva/work/NNN-<slug>/proposal.md`, `.minerva/work/NNN-<slug>/replan.md` | Grep when relevant |
+| Ephemeral | `.minerva/work/NNN-<slug>/scratchpad.md` | Live during `/work`, archived by `/promote` |
 
 When in doubt about whether something belongs in a decision file vs. a scratchpad note, apply the new-engineer-in-a-year heuristic above.
 
 ## Common scenarios
+
+**"This is a fresh project — let's start using minerva."**
+→ `/init`. Scaffolds `.minerva/work/` and `.minerva/decisions/`, checks `.gitignore` for exclusions, and adds a Routing section to the agent file (CLAUDE.md / AGENTS.md / GEMINI.md).
 
 **"Let's add a payments flow."**
 → `/propose add-payments`. Brainstorm the design through the command's flow. Don't start coding until the proposal is written.
@@ -76,6 +79,6 @@ The ceremony only pays off when the work is substantial enough that future reade
 
 Even when you don't run a `minerva:` command this session, respect the hierarchy:
 
-- Treat `CLAUDE.md` and `decisions/` as authoritative — read them when starting work in the project.
-- Grep `work/` when you need historical context for a feature.
+- Treat `CLAUDE.md` / `AGENTS.md` and `.minerva/decisions/` as authoritative — read them when starting work in the project.
+- Grep `.minerva/work/` when you need historical context for a feature.
 - Don't create `scratchpad.md` files directly outside of `/work`. If you need scratch space, use a TodoWrite or notes in conversation instead.

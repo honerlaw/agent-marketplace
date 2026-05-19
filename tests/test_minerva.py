@@ -133,11 +133,13 @@ def test_using_minerva_skill_exists_with_frontmatter():
     # Frontmatter declares the skill
     assert "name: using-minerva" in frontmatter
     assert "description:" in frontmatter
+    # Frontmatter trigger signal should reference the .minerva/ directory
+    assert ".minerva" in frontmatter, "trigger description must mention .minerva/ as the detection signal"
     # Body covers the four commands
     for command in ["/propose", "/replan", "/work", "/promote"]:
         assert command in body, f"using-minerva must mention {command}"
-    # Detection signals
-    assert "work/" in body
-    assert "decisions/" in body
+    # Path references should use the .minerva/ layout
+    assert ".minerva/work/" in body
+    assert ".minerva/decisions/" in body
     # Anti-patterns section exists
     assert "anti-pattern" in body.lower() or "when not to use" in body.lower() or "NOT to use" in body
