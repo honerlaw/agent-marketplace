@@ -122,6 +122,9 @@ def test_plugin_readme_lists_all_four_commands():
     # Persistence hierarchy concept should be present
     assert "decisions" in readme.lower()
     assert "scratchpad" in readme.lower()
+    # Layout uses the .minerva/ prefix
+    assert ".minerva/work/" in readme, "README file-layout must use .minerva/work/"
+    assert ".minerva/decisions/" in readme, "README file-layout must use .minerva/decisions/"
 
 
 def test_using_minerva_skill_exists_with_frontmatter():
