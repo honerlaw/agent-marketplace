@@ -23,7 +23,7 @@ Every work unit runs in an isolated git worktree. This section runs **before** r
 1. **Determine NNN-slug** from the resolved target (e.g. `005-work-in-git-worktree`).
 
 2. **Check for an existing worktree** at `.minerva/worktrees/NNN-slug/`.
-   - **Exists** → the worktree is already initialized. Switch to it (treat it as the working directory for all subsequent steps) and continue to Setup.
+   - **Exists** → the worktree is already initialized. Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"` and continue to Setup.
    - **Does not exist** → proceed with steps 3–6.
 
 3. **Ensure `.minerva/worktrees/` is gitignored** on `main`. If `.gitignore` does not already contain `.minerva/worktrees/`, append it and commit:
@@ -43,13 +43,13 @@ Every work unit runs in an isolated git worktree. This section runs **before** r
    mv .minerva/work/NNN-slug .minerva/worktrees/NNN-slug/.minerva/work/NNN-slug
    ```
 
-6. **Commit the docs on the branch** (inside the worktree):
+6. **Commit the docs on the branch** (from the main repo):
    ```
    git -C .minerva/worktrees/NNN-slug add .minerva/work/NNN-slug/
    git -C .minerva/worktrees/NNN-slug commit -m "chore: initialize NNN-slug work unit"
    ```
 
-7. All subsequent work — reading docs, writing scratchpad, implementation — happens inside `.minerva/worktrees/NNN-slug/`.
+7. **Enter the worktree** — call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`. All subsequent work — reading docs, writing scratchpad, implementation — happens inside the worktree session.
 
 ## Setup (run at the start of every `minerva:work` invocation)
 
