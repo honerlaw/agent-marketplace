@@ -14,7 +14,7 @@ The heuristic: **would a new engineer (or new agent) joining the project in a ye
 You're in a minerva project if any of these are true:
 
 - A `.minerva/` directory exists at the project root.
-- The user invoked any `minerva:` skill (`minerva:init`, `minerva:propose`, `minerva:replan`, `minerva:work`, `minerva:promote`) earlier in the session.
+- The user invoked any `minerva:` skill (`minerva:init`, `minerva:propose`, `minerva:replan`, `minerva:work`, `minerva:promote`, `minerva:review`) earlier in the session.
 - `CLAUDE.md`, `AGENTS.md`, or similar has a `## minerva` Routing section pointing at `.minerva/`.
 
 If none are true, the project isn't using minerva. Don't reach for these skills unsolicited — but if the user is clearly starting durable work that would benefit from the discipline, suggest `minerva:init` as the entry point (it scaffolds the directory and adds a Routing section to the agent file).
@@ -30,8 +30,9 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
 | Just hit something that's clearly a durable decision, mid-work | `minerva:promote "<short description>"` |
 | Implementation is done — finalize the record | `minerva:promote` (no argument) |
+| Want to audit shipped code against the proposal | `minerva:review` |
 
-The five skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
+The six skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
 ## The persistence hierarchy (quick reference)
 
@@ -62,6 +63,9 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 
 **"Tests pass and the feature is shipped. Ready to clean up."**
 → `minerva:promote` with no argument. The end-of-work pass partitions the scratchpad into promote/merge/discard, rewrites `proposal.md` to match what shipped, and archives the raw scratchpad.
+
+**"Before I open the PR, let's check the code actually matches what we designed."**
+→ `minerva:review`. The skill reads the proposal + replans, audits the branch-vs-default diff (or the uncommitted diff if the tree is dirty), and walks you through each finding with a fix / suggest / ignore disposition. Run dead last — after `minerva:work` and ideally after `minerva:promote` — and re-run if the first pass produced fixes worth promoting.
 
 ## Anti-patterns — when NOT to use minerva
 

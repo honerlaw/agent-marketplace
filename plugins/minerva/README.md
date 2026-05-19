@@ -21,6 +21,7 @@ The heuristic for what to keep: **would a new engineer (or new agent) joining th
 | `minerva:replan` | Same brainstorm flow, but appends a dated divergence entry to `.minerva/work/NNN-slug/replan.md` for the current (context-inferred) work unit. |
 | `minerva:work` | Enter implementation mode. Reads the proposal + replans, maintains `scratchpad.md`, auto-triggers `minerva:replan` on load-bearing divergence. |
 | `minerva:promote [item]` | No-arg: end-of-work full pass (promote concrete past-tense knowledge → `.minerva/knowledge/`, rewrite proposal to match reality, archive scratchpad). With arg: single-item mid-work promote. Idempotent. |
+| `minerva:review` | Audit the implementation against the proposal (and `.minerva/knowledge/` invariants) by reviewing the branch-vs-default-branch diff, or the uncommitted diff if the working tree isn't clean. Interactive triage: fix / suggest / ignore. Runs after `minerva:work` and may cycle with `minerva:promote`. |
 | `minerva:using-minerva` | Context-aware orientation skill — explains when to invoke each skill, gives common scenarios, and lists anti-patterns. Auto-triggers in projects with a `.minerva/` directory, or when the user describes starting/continuing/finishing a meaningful unit of work. |
 
 ## Typical flow
@@ -30,7 +31,9 @@ minerva:init                              # one-time: scaffold .minerva/ + agent
 minerva:propose "add payments flow"       # .minerva/work/001-add-payments-flow/ + proposal.md
 minerva:work                              # implementation begins, scratchpad live
    → minerva:replan triggers on drift    # .minerva/work/001-add-payments-flow/replan.md appended
+minerva:review                            # audit shipped code vs proposal (fix / suggest / ignore)
 minerva:promote                           # end-of-work: knowledge/, proposal rewritten, scratchpad archived
+   ↺ minerva:review → minerva:promote    # cycle as needed if review surfaces durable knowledge
 ```
 
 ## File layout produced

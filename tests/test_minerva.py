@@ -39,7 +39,7 @@ def test_marketplace_does_not_list_feature_cycle():
 def test_root_readme_mentions_minerva():
     readme = (REPO_ROOT / "README.md").read_text()
     assert "minerva" in readme, "root README must list minerva in the plugin table"
-    for skill in ["minerva:init", "minerva:propose", "minerva:replan", "minerva:work", "minerva:promote"]:
+    for skill in ["minerva:init", "minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
         assert skill in readme, f"root README must mention {skill}"
 
 
@@ -124,9 +124,25 @@ def test_promote_skill_exists_with_frontmatter():
     assert "new engineer" in body.lower() or "year" in body.lower()
 
 
+def test_review_skill_exists_with_frontmatter():
+    fm, body = _read_skill("review")
+    assert fm.get("name") == "review", "review/SKILL.md must have name: review"
+    assert fm.get("description"), "review/SKILL.md must have a description in frontmatter"
+    assert ".minerva/work/" in body, "review skill must use the .minerva/work/ layout"
+    assert "proposal.md" in body
+    assert "scratchpad.md" in body
+    assert "git diff" in body or "git status" in body, "review skill must describe how it picks the diff"
+    assert "FIX" in body
+    assert "SUGGEST" in body
+    assert "IGNORE" in body
+    assert "minerva:promote" in body, "review skill must reference promote (cycle)"
+    assert "minerva:replan" in body, "review skill must reference replan (load-bearing divergence)"
+    assert "most-recently-modified" in body.lower() or "most recently modified" in body.lower()
+
+
 def test_plugin_readme_lists_all_skills():
     readme = (PLUGIN_DIR / "README.md").read_text()
-    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote"]:
+    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
         assert skill in readme, f"plugin README must list {skill}"
     assert "decisions" in readme.lower()
     assert "scratchpad" in readme.lower()
@@ -143,7 +159,7 @@ def test_using_minerva_skill_exists_with_frontmatter():
     assert "name: using-minerva" in frontmatter
     assert "description:" in frontmatter
     assert ".minerva" in frontmatter, "trigger description must mention .minerva/ as the detection signal"
-    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote"]:
+    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
         assert skill in body, f"using-minerva must mention {skill}"
     assert ".minerva/work/" in body
     assert ".minerva/knowledge/" in body
