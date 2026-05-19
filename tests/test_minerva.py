@@ -97,6 +97,26 @@ def test_work_command_exists_with_frontmatter():
     assert "resume" in body.lower() or "left off" in body.lower()
 
 
+def test_init_command_exists_with_frontmatter():
+    fm, body = _read_command("init")
+    assert fm.get("description"), "init.md must have a description in frontmatter"
+    # Scaffolds the .minerva/ layout
+    assert ".minerva/work/" in body
+    assert ".minerva/decisions/" in body
+    assert ".gitkeep" in body
+    # Gitignore check is described
+    assert ".gitignore" in body
+    # Agent-file detection covers the canonical names
+    assert "CLAUDE.md" in body
+    assert "AGENTS.md" in body
+    # Routing section is the artifact written into the agent file
+    assert "Routing" in body or "## minerva" in body
+    # Idempotency commitment
+    assert "idempotent" in body.lower() or "idempotency" in body.lower() or "already initialized" in body.lower()
+    # Pre-existing flat layout warning
+    assert "flat layout" in body.lower() or "mv work" in body or "pre-existing" in body.lower()
+
+
 def test_promote_command_exists_with_frontmatter():
     fm, body = _read_command("promote")
     assert fm.get("description"), "promote.md must have a description in frontmatter"
