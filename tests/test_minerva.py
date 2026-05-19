@@ -119,3 +119,22 @@ def test_plugin_readme_lists_all_four_commands():
     # Persistence hierarchy concept should be present
     assert "decisions" in readme.lower()
     assert "scratchpad" in readme.lower()
+
+
+def test_using_minerva_skill_exists_with_frontmatter():
+    skill_path = PLUGIN_DIR / "skills" / "using-minerva" / "SKILL.md"
+    assert skill_path.is_file(), f"missing: {skill_path}"
+    text = skill_path.read_text()
+    assert text.startswith("---\n"), "SKILL.md must start with YAML frontmatter"
+    _, frontmatter, body = text.split("---\n", 2)
+    # Frontmatter declares the skill
+    assert "name: using-minerva" in frontmatter
+    assert "description:" in frontmatter
+    # Body covers the four commands
+    for command in ["/propose", "/replan", "/work", "/promote"]:
+        assert command in body, f"using-minerva must mention {command}"
+    # Detection signals
+    assert "work/" in body
+    assert "decisions/" in body
+    # Anti-patterns section exists
+    assert "anti-pattern" in body.lower() or "when not to use" in body.lower() or "NOT to use" in body

@@ -21,6 +21,12 @@ The heuristic for what to keep: **would a new engineer (or new agent) joining th
 | `/work [target]` | Enter implementation mode. Reads the proposal + replans, maintains `scratchpad.md`, auto-triggers `/replan` on load-bearing divergence. |
 | `/promote [item]` | No-arg: end-of-work full pass (promote significant items → `decisions/`, rewrite proposal to match reality, archive scratchpad). With arg: single-item mid-work promote. Idempotent. |
 
+## Skills
+
+| Skill | Description |
+|-------|-------------|
+| `minerva:using-minerva` | Context-aware orientation skill — explains when to invoke each command, gives common scenarios, and lists anti-patterns. Auto-triggers in projects with `work/` or `decisions/` directories, or when the user describes starting/continuing/finishing a meaningful unit of work. |
+
 ## Typical flow
 
 ```text
