@@ -37,7 +37,7 @@ def test_marketplace_does_not_list_feature_cycle():
 def test_root_readme_mentions_minerva():
     readme = (REPO_ROOT / "README.md").read_text()
     assert "minerva" in readme, "root README must list minerva in the plugin table"
-    for command in ["/propose", "/replan", "/work", "/promote"]:
+    for command in ["/init", "/propose", "/replan", "/work", "/promote"]:
         assert command in readme, f"root README must mention {command}"
 
 
