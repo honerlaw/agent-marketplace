@@ -1,21 +1,21 @@
 ---
-description: Capture a divergence from the proposal in the current work unit. Same brainstorm-style flow as /propose, but appends a dated entry to work/NNN-slug/replan.md rather than starting a new work unit.
+description: Capture a divergence from the proposal in the current work unit. Same brainstorm-style flow as /propose, but appends a dated entry to .minerva/work/NNN-slug/replan.md rather than starting a new work unit.
 ---
 
 Append a dated replan entry to the current work unit when reality has diverged from the proposal.
 
 ## Usage
 
-- `/replan` — operates on the most-recently-modified `work/NNN-*/`
+- `/replan` — operates on the most-recently-modified `.minerva/work/NNN-*/`
 - `/replan 003-add-payments` — explicit work directory
 - `/replan add-payments` — substring match against existing work dirs
 
 ## Target resolution
 
-1. If the user passed an exact directory name (e.g. `003-add-payments`), use `work/<that>/`.
-2. Otherwise substring match against existing `work/NNN-*/` entries. If exactly one match, use it; if multiple, list them and ask which.
-3. If no argument, use the most-recently-modified `work/NNN-*/` by directory mtime.
-4. If no `work/` directory exists or it's empty, report "no work units found — run `/propose <slug>` first" and stop.
+1. If the user passed an exact directory name (e.g. `003-add-payments`), use `.minerva/work/<that>/`.
+2. Otherwise substring match against existing `.minerva/work/NNN-*/` entries. If exactly one match, use it; if multiple, list them and ask which.
+3. If no argument, use the most-recently-modified `.minerva/work/NNN-*/` by directory mtime.
+4. If `.minerva/work/` doesn't exist or it's empty, report "no work units found — run `/propose <slug>` first" and stop.
 
 ## Protocol
 
@@ -33,7 +33,7 @@ Same brainstorming pattern as `/propose`, but framed around divergence:
 
 ## On approval — file write
 
-1. If `replan.md` doesn't exist yet, create it with this header:
+1. If `replan.md` doesn't exist yet in the target `.minerva/work/NNN-<slug>/`, create it with this header:
 
    ```markdown
    # Replan log: <slug>

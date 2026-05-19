@@ -66,7 +66,7 @@ def test_propose_command_exists_with_frontmatter():
     assert fm.get("description"), "propose.md must have a description in frontmatter"
     # Key behaviors from the spec
     assert "proposal.md" in body
-    assert "work/" in body
+    assert ".minerva/work/" in body, "propose.md must use the .minerva/work/ layout"
     assert "brainstorm" in body.lower() or "questions one at a time" in body.lower()
     assert "scratchpad.md" in body  # the empty scratchpad is created alongside
 
@@ -75,6 +75,7 @@ def test_replan_command_exists_with_frontmatter():
     fm, body = _read_command("replan")
     assert fm.get("description"), "replan.md must have a description in frontmatter"
     assert "replan.md" in body
+    assert ".minerva/work/" in body, "replan.md must use the .minerva/work/ layout"
     assert "Original plan" in body
     assert "What changed" in body
     assert "New plan" in body
@@ -88,6 +89,7 @@ def test_work_command_exists_with_frontmatter():
     assert "scratchpad.md" in body
     assert "proposal.md" in body
     assert "replan.md" in body
+    assert ".minerva/work/" in body, "work.md must use the .minerva/work/ layout"
     # Auto-trigger of /replan on divergence
     assert "/replan" in body
     assert "diverge" in body.lower() or "divergence" in body.lower()
@@ -106,8 +108,9 @@ def test_promote_command_exists_with_frontmatter():
     assert "DISCARD" in body
     # Idempotency
     assert "idempotent" in body.lower() or "idempotency" in body.lower()
-    # Decision file destination
-    assert "decisions/" in body
+    # Decision file destination uses the .minerva/ layout
+    assert ".minerva/decisions/" in body, "promote.md must use the .minerva/decisions/ layout"
+    assert ".minerva/work/" in body, "promote.md must use the .minerva/work/ layout"
     # Heuristic from the spec / image
     assert "new engineer" in body.lower() or "year" in body.lower()
 

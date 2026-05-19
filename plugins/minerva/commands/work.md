@@ -6,17 +6,17 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 
 ## Usage
 
-- `/work` — resume the most-recently-modified `work/NNN-*/`
+- `/work` — resume the most-recently-modified `.minerva/work/NNN-*/`
 - `/work 003-add-payments` — explicit work directory
 - `/work add-payments` — substring match
 
 ## Target resolution
 
 Identical to `/replan`:
-1. Exact directory match: `work/<arg>/`.
-2. Substring match against `work/NNN-*/`; single match wins, multiple → list and ask.
-3. No argument → most-recently-modified `work/NNN-*/` by mtime.
-4. No `work/` or empty → report "no work units found — run `/propose <slug>` first" and stop.
+1. Exact directory match: `.minerva/work/<arg>/`.
+2. Substring match against `.minerva/work/NNN-*/`; single match wins, multiple → list and ask.
+3. No argument → most-recently-modified `.minerva/work/NNN-*/` by mtime.
+4. `.minerva/work/` missing or empty → report "no work units found — run `/propose <slug>` first" and stop.
 
 ## Setup (run at the start of every `/work` invocation)
 

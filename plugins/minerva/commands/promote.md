@@ -1,8 +1,8 @@
 ---
-description: Extract durable decisions and finalize a work unit. No argument runs the end-of-work full pass (promote significant scratchpad items to decisions/, rewrite proposal.md to match reality, archive the raw scratchpad). With an argument, promotes a single mid-work item. Idempotent.
+description: Extract durable decisions and finalize a work unit. No argument runs the end-of-work full pass (promote significant scratchpad items to .minerva/decisions/, rewrite proposal.md to match reality, archive the raw scratchpad). With an argument, promotes a single mid-work item. Idempotent.
 ---
 
-Promote durable items from `scratchpad.md` to `decisions/`, and (in the end-of-work pass) reshape the work unit's persistent record to match what shipped.
+Promote durable items from `scratchpad.md` to `.minerva/decisions/`, and (in the end-of-work pass) reshape the work unit's persistent record to match what shipped.
 
 ## The heuristic
 
@@ -11,10 +11,10 @@ Promote durable items from `scratchpad.md` to `decisions/`, and (in the end-of-w
 ## Target resolution
 
 Same as `/replan` and `/work`:
-1. Exact directory match.
-2. Substring match against `work/NNN-*/`; single match wins.
-3. No argument → most-recently-modified `work/NNN-*/`.
-4. No `work/` or empty → report and stop.
+1. Exact directory match: `.minerva/work/<arg>/`.
+2. Substring match against `.minerva/work/NNN-*/`; single match wins.
+3. No argument → most-recently-modified `.minerva/work/NNN-*/`.
+4. `.minerva/work/` missing or empty → report and stop.
 
 ## Two modes
 
@@ -26,13 +26,13 @@ Same as `/replan` and `/work`:
    - **PROMOTE** → durable architectural/design choices, surprising constraints, tradeoffs worth recording, gotchas a future reader needs.
    - **MERGE INTO PROPOSAL** → places where the actual approach diverged from the original; the proposal's `## Approach` must end up describing what got built.
    - **DISCARD** → dead ends, momentary confusion, debugging digressions, choices that don't matter.
-   Skip entries already marked `→ promoted to decisions/...` — they were promoted mid-work.
+   Skip entries already marked `→ promoted to .minerva/decisions/...` — they were promoted mid-work.
 4. Present the partition as a numbered list with each entry's classification and a one-line justification. Wait for confirmation or edits.
 5. **Hard gate:** do not write files until the user confirms.
 6. On confirmation:
-   - **For each PROMOTE item:** write `decisions/NNN-<slug>.md` using the decision template below. Auto-increment NNN across the whole `decisions/` directory (3-digit pad). If `decisions/` doesn't exist, create it and start at `001`. Each entry must stand alone.
+   - **For each PROMOTE item:** write `.minerva/decisions/NNN-<slug>.md` using the decision template below. Auto-increment NNN across the whole `.minerva/decisions/` directory (3-digit pad). If `.minerva/decisions/` doesn't exist, create it and start at `001`. Each entry must stand alone.
    - **Rewrite `proposal.md`:** the `## Approach` section (and any other section that's out of date) describes reality, not the original plan. Don't preserve obsolete planning prose just because it was there.
-   - **Archive the scratchpad:** create `work/<target>/archive/` if needed, move `scratchpad.md` to `archive/scratchpad.md`, then write a new `scratchpad.md` containing exactly:
+   - **Archive the scratchpad:** create `.minerva/work/<target>/archive/` if needed, move `scratchpad.md` to `archive/scratchpad.md`, then write a new `scratchpad.md` containing exactly:
      ```
      Summarized at /promote on YYYY-MM-DD — see archive/.
      ```
@@ -44,12 +44,12 @@ Same as `/replan` and `/work`:
 
 1. Read `scratchpad.md`.
 2. Locate the block matching the argument (substring or fuzzy match on the entry text). If multiple candidates, list them and ask which.
-3. **Idempotency check:** if the matched block already has a `→ promoted to decisions/...` trailing line, report the existing decision file path and stop.
+3. **Idempotency check:** if the matched block already has a `→ promoted to .minerva/decisions/...` trailing line, report the existing decision file path and stop.
 4. Confirm with the user that you've identified the right block and show the proposed decision entry. Wait for approval.
 5. On approval:
-   - Determine the next NNN under `decisions/` (max+1, 3-digit pad; start at `001` if dir is missing).
-   - Write `decisions/NNN-<slug>.md` using the decision template.
-   - In `scratchpad.md`, append `→ promoted to decisions/NNN-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
+   - Determine the next NNN under `.minerva/decisions/` (max+1, 3-digit pad; start at `001` if dir is missing).
+   - Write `.minerva/decisions/NNN-<slug>.md` using the decision template.
+   - In `scratchpad.md`, append `→ promoted to .minerva/decisions/NNN-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
 6. Report the decision file path.
 
 ## Idempotency summary
@@ -66,7 +66,7 @@ If a user manually edits the scratchpad to remove markers, re-running `/promote`
 # <Short, declarative title — what was decided>
 
 **Date**: YYYY-MM-DD
-**Context**: work/NNN-<slug>
+**Context**: .minerva/work/NNN-<slug>
 
 ## Context
 The situation that forced this choice. Constraints, prior state, or the
