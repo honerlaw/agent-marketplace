@@ -12,16 +12,53 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 ## Target resolution
 
 1. Check current-session chat history for a mentioned work unit (e.g. a unit name, slug, or path that appeared in conversation). If one is clearly referenced, use it.
-2. Fall back to the most-recently-modified `.minerva/work/NNN-*/` by directory mtime.
+2. Fall back to the most-recently-modified `.minerva/work/NNN-*/` by directory mtime — check **both** `.minerva/work/` on `main` and `.minerva/worktrees/NNN-*/` (docs move to the worktree on first invocation).
 3. If multiple candidates exist and context is ambiguous, list them and ask the user which to target.
-4. `.minerva/work/` missing or empty → report "no work units found — run `minerva:propose` first" and stop.
+4. `.minerva/work/` missing or empty and no worktrees exist → report "no work units found — run `minerva:propose` first" and stop.
+
+## Worktree setup (run once per work unit, before Setup)
+
+Every work unit runs in an isolated git worktree. This section runs **before** reading docs.
+
+1. **Determine NNN-slug** from the resolved target (e.g. `005-work-in-git-worktree`).
+
+2. **Check for an existing worktree** at `.minerva/worktrees/NNN-slug/`.
+   - **Exists** → the worktree is already initialized. Switch to it (treat it as the working directory for all subsequent steps) and continue to Setup.
+   - **Does not exist** → proceed with steps 3–6.
+
+3. **Ensure `.minerva/worktrees/` is gitignored** on `main`. If `.gitignore` does not already contain `.minerva/worktrees/`, append it and commit:
+   ```
+   git add .gitignore
+   git commit -m "chore: ignore .minerva/worktrees/ directory"
+   ```
+
+4. **Create the worktree and branch:**
+   ```
+   git worktree add -b NNN-slug .minerva/worktrees/NNN-slug
+   ```
+
+5. **Move the work unit docs** from `.minerva/work/NNN-slug/` into the worktree:
+   ```
+   mkdir -p .minerva/worktrees/NNN-slug/.minerva/work
+   mv .minerva/work/NNN-slug .minerva/worktrees/NNN-slug/.minerva/work/NNN-slug
+   ```
+
+6. **Commit the docs on the branch** (inside the worktree):
+   ```
+   git -C .minerva/worktrees/NNN-slug add .minerva/work/NNN-slug/
+   git -C .minerva/worktrees/NNN-slug commit -m "chore: initialize NNN-slug work unit"
+   ```
+
+7. All subsequent work — reading docs, writing scratchpad, implementation — happens inside `.minerva/worktrees/NNN-slug/`.
 
 ## Setup (run at the start of every `minerva:work` invocation)
 
-1. Read `proposal.md`.
-2. Read **all** `replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
-3. Read `scratchpad.md` to figure out where work left off.
-4. Glance at `git status` and the last 3 commits to corroborate.
+All paths below are relative to the worktree root (`.minerva/worktrees/NNN-slug/`).
+
+1. Read `.minerva/work/NNN-slug/proposal.md`.
+2. Read **all** `.minerva/work/NNN-slug/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
+3. Read `.minerva/work/NNN-slug/scratchpad.md` to figure out where work left off.
+4. Glance at `git status` and the last 3 commits (run from inside the worktree) to corroborate.
 5. **Summarize the resumption point** to the user in one short paragraph before doing anything else: what the goal is, what's been done, what's next. Confirm before proceeding.
 
 ## Implementation protocol — apply throughout the session
