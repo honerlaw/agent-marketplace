@@ -8,9 +8,9 @@
   },
   "plugins": [
     {
-      "name": "financials",
-      "source": "./plugins/financials",
-      "description": "Pull and analyze personal finances from Truist, Amex, and Citi"
+      "name": "utils",
+      "source": "./plugins/utils",
+      "description": "Miscellaneous utility skills"
     },
     {
       "name": "minerva",
