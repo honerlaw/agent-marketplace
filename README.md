@@ -23,4 +23,4 @@ git pull  # symlink keeps the plugin live immediately
 | Plugin | Skills | Description |
 |--------|--------|-------------|
 | financials | `/pull-finances` `/spending-summary` `/spending-breakdown` `/recurring-expenses` `/cross-account` | Pull and analyze personal finances from Truist, Amex, Citi |
-| minerva | `minerva:init` `minerva:propose` `minerva:replan` `minerva:work` `minerva:promote` `minerva:review` | Durable record discipline for software work — proposal → work → replan → promote → review, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads |
+| minerva | `minerva:init` `minerva:propose` `minerva:replan` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads |
