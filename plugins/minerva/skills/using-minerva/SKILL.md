@@ -66,17 +66,19 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 ## Canonical lifecycle order
 
 ```
-minerva:init                              # one-time: scaffold + agent-file Routing
-minerva:propose                           # design + write proposal.md
-minerva:work                              # implementation in a git worktree
-   ↺ minerva:replan when scope shifts    # appends to replan.md
+minerva:init                              # one-time: scaffold + agent-file Routing + .gitignore for worktrees
+minerva:propose                           # design + branch + worktree + proposal.md (all writes inside the worktree)
+minerva:work                              # enter the existing worktree and implement
+   ↺ minerva:replan when scope shifts    # appends to replan.md (inside the worktree)
 minerva:review                            # audit shipped code vs. proposal + run code quality review
    ↺ minerva:replan if review finds drift
 minerva:promote                           # promote knowledge, rewrite proposal, archive scratchpad
    ↺ minerva:review → minerva:promote    # cycle if review surfaces new durable knowledge
-minerva:ship                              # commit → branch → PR → CI watch (polled) → auto-merge
-minerva:cleanup                           # remove merged worktree + local branch
+minerva:ship                              # push the work-unit branch → PR → CI watch (polled) → auto-merge
+minerva:cleanup                           # remove merged worktree + local branch (runs from the parent repo)
 ```
+
+Worktree ownership: **`minerva:propose` creates** the branch + worktree and enters it. Every downstream lifecycle skill (`work`, `replan`, `review`, `promote`, `ship`) enters the existing worktree on invocation if the session is not already in it. `minerva:cleanup` is the only skill that stays outside — it removes worktrees, so it must run from the parent repo.
 
 Review runs **before** promote so review-derived scratchpad notes flow through the promote partition. Re-cycle review/promote as many times as the work requires.
 
@@ -86,10 +88,10 @@ Review runs **before** promote so review-derived scratchpad notes flow through t
 → `minerva:init`. Scaffolds `.minerva/work/` and `.minerva/knowledge/`, checks `.gitignore`, warns about any legacy `.minerva/decisions/`, adds a Routing section to the agent file, and offers to commit.
 
 **"Let's add a payments flow."**
-→ `minerva:propose "add payments flow"` (or just `minerva:propose` — the skill infers your intent from context). Brainstorm the design through the skill's flow. Don't start coding until the proposal is written, self-reviewed, and you've approved the file directly.
+→ `minerva:propose "add payments flow"` (or just `minerva:propose` — the skill infers your intent from context). Brainstorm the design through the skill's flow. After you approve every section, propose creates the `NNN-add-payments` branch and worktree at `.minerva/worktrees/NNN-add-payments/`, enters the worktree, writes `proposal.md` + `scratchpad.md` inside it, and commits the initial docs. Don't start coding until the proposal is written, self-reviewed, and you've approved the file directly.
 
 **"Where were we on the payments thing?"**
-→ `minerva:work` (or `minerva:work 005-add-payments` to be explicit). The skill reads `proposal.md`, the latest `replan.md`, surfaces any unresolved Open Questions, and skims `scratchpad.md` to figure out where to pick up.
+→ `minerva:work` (or `minerva:work 005-add-payments` to be explicit). The skill enters the existing worktree at `.minerva/worktrees/005-add-payments/`, reads `proposal.md`, the latest `replan.md`, surfaces any unresolved Open Questions, and skims `scratchpad.md` to figure out where to pick up.
 
 **"It turns out we can't use Stripe's hosted checkout — we need our own form."**
 → Load-bearing divergence. Inside `minerva:work`, the protocol auto-triggers `minerva:replan`. Outside `minerva:work` (coming back from a tangent), invoke `minerva:replan` directly.
@@ -129,6 +131,6 @@ The ceremony only pays off when the work is substantial enough that future reade
 Even when you don't run a `minerva:` skill this session, respect the hierarchy:
 
 - Treat `CLAUDE.md` / `AGENTS.md` and `.minerva/knowledge/` as authoritative — read them when starting work in the project. These contain decisions, fixed bugs, and discovered patterns, not just architecture.
-- Grep `.minerva/work/` when you need historical context for a feature.
+- Grep `.minerva/work/` when you need historical context for a feature. Active work lives at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`; shipped work lives at `.minerva/work/<NNN-slug>/` on the default branch.
 - Don't create `scratchpad.md` files directly outside of `minerva:work`. If you need scratch space, use a TodoWrite or notes in conversation instead.
 - If a project has a leftover `.minerva/decisions/` directory, that's the legacy location — `minerva:init` will report it; either migrate to `.minerva/knowledge/` or treat both as authoritative until you do.

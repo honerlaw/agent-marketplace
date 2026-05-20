@@ -21,6 +21,16 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:review`, `minerv
 
 `minerva:promote "exponential backoff for retries"` (Mode B) — when the first argument matches a scratchpad block, Mode B kicks in on the resolved unit.
 
+## Worktree entry
+
+After resolving the target and before reading or writing any files:
+
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
+- If the docs live only on the default branch (a shipped unit being promoted retrospectively), operate on the parent repo without entering a worktree.
+- If the session is already in the matching worktree, do nothing.
+
+Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) land inside the worktree when one is active, so they're committed on the work-unit branch and merged into the default branch via the PR.
+
 ## Two modes
 
 ### Mode A — no argument (end-of-work full pass)

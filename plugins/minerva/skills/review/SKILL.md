@@ -20,6 +20,17 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → **no minerva context**. Skip to [Code review invocation](#code-review-invocation) — do not stop.
 
+## Worktree entry
+
+After resolving the target and before reading docs or running git commands:
+
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
+- If the docs live only on the default branch (a shipped unit being reviewed retrospectively), operate on the parent repo without entering a worktree.
+- If the session is already in the matching worktree, do nothing.
+- If target resolution returned no minerva context, skip this step — the code review pass runs in whatever working tree the user invoked the skill from.
+
+Diff resolution, file reads, and `code-review:code-review` all run inside the resolved working tree.
+
 ## Diff resolution
 
 Decide what to review:

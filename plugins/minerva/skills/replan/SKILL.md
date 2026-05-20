@@ -25,6 +25,16 @@ Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `miner
 4. **Ambiguity** — list candidates, ask the user.
 5. **None found** — "no work units found — run `minerva:propose` first" and stop.
 
+## Worktree entry
+
+After resolving the target and before reading or writing any files:
+
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
+- If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo without entering a worktree.
+- If the session is already in the matching worktree, do nothing.
+
+This makes the skill robust against being invoked from a stale cwd — all subsequent file paths in this skill are resolved relative to the right working tree.
+
 ## Protocol
 
 Same brainstorming pattern as `minerva:propose`, but framed around divergence:

@@ -20,7 +20,13 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → run in **bare mode**: ship from git state alone, no proposal-derived PR title/body. Bare mode is a first-class fallback, not an error path.
 
-If the resolved work unit's docs live in a worktree (`.minerva/worktrees/NNN-slug/.minerva/work/NNN-slug/`) and the current shell is not in that worktree, prefer entering the worktree before shipping (its branch is already set up correctly). If the user is intentionally on a different branch, ship from there and warn that the PR body will not reflect the work-unit proposal.
+## Worktree entry
+
+After resolving the target and before running any git commands:
+
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. The work-unit branch is already checked out there, so the rest of ship (branch detection, commit, push, PR open) runs against the correct branch automatically.
+- If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** enter a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
+- If the session is already in the matching worktree, do nothing.
 
 ## Default-branch detection
 
@@ -181,7 +187,7 @@ Surface both nudges as part of the initial summary, then proceed. The user can s
 
 ## Worktree handling
 
-Ship from wherever the user invokes the skill. If invoked inside a `.minerva/worktrees/` worktree, ship from that worktree — `git`, `gh`, and branch state are already correct there. If the work unit lives in a worktree but the user is elsewhere, prefer suggesting they enter the worktree first (see [Target resolution](#target-resolution)).
+The [Worktree entry](#worktree-entry) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `minerva:propose`, so the rest of ship works against the correct state automatically.
 
 After merge, the worktree and its branch should be cleaned up via `minerva:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
 

@@ -48,10 +48,19 @@ If `.minerva/` already exists, skip whichever pieces are already in place. Don't
 
 (Skip in a non-git repo.)
 
-Read `.gitignore` at the project root and any nested `.gitignore` files that would apply to `.minerva/`. Look for patterns that would exclude `.minerva` or `.minerva/` or `.*` (the common dotfile-catchall). Note: `.minerva/worktrees/` is **expected** to be gitignored (added by `minerva:work` on first run) — only flag patterns that would exclude `.minerva/knowledge/` or `.minerva/work/`.
+Read `.gitignore` at the project root and any nested `.gitignore` files that would apply to `.minerva/`. The check has two parts:
 
-- If a matching pattern is found, report the offending file path, line number, and the offending pattern. **Do not auto-edit** `.gitignore` — that file is user territory. Suggest the user remove or narrow the pattern, since `.minerva/knowledge/` and `.minerva/work/` are intended to be committed.
-- If none found, report `gitignore ✓`.
+**Part A — flag patterns that would exclude committed dirs.** Look for patterns that would exclude `.minerva` or `.minerva/` or `.*` (the common dotfile-catchall). `.minerva/knowledge/` and `.minerva/work/` are intended to be committed.
+
+- If a matching pattern is found, report the offending file path, line number, and the offending pattern. **Do not auto-edit** `.gitignore` to remove user-authored patterns — that file is user territory. Suggest the user remove or narrow the pattern.
+- If none found, report `gitignore ✓ (committed dirs)`.
+
+**Part B — install `.minerva/worktrees/` if missing.** Every worktree created by `minerva:propose` lives under `.minerva/worktrees/` and must be ignored on the default branch (see `.minerva/knowledge/005-decision-gitignore-before-worktree.md`). Init installs this entry up front so propose doesn't have to modify `.gitignore` from inside a worktree later.
+
+- If `.gitignore` does not already contain a line matching `.minerva/worktrees/` (exact match, or a parent pattern like `.minerva/` — both effectively ignore the path), append `.minerva/worktrees/` to the end of the project-root `.gitignore` (create the file if it doesn't exist). Report `gitignore: added .minerva/worktrees/`.
+- If already present, report `gitignore ✓ (worktrees ignored)`.
+
+Unlike Part A, this entry is appended automatically — it's part of init's idempotent scaffold, not user territory.
 
 ## Step 3 — agent-file detection + Routing
 
@@ -109,6 +118,7 @@ Print a status block:
 ```
 .minerva/ layout       ✓ created (or: already present)
 .gitignore             ✓ ok       (or: skipped — not a git repo; or: ⚠ <pattern at file:line> would exclude .minerva/)
+.minerva/worktrees/    ✓ added to .gitignore (or: ✓ already ignored; or: — not a git repo)
 CLAUDE.md              ✓ Routing section added (or: ✓ already present; or: — not present)
 AGENTS.md              ✓ Routing section added (or: ✓ already present; or: — not present)
 GEMINI.md              ✓ Routing section added (or: ✓ already present; or: — not present)
@@ -124,5 +134,5 @@ Suggest `minerva:propose` as the next step if no work units exist yet.
 - Migrating a pre-existing flat `work/` + `decisions/` layout. `minerva:init` only reports it; the user runs the `mv` themselves.
 - Migrating `.minerva/decisions/` to `.minerva/knowledge/`. Same — report only, user runs the move.
 - Authoring or rewriting CLAUDE.md / AGENTS.md content beyond the Routing section.
-- Editing `.gitignore` to remove offending patterns.
+- Editing `.gitignore` to remove offending user-authored patterns. (Init **does** install `.minerva/worktrees/` if missing — that entry is part of the scaffold, not user territory.)
 - A `minerva:init --refresh` mode to rewrite the Routing section when its template changes. Out of scope for v1.

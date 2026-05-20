@@ -16,45 +16,40 @@ Same pattern used by `minerva:replan`, `minerva:promote`, `minerva:review`, `min
 
 1. **Explicit argument** — if the user passed a slug or path (`minerva:work 005-foo` or a full `.minerva/work/...` path), resolve it directly. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` — whichever exists wins.
 2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
-3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`, take the most-recently-modified by directory mtime. After `minerva:work` runs once, the docs for that unit live in the worktree, not on `main` — both locations must be scanned every time.
+3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`, take the most-recently-modified by directory mtime. Active work units (created by `minerva:propose`) live in worktrees; shipped + merged units live in `.minerva/work/` on the default branch — both locations must be scanned every time.
 4. **Ambiguity** — if multiple recent candidates exist and context can't pick, list them and ask the user.
 5. **None found** — report "no work units found — run `minerva:propose` first" and stop.
 
-## Worktree setup (run once per work unit, before Setup)
+## Worktree entry (run before Setup)
 
-Every work unit runs in an isolated git worktree. This section runs **before** reading docs.
+Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs.
 
 1. **Determine NNN-slug** from the resolved target (e.g. `005-add-payments`).
 
-2. **Check for an existing worktree** at `.minerva/worktrees/NNN-slug/`.
-   - **Exists** → the worktree is already initialized. Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"` and continue to Setup.
-   - **Does not exist** → proceed with steps 3–6.
+2. **Decide the entry path** based on where the work unit's docs live:
 
-3. **Ensure `.minerva/worktrees/` is gitignored** on `main`. If `.gitignore` does not already contain `.minerva/worktrees/`, append it and commit:
-   ```
-   git add .gitignore
-   git commit -m "chore: ignore .minerva/worktrees/ directory"
-   ```
+   ### Primary path — worktree exists
 
-4. **Create the worktree and branch:**
-   ```
-   git worktree add -b NNN-slug .minerva/worktrees/NNN-slug
-   ```
-   (Branch names intentionally start with the NNN prefix so reviewers can immediately tie a branch to its work-unit number. Propose scans this pattern to avoid NNN collisions.)
+   `.minerva/worktrees/NNN-slug/` exists. This is the common case after `minerva:propose`.
 
-5. **Move the work unit docs** from `.minerva/work/NNN-slug/` into the worktree:
-   ```
-   mkdir -p .minerva/worktrees/NNN-slug/.minerva/work
-   mv .minerva/work/NNN-slug .minerva/worktrees/NNN-slug/.minerva/work/NNN-slug
-   ```
+   - Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`.
+   - Continue to Setup.
 
-6. **Commit the docs on the branch:**
-   ```
-   git -C .minerva/worktrees/NNN-slug add .minerva/work/NNN-slug/
-   git -C .minerva/worktrees/NNN-slug commit -m "chore: initialize NNN-slug work unit"
-   ```
+   ### Exceptional path — worktree missing, docs only on default branch
 
-7. **Enter the worktree** — call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`. All subsequent work — reading docs, writing scratchpad, implementation — happens inside the worktree session.
+   `.minerva/worktrees/NNN-slug/` does **not** exist, but `.minerva/work/NNN-slug/` exists on the default branch. This is the resurrection case: the unit was previously shipped and `minerva:cleanup` removed its worktree, but the user wants to re-open it. Surface a one-line note before proceeding: "no worktree found for `NNN-slug` — re-creating from the shipped docs on `<default-branch>`."
+
+   1. Resolve the default branch the same way `ship` and `cleanup` do:
+      - `git symbolic-ref refs/remotes/origin/HEAD` → parse `refs/remotes/origin/<name>`.
+      - Fall back to `main`, then `master`.
+   2. Confirm `.minerva/worktrees/` is gitignored on `<default-branch>` (`git show <default-branch>:.gitignore | grep -q '\.minerva/worktrees/'`). If missing, bail with "run `minerva:init` first to install the gitignore entry, then retry."
+   3. `git worktree add -b NNN-slug .minerva/worktrees/NNN-slug <default-branch>` — branches from the merged default, picking up the shipped docs automatically.
+   4. Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`.
+   5. Continue to Setup. (No file move or commit needed — the docs are already on the branch.)
+
+   ### Neither location has the unit
+
+   Report "no such work unit `NNN-slug` — run `minerva:propose` first" and stop.
 
 ## Setup (run at the start of every `minerva:work` invocation)
 

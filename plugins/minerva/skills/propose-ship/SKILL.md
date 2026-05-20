@@ -13,6 +13,8 @@ minerva:propose → minerva:work → minerva:review → minerva:promote → mine
 
 Invoke each phase via the `Skill` tool in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 
+The `minerva:propose` phase creates the work unit's branch + worktree at `.minerva/worktrees/<NNN-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `minerva:cleanup` is the only phase that runs from outside the worktree — it removes it.
+
 (Note: review runs **before** promote so review-derived scratchpad notes flow through the promote partition. This matches `using-minerva` and `review`. Re-cycle review/promote as needed. Cleanup runs only after the PR actually merges — see [Phase 7](#phase-7--cleanup-gate).)
 
 ## Pre-flight: detect in-flight work
