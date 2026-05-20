@@ -25,7 +25,7 @@ Bail with a clear message on any failure:
 
 1. **Git repo.** `git rev-parse --is-inside-work-tree` returns true.
 2. **`gh` CLI available** (optional but preferred). Falls back to local-only merge detection if `gh` is missing or unauthenticated.
-3. **Not currently inside a worktree being cleaned.** If invoked from inside `.minerva/worktrees/NNN-slug/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run.
+3. **Not currently inside a worktree being cleaned.** If invoked from inside `.minerva/worktrees/NNN-slug/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run. **Unlike other lifecycle skills, cleanup does not call `EnterWorktree`** — its job is to remove worktrees, so it must operate from the parent repo.
 
 ## Default-branch detection
 

@@ -98,10 +98,14 @@ To keep each commit reviewable in isolation:
 - `plugins/minerva/skills/init/SKILL.md` adds `.minerva/worktrees/` to `.gitignore` when absent, reports it as part of step 2, and is idempotent (no-op when already present).
 - `plugins/minerva/skills/using-minerva/SKILL.md` describes worktree+branch creation as propose's responsibility in both the lifecycle diagram and the common-scenarios section.
 - `plugins/minerva/skills/propose-ship/SKILL.md` prose reflects that the worktree exists from the propose phase onward.
-- All six target-resolution blocks (`work`, `replan`, `promote`, `review`, `ship`, `cleanup`) remain byte-identical to each other (the "keep all six in sync" rule still holds after the edits).
+- All six target-resolution blocks (`work`, `replan`, `promote`, `review`, `ship`, `cleanup`) preserve the shared 5-step pattern (explicit arg → session context → MRU across both locations → ambiguity → none-found). The blocks are not byte-identical (each has documented skill-specific variation — `review`'s no-minerva-context fallback, `ship`'s bare mode, `cleanup`'s collection-mode default), but the shared rule structure stays consistent across all six.
 - Running `minerva:propose` on a fresh slug in a clean repo produces: a `<NNN-slug>` branch checked out at `.minerva/worktrees/<NNN-slug>/`, a single commit on that branch containing `.minerva/work/<NNN-slug>/{proposal.md,scratchpad.md}`, and no changes to `.minerva/work/` on the default branch.
 
 ## Open Questions
 
-- Should the work skill keep the worktree-creation fallback for resurrecting shipped units, or remove it entirely and require the user to recreate the worktree manually? Leaning keep — it's the only way to re-enter a cleaned-up unit without manual git plumbing, and the prose can mark it as the exceptional path.
-- Should propose offer to remove the worktree if the user rejects at the post-write gate? Leaning no — keep propose's responsibilities narrow; the user can `git worktree remove .minerva/worktrees/<NNN-slug>` or run `minerva:cleanup <slug> --force` (where `--force` is a future addition, not part of this work unit) to abandon. Defer the abandon path.
+(none — resolved at minerva:work start on 2026-05-20)
+
+## Resolutions
+
+- **Resurrection fallback in `work`**: keep the existing worktree-creation flow as a documented fallback for the rare case of resurrecting a shipped + cleaned-up unit (worktree gone, docs only on `<default-branch>`). Mark it explicitly as the exceptional path in the prose.
+- **Abandon path in `propose`**: not added. If the user rejects at the post-write gate and wants to abandon, they run `git worktree remove .minerva/worktrees/<NNN-slug>` plus `git branch -D <NNN-slug>` manually. Adding an `--abandon` flag to propose or extending `cleanup` to handle unmerged work is deferred.
