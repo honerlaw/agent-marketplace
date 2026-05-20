@@ -7,10 +7,10 @@ A personal plugin marketplace for AI coding agents. Each plugin in `plugins/` is
 ```bash
 git clone https://github.com/honerlaw/agent-marketplace
 cd agent-marketplace
-./install.sh financials
+./install.sh utils
 ```
 
-Restart Claude Code — that's it. The installer handles Python dependencies, Playwright browser download, and Claude Code settings registration automatically.
+Restart Claude Code — that's it. The installer handles Claude Code settings registration automatically (and Python dependencies / Playwright if the plugin ships any).
 
 ## Update
 
@@ -22,5 +22,5 @@ git pull  # symlink keeps the plugin live immediately
 
 | Plugin | Skills | Description |
 |--------|--------|-------------|
-| financials | `/pull-finances` `/spending-summary` `/spending-breakdown` `/recurring-expenses` `/cross-account` | Pull and analyze personal finances from Truist, Amex, Citi |
+| utils | `humanizer` | Miscellaneous utility skills |
 | minerva | `minerva:init` `minerva:propose` `minerva:replan` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads |
