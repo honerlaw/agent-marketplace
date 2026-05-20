@@ -1,9 +1,9 @@
 ---
 name: review
-description: Use when the user invokes `minerva:review`, asks to review or audit a changeset, or wants to verify shipped code matches what was designed. Always runs `code-review:code-review` on the diff. With a minerva work unit in context, also audits spec fidelity and knowledge compliance, presenting both result sets in parallel before unified triage. Without minerva context, delegates directly to `code-review:code-review`.
+description: Use when the user invokes `minerva:review`, asks to review or audit a changeset, or wants to verify shipped code matches what was designed. With a minerva work unit in context, runs a spec/knowledge audit alongside a code quality review, presenting both result sets in parallel before unified triage. Without minerva context, runs a code quality review directly. If a GitHub PR exists for the current branch, delegates the code quality pass to `code-review:code-review`; otherwise performs it inline against the local diff.
 ---
 
-Review the active changeset for both design compliance and code quality. When a minerva work unit is found, runs a spec/knowledge audit alongside `code-review:code-review` and presents both result sets in parallel before triage. When no minerva context exists, delegates directly to `code-review:code-review`.
+Review the active changeset for both design compliance and code quality. Works against the local diff — no PR required. When a minerva work unit is found, runs a spec/knowledge audit alongside the code quality review and presents both result sets in parallel before triage. When no minerva context exists, runs the code quality review alone.
 
 ## Usage
 
@@ -63,7 +63,12 @@ If the user agrees, exit review, run the `minerva:replan` protocol, then re-ente
 
 ## Code review invocation
 
-Invoke the `code-review:code-review` **skill** (via the Skill tool — it is a skill, not a subagent). This always runs — with or without minerva context — on the same diff resolved above.
+This always runs — with or without minerva context — on the same diff resolved above.
+
+**Check for an existing PR first:** run `gh pr view --json url,number,state 2>/dev/null`.
+
+- **PR exists and is OPEN** → invoke the `code-review:code-review` skill (via the Skill tool). It will fetch the PR and run its full review flow.
+- **No PR (or PR is closed/merged)** → perform the code quality review inline: read the diff directly and check for bugs, CLAUDE.md compliance, and code quality issues. Apply the same severity tagging (`high` / `medium` / `low`) and cite specific files and line numbers. Do not invoke `code-review:code-review` — it requires a live PR and will not work against a local diff.
 
 ## Parallel presentation (when both ran)
 
@@ -79,7 +84,7 @@ When minerva context exists, present findings in two labeled sections before any
 
 Then run a single unified triage pass across all numbered findings from both sections.
 
-When no minerva context exists, the code-review output is the only result — present and triage it directly per `code-review:code-review`'s own conventions.
+When no minerva context exists, the code quality review output is the only result — present and triage it directly.
 
 ## Interactive triage
 
