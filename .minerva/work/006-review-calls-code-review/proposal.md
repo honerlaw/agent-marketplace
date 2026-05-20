@@ -1,7 +1,7 @@
 # Proposal: review-calls-code-review
 
 **Date**: 2026-05-19
-**Status**: Draft
+**Status**: Shipped (2026-05-19)
 
 ## Goal
 
@@ -19,18 +19,14 @@ Modify `plugins/minerva/skills/review/SKILL.md` with these changes:
 
 2. **Add `code-review:code-review` invocation after finding generation:** After the minerva spec/knowledge audit runs (when context exists), invoke `code-review:code-review` on the same diff. When no minerva context exists, invoke it directly and return.
 
-3. **Parallel presentation (when both run):** Present findings in two labeled sections before triage:
+3. **Parallel presentation (when both run):** Present findings in two labeled sections before triage. Findings from `code-review:code-review` are numbered continuing from where the minerva audit left off, producing a single flat triage sequence:
    ```
    ## Minerva audit
-   [spec fidelity + knowledge compliance findings]
+   [spec fidelity + knowledge compliance findings, numbered 1…N]
 
    ## Code review
-   [code-review:code-review findings]
+   [code-review:code-review findings, numbered N+1…M]
    ```
-   Then run a single unified triage pass across all numbered findings from both sections.
+   Then run a single unified triage pass across all numbered findings.
 
-4. **Remove the "suggest running code-review:code-review alongside" line** from the General quality lens — it's now always run, not suggested.
-
-## Open Questions
-
-- None blocking. The no-minerva-context path delegates fully to `code-review:code-review` — whatever that skill's own behavior is (findings, triage, output format) is inherited as-is, not duplicated in this skill.
+4. **General quality lens removed** from the minerva audit — `code-review:code-review` owns that concern exclusively. The minerva audit narrows to spec fidelity and knowledge compliance only.
