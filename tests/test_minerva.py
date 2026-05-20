@@ -39,7 +39,7 @@ def test_marketplace_does_not_list_feature_cycle():
 def test_root_readme_mentions_minerva():
     readme = (REPO_ROOT / "README.md").read_text()
     assert "minerva" in readme, "root README must list minerva in the plugin table"
-    for skill in ["minerva:init", "minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
+    for skill in ["minerva:init", "minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review", "minerva:ship"]:
         assert skill in readme, f"root README must mention {skill}"
 
 
@@ -140,9 +140,29 @@ def test_review_skill_exists_with_frontmatter():
     assert "most-recently-modified" in body.lower() or "most recently modified" in body.lower()
 
 
+def test_ship_skill_exists_with_frontmatter():
+    fm, body = _read_skill("ship")
+    assert fm.get("name") == "ship", "ship/SKILL.md must have name: ship"
+    assert fm.get("description"), "ship/SKILL.md must have a description in frontmatter"
+    assert ".minerva/work/" in body, "ship skill must use the .minerva/work/ layout"
+    assert "proposal.md" in body, "ship skill must reference proposal.md for PR title/body"
+    assert "gh pr create" in body, "ship skill must use gh pr create to open the PR"
+    assert "gh pr merge --auto" in body, "ship skill must use gh pr merge --auto for auto-merge"
+    assert "git checkout -b" in body, "ship skill must describe branch creation"
+    assert "bare mode" in body.lower(), "ship skill must describe its bare-mode fallback"
+    assert "3 iteration" in body.lower() or "three iteration" in body.lower(), "ship skill must cap the CI auto-fix loop at 3 iterations"
+    assert "auto-merge" in body.lower() or "auto merge" in body.lower()
+    assert "minerva:promote" in body, "ship skill must nudge toward minerva:promote"
+    assert "minerva:review" in body, "ship skill must nudge toward minerva:review"
+    assert "most-recently-modified" in body.lower() or "most recently modified" in body.lower()
+    assert "gh pr view" in body, "ship skill must check for an existing PR before gh pr create (re-run safety)"
+    assert "Default-branch detection" in body or "default-branch detection" in body.lower(), "ship skill must define default-branch detection in a dedicated section, resolved once and reused"
+    assert "post-promote" in body.lower() or "post-`minerva:promote`" in body, "ship skill must explicitly handle the post-promote scratchpad marker in the commit-message step"
+
+
 def test_plugin_readme_lists_all_skills():
     readme = (PLUGIN_DIR / "README.md").read_text()
-    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
+    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review", "minerva:ship"]:
         assert skill in readme, f"plugin README must list {skill}"
     assert "decisions" in readme.lower()
     assert "scratchpad" in readme.lower()
@@ -159,7 +179,7 @@ def test_using_minerva_skill_exists_with_frontmatter():
     assert "name: using-minerva" in frontmatter
     assert "description:" in frontmatter
     assert ".minerva" in frontmatter, "trigger description must mention .minerva/ as the detection signal"
-    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review"]:
+    for skill in ["minerva:propose", "minerva:replan", "minerva:work", "minerva:promote", "minerva:review", "minerva:ship"]:
         assert skill in body, f"using-minerva must mention {skill}"
     assert ".minerva/work/" in body
     assert ".minerva/knowledge/" in body
