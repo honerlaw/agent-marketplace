@@ -1,7 +1,7 @@
 # Proposal: worktree-creation-in-propose
 
 **Date**: 2026-05-20
-**Status**: Draft
+**Status**: Shipped (2026-05-20)
 
 ## Goal
 
@@ -19,93 +19,77 @@ For end-to-end orchestration (`minerva:propose-ship`), this means the worktree i
 
 ### `propose/SKILL.md` — main change
 
-After the existing pre-write hard gate (all sections approved), insert a worktree-setup phase before any file is written:
+The "On approval — worktree setup + file writes" section has 13 steps. A section preamble states which steps run from the parent repo vs. inside the worktree, plus a non-git-repo escape clause:
 
-1. **Slug derivation + duplicate check** (unchanged): derive slug, scan `.minerva/work/<NNN-slug>/`, `.minerva/worktrees/<NNN-slug>/`, and `git branch --list "*-<slug>"` (both local and remote). Abort on collision.
-2. **NNN computation** (unchanged): scan local `.minerva/work/`, local branches `[0-9][0-9][0-9]-*` and `minerva/[0-9][0-9][0-9]-*`, remote branches with the same patterns. Max+1, pad to 3 digits.
-3. **Default-branch detection** (new): same logic block used by `ship` and `cleanup`:
-   - `git symbolic-ref refs/remotes/origin/HEAD` → parse the trailing name.
-   - Fall back to `main`, then `master`.
-4. **Pre-flight gitignore check** (new): verify `.minerva/worktrees/` appears in the default branch's `.gitignore`. If missing, abort with "the `.minerva/worktrees/` gitignore entry is missing on `<default-branch>` — run `minerva:init` first to install it, or add `.minerva/worktrees/` to `.gitignore` and commit on `<default-branch>`." Do not auto-edit `.gitignore` from inside propose (propose may be invoked from a worktree where editing `.gitignore` would land on the wrong branch).
-5. **Worktree + branch creation** (new): from the main repo working directory, run `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`. Branching explicitly from the default branch (rather than HEAD) prevents accidentally stacking on an in-flight branch when propose is invoked from another worktree.
-6. **Enter the worktree** (new): call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. All subsequent file operations run inside the worktree.
-7. **Create `.minerva/work/<NNN-slug>/`** (unchanged target, new location: inside the worktree).
-8. **Write `proposal.md` and `scratchpad.md`** (unchanged content).
-9. **Self-review and inline fixes** (unchanged).
-10. **Commit on the branch** (new): `git add .minerva/work/<NNN-slug>/` then `git commit -m "chore: initialize <NNN-slug> work unit"`.
-11. **Post-write user gate** (unchanged content, new commit behavior): if the user requests edits, edit inline, then create a follow-up commit (no `--amend` — the previous commit is the starting state of the branch and amending it would invalidate any history viewer that already saw it).
-12. **Suggest `minerva:work` as the next step** (unchanged).
+> Steps 1–6 run from the parent repo. Step 7 enters the worktree. Steps 8–13 run inside the worktree. Non-git escape clause: skip steps 4, 5, 6, 7, and 11 entirely; run 1–3, jump to 8, continue with 9, 10, 12, 13.
 
-The `Out of scope` section gets one sentence noting that the worktree is created by propose, not work.
+The steps:
+
+1. Derive the slug from the confirmed goal title.
+2. Duplicate slug check across `.minerva/work/<NNN-slug>/`, `.minerva/worktrees/<NNN-slug>/`, and `git branch --list "*-<slug>"` (local and remote).
+3. Compute the next NNN by scanning local `.minerva/work/`, local branches `[0-9][0-9][0-9]-*` / `minerva/[0-9][0-9][0-9]-*`, and matching remote branches.
+4. Resolve the default branch via `git symbolic-ref refs/remotes/origin/HEAD` → fall back to `main` → fall back to `master`.
+5. Pre-flight gitignore check: `git show <default-branch>:.gitignore` and grep for `.minerva/worktrees/`. If missing, abort with a message pointing at `minerva:init`. Propose does **not** auto-edit `.gitignore` (it may be running from a worktree, where the edit would land on the wrong branch).
+6. `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>` — branching explicitly from `<default-branch>` (not HEAD) so the new unit doesn't stack on an in-flight branch.
+7. `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. All subsequent file ops run inside the worktree.
+8. Create `.minerva/work/<NNN-slug>/` (relative to the worktree root).
+9. Write `proposal.md` and `scratchpad.md`.
+10. Self-review the proposal and fix issues inline.
+11. `git add .minerva/work/<NNN-slug>/` then `git commit -m "chore: initialize <NNN-slug> work unit"`.
+12. Post-write user gate. If the user requests edits, create a follow-up commit (no `--amend` — the initial commit was already published as the branch's starting state).
+13. Suggest `minerva:work` as the next step.
+
+`Out of scope` was extended with an explicit note about worktree abandonment: if the user rejects at the post-write gate, they remove the worktree and branch manually — propose has no `--abandon` flow.
 
 ### `work/SKILL.md` — flip worktree setup to "enter, don't create"
 
-The existing "Worktree setup" section becomes "Worktree entry" with the priority inverted:
+The old "Worktree setup" section is now "Worktree entry" with two named paths:
 
-- **Worktree exists at `.minerva/worktrees/<NNN-slug>/`** (the common case after propose) → `EnterWorktree path: ".minerva/worktrees/<NNN-slug>"`, continue to Setup.
-- **Worktree does not exist BUT `.minerva/work/<NNN-slug>/` exists on `<default-branch>`** (the rare case: a shipped work unit being resurrected after `minerva:cleanup`) → keep the existing creation flow as a documented fallback. Surface a one-line note to the user: "no worktree found — re-creating from the shipped docs on `<default-branch>`."
-- **Neither location has the work unit** → "no such work unit `<NNN-slug>` — run `minerva:propose` first" and stop.
+- **Primary path — worktree exists**: `.minerva/worktrees/<NNN-slug>/` is present (the common case after propose). Call `EnterWorktree` and continue to Setup.
+- **Exceptional path — worktree missing, docs only on default branch**: the resurrection case (shipped + cleaned-up unit being re-opened). Surface a one-line note, re-resolve the default branch, confirm `.minerva/worktrees/` is gitignored (else bail to `minerva:init`), `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`, then EnterWorktree. No file move or commit needed — the docs are already on the branch.
+- **Neither location has the work unit** → "no such work unit — run `minerva:propose` first" and stop.
 
-Target resolution is unchanged: still scans both `.minerva/work/` and `.minerva/worktrees/` because shipped units live on main.
+Target resolution prose was updated to say "active work lives in worktrees; shipped + merged units live in `.minerva/work/` on the default branch" instead of the obsolete "after `minerva:work` runs once, the docs move".
 
 ### `replan/SKILL.md`, `review/SKILL.md`, `promote/SKILL.md`, `ship/SKILL.md` — worktree awareness
 
-After each skill's target-resolution block, insert a uniform "worktree entry" step that reads roughly:
+Each gets a `## Worktree entry` block inserted immediately after `## Target resolution`. The block reads:
 
-> **Worktree entry.** If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is not in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"` before reading or writing anything. If the docs only live on `<default-branch>` (a shipped unit being inspected), operate on the main repo without entering a worktree.
+> If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is not in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo. If the session is already in the matching worktree, do nothing.
 
-This makes the skills robust against being invoked from a stale cwd — they always end up in the right working tree before touching files or running git commands.
-
-`ship/SKILL.md` already has a partial worktree-handling note ("prefer entering the worktree before shipping"); replace the prose with the concrete `EnterWorktree` call.
+`review` adds a clause for the no-minerva-context path (skip the worktree entry, run code review in the user's cwd). `ship` adds a clause for bare mode (no worktree entry). `ship`'s older "Worktree handling" section near the bottom was rewritten to cross-reference the new "Worktree entry" block instead of restating the rules.
 
 ### `cleanup/SKILL.md` — no worktree entry
 
-Cleanup removes worktrees, so it must stay outside the worktrees it's removing. The existing "Not currently inside a worktree being cleaned" pre-flight check already enforces this. No structural changes — but add a one-line cross-reference acknowledging the new propose-creates-worktree flow so future readers don't expect cleanup to also handle creation.
+Cleanup removes worktrees, so it must stay outside. The existing pre-flight check ("Not currently inside a worktree being cleaned") was extended with a one-line cross-reference: "Unlike other lifecycle skills, cleanup does not call `EnterWorktree` — its job is to remove worktrees, so it must operate from the parent repo." No structural change.
 
 ### `init/SKILL.md` — install gitignore entry
 
-Step 2 ("gitignore check") gets a new sub-step: if `.minerva/worktrees/` is **not** present in `.gitignore`, append it and report `gitignore: added .minerva/worktrees/`. If it is present, report `gitignore ✓ (worktrees ignored)`. Existing gitignore-violation detection (patterns that would exclude `.minerva/knowledge/` or `.minerva/work/`) is unchanged.
+Step 2 ("gitignore check") was split into two parts:
 
-This makes `.minerva/worktrees/` part of init's idempotent scaffold rather than something propose has to install on first run. Knowledge entry `005-decision-gitignore-before-worktree` already documents the constraint; pulling it into init is the natural home.
+- **Part A — flag patterns that would exclude committed dirs** (existing behavior, unchanged): warn on patterns that would exclude `.minerva/`, `.minerva/knowledge/`, `.minerva/work/`, etc. Do not auto-edit; suggest the user fix it.
+- **Part B — install `.minerva/worktrees/` if missing** (new): if no line in `.gitignore` matches `.minerva/worktrees/` (exact or parent pattern), append it and report `gitignore: added .minerva/worktrees/`. If present, report `gitignore ✓ (worktrees ignored)`.
+
+Part B is explicitly part of init's scaffold (not user territory). The report block gained a `.minerva/worktrees/` row. The `Out of scope` note about not editing `.gitignore` was qualified to clarify that init does install the worktrees entry.
 
 ### `using-minerva/SKILL.md` — update lifecycle ownership
 
-Two prose updates:
-
-- In the "Canonical lifecycle order" diagram, change `minerva:work # implementation in a git worktree` to `minerva:work # implementation inside the worktree from propose`, and change `minerva:propose # design + write proposal.md` to `minerva:propose # design + branch + worktree + proposal.md`.
-- In "Common scenarios", the propose blurb gets a sentence: "Propose also creates the work unit's branch and worktree at `.minerva/worktrees/<NNN-slug>/` and enters it — all writes happen in the worktree, not on `<default-branch>`."
+- Lifecycle diagram: `init` mentions `.gitignore for worktrees`; `propose` says `design + branch + worktree + proposal.md (all writes inside the worktree)`; `work` says `enter the existing worktree and implement`; `replan` says it appends inside the worktree; `ship` says it pushes the work-unit branch; `cleanup` says it runs from the parent repo.
+- An "ownership" paragraph below the diagram names propose as the worktree creator, lists all the downstream skills that enter on invocation, and calls out cleanup as the only outside-the-worktree skill.
+- "Common scenarios" entries for `propose` and `work` were updated to describe the new flow.
+- "Working in a minerva project without invoking skills" was updated: active work lives in worktrees, shipped work lives on `main`.
 
 ### `propose-ship/SKILL.md` — minor prose update
 
-The "Phase sequence" comment becomes: "propose now owns worktree creation; work enters the existing worktree." No structural change to the orchestrator — it's still a thin conductor.
-
-### Implementation order
-
-To keep each commit reviewable in isolation:
-
-1. `init/SKILL.md` — gitignore install (small, foundational).
-2. `propose/SKILL.md` — worktree setup phase (the main change).
-3. `work/SKILL.md` — flip priority of worktree-entry vs creation.
-4. `replan`, `review`, `promote`, `ship` — uniform worktree-entry block (can be a single commit since they're parallel changes).
-5. `cleanup/SKILL.md` — cross-reference note.
-6. `using-minerva/SKILL.md`, `propose-ship/SKILL.md` — prose updates reflecting new ownership.
+A paragraph below the phase-sequence diagram names propose as the worktree creator and notes that every downstream phase enters the worktree automatically (or is already in it). Cleanup runs from outside. The orchestrator logic itself is unchanged — it's still a thin conductor.
 
 ## Success criteria
 
-- `plugins/minerva/skills/propose/SKILL.md` runs `git worktree add` and `EnterWorktree` between NNN computation and the first file write, branches explicitly from the resolved default branch, and commits the initial docs on the new branch.
-- `plugins/minerva/skills/work/SKILL.md`'s worktree section lists "worktree exists → EnterWorktree" as the primary path; creation logic is marked as a fallback for shipped-unit resurrection only.
-- `plugins/minerva/skills/replan/SKILL.md`, `review/SKILL.md`, `promote/SKILL.md`, `ship/SKILL.md` each contain an explicit "Worktree entry" block immediately after their Target resolution section, with the same EnterWorktree guidance.
-- `plugins/minerva/skills/init/SKILL.md` adds `.minerva/worktrees/` to `.gitignore` when absent, reports it as part of step 2, and is idempotent (no-op when already present).
-- `plugins/minerva/skills/using-minerva/SKILL.md` describes worktree+branch creation as propose's responsibility in both the lifecycle diagram and the common-scenarios section.
-- `plugins/minerva/skills/propose-ship/SKILL.md` prose reflects that the worktree exists from the propose phase onward.
-- All six target-resolution blocks (`work`, `replan`, `promote`, `review`, `ship`, `cleanup`) preserve the shared 5-step pattern (explicit arg → session context → MRU across both locations → ambiguity → none-found). The blocks are not byte-identical (each has documented skill-specific variation — `review`'s no-minerva-context fallback, `ship`'s bare mode, `cleanup`'s collection-mode default), but the shared rule structure stays consistent across all six.
-- Running `minerva:propose` on a fresh slug in a clean repo produces: a `<NNN-slug>` branch checked out at `.minerva/worktrees/<NNN-slug>/`, a single commit on that branch containing `.minerva/work/<NNN-slug>/{proposal.md,scratchpad.md}`, and no changes to `.minerva/work/` on the default branch.
-
-## Open Questions
-
-(none — resolved at minerva:work start on 2026-05-20)
-
-## Resolutions
-
-- **Resurrection fallback in `work`**: keep the existing worktree-creation flow as a documented fallback for the rare case of resurrecting a shipped + cleaned-up unit (worktree gone, docs only on `<default-branch>`). Mark it explicitly as the exceptional path in the prose.
-- **Abandon path in `propose`**: not added. If the user rejects at the post-write gate and wants to abandon, they run `git worktree remove .minerva/worktrees/<NNN-slug>` plus `git branch -D <NNN-slug>` manually. Adding an `--abandon` flag to propose or extending `cleanup` to handle unmerged work is deferred.
+- `plugins/minerva/skills/propose/SKILL.md` runs `git worktree add` and `EnterWorktree` between NNN computation and the first file write, branches explicitly from the resolved default branch, and commits the initial docs on the new branch. ✓
+- `plugins/minerva/skills/work/SKILL.md`'s worktree section lists "worktree exists → EnterWorktree" as the **Primary path**; creation logic is marked as the **Exceptional path** for shipped-unit resurrection. ✓
+- `plugins/minerva/skills/replan/SKILL.md`, `review/SKILL.md`, `promote/SKILL.md`, `ship/SKILL.md` each contain an explicit `## Worktree entry` block immediately after their Target resolution section, with the same EnterWorktree guidance. ✓
+- `plugins/minerva/skills/init/SKILL.md` adds `.minerva/worktrees/` to `.gitignore` when absent, reports it as part of step 2, and is idempotent (no-op when already present). ✓
+- `plugins/minerva/skills/using-minerva/SKILL.md` describes worktree+branch creation as propose's responsibility in both the lifecycle diagram and the common-scenarios section. ✓
+- `plugins/minerva/skills/propose-ship/SKILL.md` prose reflects that the worktree exists from the propose phase onward. ✓
+- All six target-resolution blocks (`work`, `replan`, `promote`, `review`, `ship`, `cleanup`) preserve the shared 5-step pattern (explicit arg → session context → MRU across both locations → ambiguity → none-found). The blocks are not byte-identical (each has documented skill-specific variation — `review`'s no-minerva-context fallback, `ship`'s bare mode, `cleanup`'s collection-mode default), but the shared rule structure stays consistent across all six. ✓
+- Running `minerva:propose` on a fresh slug in a clean repo produces: a `<NNN-slug>` branch checked out at `.minerva/worktrees/<NNN-slug>/`, a single commit on that branch containing `.minerva/work/<NNN-slug>/{proposal.md,scratchpad.md}`, and no changes to `.minerva/work/` on the default branch. ✓ (dogfooded for this very work unit — branch `010-worktree-creation-in-propose` was created from main, EnterWorktree'd, and the first commit `7863801 chore: initialize 010-worktree-creation-in-propose work unit` matches the expected shape).
