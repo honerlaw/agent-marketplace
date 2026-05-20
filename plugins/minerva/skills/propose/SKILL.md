@@ -37,7 +37,9 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
 ## On approval — worktree setup + file writes
 
-Steps 1–4 run from the parent repo (typically on `<default-branch>`). Step 5 creates the worktree. Step 6 enters it. Steps 7–11 run **inside the worktree**.
+Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 enters the worktree. Steps 8–13 run **inside the worktree**.
+
+**Non-git repo escape clause:** in a non-git project (no `.git/` directory at the project root), there's nothing to commit and no worktree to create. Skip steps 4, 5, 6, 7, and 11 entirely; run steps 1–3 (NNN computation already has its own non-git fallback), then jump from step 3 to step 8 — create `.minerva/work/<NNN-slug>/` directly at the project root and continue with steps 9, 10, 12, 13.
 
 1. **Derive the slug silently** from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
 
@@ -70,8 +72,6 @@ Steps 1–4 run from the parent repo (typically on `<default-branch>`). Step 5 c
    - If missing → **abort**: "The `.minerva/worktrees/` entry is missing from `.gitignore` on `<default-branch>`. Run `minerva:init` first to install it (init handles this idempotently), or add `.minerva/worktrees/` to `.gitignore` and commit on `<default-branch>` manually before re-running `minerva:propose`."
 
    Do not auto-edit `.gitignore` from propose: propose may be invoked from inside another worktree, where editing `.gitignore` would land the change on the wrong branch. Init is the one place that installs this entry.
-
-   Skip steps 5–6 cleanly in a non-git repo: fall through to creating `.minerva/work/<NNN-slug>/` directly at the project root and continue with steps 7–9. (Steps 10–11 also no-op.)
 
 6. **Create the worktree and branch:**
 
