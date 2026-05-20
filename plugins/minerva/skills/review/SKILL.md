@@ -63,7 +63,7 @@ If the user agrees, exit review, run the `minerva:replan` protocol, then re-ente
 
 ## Code review invocation
 
-Invoke `code-review:code-review` on the same diff resolved above. This always runs — with or without minerva context.
+Invoke the `code-review:code-review` **skill** (via the Skill tool — it is a skill, not a subagent). This always runs — with or without minerva context — on the same diff resolved above.
 
 ## Parallel presentation (when both ran)
 
