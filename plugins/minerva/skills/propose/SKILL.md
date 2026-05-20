@@ -1,6 +1,6 @@
 ---
 name: propose
-description: Use when the user invokes `minerva:propose`, asks to start a new unit of work, or wants to plan/design a new feature, refactor, or investigation for a minerva-tracked project. Runs a brainstorm-style intake flow, asks clarifying questions one at a time, proposes 2–3 approaches, presents the design in sections, and writes the approved design to .minerva/work/NNN-<slug>/proposal.md.
+description: Use when the user invokes `minerva:propose`, asks to start a new unit of work, or wants to plan/design a new feature, refactor, or investigation for a minerva-tracked project. Runs a brainstorm-style intake flow, asks clarifying questions one at a time, proposes 2–3 approaches, presents the design in sections, writes the approved design to .minerva/work/NNN-<slug>/proposal.md, then runs a self-review and a post-write user gate.
 ---
 
 Start a new work unit by brainstorming and writing its proposal.
@@ -23,26 +23,40 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
    - If no description but current-session chat history is present → read the history and repo structure, state the inferred intent ("Based on our conversation, it sounds like you want to X — is that right?"), and let the user confirm or redirect.
    - If no description and no relevant current-session history → ask "What would you like to build?"
 
-2. **Explore project context.** Read `CLAUDE.md` / `AGENTS.md` if present, skim `.minerva/knowledge/`, glance at recent `.minerva/work/NNN-*/proposal.md` files for tone and conventions. This informs the questions you'll ask.
+2. **Scope check.** Before asking clarifying questions, decide whether the request fits a single work unit. If it spans multiple independent subsystems ("build a platform with chat, billing, analytics", "rewrite the entire data layer"), surface this immediately and help the user decompose into smaller work units. Each sub-unit gets its own `minerva:propose` run. Do not produce a 500-line proposal for work that should be three separate units.
 
-3. **Ask clarifying questions one at a time.** Cover purpose, constraints, and success criteria. Prefer multiple-choice. Don't batch.
+3. **Explore project context.** Read `CLAUDE.md` / `AGENTS.md` if present, skim `.minerva/knowledge/` (and `.minerva/decisions/` if it still exists — legacy directory), glance at recent `.minerva/work/NNN-*/proposal.md` files for tone and conventions. This informs the questions you'll ask.
 
-4. **Propose 2–3 approaches** with tradeoffs and a recommendation. Lead with the recommendation. Iterate based on user feedback.
+4. **Ask clarifying questions one at a time.** Cover purpose, constraints, and success criteria. Prefer multiple-choice. Don't batch.
 
-5. **Present the design in sections** (Goal, Why, Approach, Open Questions). Get approval per section before moving on.
+5. **Propose 2–3 approaches** with tradeoffs and a recommendation. Lead with the recommendation. Iterate based on user feedback.
 
-6. **Hard gate:** do not write any file until the user has explicitly approved the design.
+6. **Present the design in sections** (Goal, Why, Approach, Success criteria, Open Questions). Get approval per section before moving on.
+
+7. **Pre-write hard gate:** do not write any file until the user has explicitly approved every section.
 
 ## On approval — file writes
 
 1. Derive the slug silently from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
 
-2. Check for a duplicate: if `.minerva/work/` already contains an entry matching the derived slug (any `.minerva/work/NNN-<slug>/`), do **not** write. Tell the user the existing path and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
+2. **Duplicate slug check** — look for `.minerva/work/NNN-<slug>/` on disk and also for any branch named `*-<slug>` (`git branch --list "*-<slug>"`, `git branch -r --list "*-<slug>"`). If found, do **not** write. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
 
-3. Compute the next NNN under `.minerva/work/`:
-   - List entries matching `^[0-9]{3}-` in `.minerva/work/`.
-   - Take `max + 1`, padded to 3 digits.
-   - If `.minerva/work/` doesn't exist, create it and start at `001`.
+3. **Compute the next NNN** by scanning **all three** sources so parallel work in worktrees and remotes doesn't collide:
+
+   ```
+   # local work directory
+   ls -1 .minerva/work/ | grep -E '^[0-9]{3}-'
+
+   # local branches (catches in-flight worktrees whose docs left .minerva/work/)
+   git branch --list '[0-9][0-9][0-9]-*' --format '%(refname:short)'
+   git branch --list 'minerva/[0-9][0-9][0-9]-*' --format '%(refname:short)'
+
+   # remote branches (catches work shipped from elsewhere)
+   git ls-remote --heads origin '[0-9][0-9][0-9]-*' 2>/dev/null
+   git ls-remote --heads origin 'minerva/[0-9][0-9][0-9]-*' 2>/dev/null
+   ```
+
+   Parse the 3-digit prefix from each, take the max across all sources, add 1, pad to 3 digits. If none exist, start at `001`. Skip the git steps cleanly in a non-git repo or when offline (treat the source as empty).
 
 4. Create `.minerva/work/NNN-<slug>/`.
 
@@ -61,7 +75,12 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
    <approved motivation>
 
    ## Approach
-   <approved approach — will be rewritten by /promote to describe what shipped>
+   <approved approach — will be rewritten by minerva:promote to describe what shipped>
+
+   ## Success criteria
+   - <concrete, checkable item 1>
+   - <concrete, checkable item 2>
+   <each item must be objectively answerable yes/no when implementation is "done">
 
    ## Open Questions
    - <any remaining items>
@@ -80,8 +99,22 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
    ```
 
-7. Report the created path (including the derived slug). Suggest `minerva:work` as the next step.
+7. **Self-review the written proposal.** Re-read `proposal.md` with fresh eyes and fix inline:
+   - **Placeholders** — any `TBD`, `TODO`, vague phrasing, or incomplete sections.
+   - **Internal consistency** — does `## Approach` actually achieve `## Goal`? Do `## Success criteria` cover what `## Goal` promises?
+   - **Ambiguity** — could any requirement be read two different ways? Pick one and make it explicit.
+   - **Scope** — is this still a single work unit, or did the prose drift into multi-unit territory? If the latter, stop and re-decompose with the user.
+
+   Fix issues inline. No need to re-review — just fix and move on.
+
+8. **Post-write user gate.** Report the created path and ask:
+
+   > "Proposal written to `.minerva/work/NNN-<slug>/proposal.md`. Please review the file directly and let me know if you want to change anything before we start work."
+
+   Wait for the user's response. If they request changes, edit `proposal.md` directly and re-run the self-review. Only once the user approves the written file is the proposal considered final.
+
+9. Suggest `minerva:work` as the next step.
 
 ## Out of scope
 
-This skill stops at writing the files. It does **not** invoke any implementation skill — `minerva:work` is the next phase.
+This skill stops at writing and confirming the files. It does **not** invoke any implementation skill — `minerva:work` is the next phase.

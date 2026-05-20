@@ -1,6 +1,6 @@
 ---
 name: work
-description: Use when the user invokes `minerva:work`, asks to implement or resume a minerva work unit, or is ready to start coding on a proposed feature. Reads the proposal and any replans, maintains a live scratchpad, and auto-invokes the minerva:replan protocol when reality drifts in a load-bearing way.
+description: Use when the user invokes `minerva:work`, asks to implement or resume a minerva work unit, or is ready to start coding on a proposed feature. Reads the proposal and any replans, maintains a live scratchpad, and auto-invokes the minerva:replan protocol when reality drifts in a load-bearing way. Checks proposal Open Questions on resume and proposal Success criteria before signaling completion.
 ---
 
 Implement the active work unit while maintaining the scratchpad and honoring the persistence hierarchy.
@@ -8,19 +8,23 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 ## Usage
 
 - `minerva:work` — resume the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
+- `minerva:work 005-add-payments` — operate on the named unit explicitly (slug or path accepted)
 
 ## Target resolution
 
-1. Check current-session chat history for a mentioned work unit (e.g. a unit name, slug, or path that appeared in conversation). If one is clearly referenced, use it.
-2. Fall back to the most-recently-modified `.minerva/work/NNN-*/` by directory mtime — check **both** `.minerva/work/` on `main` and `.minerva/worktrees/NNN-*/` (docs move to the worktree on first invocation).
-3. If multiple candidates exist and context is ambiguous, list them and ask the user which to target.
-4. `.minerva/work/` missing or empty and no worktrees exist → report "no work units found — run `minerva:propose` first" and stop.
+Same pattern used by `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
+
+1. **Explicit argument** — if the user passed a slug or path (`minerva:work 005-foo` or a full `.minerva/work/...` path), resolve it directly. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` — whichever exists wins.
+2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
+3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`, take the most-recently-modified by directory mtime. After `minerva:work` runs once, the docs for that unit live in the worktree, not on `main` — both locations must be scanned every time.
+4. **Ambiguity** — if multiple recent candidates exist and context can't pick, list them and ask the user.
+5. **None found** — report "no work units found — run `minerva:propose` first" and stop.
 
 ## Worktree setup (run once per work unit, before Setup)
 
 Every work unit runs in an isolated git worktree. This section runs **before** reading docs.
 
-1. **Determine NNN-slug** from the resolved target (e.g. `005-work-in-git-worktree`).
+1. **Determine NNN-slug** from the resolved target (e.g. `005-add-payments`).
 
 2. **Check for an existing worktree** at `.minerva/worktrees/NNN-slug/`.
    - **Exists** → the worktree is already initialized. Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"` and continue to Setup.
@@ -36,6 +40,7 @@ Every work unit runs in an isolated git worktree. This section runs **before** r
    ```
    git worktree add -b NNN-slug .minerva/worktrees/NNN-slug
    ```
+   (Branch names intentionally start with the NNN prefix so reviewers can immediately tie a branch to its work-unit number. Propose scans this pattern to avoid NNN collisions.)
 
 5. **Move the work unit docs** from `.minerva/work/NNN-slug/` into the worktree:
    ```
@@ -43,7 +48,7 @@ Every work unit runs in an isolated git worktree. This section runs **before** r
    mv .minerva/work/NNN-slug .minerva/worktrees/NNN-slug/.minerva/work/NNN-slug
    ```
 
-6. **Commit the docs on the branch** (from the main repo):
+6. **Commit the docs on the branch:**
    ```
    git -C .minerva/worktrees/NNN-slug add .minerva/work/NNN-slug/
    git -C .minerva/worktrees/NNN-slug commit -m "chore: initialize NNN-slug work unit"
@@ -59,7 +64,10 @@ All paths below are relative to the worktree root (`.minerva/worktrees/NNN-slug/
 2. Read **all** `.minerva/work/NNN-slug/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
 3. Read `.minerva/work/NNN-slug/scratchpad.md` to figure out where work left off.
 4. Glance at `git status` and the last 3 commits (run from inside the worktree) to corroborate.
-5. **Summarize the resumption point** to the user in one short paragraph before doing anything else: what the goal is, what's been done, what's next. Confirm before proceeding.
+5. **Resolve open questions.** If `## Open Questions` in `proposal.md` has unresolved items, surface them to the user before implementation begins:
+   > "The proposal lists these open questions — let's settle them before implementing: [list]. Once answered, I'll edit the proposal to record the resolutions."
+   When the user answers, edit `proposal.md` to either remove resolved items from `## Open Questions` or move them into `## Approach` as decisions.
+6. **Summarize the resumption point** to the user in one short paragraph: what the goal is, what's been done, what's next. Confirm before proceeding.
 
 ## Implementation protocol — apply throughout the session
 
@@ -97,7 +105,14 @@ Continuously check: does the approach I'm taking still match `proposal.md` (as s
 
 ### Completion signal
 
-When you believe implementation is done (the proposal's success criteria are met, any tests pass, the visible scope is delivered), surface `minerva:promote` as the next step. Do not run it automatically — that's the user's call.
+Implementation is **done** when every item in `## Success criteria` (as amended by replans) can be honestly checked off. Before suggesting `minerva:promote`:
+
+1. Re-read `## Success criteria` from `proposal.md`.
+2. For each item, state objectively whether it's met (with evidence: tests pass, file exists, behavior verified, etc.).
+3. If any item is not met, do not suggest promote — keep working or trigger `minerva:replan` if the criterion itself is wrong.
+4. If every item is met, surface this checklist to the user and recommend `minerva:promote` as the next step. Do not run promote automatically — that's the user's call.
+
+If the proposal has no `## Success criteria` section (e.g. it was authored before that section existed), fall back to the proposal's `## Goal` paragraph as the implicit criterion and note the gap to the user.
 
 ## Out of scope
 
