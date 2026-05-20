@@ -1,7 +1,7 @@
 # Proposal: grill-plan-before-approval
 
 **Date**: 2026-05-20
-**Status**: Draft
+**Status**: Shipped (2026-05-20)
 
 ## Goal
 
@@ -28,6 +28,10 @@ The current propose flow gathers requirements via clarifying questions during in
 
 4. Leave `plugins/minerva/skills/using-minerva/SKILL.md` alone. The grilling step is an internal protocol detail of propose and replan; surfacing it at the top-level user guide would add noise without changing how the user invokes anything.
 
+5. Decisions folded from Open Questions:
+   - **Standalone ad-hoc invocation is implicit, not explicit.** Write the description and body so they read naturally when triggered standalone, but don't add a dedicated "Standalone usage" section. If ad-hoc use turns out to be common, a follow-up unit can formalize it.
+   - **No hard cap on grill questions.** Rely on LLM judgment plus user short-circuit phrases ("good enough", "stop grilling", "ship it"). Encode that termination condition explicitly in the skill body so the LLM knows when to stop.
+
 ## Success criteria
 
 - `plugins/minerva/skills/grill-plan/SKILL.md` exists with valid frontmatter (`name: grill-plan` plus a description that triggers on standalone use and references the propose/replan callers) and a body covering all the directives listed in Approach step 1.
@@ -39,5 +43,4 @@ The current propose flow gathers requirements via clarifying questions during in
 
 ## Open Questions
 
-- Should `minerva:grill-plan` be reusable standalone (e.g., user invokes it ad-hoc on an existing `proposal.md` after the fact)? Default for this unit: the skill's prompt is openly written enough that ad-hoc use works implicitly, but no explicit ad-hoc invocation guide is added. If standalone use turns out to be common, a follow-up unit can add a usage section.
-- Hard cap on the number of grill questions? Default: no cap. Rely on LLM judgment plus the user short-circuit phrases ("good enough", "stop grilling", "ship it"). If grilling sessions consistently run too long in practice, a soft cap can be added in a follow-up.
+(None — Open Questions were resolved into Approach step 5 before implementation began.)
