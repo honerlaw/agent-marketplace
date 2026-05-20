@@ -1,6 +1,6 @@
 ---
 name: replan
-description: Use when the user invokes `minerva:replan`, or when work on a minerva unit has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting. Also use to amend an approved proposal before `minerva:work` starts (pre-work tweaks). Appends a dated divergence entry to .minerva/work/NNN-slug/replan.md for the current work unit.
+description: Use when the user invokes `minerva:replan`, or when work on a minerva unit has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting. Also use to amend an approved proposal before `minerva:work` starts (pre-work tweaks). Drafts the new plan, stress-tests it via `minerva:grill-plan` before approval, then appends a dated divergence entry to .minerva/work/NNN-slug/replan.md for the current work unit.
 ---
 
 Append a dated replan entry to the current work unit when reality has diverged from the proposal, OR amend an approved proposal pre-work.
@@ -46,8 +46,9 @@ Same brainstorming pattern as `minerva:propose`, but framed around divergence:
    - **New plan** — the revised approach
 3. **Ask clarifying questions one at a time** to fill in any of the three pieces that aren't already obvious from the conversation or files.
 4. **Propose 2–3 alternative new plans** if the path forward isn't already settled. Iterate.
-5. **Present the resulting entry** for approval before writing.
-6. **Hard gate:** do not append to the file until the user has approved the entry.
+5. **Draft the replan entry internally**, then **stress-test it before showing it for approval.** Assemble the Original plan / What changed / New plan triple in conversation (do not write to disk yet) and invoke `minerva:grill-plan` against it. Let grill-plan walk the decision tree, edit affected pieces in place as answers surface, and return only once shared understanding is reached. The entry that exits grilling is what step 6 presents.
+6. **Present the resulting entry** for approval before writing.
+7. **Hard gate:** do not append to the file until the user has approved the entry.
 
 ## On approval — file write
 
