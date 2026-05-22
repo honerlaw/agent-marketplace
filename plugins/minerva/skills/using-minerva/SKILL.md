@@ -37,6 +37,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Implementation is done — finalize the record | `minerva:promote` (no argument) |
 | Ready to commit, open a PR, watch CI, and merge | `minerva:ship` |
 | PR merged — tidy up the worktree and branch | `minerva:cleanup` |
+| Something is broken — investigate a live incident or a dev bug end-to-end | `minerva:triage` |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions) | `minerva:propose-ship-auto` |
 
