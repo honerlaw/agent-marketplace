@@ -20,7 +20,9 @@ git pull  # symlink keeps the plugin live immediately
 
 ## Plugins
 
+<!-- Source of truth for each plugin's "Skills" cell: that plugin's `skills/` subdirectory. When you add a skill there, add its `plugin:skill-name` to the cell here too. -->
+
 | Plugin | Skills | Description |
 |--------|--------|-------------|
 | utils | `humanizer` | Miscellaneous utility skills |
-| minerva | `minerva:init` `minerva:propose` `minerva:replan` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` `minerva:propose-ship` `minerva:propose-ship-auto` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads. `propose-ship` conducts the whole lifecycle with user gates; `propose-ship-auto` replaces the gates with a 3-agent Proponent/Skeptic/Arbiter consensus panel. |
+| minerva | `minerva:init` `minerva:propose` `minerva:replan` `minerva:grill-plan` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` `minerva:cleanup` `minerva:propose-ship` `minerva:propose-ship-auto` `minerva:using-minerva` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads. `propose-ship` conducts the whole lifecycle with user gates; `propose-ship-auto` replaces the gates with a 3-agent Proponent/Skeptic/Arbiter consensus panel. |

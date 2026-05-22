@@ -21,6 +21,8 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 
 ## Skill decision matrix
 
+<!-- Source of truth: each row's skill text comes from the skill's SKILL.md `description:` frontmatter. When you add a skill to `plugins/minerva/skills/`, add a row here too (unless self-referencing this skill). -->
+
 | Situation | Skill |
 |---|---|
 | First time using minerva in this project | `minerva:init` |
@@ -28,6 +30,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Resuming work on an existing unit | `minerva:work` (or `minerva:work <slug>` to target a specific unit) |
 | The plan still holds — keep going | (no skill — continue work normally) |
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
+| Just drafted a plan and want to stress-test it before approving | `minerva:grill-plan` (auto-invoked by `minerva:propose` and `minerva:replan`; usable standalone on any drafted plan) |
 | Approved a proposal but want to tweak it before coding starts | `minerva:replan` (pre-work amendment mode) |
 | Just hit something that's clearly a durable decision, mid-work | `minerva:promote "<short description>"` |
 | Want to audit shipped code against the proposal | `minerva:review` |
@@ -35,6 +38,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Ready to commit, open a PR, watch CI, and merge | `minerva:ship` |
 | PR merged — tidy up the worktree and branch | `minerva:cleanup` |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
+| Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions) | `minerva:propose-ship-auto` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
