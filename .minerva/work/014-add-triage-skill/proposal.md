@@ -1,7 +1,7 @@
 # Proposal: add-triage-skill
 
 **Date**: 2026-05-22
-**Status**: Draft
+**Status**: Shipped (2026-05-22)
 
 ## Goal
 
@@ -67,9 +67,9 @@ The skill body includes a short paragraph explaining the two `.minerva/` directo
 
 Three surfaces updated in the same commit:
 
-- `plugins/minerva/skills/using-minerva/SKILL.md` — add a row to the decision matrix. Situation phrasing covers both incident and dev-bug surfaces.
-- `plugins/minerva/README.md` — add a row to the Skills table, lifecycle-positioned appropriately (likely near `using-minerva` since triage is orientation/diagnostic, not part of the propose→ship lifecycle).
-- `README.md` (repo root) — append `minerva:triage` to the minerva row's Skills cell.
+- `plugins/minerva/skills/using-minerva/SKILL.md` — row added between `cleanup` and `propose-ship` with situation phrasing "Something is broken — investigate a live incident or a dev bug end-to-end".
+- `plugins/minerva/README.md` — row added between `propose-ship-auto` and `using-minerva` in the Skills table.
+- `README.md` (repo root) — `minerva:triage` inserted between `propose-ship-auto` and `using-minerva` in the minerva row's Skills cell.
 
 ### Out-of-scope: seekless migration
 
