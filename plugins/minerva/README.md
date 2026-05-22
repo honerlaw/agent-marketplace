@@ -14,11 +14,14 @@ The heuristic for what to keep: **would a new engineer (or new agent) joining th
 
 ## Skills
 
+<!-- Source of truth: each row's text is excerpted from the skill's SKILL.md `description:` frontmatter. When you add a skill to `plugins/minerva/skills/`, add a row here too. -->
+
 | Skill | Description |
 |-------|-------------|
 | `minerva:init` | One-time scaffolding for a project. Creates `.minerva/work/` and `.minerva/knowledge/` with `.gitkeep`s, checks `.gitignore`, warns about any legacy `.minerva/decisions/`, adds a Routing section to the agent file (CLAUDE.md / AGENTS.md / GEMINI.md), and offers to commit. Idempotent. |
 | `minerva:propose ["description"]` | Brainstorm-style proposal authoring for a new work unit. Infers intent from context or asks; derives slug from the agreed goal; scans local + remote branches and `.minerva/work/` to avoid NNN collisions; writes `.minerva/work/NNN-<slug>/proposal.md` (with a Success criteria section); self-reviews the written file; then gates on user re-read. |
 | `minerva:replan` | Same brainstorm flow, but appends a dated divergence entry to `.minerva/work/NNN-<slug>/replan.md`. Used for mid-work divergence (auto-triggered by `minerva:work`) and for pre-work proposal amendments. |
+| `minerva:grill-plan` | Interviews the user relentlessly about a drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached. Invoked by `minerva:propose` after approach selection and by `minerva:replan` after the new-plan brainstorm; also usable standalone on any drafted plan. |
 | `minerva:work` | Enter implementation mode in an isolated git worktree. Reads the proposal + replans, surfaces any unresolved Open Questions, maintains `scratchpad.md`, auto-triggers `minerva:replan` on load-bearing divergence, and verifies Success criteria before suggesting promote. |
 | `minerva:promote [item]` | No-arg: end-of-work full pass (promote concrete past-tense knowledge → `.minerva/knowledge/`, rewrite proposal to match reality, archive scratchpad, dispose of TODOs explicitly via `followups.md` / new proposal / discard). With arg: single-item mid-work promote. Idempotent. |
 | `minerva:review` | Audit the implementation against the proposal (and `.minerva/knowledge/` invariants) by reviewing the local diff. Runs `code-review:code-review` when a PR exists, else does a structured inline check using the same finding format. Triage state persisted to scratchpad for resume. Runs **before** `minerva:promote` so findings flow through the partition. |
