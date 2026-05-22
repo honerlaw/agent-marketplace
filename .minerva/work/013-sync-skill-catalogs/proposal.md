@@ -1,7 +1,7 @@
 # 013 — sync skill catalogs
 
 ## Status
-Draft
+Shipped (2026-05-21)
 
 ## Goal
 Update minerva plugin orientation surfaces so every skill under `plugins/minerva/skills/` is referenced in catalog-style enumerations.
@@ -17,17 +17,17 @@ These surfaces orient humans browsing the repo and Claude itself (`using-minerva
 
 ## Approach
 
-1. **`plugins/minerva/README.md` skills table.** Insert a single new row for `minerva:grill-plan` between the existing `minerva:replan` and `minerva:work` rows. The existing table order is lifecycle order (`init → propose → replan → work → promote → review → ship → cleanup → propose-ship → propose-ship-auto → using-minerva`); `grill-plan` belongs in the plan-drafting cluster since it is invoked by both `propose` and `replan`. Placing it after `replan` and before `work` preserves the planning-vs-execution boundary.
+1. **`plugins/minerva/README.md` skills table.** Added a single new row for `minerva:grill-plan` between the existing `minerva:replan` and `minerva:work` rows. The existing table order was lifecycle order (`init → propose → replan → work → promote → review → ship → cleanup → propose-ship → propose-ship-auto → using-minerva`); `grill-plan` was placed in the plan-drafting cluster since it is invoked by both `propose` and `replan`, preserving the planning-vs-execution boundary.
 
-2. **`plugins/minerva/skills/using-minerva/SKILL.md` skill decision matrix.** Add two rows:
+2. **`plugins/minerva/skills/using-minerva/SKILL.md` skill decision matrix.** Added two rows:
    - `grill-plan` row, slotted between the existing "Reality has diverged…" `minerva:replan` row and the "Approved a proposal but want to tweak it…" row. Situation phrasing: *"Just drafted a plan and want to stress-test it before approving"* → `minerva:grill-plan` (auto-invoked by `minerva:propose` and `minerva:replan`; usable standalone on any drafted plan).
-   - `propose-ship-auto` row, immediately after the existing `propose-ship` row. Situation phrasing: *"Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions)"* → `minerva:propose-ship-auto`. Phrasing is deliberately distinct from `propose-ship`'s existing "Run the whole lifecycle end-to-end from scratch" so readers wanting gates pick `propose-ship` and readers wanting full automation pick `propose-ship-auto`.
+   - `propose-ship-auto` row, immediately after the existing `propose-ship` row. Situation phrasing: *"Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions)"* → `minerva:propose-ship-auto`. The phrasing was made deliberately distinct from `propose-ship`'s existing "Run the whole lifecycle end-to-end from scratch" so readers wanting gates pick `propose-ship` and readers wanting full automation pick `propose-ship-auto`.
 
-3. **Top-level `README.md` plugins-table.** In the row for `minerva`, edit the "Skills" cell to include `minerva:cleanup`, `minerva:grill-plan`, `minerva:using-minerva` alongside the existing 9. Use the same space-separated backtick-wrapped format as the existing list. If the cell becomes visually unwieldy after the edit, the implementer may insert `<br>` between logical groupings — judged at write-time.
+3. **Top-level `README.md` plugins-table.** In the row for `minerva`, edited the "Skills" cell to include `minerva:cleanup`, `minerva:grill-plan`, `minerva:using-minerva` alongside the existing 9 — bringing the cell to all 12 skills. Same space-separated backtick-wrapped format. Cell remained visually fine without `<br>` groupings.
 
-4. **Text-sourcing rule for new rows.** Each new row's description is a verbatim or lightly-trimmed excerpt of the corresponding skill's `SKILL.md` `description:` frontmatter. If the frontmatter begins with a `"Use when…"` trigger, trim that prefix and take the next descriptive clause. No paraphrasing or fresh-writing. This rule applies to NEW rows only — existing rows keep their current rich-prose style. Retroactive rewrite is out of scope.
+4. **Text-sourcing rule for new rows.** Each new row's description text is a verbatim or lightly-trimmed excerpt of the corresponding skill's `SKILL.md` `description:` frontmatter. `"Use when…"` trigger prose was trimmed off the front; the next descriptive clause carried into the row. No paraphrasing. The rule applies to NEW rows only — existing rows kept their rich-prose style (retroactive rewrite was out of scope). The Phase-2 completion-verification panel caught a paraphrase in the first draft of the `grill-plan` row; the commit was amended to use a faithful excerpt before promote.
 
-5. **HTML-comment convention reminder above each catalog table.** Add a single `<!-- ... -->` line above each of the three catalog surfaces noting: *"Source of truth: each row's text is excerpted from the skill's SKILL.md `description:` frontmatter. When you add a skill to `plugins/minerva/skills/`, add a row here too."* This is a **zero-infrastructure write-time convention** — qualitatively distinct from CI/script drift-prevention automation (which was deliberately scoped out by the scope-check panel). It costs one line per catalog, adds zero ongoing maintenance burden, and degrades gracefully — an author who ignores it produces the same drift we are fixing today, no worse.
+5. **HTML-comment convention reminder above each catalog table.** Added a single `<!-- ... -->` line above each of the three catalog surfaces noting: *"Source of truth: each row's text is excerpted from the skill's SKILL.md `description:` frontmatter. When you add a skill to `plugins/minerva/skills/`, add a row here too."* This is a **zero-infrastructure write-time convention** — distinct from CI/script drift-prevention automation (deferred to a follow-up; see `followups.md`).
 
 ## Success criteria
 
