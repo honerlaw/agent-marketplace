@@ -404,7 +404,21 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 > The company plans to open two more locations next year.
 
 
-### 26. Hyphenated Word Pair Overuse
+### 26. Uniform Contraction Usage
+
+**Problem:** AI uses contractions with perfect consistency, either always contracting or never contracting. Human writers are inconsistent. They will write "don't" in one paragraph and "do not" in the next without thinking about it. Some writers also deliberately avoid contractions as a stylistic choice. When voice calibrating, check whether the writer uses contractions, avoids them, or mixes them, and match that pattern.
+
+**Before:**
+> We don't need to worry about that. It doesn't matter if the config isn't set. They won't notice the difference. You shouldn't change it.
+
+**After (matching a writer who avoids contractions):**
+> We do not need to worry about that. It does not matter if the config is not set. They will not notice the difference. You should not change it.
+
+**After (matching a writer who mixes naturally):**
+> We don't need to worry about that. It does not matter if the config isn't set. They won't notice the difference. You should not change it.
+
+
+### 27. Hyphenated Word Pair Overuse
 
 **Words to watch:** third-party, cross-functional, client-facing, data-driven, decision-making, well-known, high-quality, real-time, long-term, end-to-end
 
@@ -417,7 +431,7 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 > The cross functional team delivered a high quality, data driven report on our client facing tools. Their decision making process was known for being thorough and detail oriented.
 
 
-### 27. Persuasive Authority Tropes
+### 28. Persuasive Authority Tropes
 
 **Phrases to watch:** The real question is, at its core, in reality, what really matters, fundamentally, the deeper issue, the heart of the matter
 
@@ -430,7 +444,7 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 > The question is whether teams can adapt. That mostly depends on whether the organization is ready to change its habits.
 
 
-### 28. Signposting and Announcements
+### 29. Signposting and Announcements
 
 **Phrases to watch:** Let's dive in, let's explore, let's break this down, here's what you need to know, now let's look at, without further ado
 
@@ -443,7 +457,7 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 > Next.js caches data at multiple layers, including request memoization, the data cache, and the router cache.
 
 
-### 29. Fragmented Headers
+### 30. Fragmented Headers
 
 **Signs to watch:** A heading followed by a one-line paragraph that simply restates the heading before the real content begins.
 
