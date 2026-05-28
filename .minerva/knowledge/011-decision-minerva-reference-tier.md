@@ -23,7 +23,7 @@ Discovery convention for `.minerva/reference/`: **filename-driven**, not frontma
 
 ## Implications
 
-- Projects using minerva can place present-tense operational docs in `.minerva/reference/`. Skills like `minerva:triage` discover them at runtime without per-project configuration.
+- Projects using minerva can place present-tense operational docs in `.minerva/reference/`. Skills like `minerva:debug` discover them at runtime without per-project configuration.
 - Files in `.minerva/reference/` should be named descriptively (`topology.md`, `observability.md`, `database.md`, etc.) so consuming skills can pick relevance from filename + symptom alone. Avoid generic names (`docs.md`, `notes.md`) that won't help discovery.
 - Pattern-catalog files (recurring bug shapes optimized for rapid skim) should be named `bug-patterns.md`, `incidents.md`, or `patterns.md` so the always-load discovery rule picks them up.
 - New durable learnings still go to `.minerva/knowledge/`. The `.minerva/reference/` tier is for operational facts, not promoted knowledge — they coexist, and a single triage may read from both.
