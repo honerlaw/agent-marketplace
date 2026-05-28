@@ -1,7 +1,7 @@
 # Proposal: rename-triage-to-debug
 
 **Date**: 2026-05-27
-**Status**: Draft
+**Status**: Shipped (2026-05-27)
 
 ## Goal
 
