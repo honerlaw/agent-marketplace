@@ -21,6 +21,7 @@ The companion module ``test_minerva.py`` keeps the non-per-skill checks
 (marketplace registration, plugin.json, feature-cycle absence).
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -73,15 +74,28 @@ def _read_skill(skill: str) -> tuple[str, dict, str]:
     return raw_fm, parsed, body
 
 
+def _present(needle: str, text: str, ignore_case: bool = False) -> bool:
+    """Is ``needle`` present in ``text``?
+
+    ``minerva:<skill>`` tokens are matched on a token boundary so that, e.g.,
+    ``minerva:propose`` is NOT satisfied by ``minerva:propose-ship`` — otherwise
+    deleting a standalone catalog row would slip past the very catalog-sync
+    regression this floor exists to catch.
+    """
+    flags = re.IGNORECASE if ignore_case else 0
+    if needle.startswith("minerva:"):
+        return re.search(re.escape(needle) + r"(?![\w-])", text, flags) is not None
+    if ignore_case:
+        return needle.lower() in text.lower()
+    return needle in text
+
+
 def _anchor_satisfied(anchor, body: str) -> bool:
-    """A plain string must be a substring; an object is an any-of disjunction."""
+    """A plain string must be present; an object is an any-of disjunction."""
     if isinstance(anchor, str):
-        return anchor in body
-    alts = anchor["any_of"]
-    if anchor.get("ignore_case"):
-        low = body.lower()
-        return any(alt.lower() in low for alt in alts)
-    return any(alt in body for alt in alts)
+        return _present(anchor, body)
+    ignore_case = anchor.get("ignore_case", False)
+    return any(_present(alt, body, ignore_case) for alt in anchor["any_of"])
 
 
 def _anchor_label(anchor) -> str:
@@ -162,7 +176,16 @@ def test_cross_surface(skill):
         if not required:
             continue
         text = SURFACE_FILES[surface].read_text()
-        assert token in text, (
+        assert _present(token, text), (
             f"{token} must appear in {SURFACE_FILES[surface].relative_to(REPO_ROOT)} "
             f"(cross_surface.{surface})"
         )
+
+
+def test_token_match_is_boundary_aware():
+    # Guards the Finding-1 fix: a prefix token must not satisfy a longer one.
+    assert _present("minerva:propose", "see minerva:propose for details")
+    assert _present("minerva:propose", "minerva:propose.")
+    assert not _present("minerva:propose", "only minerva:propose-ship here")
+    assert _present("minerva:propose-ship", "minerva:propose-ship runs the lifecycle")
+    assert not _present("minerva:propose-ship", "only minerva:propose-ship-auto here")

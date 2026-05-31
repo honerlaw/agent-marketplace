@@ -43,7 +43,13 @@ An anchor is **either**:
 - a **plain string** — must appear verbatim in the body (case-sensitive); or
 - an **object** `{"any_of": [...], "ignore_case": <bool>}` — at least one alternative must
   appear. `ignore_case: true` folds case for every alternative in the group, which is how the
-  legacy `... in body.lower()` checks are represented.
+  legacy `... in body.lower()` checks are represented. To express a **case-insensitive single
+  anchor**, use a one-element `any_of`: `{"any_of": ["Root cause"], "ignore_case": true}` —
+  there is no `ignore_case` flag on plain-string anchors.
+
+A `minerva:<skill>` anchor (or cross-surface token) is matched on a **token boundary**, so
+`minerva:propose` is not satisfied by `minerva:propose-ship` — a dropped catalog row can't hide
+behind a longer sibling token.
 
 Anchors are deliberately structural string matches, not behavioral assertions — they catch
 "the protocol text that made this skill load-bearing was deleted." Measuring whether the skill

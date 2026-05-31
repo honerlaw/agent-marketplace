@@ -15,8 +15,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLUGIN_DIR = REPO_ROOT / "plugins" / "minerva"
 
-SKILLS_DIR = PLUGIN_DIR / "skills"
-
 
 def test_plugin_json_exists_and_parses():
     plugin_json = PLUGIN_DIR / ".claude-plugin" / "plugin.json"

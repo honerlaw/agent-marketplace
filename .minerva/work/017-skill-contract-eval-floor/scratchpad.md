@@ -8,12 +8,25 @@ Running log for the work unit. Promoted/archived at `minerva:promote`.
 - [3/3 accept, vote 2] approach selection: Approach 1 (externalized per-skill `evals/<skill>/contract.json` + generic parametrized `tests/test_skill_contracts.py`). Vote 1 was 1/3 (Proponent revise / Skeptic revise / Arbiter accept-if-folded); revision folded in: any-of+ignore_case anchors, no-vacuous-pass enumeration of all 13, parity proof before deletion, opaque reserved `behavioral` namespace, pyyaml frontmatter parsing. Vote 2 = 3/3 accept.
 - [3/3 accept] whole-proposal acceptance: Proponent accept / Skeptic accept (concerns folded) / Arbiter accept. Folded before writing: (1) `using-minerva` cross_surface self-exclusion, (2) criterion 6 mechanical no-loss verification, (3) root enumeration at `PLUGIN_DIR` + frame cross_surface as expanding to all 13.
 
+## Panel decisions 2026-05-31 (cont.)
+
+- [3/3 accept] completion verification: Proponent / Skeptic / Arbiter all independently verified by running commands — missing contract reds the suite (`git mv` probe), 89/89 anchors non-vacuous, `lib` collection errors byte-identical to main (pre-existing, out of scope), parity faithful + widening-only. All 7 success criteria honestly met.
+
 ## Panel concerns 2026-05-31
 
 (Logged for the work phase to honor — all already reflected in proposal Approach/Success criteria.)
 - using-minerva contract must OMIT the `using-minerva` body surface (self-reference circular).
 - Parity must be mechanically verified, not eyeballed: suite green after deletion + anchors shown to carry load.
 - Enumeration must root at repo `plugins/minerva/skills/` (no `.minerva/worktrees/` copies).
+
+## Review triage 2026-05-31
+
+- [2/2 accept — tactical 2/3 quorum met] triage panel on review findings. Skeptic verified the boundary regex non-breaking on all 3 real surfaces; only one prefix family exists (`propose` ⊂ `propose-ship` ⊂ `propose-ship-auto`).
+- **Finding 1 [correctness, low/latent] → FIX**: cross_surface + `minerva:`-prefixed anchor matching was plain substring, so `minerva:propose` could be satisfied by `minerva:propose-ship` (blunts catalog-sync detection for the propose family). Fixed via a centralized `_present()` helper applying a token-boundary regex `minerva:<skill>(?![\w-])` to BOTH code paths (`_anchor_satisfied` + `test_cross_surface`). Added `test_token_match_is_boundary_aware` as a regression guard.
+- **Finding 3 [simplicity, low] → FIX**: deleted dead `SKILLS_DIR` binding in `test_minerva.py` (its only consumers migrated out).
+- **Finding 6 [maintainability, low] → FIX**: documented the 1-element `any_of` idiom (case-insensitive single anchor) + the token-boundary behavior in `evals/README.md`.
+- Findings 2, 4, 5 clean (correctness/spec/knowledge) — no disposition. No load-bearing divergence → no replan.
+- Post-fix: minerva suite 74 passed; all 89 anchors re-verified load-bearing under the new boundary-aware matcher.
 
 ## Implementation log
 
