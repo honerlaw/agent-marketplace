@@ -46,6 +46,5 @@
     "root_readme": true,
     "plugin_readme": true,
     "using_minerva_body": true
-  },
-  "behavioral": {}
+  }
 }

@@ -3,13 +3,15 @@
 This directory holds the **eval definitions** for the minerva skills. Each skill
 under `plugins/minerva/skills/<name>/` has a companion `evals/<name>/` directory.
 
-There are two tiers of evaluation. **Only the structural tier exists today**; the
-behavioral tier is a sequenced follow-up (see [Reserved: `behavioral`](#reserved-behavioral)).
+There are two tiers of evaluation, each with its own file:
 
 | Tier | File | What it checks | Runner | Determinism |
 |------|------|----------------|--------|-------------|
 | Structural contract | `evals/<skill>/contract.json` | The SKILL.md still carries its required frontmatter, body anchors, and catalog references | `tests/test_skill_contracts.py` (pytest) | Deterministic — the regression floor |
-| Behavioral value *(future)* | `contract.json` → `behavioral` key | Does invoking the skill produce a materially better outcome than not? | *(Unit 2 — not yet built)* | Non-deterministic, LLM-judged |
+| Behavioral value | `evals/<skill>/behavioral.json` | Does invoking the skill produce a materially better outcome than not? | `scripts/run_skill_evals.py` | Non-deterministic, LLM-judged — **on-demand, not a CI gate** |
+
+The two files are independent: the structural floor never reads `behavioral.json`, and the
+behavioral runner never reads `contract.json`.
 
 ## `contract.json` — structural contract format
 
@@ -31,8 +33,7 @@ behavioral tier is a sequenced follow-up (see [Reserved: `behavioral`](#reserved
     "root_readme": true,                //   README.md
     "plugin_readme": true,              //   plugins/minerva/README.md
     "using_minerva_body": true          //   using-minerva/SKILL.md body
-  },
-  "behavioral": {}                      // RESERVED — owned by the Unit 2 runner (see below)
+  }
 }
 ```
 
@@ -83,13 +84,60 @@ python3 -m pytest tests/test_skill_contracts.py -q
 2. Add `<name>` to the catalogs (root README, plugin README, using-minerva matrix) per the
    catalog-sync constraint.
 3. Create `evals/<name>/contract.json` declaring its contract. The runner fails until you do.
+4. Optionally add `evals/<name>/behavioral.json` with value cases (below).
 
-## Reserved: `behavioral`
+## `behavioral.json` — behavioral value format
 
-The `behavioral` key in every `contract.json` is **reserved for a future behavioral-eval
-runner (Unit 2)** and is intentionally left as an empty, opaque object. Unit 2 will measure
-whether a skill *adds value* — running a task with the skill available vs. without (a control),
-and judging the difference. That runner owns the `behavioral` schema wholesale; the structural
-floor here ignores the key's contents. No behavioral fields are designed yet, on purpose:
-freezing the schema before its only consumer exists would be a guess. See the work unit
-`017-skill-contract-eval-floor` `followups.md` for the Unit 2 seed.
+```jsonc
+{
+  "skill": "debug",                       // must equal the directory name
+  "cases": [
+    {
+      "id": "stale-cache-incident",       // unique within the file
+      "prompt": "Users report ...",       // the task to run with vs without the skill
+      "files": ["path/to/fixture"],       // optional input files
+      "rubric": [                         // criteria the LLM-as-judge scores (1 point each)
+        "Restates the symptom before diagnosing",
+        "Gathers evidence before asserting a cause"
+      ]
+    }
+  ]
+}
+```
+
+There is **no `baseline` field yet** — recording live deltas as a regression baseline is
+deferred to the validation spike (below), which will learn its shape from real runs rather than
+guessing it now.
+
+### Running behavioral evals
+
+```bash
+python3 scripts/run_skill_evals.py --dry-run --skill debug   # validate + print run plan, zero API
+python3 scripts/run_skill_evals.py --skill debug             # live: costs API, non-deterministic
+python3 scripts/run_skill_evals.py --out report.json         # all skills → JSON + markdown
+```
+
+Per case the runner plans three steps — **treatment** (skill available), **control** (skill
+suppressed), and **judge** — then reports `treatment - control` as the per-case "value-added"
+delta. `--dry-run` only parses and prints the plan; it makes no API calls.
+
+### ⚠️ The methodology is PROVISIONAL
+
+Whether the with-minus-without delta is a *stable, meaningful per-skill signal* is **not
+validated**. Two specific unsolved problems:
+
+- **The control is a best-effort stub.** Cleanly running a task *without* one specific
+  auto-discovered skill (while leaving the other 12 available) is unsolved. The default control
+  invocation does not yet guarantee the skill is absent and warns at runtime.
+- **Judge calibration is unproven.** Rubric scores from an LLM-as-judge may be noisy.
+
+The cited prior art (`skill-creator`) does skill **triggering** (making a skill *appear*) and
+**variant-vs-variant** blind comparison — **not** present-vs-absent suppression. So the control
+is a genuinely new problem, not a known pattern to wire up. The first follow-up is a live
+signal-and-control validation spike (1 skill / 1 case / N runs) whose go/no-go can force a
+redesign of the runner; see the work unit's `followups.md`. Treat all reported deltas as
+experimental until that spike lands.
+
+The runner's own logic (parsing, planning, scoring, reporting) is deterministically
+regression-tested in `tests/test_skill_evals.py` with stubbed LLM calls — only the live
+`claude -p` execution is non-deterministic, which is why this tier is on-demand, never a CI gate.

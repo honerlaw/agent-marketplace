@@ -14,8 +14,8 @@ Each skill under ``plugins/minerva/skills/<name>/`` must carry a companion
 This module *enumerates* the skill directories and fails when any of them is
 missing a contract, so coverage can never silently lag the skill set. It is the
 deterministic regression floor; behavioral "does this skill add value" evals are
-a separate, sequenced layer that consumes the same ``evals/`` format (see
-``evals/README.md`` — the reserved ``behavioral`` namespace).
+a separate layer (``scripts/run_skill_evals.py``) that reads sibling
+``evals/<skill>/behavioral.json`` files (see ``evals/README.md``).
 
 The companion module ``test_minerva.py`` keeps the non-per-skill checks
 (marketplace registration, plugin.json, feature-cycle absence).
@@ -132,11 +132,11 @@ def test_contract_well_formed(skill):
     assert contract.get("skill") == skill, (
         f"contract 'skill' field {contract.get('skill')!r} must equal dir name {skill!r}"
     )
-    allowed = {"skill", "frontmatter", "anchors", "cross_surface", "behavioral"}
+    allowed = {"skill", "frontmatter", "anchors", "cross_surface"}
     unknown = set(contract) - allowed
     assert not unknown, f"{skill} contract has unknown keys: {sorted(unknown)}"
-    # The behavioral namespace is reserved for the Unit 2 runner; this floor
-    # treats it as opaque and ignores its contents.
+    # Behavioral "does this skill add value" evals live in a sibling
+    # evals/<skill>/behavioral.json, read by scripts/run_skill_evals.py — not here.
     assert isinstance(contract.get("frontmatter", {}), dict)
     assert isinstance(contract.get("anchors", []), list)
     assert isinstance(contract.get("cross_surface", {}), dict)
