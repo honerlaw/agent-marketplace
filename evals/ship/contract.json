@@ -1,0 +1,72 @@
+{
+  "skill": "ship",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "ship"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    ".minerva/work/",
+    "proposal.md",
+    "gh pr create",
+    "gh pr merge --auto",
+    "git checkout -b",
+    {
+      "any_of": [
+        "bare mode"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "3 iteration",
+        "three iteration"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "auto-merge",
+        "auto merge"
+      ],
+      "ignore_case": true
+    },
+    "minerva:promote",
+    "minerva:review",
+    {
+      "any_of": [
+        "most-recently-modified",
+        "most recently modified"
+      ],
+      "ignore_case": true
+    },
+    "gh pr view",
+    {
+      "any_of": [
+        "Default-branch detection",
+        "default-branch detection"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "post-promote",
+        "post-`minerva:promote`"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

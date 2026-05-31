@@ -1,0 +1,35 @@
+{
+  "skill": "replan",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "replan"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    "replan.md",
+    ".minerva/work/",
+    "Original plan",
+    "What changed",
+    "New plan",
+    {
+      "any_of": [
+        "most-recently-modified",
+        "most recently modified"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

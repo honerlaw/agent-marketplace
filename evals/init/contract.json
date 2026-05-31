@@ -1,0 +1,51 @@
+{
+  "skill": "init",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "init"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    ".minerva/work/",
+    ".minerva/knowledge/",
+    ".gitkeep",
+    ".gitignore",
+    "CLAUDE.md",
+    "AGENTS.md",
+    {
+      "any_of": [
+        "Routing",
+        "## minerva"
+      ]
+    },
+    {
+      "any_of": [
+        "idempotent",
+        "idempotency",
+        "already initialized"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "flat layout",
+        "mv work",
+        "pre-existing"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

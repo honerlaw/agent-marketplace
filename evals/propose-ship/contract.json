@@ -1,0 +1,28 @@
+{
+  "skill": "propose-ship",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "propose-ship"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    "minerva:propose",
+    "minerva:ship",
+    "minerva:cleanup",
+    "minerva:review",
+    "minerva:promote"
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

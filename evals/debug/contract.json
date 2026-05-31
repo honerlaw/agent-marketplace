@@ -1,0 +1,33 @@
+{
+  "skill": "debug",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "debug"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    ".minerva/reference/",
+    ".minerva/knowledge/",
+    "Evidence",
+    {
+      "any_of": [
+        "Root cause"
+      ],
+      "ignore_case": true
+    },
+    "read-only"
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}
