@@ -1,7 +1,7 @@
 # Proposal: skill-contract-eval-floor
 
 **Date**: 2026-05-31
-**Status**: Draft
+**Status**: Shipped (2026-05-31)
 
 > **Unit 1 of 2.** The user's request — "a mechanism to define and run evals against the
 > skills to ensure they do not regress and are actually adding value" — was decomposed by a
@@ -122,12 +122,10 @@ LLM-as-judge) is seeded as a follow-up.
    migration.
 7. Unit 2 (behavioral value runner) is recorded in `followups.md`.
 
-## Open Questions
+## Open Questions (resolved)
 
-- **Cross-surface granularity** — assert exact `using-minerva` table-row situation phrasing, or
-  just skill-token presence? *Lean: presence only (matches what the current tests do;
-  exact-phrasing is brittle).* Non-load-bearing; resolved during work.
-- **Orchestrator anchors** — `propose-ship` / `propose-ship-auto` currently have no body
-  anchors. *Lean: give each a minimal, non-tautological anchor set — e.g. each must reference
-  the skills it orchestrates (`minerva:ship`, `minerva:cleanup`, etc.) — so the contract is not
-  vacuous.* Non-load-bearing; resolved during work.
+- **Cross-surface granularity** — *Resolved: skill-token presence only* (`minerva:<skill>`,
+  matched on a token boundary), not exact table-row phrasing. Exact phrasing is brittle.
+- **Orchestrator anchors** — *Resolved: yes, minimal non-tautological anchors.* `propose-ship`
+  anchors on the skills it sequences (`minerva:propose`/`ship`/`cleanup`/`review`/`promote`);
+  `propose-ship-auto` on `Proponent`/`Skeptic`/`Arbiter`/`panel` + `minerva:ship`/`cleanup`.
