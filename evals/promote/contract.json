@@ -1,0 +1,56 @@
+{
+  "skill": "promote",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "promote"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    {
+      "any_of": [
+        "end-of-work",
+        "end of work"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "single-item",
+        "single item",
+        "with argument"
+      ],
+      "ignore_case": true
+    },
+    "PROMOTE",
+    "DISCARD",
+    {
+      "any_of": [
+        "idempotent",
+        "idempotency"
+      ],
+      "ignore_case": true
+    },
+    ".minerva/knowledge/",
+    ".minerva/work/",
+    {
+      "any_of": [
+        "new engineer",
+        "year"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

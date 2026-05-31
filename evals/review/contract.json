@@ -1,0 +1,44 @@
+{
+  "skill": "review",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "review"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    ".minerva/work/",
+    "proposal.md",
+    "scratchpad.md",
+    {
+      "any_of": [
+        "git diff",
+        "git status"
+      ]
+    },
+    "FIX",
+    "SUGGEST",
+    "IGNORE",
+    "minerva:promote",
+    "minerva:replan",
+    {
+      "any_of": [
+        "most-recently-modified",
+        "most recently modified"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  },
+  "behavioral": {}
+}

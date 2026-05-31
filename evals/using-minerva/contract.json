@@ -1,0 +1,42 @@
+{
+  "skill": "using-minerva",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "using-minerva"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      ".minerva"
+    ]
+  },
+  "anchors": [
+    "minerva:propose",
+    "minerva:replan",
+    "minerva:work",
+    "minerva:promote",
+    "minerva:review",
+    "minerva:ship",
+    ".minerva/work/",
+    ".minerva/knowledge/",
+    {
+      "any_of": [
+        "anti-pattern",
+        "when not to use",
+        "NOT to use"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": false
+  },
+  "behavioral": {}
+}
