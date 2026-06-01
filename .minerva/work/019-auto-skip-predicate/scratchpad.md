@@ -21,6 +21,8 @@ Live working notes for this unit. Promoted to durable knowledge (or discarded) a
 - [1/3 accept → revised → 3/3 accept] approach selection: option A′ (in-skill per-decision skip predicate). Round 1 rejected the original (Phase 0 sizing panel + dual-mode + `--fast` flag) as self-defeating (a panel to decide whether to skip panels) and too coarse; folded toward a per-decision cheap predicate that fails closed into the existing panel.
 - [2/3 accept → revised → 3/3 accept] whole-proposal acceptance. Round 1 Skeptic surfaced two load-bearing gaps (New-plan acceptance + Replan-vs-FIX rows omitted from the "Skippable?" enumeration, contradicting the every-row criterion); revised to a unified never-skippable rule covering all four post-divergence/self-check panels, plus rejected-alternatives logging and the promote-invisibility statement.
 
+- [3/3 accept] completion verification (never-skippable per the very rule this unit adds): all 7 success criteria honestly met against the files; contract suite green (68 passed), contract.json untouched. Skeptic flagged one grammatical elision in the logging prose ("...instead of a panel **are logged**...") — fixed.
+
 ### Work-phase notes carried from the panels
 - Arbiter (whole-proposal): the skip is a **main-LLM unilateral judgment** — the one decision in the taxonomy with no second agent checking it. Mitigated by the "mechanical evidence" clause, but each skip line MUST record its concrete evidence string so a later review/promote can audit that the predicate is honored, not rubber-stamped.
 - Approach clause must be written as an **action** ("did I enumerate ≥2 viable approaches, one strictly dominant") not a self-judgment ("no alternative exists") — the latter reintroduces the detector==suspect gameability.

@@ -177,7 +177,7 @@ After every panel call (regardless of outcome), append a one-line entry to `scra
 - [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
 ```
 
-Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) instead of a panel log under the **same** header, prefixed `[skipped — small]`, and **must record the concrete evidence** that satisfied the predicate (so a later `minerva:review` / `minerva:promote` pass can audit that the skip was honest, not rubber-stamped). Approach-decision skips additionally record the rejected alternatives:
+Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) instead of a panel **are logged** under the **same** header, prefixed `[skipped — small]`, and **must record the concrete evidence** that satisfied the predicate (so a later `minerva:review` / `minerva:promote` pass can audit that the skip was honest, not rubber-stamped). Approach-decision skips additionally record the rejected alternatives:
 
 ```
 - [skipped — small] scope check: single additive unit (evidence: only SKILL.md touched)
