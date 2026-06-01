@@ -1,11 +1,11 @@
 ---
 name: propose-ship-auto
-description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → ship → cleanup), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel. Human input is only a fallback when the panel can't agree after one revision round.
+description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → ship → cleanup), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel. Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
 ---
 
 Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
 
-The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents. Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them.
+The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents. Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a [Skip predicate](#skip-predicate-small-decisions) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
 
 ## Usage
 
@@ -27,6 +27,23 @@ Only proceed after the user confirms. This is the single mandatory pre-run user 
 ## Panel protocol
 
 Used at every strategic/tactical decision point (see [Decision taxonomy](#decision-taxonomy)).
+
+### Skip predicate (small decisions)
+
+Before dispatching a panel for any **skippable** strategic/tactical decision (see the `Skippable?` column in the [Decision taxonomy](#decision-taxonomy)), the main LLM first applies an explicit **conjunctive** test to *that specific decision*. Skip the panel — the main LLM decides directly — **only if every** clause holds:
+
+- **additive / low-blast-radius** — the artifact adds rather than rewrites, with a bounded surface;
+- **objectively verifiable without a judgment call** — the supporting evidence is mechanical (a named passing test, a file that exists, a count), not an opinion;
+- **single-surface** — one file / one concern;
+- **no new public interface or cross-cutting contract**;
+- **violates no identifiable `.minerva/knowledge/` constraint**;
+- **(approach-bearing decisions only)** the main LLM actually **enumerated ≥2 viable approaches and one is strictly dominant** on the stated criteria. This is an *action* check (did you do the enumeration), not a self-judgment that "no alternative exists" — the latter is gameable by an LLM that never looked.
+
+**Fails closed.** If any single clause fails — or you are unsure whether it holds — convene the panel exactly as specified below, at the decision's existing quorum. The predicate only ever decides *whether to convene*; it never changes a quorum. Because every clause must pass, the worst case of a wrong skip is bounded to an additive, single-surface, low-risk change; the worst case of a wrong *non*-skip is a panel you didn't strictly need.
+
+**Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see [Failure modes](#failure-modes-escalation-budget-caps)) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
+
+**Log every skip** under the same `## Panel decisions YYYY-MM-DD` header used for panel calls (see [Per-decision logging](#per-decision-logging)).
 
 ### Dispatch
 
@@ -160,27 +177,36 @@ After every panel call (regardless of outcome), append a one-line entry to `scra
 - [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
 ```
 
-These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition.
+Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) instead of a panel **are logged** under the **same** header, prefixed `[skipped — small]`, and **must record the concrete evidence** that satisfied the predicate (so a later `minerva:review` / `minerva:promote` pass can audit that the skip was honest, not rubber-stamped). Approach-decision skips additionally record the rejected alternatives:
+
+```
+- [skipped — small] scope check: single additive unit (evidence: only SKILL.md touched)
+- [skipped — small] approach selection: option B dominant (rejected: A — duplicates orchestration; C — coarse)
+```
+
+These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
 
 ## Decision taxonomy
 
-| Phase | Decision | Tier | Quorum |
-|---|---|---|---|
-| Pre-flight | In-flight work collision | n/a | Hardcoded user escalation |
-| Propose | Scope check (single unit vs. decompose) | Strategic | 3/3 |
-| Propose | Approach selection (from 2-3 candidates) | Strategic | 3/3 |
-| Propose | Whole-proposal acceptance | Strategic | 3/3 |
-| Work | Mid-work load-bearing divergence (panel confirms main LLM's detection) | Strategic | 2/3 |
-| Replan (if triggered) | New-plan acceptance | Strategic | 3/3 |
-| Work | Completion verification (success criteria honestly met) | Strategic | 3/3 |
-| Review | Per-finding triage (single panel call for all findings) | Tactical | 2/3 |
-| Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 |
-| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 |
-| Promote | TODO disposition | Tactical | 2/3 |
-| Ship | Commit message | Operational | No panel (main LLM accepts draft) |
-| Ship | PR title + body | Operational | No panel (main LLM accepts draft) |
-| Ship | CI auto-fix classification | Tactical | No panel (`ship`'s classifier handles it) |
-| Cleanup gate | PR state polling + cleanup | n/a | No panel |
+The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decisions): it gives the per-row bar a decision must clear for the main LLM to skip its panel. `No` = always run the panel (never-skippable). Operational rows are already main-LLM (no panel to skip).
+
+| Phase | Decision | Tier | Quorum | Skippable? |
+|---|---|---|---|---|
+| Pre-flight | In-flight work collision | n/a | Hardcoded user escalation | **No** — hardcoded user escalation |
+| Propose | Scope check (single unit vs. decompose) | Strategic | 3/3 | Only if obviously a single additive unit |
+| Propose | Approach selection (from 2-3 candidates) | Strategic | 3/3 | Only if ≥2 approaches enumerated & one strictly dominant; skip log records the rejected alternatives |
+| Propose | Whole-proposal acceptance | Strategic | 3/3 | Only if every section is trivially sound & single-surface |
+| Work | Mid-work load-bearing divergence (panel confirms main LLM's detection) | Strategic | 2/3 | **No** — precondition is a surfaced divergence |
+| Replan (if triggered) | New-plan acceptance | Strategic | 3/3 | **No** — convened only after a confirmed divergence |
+| Work | Completion verification (success criteria honestly met) | Strategic | 3/3 | **No** — independent check on the main LLM's self-assessment |
+| Review | Per-finding triage (single panel call for all findings) | Tactical | 2/3 | Only if all findings are low-severity (any medium+ → panel) |
+| Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 | **No** — precondition is a surfaced load-bearing finding |
+| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
+| Promote | TODO disposition | Tactical | 2/3 | Only if a single unambiguous disposition |
+| Ship | Commit message | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
+| Ship | PR title + body | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
+| Ship | CI auto-fix classification | Tactical | No panel (`ship`'s classifier handles it) | n/a — `ship`'s classifier |
+| Cleanup gate | PR state polling + cleanup | n/a | No panel | n/a |
 
 ## Phase 1 — Propose (inline)
 

@@ -39,7 +39,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | PR merged — tidy up the worktree and branch | `minerva:cleanup` |
 | Something is broken — investigate a live incident or a dev bug end-to-end | `minerva:debug` |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
-| Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions) | `minerva:propose-ship-auto` |
+| Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
