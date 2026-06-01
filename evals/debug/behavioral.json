@@ -1,0 +1,26 @@
+{
+  "skill": "debug",
+  "cases": [
+    {
+      "id": "stale-cache-incident",
+      "prompt": "Users report that the dashboard shows yesterday's numbers even after new data lands. It started this morning. Investigate and tell me the root cause and a fix.",
+      "rubric": [
+        "Restates the symptom in one concrete sentence before diagnosing",
+        "Gathers or asks for specific evidence (logs, metrics, a query, a repro) before asserting a cause",
+        "Names a concrete root-cause hypothesis grounded in that evidence rather than guessing",
+        "Recommends a specific fix tied to the root cause",
+        "States what was NOT checked / ruled out, to avoid false confidence"
+      ]
+    },
+    {
+      "id": "test-returns-wrong-value",
+      "prompt": "A unit test for compute_total() suddenly fails: it expects 42 but gets 0. Figure out why and how to fix it.",
+      "rubric": [
+        "Restates the failure precisely (expected vs actual) before proposing causes",
+        "Proposes reproducing or reading the relevant call sites as evidence before concluding",
+        "Traces the failure to a specific offending line or condition rather than a vague area",
+        "Recommends a targeted fix and how to confirm it"
+      ]
+    }
+  ]
+}

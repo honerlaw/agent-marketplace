@@ -1,0 +1,16 @@
+{
+  "skill": "propose",
+  "cases": [
+    {
+      "id": "add-rate-limiting",
+      "prompt": "I want to add rate limiting to our public API. Help me plan this work before we write any code.",
+      "rubric": [
+        "Asks clarifying questions about scope/constraints before locking a design",
+        "Offers 2-3 candidate approaches rather than jumping to one",
+        "Produces a structured plan with an explicit goal and why it matters",
+        "States concrete, checkable success criteria",
+        "Surfaces open questions or risks rather than presenting the plan as final"
+      ]
+    }
+  ]
+}
