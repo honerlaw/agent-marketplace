@@ -43,6 +43,8 @@ class Case:
     id: str
     prompt: str
     rubric: list[str]
+    # Reserved — parsed and validated but NOT yet threaded into invoke(); the
+    # validation spike (followups.md) wires file fixtures into the task prompt.
     files: list[str] = field(default_factory=list)
 
 
@@ -140,6 +142,12 @@ def claude_invoke(prompt: str, skill_available: bool, skill: str) -> str:
         ["claude", "-p", prompt],
         capture_output=True, text=True, env=env, timeout=600,
     )
+    # Fail loud: an empty transcript silently scored would fabricate a value-delta —
+    # exactly the false signal this runner exists to avoid.
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"`claude -p` failed (rc={result.returncode}) for {skill!r}: "
+            f"{result.stderr.strip()[:500]}")
     return result.stdout
 
 
@@ -161,7 +169,17 @@ def claude_judge(prompt: str, transcript: str, rubric: list[str]) -> dict:
         ["claude", "-p", judge_prompt],
         capture_output=True, text=True, env=env, timeout=600,
     )
-    return json.loads(result.stdout)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"judge `claude -p` failed (rc={result.returncode}): "
+            f"{result.stderr.strip()[:500]}")
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"judge did not return JSON: {result.stdout.strip()[:300]!r}") from e
+    if not isinstance(data.get("score"), (int, float)):
+        raise ValueError(f"judge 'score' is not numeric: {data!r}")
+    return data
 
 
 # --------------------------------------------------------------------------- #
