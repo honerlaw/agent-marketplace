@@ -1,7 +1,7 @@
 # Proposal: auto-skip-predicate
 
 **Date**: 2026-05-31
-**Status**: Draft
+**Status**: Shipped (2026-05-31)
 
 ## Goal
 
@@ -141,11 +141,11 @@ is intended: a decision trivial enough to skip yields no durable knowledge.
 7. The change is confined to `propose-ship-auto` (plus the three catalogs **only if** the
    `description:` frontmatter changed); no other minerva skill is modified.
 
-## Open Questions
+## Open Questions (resolved)
 
-- **Advertise in `description:`?** Updating the `propose-ship-auto` frontmatter `description:` to
-  mention the skip predicate would let users discover the behavior, but triggers the three-surface
-  catalog refresh. *Lean: a light description touch + catalog sync*, so the capability is
-  discoverable. Resolve at write time.
-- **Triage skip bar.** "All findings low-severity" vs. "any medium+ forces the panel." *Resolved
-  in the taxonomy as: any medium+ forces the panel* (the stricter, fail-closed reading).
+- **Advertise in `description:`?** **Resolved: yes — light touch.** The `propose-ship-auto`
+  frontmatter `description:` gained one sentence about the skip predicate, and all three catalog
+  surfaces (`plugins/minerva/README.md`, `using-minerva` decision matrix, root `README.md`) were
+  synced in the same change per the catalog-sync constraint.
+- **Triage skip bar.** **Resolved: any medium+ forces the panel** (the stricter, fail-closed
+  reading), encoded directly in the Decision-taxonomy `Skippable?` row for per-finding triage.
