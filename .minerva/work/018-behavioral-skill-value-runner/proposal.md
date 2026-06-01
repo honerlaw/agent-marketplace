@@ -1,7 +1,7 @@
 # Proposal: behavioral-skill-value-runner
 
 **Date**: 2026-05-31
-**Status**: Draft
+**Status**: Shipped (2026-05-31)
 
 > **Unit 2 of 2.** Unit 1 (`017-skill-contract-eval-floor`, shipped) built the deterministic
 > structural *don't-regress* floor and the shared `evals/` format. This unit builds the
