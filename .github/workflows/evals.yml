@@ -1,0 +1,40 @@
+name: evals
+
+# Deterministic skill-eval gate — runs on every PR and push to main.
+# Covers the structural contract floor, the behavioral runner's stubbed unit
+# tests, and a no-API --dry-run of the behavioral runner. No secrets, no API.
+#
+# Scope note: the suite is scoped to the minerva/eval tests on purpose. A bare
+# `pytest` currently aborts during collection on the unrelated financials tests
+# (`No module named 'lib'` in tests/test_browser.py and tests/test_storage.py),
+# which pre-exist on main. Fixing that import is a separate follow-up; until
+# then this job runs exactly the tests these eval mechanisms own.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  structural:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test deps
+        run: pip install pytest pyyaml
+
+      - name: Structural contract floor + runner unit tests (deterministic, no API)
+        run: >
+          python -m pytest
+          tests/test_skill_contracts.py
+          tests/test_minerva.py
+          tests/test_skill_evals.py
+          -q
+
+      - name: Behavioral runner --dry-run (parse + plan, zero API)
+        run: python scripts/run_skill_evals.py --dry-run
