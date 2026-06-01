@@ -4,7 +4,14 @@ Live working notes for this unit. Promoted to durable knowledge (or discarded) a
 
 ## Decisions
 
+- Resolved the `description:` open question to **yes, light touch + catalog sync** (the proposal's lean) — added one sentence to the frontmatter and synced all three catalog rows (plugin README, using-minerva matrix, root README) per knowledge 010. Discoverability of a user-facing capability won over minimal-diff.
+- Triage skip bar resolved to **any medium+ forces the panel** (the stricter fail-closed reading), baked into the taxonomy row.
+- Defined the skip predicate **once** in the Panel protocol section (it is "used at every strategic/tactical decision point") rather than editing each of Phases 1–4 — honors the no-logic-duplication ethos and avoids bloating every phase. The taxonomy `Skippable?` column is the canonical per-decision reference.
+
 ## Surprises
+
+- None load-bearing. Implementation matched the approved proposal exactly; no divergence, no replan triggered.
+- `tests/test_browser.py` and `tests/test_storage.py` fail to collect (`No module named 'lib'`) — pre-existing environment issue unrelated to this markdown-only change. Skill-relevant suites (test_skill_contracts, test_minerva, test_skill_evals) all pass (89).
 
 ## Open threads
 
