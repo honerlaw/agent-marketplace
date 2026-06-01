@@ -1,0 +1,58 @@
+name: behavioral-evals (manual, PROVISIONAL)
+
+# Runs the LIVE behavioral skill-value evals: per case, a task is run with the
+# skill available vs without (control) via `claude -p`, judged by an LLM, and a
+# treatment-minus-control "value-added" delta is reported.
+#
+# This is intentionally MANUAL ONLY (workflow_dispatch) and NEVER a PR/merge
+# gate. Per knowledge 013-decision-behavioral-evals-provisional:
+#   * the value-delta methodology is unvalidated (the "without skill" control is
+#     a best-effort stub; the delta may be noise) until the mandatory validation
+#     spike in .minerva/work/018-behavioral-skill-value-runner/followups.md
+#     returns "go";
+#   * it is non-deterministic and costs API — do not gate merges on it.
+# Treat any deltas this produces as EXPERIMENTAL.
+#
+# Requires an `ANTHROPIC_API_KEY` repository secret. Until the validation spike
+# lands, expect this to need adjustment (CLI invocation, control suppression).
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Single skill to eval (blank = all with behavioral.json)"
+        required: false
+        default: ""
+
+jobs:
+  behavioral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run behavioral evals (live — costs API, results PROVISIONAL)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/run_skill_evals.py \
+            ${{ inputs.skill && format('--skill {0}', inputs.skill) || '' }} \
+            --out eval-report.json
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behavioral-eval-report
+          path: eval-report.json
+          if-no-files-found: ignore
