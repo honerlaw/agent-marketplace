@@ -45,6 +45,17 @@
         "year"
       ],
       "ignore_case": true
+    },
+    "## Related",
+    "index-watermark",
+    "[[",
+    {
+      "any_of": [
+        "cross-reference",
+        "cross-references",
+        "wiki maintenance"
+      ],
+      "ignore_case": true
     }
   ],
   "cross_surface": {

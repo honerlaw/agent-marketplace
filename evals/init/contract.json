@@ -40,6 +40,15 @@
         "pre-existing"
       ],
       "ignore_case": true
+    },
+    ".minerva/reference/",
+    "index.md",
+    "index-watermark",
+    {
+      "any_of": [
+        "backfill"
+      ],
+      "ignore_case": true
     }
   ],
   "cross_surface": {

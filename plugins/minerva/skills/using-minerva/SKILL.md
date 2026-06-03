@@ -62,9 +62,14 @@ When omitted, the skill infers the target from current-session chat history, the
 
 | Tier | Files | Read by Claude |
 |---|---|---|
-| Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` | Every conversation in this project — decisions, bugs, patterns |
+| Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog) | Every conversation in this project — decisions, bugs, patterns |
+| Reference (read on demand) | `.minerva/reference/<topic>.md` | Present-tense operational docs — architecture, glossary, conventions: how the system works now |
 | Searchable-on-demand | `.minerva/work/NNN-<slug>/proposal.md`, `.minerva/work/NNN-<slug>/replan.md`, `followups.md` if present | Grep when relevant |
 | Ephemeral | `.minerva/work/NNN-<slug>/scratchpad.md` | Live during `minerva:work`, archived by `minerva:promote` |
+
+The two LLM-owned wiki tiers differ in **time-shape** (see `.minerva/knowledge/011-decision-minerva-reference-tier.md`): `.minerva/knowledge/` is atomic, past-tense, append-only "what we learned"; `.minerva/reference/` is thematic, present-tense, replace-on-change "how the system works now."
+
+**The knowledge wiki is navigable, not a flat pile.** `.minerva/knowledge/index.md` is the maintained catalog — one line per entry (link + one-line summary), grouped by type, carrying an `index-watermark` of the highest entry it reflects. Entries cross-reference each other in a trailing `## Related` block using `[[NNN-type-slug]]` wiki-links keyed on the stable NNN, with a closed relationship vocabulary (`builds on` / `supersedes` / `superseded by` / `contradicts` / `see also`); superseded entries keep a `<!-- superseded-by: NNN -->` banner rather than being deleted. `minerva:promote` maintains the index and these cross-references (including the reciprocal links on neighbor entries) through its existing confirmation gate. Inline `[[…]]` mentions in entry prose remain valid and are not migrated — the `## Related` block is the structured, machine-maintained surface; inline mentions are free prose.
 
 When in doubt about whether something belongs in a knowledge file vs. a scratchpad note, apply the new-engineer-in-a-year heuristic above.
 

@@ -17,3 +17,8 @@ The format itself (anchor grammar including the `{any_of, ignore_case}` disjunct
 - **Editing a skill**: removing a load-bearing body anchor or renaming frontmatter reds that skill's contract test — update the contract deliberately and record why, rather than weakening it to pass.
 - The behavioral "does this skill add value" half is now built as a separate tier: value cases live in a sibling `evals/<skill>/behavioral.json` read by `scripts/run_skill_evals.py` — **not** in `contract.json` (the once-reserved `behavioral` key was retired). That tier is PROVISIONAL; see [[013-decision-behavioral-evals-provisional]].
 - Complements [[007-constraint-skills-must-call-tools-not-prose]] and [[004-constraint-plugin-skills-auto-discovered-from-directory]]: the runtime auto-discovers skills, but their structural integrity and catalog presence are now test-enforced.
+
+## Related
+- [[004-constraint-plugin-skills-auto-discovered-from-directory]] — builds on
+- [[010-constraint-minerva-skill-catalog-sync]] — builds on
+- [[016-constraint-promote-narrowed-never-overwrite]] — see also

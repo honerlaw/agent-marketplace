@@ -34,6 +34,7 @@ jobs:
           tests/test_skill_contracts.py
           tests/test_minerva.py
           tests/test_skill_evals.py
+          tests/test_promote_invariant.py
           -q
 
       - name: Behavioral runner --dry-run (parse + plan, zero API)
