@@ -19,6 +19,8 @@
     ".gitignore",
     "CLAUDE.md",
     "AGENTS.md",
+    "overview.md",
+    "you may have customized it",
     {
       "any_of": [
         "Routing",
