@@ -13,9 +13,6 @@ minerva:propose → minerva:work → minerva:review → minerva:promote → (min
 
 The `(minerva:synthesize?)` step is the optional overview-refresh offered inside the promote → ship gate (see Handoff rules); it runs only if the user accepts and self-gates on whether enough new scope accumulated.
 
-```
-```
-
 Invoke each phase via the `Skill` tool in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 
 The `minerva:propose` phase creates the work unit's branch + worktree at `.minerva/worktrees/<NNN-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `minerva:cleanup` is the only phase that runs from outside the worktree — it removes it.
