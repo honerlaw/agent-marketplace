@@ -59,3 +59,4 @@ observability — explicitly *not* a vote and *not* a skip (promote-invisible, l
 
 ## Related
 - [[024-decision-synthesis-layer-separate-file-advisory]] — builds on
+- [[014-decision-per-decision-skip-over-sizing-gate]] — see also

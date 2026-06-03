@@ -16,3 +16,6 @@ The detection logic in `init.md` was updated to check for either `.minerva/knowl
 
 - Any future change to the Routing section template (e.g. renaming `.minerva/knowledge/` again) must update both the template content AND the detection logic to include the new string alongside existing ones — otherwise re-runs will overwrite existing Routing sections.
 - The detection is intentionally lenient: it checks for presence, not exact match. This means a manually edited Routing section that still references either path won't be rewritten.
+
+## Related
+- [[017-decision-knowledge-wiki-navigability-layer]] — see also

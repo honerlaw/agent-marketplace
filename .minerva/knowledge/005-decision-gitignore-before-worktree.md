@@ -17,3 +17,6 @@ Update `.gitignore` to include `.minerva/worktrees/` and commit that change on `
 - `git status` on `main` stays clean while a worktree is active.
 - The `.gitignore` entry is permanent — it should not be removed after the worktree is torn down, since future work units will create the same path.
 - Any skill or script that creates worktrees under `.minerva/worktrees/` must check for this entry before calling `git worktree add`.
+
+## Related
+- [[008-constraint-enter-worktree-absolute-paths]] — see also

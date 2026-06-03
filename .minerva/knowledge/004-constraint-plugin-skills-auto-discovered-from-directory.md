@@ -16,3 +16,4 @@ Adding a new minerva skill requires only: (1) create `plugins/minerva/skills/<na
 ## Related
 - [[010-constraint-minerva-skill-catalog-sync]] — see also
 - [[012-constraint-skill-structural-contracts]] — see also
+- [[009-constraint-marketplace-plugin-registry-not-auto-discovered]] — see also
