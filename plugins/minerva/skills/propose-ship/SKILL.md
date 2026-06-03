@@ -1,6 +1,6 @@
 ---
 name: propose-ship
-description: Use when the user invokes `minerva:propose-ship`, wants to run the full minerva lifecycle end-to-end in one command, or says things like "propose and ship", "full lifecycle", "start to finish", "kick off and ship". Orchestrates propose → work → review → promote → ship → cleanup by delegating to each skill in sequence with no logic duplication. Refuses to start if in-flight work exists for the same intent. Advances out of the work phase only on explicit user signal. Waits for the PR to actually merge before invoking cleanup.
+description: Use when the user invokes `minerva:propose-ship`, wants to run the full minerva lifecycle end-to-end in one command, or says things like "propose and ship", "full lifecycle", "start to finish", "kick off and ship". Orchestrates propose → work → review → promote → ship → cleanup by delegating to each skill in sequence with no logic duplication, and folds an optional `minerva:synthesize` overview-refresh offer into the promote → ship gate. Refuses to start if in-flight work exists for the same intent. Advances out of the work phase only on explicit user signal. Waits for the PR to actually merge before invoking cleanup.
 ---
 
 Orchestrate the full minerva lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
@@ -8,7 +8,12 @@ Orchestrate the full minerva lifecycle in one invocation by delegating to each s
 ## Phase sequence
 
 ```
-minerva:propose → minerva:work → minerva:review → minerva:promote → minerva:ship → minerva:cleanup
+minerva:propose → minerva:work → minerva:review → minerva:promote → (minerva:synthesize?) → minerva:ship → minerva:cleanup
+```
+
+The `(minerva:synthesize?)` step is the optional overview-refresh offered inside the promote → ship gate (see Handoff rules); it runs only if the user accepts and self-gates on whether enough new scope accumulated.
+
+```
 ```
 
 Invoke each phase via the `Skill` tool in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
@@ -43,7 +48,7 @@ This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" 
 
 - **review → promote**: hand off automatically once `minerva:review` reaches its natural completion point AND triage is clean (zero pending, all FIX items applied). If review surfaced findings the user routed back to `minerva:replan`, return control to work and re-enter review afterward.
 
-- **promote → ship gate**: this is the single explicit gate. After `minerva:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `minerva:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
+- **promote → ship gate**: this is the single explicit gate. After `minerva:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. **Then, as part of this same gate, if promote added knowledge entries, offer to refresh the knowledge-wiki overview**: `minerva:synthesize` reports how much un-synthesized scope accumulated and self-gates on whether enough is there to be worth a refresh. If the user accepts the offer, invoke `minerva:synthesize` via the `Skill` tool — including its own write confirmation — **before** invoking ship, so the refreshed `.minerva/knowledge/overview.md` rides the same PR. The offer is optional and non-blocking; the user can decline and ship without it (the overview is advisory). After the synthesis offer resolves, wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `minerva:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless. When `minerva:synthesize` wrote a refreshed overview, the ship hand-off must **name `.minerva/knowledge/overview.md` among the paths to stage** (ship stages specific paths, never `-A`) and **request** a PR-body line noting "overview.md refreshed (advisory navigation)".
 
 - **ship → cleanup**: after `minerva:ship` returns, the PR may be `OPEN` (auto-merge pending), `MERGED`, or `CLOSED`. Cleanup runs only on `MERGED`. See [Phase 7](#phase-7--cleanup-gate) for the polling rules.
 
@@ -58,8 +63,8 @@ Always start at `minerva:propose` after the pre-flight check passes. Do not atte
 3. Invoke `minerva:work` via the `Skill` tool. Stay engaged through the work phase per the handoff rule above.
 4. Invoke `minerva:review` via the `Skill` tool. Wait for it to complete. If review routes to `minerva:replan`, return to step 3 after the replan lands.
 5. Invoke `minerva:promote` via the `Skill` tool. Wait for it to complete.
-6. Apply the promote → ship gate. Wait for explicit user confirmation.
-7. Invoke `minerva:ship` via the `Skill` tool.
+6. Apply the promote → ship gate: summarize the promote result, **offer `minerva:synthesize` if entries were added** (invoke it via the `Skill` tool before ship if the user accepts), then wait for explicit user confirmation.
+7. Invoke `minerva:ship` via the `Skill` tool (naming `overview.md` in the staging set when synthesis refreshed it).
 8. Run the cleanup gate ([Phase 7](#phase-7--cleanup-gate)).
 
 ## Phase 7 — cleanup gate
@@ -80,4 +85,4 @@ This phase is also the entry point when `propose-ship` is re-invoked via the wak
 
 ## Out of scope
 
-This skill does not define what "done" means for any phase — each skill defines its own completion signal. It does not add checkpoints, summaries, or status messages between phases beyond the explicit work → review trigger words, the promote → ship gate, and the cleanup gate.
+This skill does not define what "done" means for any phase — each skill defines its own completion signal. It does not add checkpoints, summaries, or status messages between phases beyond the explicit work → review trigger words, the promote → ship gate (which now also carries the optional, in-gate `minerva:synthesize` overview-refresh offer), and the cleanup gate.

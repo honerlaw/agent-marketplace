@@ -110,8 +110,6 @@ is a deliberate scoping choice, not a 013 prohibition.
 
 ## Out of scope
 
-- Wiring `minerva:synthesize` into `minerva:propose-ship` / `minerva:propose-ship-auto`
-  (a follow-up unit; today it is a manually invoked maintenance skill).
 - Editing the frozen detector, the fixer, or `index.md` (the synthesis layer is a
   separate file).
 - A `log.md` running changelog (a possible later Phase-C increment).
