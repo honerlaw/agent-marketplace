@@ -22,13 +22,17 @@ invariant the skill must honor:
 The SKILL.md prose mirrors these exact span definitions; if the two drift, this
 file is the spec of record.
 """
-import re
-
-# --- span delimiters (must match promote/SKILL.md) ---------------------------
-BANNER_MARKER_RE = re.compile(r"^<!-- superseded-by: (\d{3}) -->$")
-BANNER_QUOTE_RE = re.compile(r"^> \*\*Superseded by ")
-RELATED_HEADER = "## Related"
-SECTION_RE = re.compile(r"^## ")
+# --- span delimiters (single source of truth: scripts/knowledge_spans.py) -----
+# These were defined inline here originally; work unit 021 extracted them to a
+# shared module so the linter (scripts/knowledge_lint.py) and this guard agree on
+# the span model (knowledge 016 calls them the spec of record). conftest.py puts
+# scripts/ on sys.path.
+from knowledge_spans import (  # noqa: E402
+    BANNER_MARKER_RE,
+    BANNER_QUOTE_RE,
+    RELATED_HEADER,
+    SECTION_RE,
+)
 
 
 # --- the two allowed mutations -----------------------------------------------

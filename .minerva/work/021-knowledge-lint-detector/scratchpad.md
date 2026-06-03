@@ -21,3 +21,13 @@
 - Reciprocity: presence keyed on NNN, NEVER label-match (builds on↔see also → 7 FPs otherwise).
 - Block: last non-fenced `## Related` → EOF (015 has a fenced example + the real block).
 - Only span CONSTANTS move to scripts/knowledge_spans.py; add_related_link/add_supersede_banner/body_complement stay in test_promote_invariant.py.
+
+## Implementation log 2026-06-02
+
+- scripts/knowledge_spans.py: extracted shared constants (BANNER_MARKER_RE, BANNER_QUOTE_RE, RELATED_HEADER, SECTION_RE) + added FENCE_RE. test_promote_invariant.py rewritten to import them (dropped its now-unused `import re`); its 7 tests still pass (value-preserving extraction).
+- scripts/knowledge_lint.py: deterministic read-only detector. parse_entry (fence-aware: banner markers above first `## `; ## Related = last non-fenced header → EOF; links by NNN), parse_index (watermark, catalog NNN→section/stem, index.md excluded from entry set), lint_knowledge → list[Finding(family,severity,message)], main() CLI exits 1 iff any error-severity finding. Checks: index drift (watermark/bijection/Type-section; slug mismatch = warning), broken `## Related` links, missing reciprocals (presence keyed on NNN, back-link in ## Related OR banner).
+- tests/test_knowledge_lint.py: 16 tests — clean corpus; each defect family flagged; slug-mismatch-is-warning; one-way-reciprocal = pure missing-back-NNN; false-positive guards (builds-on/see-also pair, banner-only back-link, fenced `## Related` example, inline-prose link, prose-mention-of-banner-string); CLI exit codes; test_live_knowledge_clean.
+- evals.yml: added test_knowledge_lint.py to the gated pytest list + a "Knowledge-wiki drift gate" step running the CLI on the live dir.
+- Verified: full gated suite 112 passed; CLI exits 0 on live `.minerva/knowledge/`; run_skill_evals --dry-run still ok.
+- No skill added → constraints 010/012 don't fire (no catalog rows, no contract.json). Gate is deterministic-only (honors 013).
+- Banner-back-link path has no live coverage (no superseded entries exist yet) — exercised only by fixture, as expected.
