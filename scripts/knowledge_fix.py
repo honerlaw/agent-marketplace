@@ -207,9 +207,11 @@ def main(argv=None) -> int:
     argv = list(argv if argv is not None else sys.argv[1:])
     dry_run = "--dry-run" in argv
     argv = [a for a in argv if a != "--dry-run"]
-    # date is injectable for deterministic tests; default to a fixed placeholder so
-    # the script never calls a wall clock (kept deterministic). Callers/tests pass one.
-    date = "2026-01-01"
+    # `date` stamps any supersession banner the fixer writes. It's injectable via
+    # --date for deterministic tests; the CLI default is the real current date so a
+    # banner written interactively carries today's date.
+    import datetime
+    date = datetime.date.today().isoformat()
     if "--date" in argv:
         date = argv[argv.index("--date") + 1]
         argv = [a for i, a in enumerate(argv) if a not in ("--date", date)]
