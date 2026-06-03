@@ -62,3 +62,4 @@ is a deliberate scoping choice, not a 013 prohibition.
 - [[013-decision-behavioral-evals-provisional]] — see also
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — see also
 - [[025-decision-synthesize-wired-post-promote-self-gating]] — see also
+- [[029-decision-routing-section-is-the-wiki-reading-protocol]] — see also

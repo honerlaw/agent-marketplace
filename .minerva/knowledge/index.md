@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 028 -->
+<!-- index-watermark: 029 -->
 
 ## Decisions
 
@@ -17,6 +17,7 @@
 - [[025-decision-synthesize-wired-post-promote-self-gating]] — minerva:synthesize is wired into both orchestrators as a self-gating post-promote/pre-ship step (delegation, not a panel)
 - [[026-decision-migration-check-read-only-entry-re-blindspot]] — minerva:migrate is the read-only migration-shape check; its reason to exist is the ENTRY_RE false-clean blind spot every wiki tool shares
 - [[027-decision-related-backfill-hand-authored-rename-redeferred]] — the initial ## Related backfill was hand-authored (the spike for any future skill); rename-APPLY stays deferred at zero live instances
+- [[029-decision-routing-section-is-the-wiki-reading-protocol]] — the Routing section teaches the wiki reading protocol; stale sections get a gated refresh with markers derived from the template-of-record
 
 ## Bugs
 

@@ -108,7 +108,7 @@ Unlike Part A, this entry is appended automatically — it's part of init's idem
 
 Check for the canonical agent files at the project root, in this order: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`.
 
-- For **each file that exists**, add a `## minerva` Routing section if one isn't already present. If the section is already present, leave the file alone and report `<file> ✓`.
+- For **each file that exists**, add a `## minerva` Routing section if one isn't already present. If the section is already present, check it for **staleness** (see "Refreshing a stale Routing section" below): if stale, offer a gated refresh; if current, leave the file alone and report `<file> ✓`.
 - If **none of the three exist**, ask the user which to create:
   - `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, or **Other** (the user supplies a filename).
   - For **Other**, the user provides a filename; the same Routing section is appended to that file (created empty first). The user can flesh out the rest later.
@@ -123,7 +123,8 @@ Use this exact template (verbatim, with the appended blank line at the end for r
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/knowledge/` — concrete, past-tense knowledge artifacts: decisions made, bugs fixed, patterns discovered. Start from `.minerva/knowledge/index.md` (the catalog). Read when starting work in this repo.
+- `.minerva/knowledge/overview.md` — theme-grouped synthesis of everything known. Read first to orient (absent until `minerva:synthesize` first runs — fall back to the index).
+- `.minerva/knowledge/index.md` — the catalog, one line per entry. Look up specifics here; drill into entries via their `[[NNN-type-slug]]` links only when a theme bears on your task.
 - `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
@@ -134,17 +135,56 @@ Append the Routing section at the end of the file (don't try to find a "right" s
 
 ### Detecting existing Routing section
 
-A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 6 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic. (The window is 6, not 4, to accommodate the `.minerva/reference/` bullet added to the template above without breaking detection on older projects — widening only loosens detection and still requires both signals.)
+A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 6 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic. (The window is 6, not 4, to accommodate template growth without breaking detection on older projects — widening only loosens detection and still requires both signals. In the current template the first qualifying line is the `overview.md` bullet, the **4th** line after the heading — its path `.minerva/knowledge/overview.md` contains the required substring — so the window holds with no further widening.)
 
 If the heading appears multiple times in the file, only the first occurrence is checked. (Unlikely in practice; if a user has multiple `## minerva` headings, the file is hand-managed and `init` should not touch it — surface a warning instead of writing.)
+
+### Refreshing a stale Routing section
+
+Detection (above) deliberately checks *presence, not exact match*, so hand-edited
+sections survive re-runs. But that also means a section written from an **older
+template** is never revisited. The refresh offer closes that gap — **gated, never
+automatic**:
+
+1. **Staleness check (generic, disjunctive).** For each `.minerva/...` path that appears
+   as a bullet in the **current template above** (today: `.minerva/knowledge/overview.md`,
+   `.minerva/knowledge/index.md`, `.minerva/reference/`, `.minerva/work/`), check whether
+   the detected section contains that substring. If **any** is missing, the section is
+   a refresh candidate. (Note the deliberate quantifier asymmetry: *detection* requires
+   both of its signals — a conjunction; *staleness* fires on any missing marker — a
+   disjunction. Deriving the markers from the template-of-record, rather than a
+   hardcoded list, keeps this check from rotting when the template next changes.)
+2. **Gate.** Show the full before/after diff of the section and ask:
+   > "Your `## minerva` section doesn't match the current template — it may be from an
+   > older template, or **you may have customized it**. Refreshing replaces the whole
+   > section, so anything custom inside it will be removed. Refresh `<file>`?"
+   Proceed only on explicit confirmation; on decline, leave the file alone and report
+   `<file> ✓ (older template kept)`.
+3. **Replacement boundary.** Replace from the `## minerva` heading line up to but **not**
+   including the next line matching `^## ` (exactly two hashes followed by a space — a
+   `### ` subsection does **not** terminate the section), or to EOF if no such line
+   exists. Worked example — in the file below, only the marked span is replaced:
+
+   ```
+   ## minerva          ← replacement starts here
+   ...section body, including any ### subsections...
+                       ← replacement ends here (line above the next ## heading)
+   ## Contributing     ← untouched
+   ```
+
+Splice-preserving refresh (keeping unrecognized custom lines while updating the
+canonical bullets) is future hardening — v1 replaces the whole section behind the gate,
+and the diff makes the cost visible before anything is written.
 
 ## Step 4 — commit offer
 
 (Skip in a non-git repo.)
 
-If any files were newly created in steps 1–3, offer to commit them:
+If any files were newly created **or refreshed** in steps 1–3 (a Routing-section refresh
+modifies an existing agent file — it must be offered for commit too, or a refresh-only
+run leaves the change dangling uncommitted), offer to commit them:
 
-> "Created `.minerva/{work,knowledge,reference}` (incl. `knowledge/index.md`) + Routing section in `<files>`. Stage and commit now?"
+> "Created/updated `.minerva/{work,knowledge,reference}` (incl. `knowledge/index.md`) + Routing section in `<files>`. Stage and commit now?"
 
 If the user agrees:
 ```
@@ -164,9 +204,9 @@ Print a status block:
 .minerva/reference/    ✓ created (or: ✓ already present)
 .gitignore             ✓ ok       (or: skipped — not a git repo; or: ⚠ <pattern at file:line> would exclude .minerva/)
 .minerva/worktrees/    ✓ added to .gitignore (or: ✓ already ignored; or: — not a git repo)
-CLAUDE.md              ✓ Routing section added (or: ✓ already present; or: — not present)
-AGENTS.md              ✓ Routing section added (or: ✓ already present; or: — not present)
-GEMINI.md              ✓ Routing section added (or: ✓ already present; or: — not present)
+CLAUDE.md              ✓ Routing section added (or: ✓ already present; or: ✓ Routing section refreshed; or: ✓ older template kept; or: — not present)
+AGENTS.md              ✓ Routing section added (or: ✓ already present; or: ✓ Routing section refreshed; or: ✓ older template kept; or: — not present)
+GEMINI.md              ✓ Routing section added (or: ✓ already present; or: ✓ Routing section refreshed; or: ✓ older template kept; or: — not present)
 flat layout            — none detected (or: ⚠ work/ and/or decisions/ at root — see message above)
 legacy decisions/      — none detected (or: ⚠ .minerva/decisions/ — see message above)
 commit                 ✓ committed (or: declined; or: — nothing to commit)
@@ -180,4 +220,5 @@ Suggest `minerva:propose` as the next step if no work units exist yet.
 - Migrating `.minerva/decisions/` to `.minerva/knowledge/`. Same — report only, user runs the move.
 - Authoring or rewriting CLAUDE.md / AGENTS.md content beyond the Routing section.
 - Editing `.gitignore` to remove offending user-authored patterns. (Init **does** install `.minerva/worktrees/` if missing — that entry is part of the scaffold, not user territory.)
-- A `minerva:init --refresh` mode to rewrite the Routing section when its template changes. Out of scope for v1.
+- Auto-refreshing a stale Routing section without the gate. Agent files are user territory — the refresh is always offered, diffed, and confirmable, never silent.
+- Splice-preserving refresh (updating canonical bullets while keeping unrecognized custom lines). Future hardening; v1 is a gated whole-section replace.
