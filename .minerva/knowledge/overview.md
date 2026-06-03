@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 023 -->
+<!-- synthesis-watermark: 025 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -30,6 +30,15 @@ CI gate first, with the LLM-judged skill deferred
 ([[020-decision-minerva-lint-read-only]]); and the gated fixer uses **two distinct safety
 models** — entry-body byte-identity vs. index skeleton-preservation
 ([[022-decision-knowledge-fix-two-safety-models]]).
+
+The wiki's final layer is **synthesis** (Phase C): this very `overview.md` is a separate,
+LLM-owned file carrying a new-scope-only `synthesis-watermark`, deliberately distinct from
+`index.md` and invisible to the frozen detector/fixer — its content is advisory, never
+CI-gated ([[024-decision-synthesis-layer-separate-file-advisory]]). The `minerva:synthesize`
+skill that maintains it is wired into **both lifecycle orchestrators** as a self-gating
+post-promote / pre-ship step — delegation, not a panel decision — so the overview refreshes
+as part of the same PR that lands new entries
+([[025-decision-synthesize-wired-post-promote-self-gating]]).
 
 ## Skills, plugins, and catalogs: discovery and contracts
 
@@ -79,7 +88,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`023`) is a **new-scope-only floor**:
+synthesis watermark (`025`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -89,6 +98,7 @@ synthesis watermark (`023`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-Because this overview was synthesized in the `024-synthesize-skill` work unit, the entry
-that unit promotes (the next NNN, `024`) will correctly show as `unsynthesized` until the
-next refresh — the advisory signal working as intended.
+This overview was refreshed in the `025-wire-synthesize-into-orchestrators` work unit
+(dogfooding the post-promote synthesis step it added), reflecting the corpus through entry
+`025`. Any entry promoted after this will correctly show as `unsynthesized` until the next
+refresh — the advisory signal working as intended.

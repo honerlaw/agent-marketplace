@@ -16,6 +16,7 @@
     "Proponent",
     "Skeptic",
     "Arbiter",
+    "minerva:synthesize",
     "minerva:ship",
     "minerva:cleanup",
     "panel"

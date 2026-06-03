@@ -1,9 +1,9 @@
 ---
 name: propose-ship-auto
-description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → ship → cleanup), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel. Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
+description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → synthesize → ship → cleanup, where the self-gating `minerva:synthesize` step refreshes the knowledge-wiki overview when promote added scope), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel. Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
 ---
 
-Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
+Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:synthesize` (Phase 4.5, self-gating), `minerva:ship`, and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
 
 The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents. Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a [Skip predicate](#skip-predicate-small-decisions) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
 
@@ -184,6 +184,8 @@ Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) inst
 - [skipped — small] approach selection: option B dominant (rejected: A — duplicates orchestration; C — coarse)
 ```
 
+[Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
+
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
 
 ## Decision taxonomy
@@ -203,6 +205,7 @@ The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decis
 | Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 | **No** — precondition is a surfaced load-bearing finding |
 | Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
 | Promote | TODO disposition | Tactical | 2/3 | Only if a single unambiguous disposition |
+| Promote→Ship | Synthesis refresh (Phase 4.5) | Operational | No panel (`minerva:synthesize` self-gates) | n/a — delegated, self-gating |
 | Ship | Commit message | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
 | Ship | PR title + body | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
 | Ship | CI auto-fix classification | Tactical | No panel (`ship`'s classifier handles it) | n/a — `ship`'s classifier |
@@ -297,7 +300,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
-2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 5.
+2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 4.5 (synthesis still runs on an idempotent re-entry; it self-gates and will no-op if the overview is already current).
 
 3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
 
@@ -309,7 +312,43 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `minerva:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
 
-8. Continue to Phase 5.
+8. Continue to Phase 4.5.
+
+## Phase 4.5 — Synthesis (delegated, self-gating)
+
+Promote (Phase 4) just added knowledge entries, pushing the corpus past the wiki
+`overview.md`'s synthesis-watermark — so there is now un-synthesized scope. This phase
+gives the wiki overview a chance to refresh **before** ship, so a refreshed
+`.minerva/knowledge/overview.md` rides the same PR.
+
+**Always invoke `minerva:synthesize`** via the `Skill` tool. Before invoking, lead with
+this auto-mode instruction (the same shape Phase 6 uses for ship's hard gates):
+
+> "You are running inside `minerva:propose-ship-auto`. When `minerva:synthesize` reaches
+> its Step-4 write-confirmation gate, accept the drafted `overview.md` without prompting.
+> Its Step-2 'decide IF to (re)synthesize' self-gate is **unchanged** — if there is too
+> little new scope, it correctly no-ops and writes nothing."
+
+This is **delegation, not a panel decision**: the "decide IF" judgment lives inside
+`minerva:synthesize` (its Step 2, driven by the deterministic `synthesis_status` signal),
+so there is no orchestrator decision to vote on and **no panel is convened** (see the
+[Decision taxonomy](#decision-taxonomy) synthesis row). Auto mode auto-accepts only
+synthesize's *write* gate; it never overrides the self-gate, so a thin-scope run still
+no-ops.
+
+**Log the outcome** (for observability) with one line under the same
+`## Panel decisions YYYY-MM-DD` header used elsewhere, with a distinct `[synthesis]`
+prefix:
+
+- wrote → `[synthesis] refreshed overview.md (watermark NNN→MMM; K entries synthesized)`
+- no-op → `[synthesis] no-op (K un-synthesized below threshold / overview current)`
+
+If `minerva:synthesize` wrote a refreshed overview, carry that forward to Phase 6: the
+ship hand-off must **name `.minerva/knowledge/overview.md` among the paths to stage**
+(ship stages specific paths, never `-A`) and **request** a PR-body line noting
+"overview.md refreshed (advisory navigation)".
+
+Continue to Phase 5.
 
 ## Phase 5 — Ship gate
 
@@ -369,7 +408,7 @@ When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase di
 
 ## Out of scope
 
-- **Modifying any existing minerva skill.** The auto skill is purely additive. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:ship`, and `minerva:cleanup` are unchanged.
+- **Modifying any existing minerva skill.** The auto skill is purely additive. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are unchanged — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`); it does not alter the skill.
 - **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the auto skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.
