@@ -1,7 +1,7 @@
 # Proposal: migrate-check
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > A read-only **migration check** for the LLM-wiki structure: assess an existing
 > `.minerva/knowledge/` corpus against the current wiki shape and report what needs
