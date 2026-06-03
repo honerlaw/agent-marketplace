@@ -29,4 +29,19 @@
 7. Reuse parse_entry/_strip_fences (fence-aware, 023); plain-primitive dict (no Finding).
 8. tests/test_migration_status.py appended to evals.yml enumerated list.
 
+- [3/3 accept] completion verification: all 7 criteria independently re-verified (162
+  tests, contracts 88 incl. migrate, runner exit 0, live corpus clean, no frozen file
+  touched, all anchors resolve incl. standalone minerva:lint).
+- [skipped — small] review triage: 4 LOW findings, no medium+ (skip predicate met). FIX 3
+  (cheap): docstring `_strip_fences` is transitive-via-parse_entry not direct; parse_entry
+  returns a dict not None; SKILL Out-of-scope note that glob is non-recursive (consistent
+  w/ frozen toolchain). SKIPPED #3 (case-insensitive-FS edge — platform-specific, no fix
+  required, consistent on CI/Linux). Evidence: reviewer found no load-bearing issues.
+
+## Review triage 2026-06-03
+
+- FIX: migration_status.py docstring — `_strip_fences` is transitive via parse_entry; "returns a dict" not None. (low)
+- FIX: migrate/SKILL.md Out of scope — non-recursive glob note. (low)
+- SKIP: case-insensitive-FS Index.md edge — platform-specific, consistent on CI. (low)
+
 ## Notes

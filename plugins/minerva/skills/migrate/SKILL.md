@@ -104,3 +104,7 @@ minerva:lint + minerva:synthesize to confirm health.`
   consumes its `ENTRY_RE` / `parse_entry` API, never re-derives it.
 - **Being a health check** — mechanical drift and synthesis staleness are owned by
   `minerva:lint` and `minerva:synthesize`; this skill checks *shape*, not *health*.
+- **Scanning subdirectories** — like the detector / fixer / synthesis tooling,
+  `migration_status` globs `*.md` non-recursively (top-level of `.minerva/knowledge/`
+  only); entries nested in a subdirectory are not inventoried (consistent with the rest of
+  the toolchain, which is equally non-recursive).

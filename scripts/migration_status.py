@@ -13,8 +13,9 @@ all of them — the files are simply never seen. This module globs the COMPLEMEN
 presence/shape signals, so `minerva:migrate` can turn a false-clean legacy corpus into an
 actionable conformance checklist.
 
-It reuses the frozen detector's primitives (`ENTRY_RE`, `parse_entry`, `_strip_fences`)
-rather than re-deriving the grammar (knowledge entries 019 / 021 / 023), and returns only
+It reuses the frozen detector's primitives (`ENTRY_RE`, and `parse_entry` — itself
+fence-aware via `_strip_fences`) rather than re-deriving the grammar (knowledge entries
+019 / 021 / 023), and returns only
 plain JSON-serializable primitives (the same style as `synthesis_status`) — never lint's
 `Finding` namedtuples, so this tool is not coupled to the frozen detector's internal
 schema.
@@ -63,8 +64,8 @@ def migration_status(knowledge_dir) -> dict:
     # empty set both when the `## Related` header is absent AND when it is present but
     # carries no catalog links — both mean "this entry contributes no cross-ref edges".
     # parse_entry is robust to malformed entries (missing **Type** / sections) — it
-    # returns None/empty rather than raising — which is exactly the legacy shape this tool
-    # is meant to inventory.
+    # returns a dict with empty `related_out` rather than raising — which is exactly the
+    # legacy shape this tool is meant to inventory.
     without_related = sorted(
         p.name for p in entry_paths if not parse_entry(p)["related_out"]
     )
