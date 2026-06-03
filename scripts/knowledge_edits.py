@@ -17,9 +17,32 @@ The span constants live in `scripts/knowledge_spans.py`; these editors import th
 from knowledge_spans import (
     BANNER_MARKER_RE,
     BANNER_QUOTE_RE,
+    FENCE_RE,
     RELATED_HEADER,
     SECTION_RE,
 )
+
+
+def _fence_flags(lines):
+    """Per-line flags: True when the line is inside a ``` fence (delimiters included).
+
+    Fence-aware **header location** (knowledge 023): a fenced `## Related` example —
+    e.g. the convention illustration in entry 015 — is body content, not structure.
+    These flags are used ONLY to decide which lines count as real structure (the
+    `## Related` header, the terminal-section assert, the banner marker). They are
+    NEVER used to drop fenced lines from `body_complement`'s output — fenced content
+    stays under the byte-identity guard (this is deliberately NOT a `_strip_fences`
+    content filter).
+    """
+    flags = []
+    in_fence = False
+    for ln in lines:
+        if FENCE_RE.match(ln):
+            flags.append(True)  # delimiter lines are never body structure
+            in_fence = not in_fence
+        else:
+            flags.append(in_fence)
+    return flags
 
 
 def add_related_link(text: str, target: str, relationship: str) -> str:
@@ -30,8 +53,13 @@ def add_related_link(text: str, target: str, relationship: str) -> str:
     if _related_has_target(text, target):
         return text  # already linked -> byte-level no-op
     body = text.rstrip("\n")
-    if RELATED_HEADER in text.splitlines():
-        # append under the existing (always-last) Related section
+    lines = text.splitlines()
+    flags = _fence_flags(lines)
+    # Only a NON-fenced header counts (a fenced `## Related` example is body content);
+    # without this, an entry carrying only a fenced example would get a bare,
+    # header-less line appended at EOF.
+    if any(ln.strip() == RELATED_HEADER and not fenced for ln, fenced in zip(lines, flags)):
+        # append under the existing (always-last) real Related section
         return body + "\n" + line + "\n"
     # create the section at EOF
     return body + "\n\n" + RELATED_HEADER + "\n" + line + "\n"
@@ -60,8 +88,15 @@ def add_supersede_banner(text: str, nnn: str, target: str, date: str) -> str:
 
 
 def _related_has_target(text: str, target: str) -> bool:
+    lines = text.splitlines()
+    flags = _fence_flags(lines)
     in_related = False
-    for ln in text.splitlines():
+    for ln, fenced in zip(lines, flags):
+        # Only a NON-fenced header opens the Related span, and only NON-fenced lines
+        # count as links — else a fenced `## Related` example (entry 015) makes prose
+        # `[[…]]` mentions after it silently false-dedupe a genuinely-needed edge.
+        if fenced:
+            continue
         if ln.strip() == RELATED_HEADER:
             in_related = True
             continue
@@ -75,22 +110,33 @@ def body_complement(text: str) -> str:
     never-overwrite invariant says promote (and the fixer) must never touch.
     """
     lines = text.splitlines()
+    flags = _fence_flags(lines)
     out = []
     i = 0
     while i < len(lines):
         ln = lines[i]
-        # drop the Related span: header -> EOF, plus one preceding blank line.
-        # Contract (spec of record): ``## Related`` is the terminal section, so the
-        # span runs cleanly to EOF. Assert it, so a future entry that puts a body
-        # section *after* ``## Related`` can't make the byte-identity check vacuous.
+        # Fenced lines are body CONTENT (e.g. entry 015's fenced `## Related`
+        # convention example): never structure, never dropped — emit verbatim so they
+        # stay under the byte-identity guard (knowledge 023: header LOCATION is
+        # fence-aware; the complement is not a content filter).
+        if flags[i]:
+            out.append(ln)
+            i += 1
+            continue
+        # drop the Related span: (real, non-fenced) header -> EOF, plus one preceding
+        # blank line. Contract (spec of record): ``## Related`` is the terminal
+        # section, so the span runs cleanly to EOF. Assert it on NON-fenced lines, so
+        # a future entry that puts a body section *after* ``## Related`` can't make
+        # the byte-identity check vacuous (a fenced `## ` example is not a section).
         if ln.strip() == RELATED_HEADER:
-            assert not any(SECTION_RE.match(later) for later in lines[i + 1:]), (
-                "## Related must be the last section — the cross-ref span runs to EOF"
-            )
+            assert not any(
+                SECTION_RE.match(later) and not later_fenced
+                for later, later_fenced in zip(lines[i + 1:], flags[i + 1:])
+            ), "## Related must be the last section — the cross-ref span runs to EOF"
             if out and out[-1] == "":
                 out.pop()
             break
-        # drop the banner span: marker + quote + one trailing blank
+        # drop the banner span: (real, non-fenced) marker + quote + one trailing blank
         if BANNER_MARKER_RE.match(ln):
             i += 1
             if i < len(lines) and BANNER_QUOTE_RE.match(lines[i]):

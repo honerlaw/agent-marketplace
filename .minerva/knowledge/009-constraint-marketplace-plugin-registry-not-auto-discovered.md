@@ -20,3 +20,7 @@ The 012 work unit surfaced this constraint when the original proposal Approach e
 - When removing a plugin: delete `plugins/<plugin>/` AND remove its entry from `.claude-plugin/marketplace.json` AND remove its row from the README plugin table. If the install example used the removed plugin, replace it with another plugin's name.
 - When proposing plugin add/remove work, the proposal's `## Approach` should explicitly enumerate the marketplace.json and README updates so they don't slip through as scope misses.
 - This constraint complements [[004-constraint-plugin-skills-auto-discovered-from-directory]]: auto-discovery applies **inside** a plugin (skills), not **between** plugins (marketplace registry).
+
+## Related
+- [[004-constraint-plugin-skills-auto-discovered-from-directory]] — see also
+- [[010-constraint-minerva-skill-catalog-sync]] — see also

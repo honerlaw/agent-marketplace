@@ -25,3 +25,6 @@ The **per-decision fail-closed predicate** dominates both: each decision applies
 - Make a skip predicate's self-referential clauses **action checks**, not self-judgments. "Did I enumerate ≥2 alternatives and is one dominant" is auditable; "no better alternative exists" is gameable by a model that never looked.
 - Any new never-skippable panel must satisfy the corollary test (precondition = an already-surfaced divergence/finding, or it is the completion self-check). Mark it never-skippable in **both** the taxonomy table and the prose — a prior review round caught two such panels silently left skippable.
 - Log each skip with the **concrete evidence** that satisfied the predicate, under the existing decision-log header, so a later review/promote pass can audit that skips are honest rather than rubber-stamped. Skips are promote-invisible by construction (no Skeptic → no durable-pattern channel), which is intended.
+
+## Related
+- [[025-decision-synthesize-wired-post-promote-self-gating]] — see also

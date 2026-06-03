@@ -101,3 +101,77 @@ def test_banner_and_related_together_preserve_body():
     assert body_complement(step2) == body_complement(ENTRY)
     # both spans present, body untouched
     assert "<!-- superseded-by: 021 -->" in step2 and "## Related" in step2
+
+
+# --- fence-aware header location (knowledge 023; bug found in unit 027) -------
+# Entry 015 carries a FENCED ``## Related`` convention example as body content.
+# Header LOCATION must be fence-aware; the complement must still EMIT fenced lines
+# (they are body content under the byte-identity guard — not a content filter).
+FENCED_ENTRY = """# A convention entry with a fenced ## Related example
+
+**Date**: 2026-06-03
+**Type**: constraint
+**Context**: .minerva/work/027-related-backfill
+
+## Context
+The convention is illustrated with a fenced example:
+
+```
+## Related
+- [[NNN-type-slug]] — <relationship>
+```
+
+## Finding
+Prose may mention [[016-constraint-promote-narrowed-never-overwrite]] inline.
+
+## Related
+- [[023-constraint-wiki-edge-derivation-fence-aware]] — builds on
+"""
+
+
+def test_fenced_related_example_does_not_crash_body_complement():
+    # Pre-fix: the fenced header tripped the terminal-section assert (real sections
+    # follow the fenced line). The complement must keep the fenced example verbatim
+    # and drop only the real terminal Related span.
+    comp = body_complement(FENCED_ENTRY)
+    assert "- [[NNN-type-slug]] — <relationship>" in comp  # fenced content preserved
+    assert "023-constraint-wiki-edge-derivation-fence-aware" not in comp  # real span dropped
+    # round-trip: adding a reciprocal preserves the complement byte-identically
+    mutated = add_related_link(FENCED_ENTRY, "027-decision-x", "see also")
+    assert body_complement(mutated) == comp
+
+
+def test_fenced_header_does_not_false_dedupe():
+    # Pre-fix: the fenced header flipped in_related, so the prose [[016...]] mention
+    # after it silently no-op'd a genuinely-needed edge (the silent half of the bug).
+    mutated = add_related_link(
+        FENCED_ENTRY, "016-constraint-promote-narrowed-never-overwrite", "see also")
+    assert mutated != FENCED_ENTRY, "prose mention after a fenced header must not dedupe"
+    assert mutated.rstrip("\n").endswith(
+        "- [[016-constraint-promote-narrowed-never-overwrite]] — see also")
+
+
+def test_fenced_only_header_creates_real_block():
+    # An entry whose ONLY ``## Related`` line is the fenced example has no real block:
+    # add_related_link must create one at EOF, not append a bare header-less line.
+    fenced_only = """# Entry with only a fenced example
+
+**Date**: 2026-06-03
+**Type**: constraint
+**Context**: .minerva/work/x
+
+## Context
+Example:
+
+```
+## Related
+- [[NNN-type-slug]] — <relationship>
+```
+
+## Finding
+Standalone so far.
+"""
+    mutated = add_related_link(fenced_only, "001-decision-x", "see also")
+    tail = mutated.rstrip("\n").splitlines()[-2:]
+    assert tail == ["## Related", "- [[001-decision-x]] — see also"], tail
+    assert body_complement(mutated) == body_complement(fenced_only)

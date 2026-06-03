@@ -21,3 +21,7 @@ Practical consequence: when a skill operates inside a worktree, every file path 
 - Every minerva lifecycle skill that calls `EnterWorktree` (`propose`, `work`, `replan`, `review`, `promote`, `ship`) must construct file paths relative to the worktree root after entering, or use absolute paths that explicitly include `.minerva/worktrees/<NNN-slug>/` in the prefix.
 - When recovering from a misroute (edits landed in the parent repo by accident), the safe sequence is: `cp` the modified files from the parent into the worktree, then `git -C <parent> checkout -- <paths>` to revert the parent's working tree. Do **not** use `git stash` across the worktree boundary unless the branches share the file content exactly.
 - Tooling cannot defend against this — it's a discipline of path construction. The risk is highest immediately after `EnterWorktree` when absolute paths from earlier in the session are still in scope (memory, previous tool calls, system prompts).
+
+## Related
+- [[005-decision-gitignore-before-worktree]] — see also
+- [[007-constraint-skills-must-call-tools-not-prose]] — see also

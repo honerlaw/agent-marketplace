@@ -17,3 +17,7 @@ When a skill requires the model to change execution context (working directory, 
 - Skill authors must identify the concrete tool call for every context-switching step and name it explicitly in the skill prose.
 - Prose like "work inside X" or "treat Y as the working directory" is insufficient on its own — pair it with the tool invocation.
 - This applies to any future skills that use `EnterWorktree`, `ExitWorktree`, or analogous context-switching tools.
+
+## Related
+- [[008-constraint-enter-worktree-absolute-paths]] — see also
+- [[021-constraint-skill-wraps-script-via-importable-api]] — see also

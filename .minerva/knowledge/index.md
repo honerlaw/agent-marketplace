@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 026 -->
+<!-- index-watermark: 028 -->
 
 ## Decisions
 
@@ -16,10 +16,12 @@
 - [[024-decision-synthesis-layer-separate-file-advisory]] — the synthesis layer is a separate overview.md with a new-scope-only watermark; its content is advisory, never CI-gated
 - [[025-decision-synthesize-wired-post-promote-self-gating]] — minerva:synthesize is wired into both orchestrators as a self-gating post-promote/pre-ship step (delegation, not a panel)
 - [[026-decision-migration-check-read-only-entry-re-blindspot]] — minerva:migrate is the read-only migration-shape check; its reason to exist is the ENTRY_RE false-clean blind spot every wiki tool shares
+- [[027-decision-related-backfill-hand-authored-rename-redeferred]] — the initial ## Related backfill was hand-authored (the spike for any future skill); rename-APPLY stays deferred at zero live instances
 
 ## Bugs
 
 - [[002-bug-promote-idempotency-check-misses-old-marker]] — promote idempotency check missed the old scratchpad marker format
+- [[028-bug-knowledge-edits-not-fence-aware]] — the span editors read fenced examples as structure: crash/false-dedupe on any edge into 015 (third fence-trap instance; fixed)
 
 ## Patterns
 

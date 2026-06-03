@@ -32,3 +32,6 @@ Fix options:
 
 - Any work unit promoted before 2026-05-19 has the old marker. A future agent should not blindly run `minerva:promote` on these without checking.
 - The simplest durable fix is option 1: update the idempotency check to match `Summarized at` (any prefix) followed by `promote on` and `see archive/`.
+
+## Related
+- [[003-constraint-post-promote-scratchpad-canonical-empty]] — see also

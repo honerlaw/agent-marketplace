@@ -31,3 +31,6 @@ The post-promote marker is the **canonical empty state** for `scratchpad.md`, no
 - New minerva skills that consume scratchpad content should call out the marker case in their protocol description so future readers don't trip over it.
 - Knowledge entries are read at the start of every conversation; SKILL.md files aren't. This constraint lives here so a future agent authoring a new minerva skill doesn't have to reverse-engineer the contract from `minerva:promote`'s archive step.
 - If the marker format ever changes again (see `.minerva/knowledge/002-bug-promote-idempotency-check-misses-old-marker.md` for prior history), downstream skill protocols that hard-code the marker text must be updated alongside the promote skill, or made lenient about the exact string.
+
+## Related
+- [[002-bug-promote-idempotency-check-misses-old-marker]] — see also
