@@ -28,3 +28,4 @@
 - [[011-decision-minerva-reference-tier]] — builds on
 - [[018-decision-phase-b-deterministic-lint-detector]] — see also
 - [[024-decision-synthesis-layer-separate-file-advisory]] — see also
+- [[026-decision-migration-check-read-only-entry-re-blindspot]] — see also

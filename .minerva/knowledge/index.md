@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 025 -->
+<!-- index-watermark: 026 -->
 
 ## Decisions
 
@@ -15,6 +15,7 @@
 - [[022-decision-knowledge-fix-two-safety-models]] — the wiki fixer uses two safety models: entry body byte-identity vs index skeleton-preservation
 - [[024-decision-synthesis-layer-separate-file-advisory]] — the synthesis layer is a separate overview.md with a new-scope-only watermark; its content is advisory, never CI-gated
 - [[025-decision-synthesize-wired-post-promote-self-gating]] — minerva:synthesize is wired into both orchestrators as a self-gating post-promote/pre-ship step (delegation, not a panel)
+- [[026-decision-migration-check-read-only-entry-re-blindspot]] — minerva:migrate is the read-only migration-shape check; its reason to exist is the ENTRY_RE false-clean blind spot every wiki tool shares
 
 ## Bugs
 

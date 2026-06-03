@@ -50,3 +50,4 @@ acting on, then build B.3.
 - [[018-decision-phase-b-deterministic-lint-detector]] — builds on
 - [[021-constraint-skill-wraps-script-via-importable-api]] — see also
 - [[022-decision-knowledge-fix-two-safety-models]] — see also
+- [[026-decision-migration-check-read-only-entry-re-blindspot]] — see also

@@ -1,0 +1,39 @@
+{
+  "skill": "migrate",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "migrate"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "migration_status",
+    "non_conforming_files",
+    "entries_without_related",
+    "read-only",
+    "git rev-parse --show-toplevel",
+    "minerva:lint",
+    "minerva:synthesize",
+    {
+      "any_of": [
+        "shape check",
+        "shape"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
