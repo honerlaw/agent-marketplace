@@ -23,3 +23,11 @@
 - Read-only: allowed-tools omits Edit/Write/MultiEdit + body directive; contract witnesses (allowed-tools + read-only anchor) but cannot guarantee absence of mutation.
 - Repairs routed to hand/B.3, NOT promote (work-unit-bound).
 - Judged dims advisory, never CI-gated (013), "spot-checked not exhaustive".
+
+## Implementation log 2026-06-03
+
+- plugins/minerva/skills/lint/SKILL.md: read-only skill. frontmatter allowed-tools = [Bash, Read, Grep, Glob] (omits Edit/Write/MultiEdit). Step 1 mechanical pass = python3 -c importing lint_knowledge (full findings incl. warnings). Step 2 judged pass = orphans (adjacency via parse_entry, snippet), contradictions, staleness — advisory, spot-checked. Step 3 = review-style presentation (mechanical + advisory sections), present-and-stop; repairs → hand/B.3, not promote. Read-only contract callout + body directive.
+- evals/lint/contract.json: skill=lint; frontmatter.contains witnesses "allowed-tools"; anchors = knowledge_lint, lint_knowledge, .minerva/knowledge/, ## Related, read-only, any_of[orphan/contradiction/stale], any_of[advisory]. NO FIX/SUGGEST/IGNORE anchors. cross_surface all 3.
+- Catalog (010): plugin README row (after debug), using-minerva matrix row (after debug), root README cell token (after debug). All 3 — verified by test_skill_contracts cross_surface (lint enumerated).
+- Verified: both SKILL python snippets run on the live corpus (mechanical=[] clean; orphans=001/002/003/005/006/007/008/009/014 — standalone entries, advisory candidates). Full gated suite 117 passed (+5 lint contract cases). Detector FROZEN (scripts unchanged). drift gate clean; run_skill_evals --dry-run ok.
+- No behavioral.json for lint (optional; the judged dims are advisory/provisional per 013).

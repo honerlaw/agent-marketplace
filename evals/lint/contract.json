@@ -1,0 +1,44 @@
+{
+  "skill": "lint",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "lint"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "knowledge_lint",
+    "lint_knowledge",
+    ".minerva/knowledge/",
+    "## Related",
+    "read-only",
+    {
+      "any_of": [
+        "orphan",
+        "contradiction",
+        "stale"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "advisory"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
