@@ -50,6 +50,11 @@ def add_related_link(text: str, target: str, relationship: str) -> str:
 def add_supersede_banner(text: str, nnn: str, target: str, date: str) -> str:
     """Insert a supersession banner between the metadata block and the first
     ``## `` header. Idempotent on the superseding NNN.
+
+    Real knowledge entries always carry at least a ``## Context`` section, so the
+    banner lands before it. The degenerate "entry with no ``## `` section at all"
+    case (banner appended directly after metadata) is out of scope — the template
+    guarantees the sections exist.
     """
     if any(BANNER_MARKER_RE.match(ln) and ln.endswith(f"{nnn} -->") for ln in text.splitlines()):
         return text  # banner for this NNN already present -> no-op
@@ -85,8 +90,14 @@ def body_complement(text: str) -> str:
     i = 0
     while i < len(lines):
         ln = lines[i]
-        # drop the Related span: header -> EOF, plus one preceding blank line
+        # drop the Related span: header -> EOF, plus one preceding blank line.
+        # Contract (spec of record): ``## Related`` is the terminal section, so the
+        # span runs cleanly to EOF. Assert it, so a future entry that puts a body
+        # section *after* ``## Related`` can't make the byte-identity check vacuous.
         if ln.strip() == RELATED_HEADER:
+            assert not any(SECTION_RE.match(later) for later in lines[i + 1:]), (
+                "## Related must be the last section — the cross-ref span runs to EOF"
+            )
             if out and out[-1] == "":
                 out.pop()
             break
@@ -150,6 +161,16 @@ def test_banner_idempotent():
     once = add_supersede_banner(ENTRY, "021", "021-decision-some-newer-call", "2026-07-01")
     twice = add_supersede_banner(once, "021", "021-decision-some-newer-call", "2026-07-01")
     assert twice == once
+
+
+def test_related_must_be_terminal_section():
+    """body_complement is the span spec of record: a body section after
+    ``## Related`` violates the contract and must be caught, not silently dropped.
+    """
+    import pytest
+    malformed = ENTRY.rstrip("\n") + "\n\n## Related\n- [[001-decision-x]] — see also\n\n## Sneaky\nbody text\n"
+    with pytest.raises(AssertionError):
+        body_complement(malformed)
 
 
 def test_banner_and_related_together_preserve_body():

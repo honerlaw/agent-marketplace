@@ -34,3 +34,15 @@
 - minerva skills are prose executed by an LLM, not Python — so #8's "byte-guard test" can't invoke a `promote()` function. Implemented it as a reference span-editor + property tests serving as the executable spec the SKILL.md prose mirrors. Satisfies the criterion's substance (mechanical enforcement of the narrowed invariant). The SKILL.md is the runtime contract; the test is the spec-of-record for the span boundaries.
 - Relationship vocab is not fully symmetric: `supersedes`↔`superseded by` is the directional pair, `contradicts`/`see also` are symmetric, but `builds on` has no inverse term — reciprocal of a `builds on` edge is rendered as `see also` (used in the 004 dogfood). Acceptable; noted in case a future entry wants a richer inverse.
 - Pre-existing: tests/test_browser.py + tests/test_storage.py fail collection (`No module named 'lib'`); known on main, CI (evals.yml) deliberately scopes around them. Untouched by 020.
+
+## Panel decisions 2026-06-02 (continued)
+
+- [3/3 accept] completion verification: all 9 success criteria honestly met; both panelists + arbiter independently ran the gated suite (95 passed) and re-proved the invariant guard is non-vacuous (body-tamper detected, anchors load-bearing)
+- [skipped — small] review triage: all 3 review findings LOW severity (evidence: reviewer rated each low; actionable ones touch only tests/test_promote_invariant.py — additive, no new interface, no knowledge-constraint violation) → main LLM triaged directly without a panel
+
+## Review finding 2026-06-02
+
+Review ran 3 lenses; spec-fidelity + knowledge-compliance clean, 3 LOW quality findings:
+1. body_complement assumed `## Related` is terminal without asserting it → FIXED: added an assertion + `test_related_must_be_terminal_section` so the guard can't go vacuous if a future entry puts a body section after `## Related`.
+2. add_supersede_banner on a (degenerate) entry with no `## ` section omits a blank separator → documented out of scope (real entries always have `## Context`; the template guarantees it).
+3. demo cluster reciprocal labels asymmetric (`builds on` ↔ `see also`) → IGNORE: intentional; the vocab has no inverse for `builds on`, reciprocal rendered as `see also`. Carried as a Phase-B consideration (richer inverse vocab).
