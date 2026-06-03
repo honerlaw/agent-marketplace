@@ -1,0 +1,38 @@
+{
+  "skill": "synthesize",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "synthesize"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "synthesis_status",
+    "overview.md",
+    "synthesis-watermark",
+    "git rev-parse --show-toplevel",
+    "[[",
+    "advisory",
+    {
+      "any_of": [
+        "gate",
+        "confirm"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
