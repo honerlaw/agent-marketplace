@@ -32,4 +32,14 @@
 8. Retire synthesize's own out-of-scope wiring bullet; entry 024 untouched (016); new
    025 builds on 024.
 
+## Panel decisions 2026-06-03 (work/review)
+
+- [3/3 accept] completion verification: Proponent + Arbiter accept; Skeptic revise →
+  both findings resolved (orphaned empty fence FIXED; entry 025 adjudicated as a
+  promote-phase deliverable, not a work-phase miss — written at promote, builds on 024).
+- [skipped — small] review triage: 1 LOW finding (redundant "promote-invisible"
+  phrasing), no medium+ (skip predicate met — all low). FIX: trimmed the [synthesis]
+  observability note. Evidence: reviewer found no load-bearing issues; phase chain,
+  step refs, anchors, contracts all consistent.
+
 ## Notes

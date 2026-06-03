@@ -184,7 +184,7 @@ Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) inst
 - [skipped — small] approach selection: option B dominant (rejected: A — duplicates orchestration; C — coarse)
 ```
 
-[Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd. Like a `[skipped — small]` line it is **promote-invisible by construction** (it has no Skeptic), so it never surfaces a durable pattern; it exists only so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent.
+[Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
 
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
 
