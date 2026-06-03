@@ -27,3 +27,4 @@
 - [[016-constraint-promote-narrowed-never-overwrite]] — see also
 - [[011-decision-minerva-reference-tier]] — builds on
 - [[018-decision-phase-b-deterministic-lint-detector]] — see also
+- [[024-decision-synthesis-layer-separate-file-advisory]] — see also

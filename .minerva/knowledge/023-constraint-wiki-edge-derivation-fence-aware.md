@@ -46,3 +46,4 @@ one-off fix:
 ## Related
 - [[015-constraint-knowledge-cross-reference-convention]] — builds on
 - [[022-decision-knowledge-fix-two-safety-models]] — see also
+- [[024-decision-synthesis-layer-separate-file-advisory]] — see also
