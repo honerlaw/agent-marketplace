@@ -60,3 +60,4 @@ incoherent for the index families and had to be split into these two guards.
 ## Related
 - [[020-decision-minerva-lint-read-only]] — builds on
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — see also
+- [[028-bug-knowledge-edits-not-fence-aware]] — see also

@@ -1,7 +1,7 @@
 # Proposal: related-backfill
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > The **cross-ref backfill** deferred by unit 026: author the initial `## Related` edges
 > for the 9 early entries that have none. The other deferred item — **rename-APPLY** — is
@@ -82,6 +82,12 @@ explicitly deferred.
    (`knowledge_lint.py` / `knowledge_fix.py` / `knowledge_spans.py`).
 7. The promote entry records the backfill decision, the rename-APPLY re-deferral, and the
    reusable-backfill-skill candidate followup.
+8. *(added by replan 2026-06-03)* `body_complement`, `_related_has_target`, and
+   `add_related_link` are fence-aware (header-location-only, via `_fence_flags` /
+   `FENCE_RE` from `knowledge_spans.py`); the crash, false-dedupe, and
+   fenced-only-header cases are covered in `tests/test_promote_invariant.py` and green;
+   the 7 existing property tests pass unchanged; a bug knowledge entry records the
+   latent landmine (cross-ref 023).
 
 ## Open Questions
 
