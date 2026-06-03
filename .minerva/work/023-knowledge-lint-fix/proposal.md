@@ -1,7 +1,7 @@
 # Proposal: knowledge-lint-fix
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > **Phase B.3** of the LLM-wiki effort — the gated, span-confined fix-applier.
 > Completes Phase B (B.1 = detector, unit 021; B.2 = read-only lint skill, unit 022).
