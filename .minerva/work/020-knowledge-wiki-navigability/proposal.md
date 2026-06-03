@@ -1,7 +1,7 @@
 # Proposal: knowledge-wiki-navigability-layer
 
 **Date**: 2026-06-02
-**Status**: Draft
+**Status**: Shipped (2026-06-02)
 
 > **Phase 1 of 3.** Phase B (`minerva:lint` health-check) and Phase C (synthesis /
 > concept pages + `log.md`) are deliberately out of scope — see **Out of scope**.
@@ -209,14 +209,20 @@ overwritten" line) is updated to state this narrowed invariant.
   following the anchor grammar in `evals/README.md`. Anchor on **short stable
   tokens** (e.g. `index-watermark`, `## Related`, `[[`, `.minerva/reference/`), not
   prose sentences. `tests/test_skill_contracts.py` must stay green.
-- **Invariant guard test:** add a test (in `tests/`) asserting `minerva:promote`
-  does NOT modify knowledge-file bytes outside the two machine-managed spans —
-  the **banner span** (lines between the H1 and the first `## ` header, delimited
-  by the `<!-- superseded-by: NNN -->` marker) and the **`## Related` span**
-  (`## Related` header → EOF). The test asserts byte-identity of the *complement*
-  of both spans, and includes a "Mode A over an already-linked pair → zero-byte
-  diff" case. This makes the narrowed never-overwrite invariant mechanically
-  enforced across both write paths, not merely documented.
+- **Invariant guard test:** because minerva skills are prose executed by an LLM
+  (there is no callable `promote()` function to unit-test), this shipped as
+  `tests/test_promote_invariant.py` — a **reference implementation** of the two
+  allowed mutations (`add_related_link`, `add_supersede_banner`) plus a
+  `body_complement` span-extractor, with property tests asserting byte-identity of
+  the *complement* of the two machine-managed spans — the **banner span** (between
+  the H1 and the first `## ` header, delimited by `<!-- superseded-by: NNN -->`)
+  and the **`## Related` span** (`## Related` header → EOF) — across both
+  mutations, plus idempotency and a "Mode A over an already-linked pair →
+  zero-byte diff" case. `body_complement` asserts `## Related` is the terminal
+  section so the guard can't go vacuous. The test is registered in the `evals.yml`
+  CI gate. The `SKILL.md` prose is the runtime contract; this test is the
+  executable spec-of-record for the span boundaries — making the narrowed
+  never-overwrite invariant mechanically enforced, not merely documented.
 - **Dogfood:** generate this repo's `.minerva/knowledge/index.md` from its 14
   existing entries (watermark `014`) and commit it, as the unit's own acceptance
   demonstration. Seed the already-inline-cross-referenced

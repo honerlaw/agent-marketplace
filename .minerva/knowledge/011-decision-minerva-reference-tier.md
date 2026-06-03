@@ -30,3 +30,6 @@ Discovery convention for `.minerva/reference/`: **filename-driven**, not frontma
 - `minerva:init` does not yet scaffold `.minerva/reference/`. New projects create it manually until init is updated (tracked in this work unit's `followups.md`).
 - The `using-minerva` skill and `plugins/minerva/README.md` document the persistence hierarchy with the two-tier model; both need updating to include the reference tier (tracked in this work unit's `followups.md`).
 - Skills that read `.minerva/reference/` must not bake in specific filenames — use `ls` + filename-driven selection, plus always-load for pattern-catalog-shaped files. This keeps the skill project-agnostic.
+
+## Related
+- [[017-decision-knowledge-wiki-navigability-layer]] — see also
