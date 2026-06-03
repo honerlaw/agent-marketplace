@@ -1,7 +1,7 @@
 # Proposal: minerva-lint-skill
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > **Phase B.2** of the LLM-wiki effort, **read-only**. Phase 1 = navigability
 > (unit 020); Phase B.1 = the deterministic detector (unit 021). The **gated

@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 019 -->
+<!-- index-watermark: 021 -->
 
 ## Decisions
 
@@ -11,6 +11,7 @@
 - [[014-decision-per-decision-skip-over-sizing-gate]] — gate per-decision and fail closed, not via an up-front sizing classifier
 - [[017-decision-knowledge-wiki-navigability-layer]] — knowledge is a navigable wiki: maintained index.md + corpus-scan discovery (X′ over X)
 - [[018-decision-phase-b-deterministic-lint-detector]] — Phase B split: a deterministic knowledge-lint CI gate ships first; the LLM-judged minerva:lint skill is deferred
+- [[020-decision-minerva-lint-read-only]] — minerva:lint ships read-only (advisory judged dims); the gated fix-applier is deferred to Phase B.3
 
 ## Bugs
 
@@ -30,3 +31,4 @@
 - [[015-constraint-knowledge-cross-reference-convention]] — entries cross-reference via a `## Related` block of wiki-links with a closed relationship vocabulary
 - [[016-constraint-promote-narrowed-never-overwrite]] — promote edits existing entries only within the `## Related`/banner span; bodies are append-only
 - [[019-constraint-knowledge-span-model-single-sourced]] — the wiki span model is single-sourced in scripts/knowledge_spans.py; import it, never re-derive
+- [[021-constraint-skill-wraps-script-via-importable-api]] — a prose skill wraps a sibling Python tool via its importable API, anchored to the working-tree root; not the CLI, not CWD-relative
