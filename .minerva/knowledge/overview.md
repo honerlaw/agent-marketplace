@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 025 -->
+<!-- synthesis-watermark: 028 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -39,6 +39,20 @@ skill that maintains it is wired into **both lifecycle orchestrators** as a self
 post-promote / pre-ship step — delegation, not a panel decision — so the overview refreshes
 as part of the same PR that lands new entries
 ([[025-decision-synthesize-wired-post-promote-self-gating]]).
+
+Adopting this structure on a legacy corpus has its own tooling and lore. The read-only
+**migration check** is the one surface that inventories what every other wiki tool is
+blind to — files that don't match the `ENTRY_RE` naming convention read as a *false
+clean* across the whole toolchain ([[026-decision-migration-check-read-only-entry-re-blindspot]]).
+The initial cross-reference **backfill** for the pre-convention entries was hand-authored
+as a one-time unit (a per-edge disposition table, editor-routed writes, fixer-owned
+reciprocals, and an honest standalone residual), with file-rename automation re-deferred
+at zero live instances ([[027-decision-related-backfill-hand-authored-rename-redeferred]]).
+That backfill also flushed out the **third instance of the fence trap**: the span editors
+read entry 015's fenced `## Related` example as structure, crashing on (and silently
+de-duping against) any edge into it — fixed with fence-aware header *location* that never
+drops fenced content from the byte-identity guard
+([[028-bug-knowledge-edits-not-fence-aware]]).
 
 ## Skills, plugins, and catalogs: discovery and contracts
 
@@ -88,7 +102,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`025`) is a **new-scope-only floor**:
+synthesis watermark (`028`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -98,7 +112,11 @@ synthesis watermark (`025`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `025-wire-synthesize-into-orchestrators` work unit
-(dogfooding the post-promote synthesis step it added), reflecting the corpus through entry
-`025`. Any entry promoted after this will correctly show as `unsynthesized` until the next
-refresh — the advisory signal working as intended.
+This overview was refreshed in the `027-related-backfill` work unit, reflecting the corpus
+through entry `028`. The refresh was invoked with the **explicit drift rationale** — the
+backfill reshaped 16 `## Related` blocks in place (exactly the edit class the watermark
+cannot see) alongside three new entries — rather than by the bare un-synthesized count.
+Prior refreshes: `025-wire-synthesize-into-orchestrators` (through `025`) and the original
+synthesis in `024-synthesize-skill` (through `023`). Any entry promoted after this will
+correctly show as `unsynthesized` until the next refresh — the advisory signal working as
+intended.
