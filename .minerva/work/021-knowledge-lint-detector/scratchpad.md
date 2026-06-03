@@ -31,3 +31,15 @@
 - Verified: full gated suite 112 passed; CLI exits 0 on live `.minerva/knowledge/`; run_skill_evals --dry-run still ok.
 - No skill added → constraints 010/012 don't fire (no catalog rows, no contract.json). Gate is deterministic-only (honors 013).
 - Banner-back-link path has no live coverage (no superseded entries exist yet) — exercised only by fixture, as expected.
+
+## Panel decisions 2026-06-02 (continued)
+
+- [3/3 accept] completion verification: all 7 success criteria met; panel ran the CLI (exit 0) + suite (112 passed) + live-mutation probes (bump watermark → exit 1; delete back-link → reciprocal error). Skeptic caught a vacuous fence test → FIXED (fenced example moved AFTER the real block; verified discriminating via fence-disable probe); re-verified 3/3.
+- [skipped — small] review triage: 3 LOW findings, single file (knowledge_lint.py), additive/polish, no interface/constraint impact → triaged directly.
+
+## Review finding 2026-06-02
+
+Inline review (spec-fidelity + knowledge-compliance clean):
+1. [low] dead/duplicate `or re.match(...)` fallback in parse_entry (unreachable; identical to CATALOG_LINE_RE) → FIXED.
+2. [low] duplicate-NNN files would silently collapse (dict keyed by NNN, last-writer-wins) → FOLLOWUP (a new check; can't occur in a promote-managed corpus, NNN is auto-incremented).
+3. [low] missing-watermark message was terse (`watermark None != ...`) → FIXED (special-cased: "index.md has no `index-watermark` comment").

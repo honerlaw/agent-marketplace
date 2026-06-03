@@ -93,9 +93,7 @@ def parse_entry(path: Path):
         for i, line in nonfenced:
             if i <= related_header_idx:
                 continue
-            m = CATALOG_LINE_RE.match(line.strip()) or re.match(
-                r"^-\s+\[\[(\d{3}-[a-z]+-[^\]]+)\]\]", line.strip()
-            )
+            m = CATALOG_LINE_RE.match(line.strip())
             if m:
                 related_out.add(m.group(1)[:3])
     return {
@@ -144,7 +142,10 @@ def lint_knowledge(knowledge_dir) -> list:
         findings.append(Finding("index", "error", "index.md is missing"))
     else:
         max_nnn = max(entry_nnns) if entry_nnns else "000"
-        if idx["watermark"] != max_nnn:
+        if idx["watermark"] is None:
+            findings.append(Finding(
+                "index", "error", "index.md has no `index-watermark` comment"))
+        elif idx["watermark"] != max_nnn:
             findings.append(Finding(
                 "index", "error",
                 f"watermark {idx['watermark']} != max entry NNN {max_nnn}"))
