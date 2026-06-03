@@ -33,3 +33,4 @@ Rules:
 ## Related
 - [[016-constraint-promote-narrowed-never-overwrite]] — see also
 - [[017-decision-knowledge-wiki-navigability-layer]] — builds on
+- [[023-constraint-wiki-edge-derivation-fence-aware]] — see also
