@@ -33,3 +33,17 @@
 - plugins/minerva/skills/lint-fix/SKILL.md: mutating, gated (dry-run→confirm→apply), allowed-tools Bash/Read/Grep/Glob (no Edit/Write), NO read-only anchor. evals/lint-fix/contract.json (no read-only / no FIX-SUGGEST-IGNORE anchors). Catalog ×3 (plugin README, using-minerva, root README). test_knowledge_fix.py added to evals.yml.
 - Verified: full gated suite 132 passed; drift gate clean; detector frozen; idempotent no-op on clean live corpus.
 - Fixed during build: serializer emitted a double blank line for the empty ## Patterns section → switched to block-join (header + blank+rows only if non-empty; sections joined by one blank).
+
+## Panel decisions 2026-06-03 (continued)
+
+- [3/3 accept] completion verification: all 9 criteria met; both panelists ran the suite (132) + MUTATION PROBES (break plan_index→5 fails, plan_reciprocals→3, body-corrupt→pre-write AssertionError, no partial write). Minor: main() default date hardcoded → FIXED (today()).
+- [2/3 accept] review triage (Proponent + Skeptic): 1 HIGH + 2 MED + 2 LOW, all FIX. #1 pinned to the _strip_fences-reuse branch (NOT editing the frozen detector). No Replan trigger (within-scope conformance fixes).
+
+## Review finding 2026-06-03
+
+Inline review (spec-fidelity + knowledge-compliance clean). 5 findings, all FIXED:
+1. [HIGH] `_forward_related` was NOT fence-aware (detector is) → a fenced `## Related` example in an entry body (e.g. convention doc 015) could make the fixer invent a spurious banner/Related edit → FIXED: import `_strip_fences` from the frozen knowledge_lint; parse the LAST non-fenced `## Related`. Detector stays frozen. Test: test_fenced_related_example_not_treated_as_edge.
+2. [MED] plan_index silently DROPPED a catalog line whose entry has an unknown declared_type (data loss) → FIXED: keep the line under its current section + record a refusal; never drop. Test: test_unknown_type_line_refused_not_dropped.
+3. [MED] plan_index on a missing/empty index.md wrote a hollow skeleton → FIXED: refuse the rewrite + surface "run minerva:init". Test: test_missing_index_refused_not_fabricated.
+4. [LOW] `--date` argv parsing stripped any token == date (path corruption) → FIXED: pop by index (del argv[i:i+2]).
+5. [LOW] apply() partial-write atomicity (no IO-error rollback) → FIXED: documented the limitation (body_complement validation IS pre-write; IO-error rollback out of scope, low-risk local FS).

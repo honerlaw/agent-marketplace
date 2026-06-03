@@ -192,6 +192,45 @@ def test_index_skeleton_and_order_preserved(tmp_path):
     assert parse_index(kd / "index.md")["watermark"] == "003"
 
 
+def test_fenced_related_example_not_treated_as_edge(tmp_path):
+    """A fenced `## Related` example in an entry body must NOT be read as a real
+    forward edge (fence-aware, matching the detector) — so the fixer invents no edit.
+    """
+    fenced = "\nExample:\n\n```markdown\n## Related\n- [[002-constraint-bar]] — supersedes\n```\n"
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo", body_extra=fenced),  # no REAL ## Related
+         "002-constraint-bar.md": entry("constraint", "bar")},
+        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+    )
+    assert errors(kd) == []  # detector (fence-aware) sees a clean corpus
+    before = {p.name: p.read_text() for p in kd.glob("*.md")}
+    batch = fix.apply(kd, DATE)
+    assert batch["entries"] == {}  # no spurious banner/Related edit from the fenced example
+    assert {p.name: p.read_text() for p in kd.glob("*.md")} == before  # byte-identical
+
+
+def test_unknown_type_line_refused_not_dropped(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-weird-x.md": entry("weird", "x")},  # declared type not one of the 4
+        index_md("001", {"Decisions": [("001-weird-x", "keep me")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    assert any("001" in r[0] or "001" in r[2] for r in batch["refusals"])
+    text = (kd / "index.md").read_text()
+    assert "001-weird-x" in text and "keep me" in text  # line NOT dropped, summary intact
+
+
+def test_missing_index_refused_not_fabricated(tmp_path):
+    (tmp_path / "001-decision-foo.md").write_text(entry("decision", "foo"))
+    # no index.md written
+    batch = fix.apply(tmp_path, DATE)
+    assert batch["index"] is None
+    assert any("missing" in r[2] for r in batch["refusals"])
+    assert not (tmp_path / "index.md").exists()  # no hollow skeleton fabricated
+
+
 def test_dry_run_writes_nothing(tmp_path):
     kd = make_dir(
         tmp_path,

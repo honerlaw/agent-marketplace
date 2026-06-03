@@ -31,6 +31,7 @@ from pathlib import Path
 from knowledge_lint import (
     ENTRY_RE,
     SECTION_TO_TYPE,
+    _strip_fences,
     lint_knowledge,
     parse_entry,
     parse_index,
@@ -68,29 +69,53 @@ def _entries(kd: Path) -> dict:
 
 # --- INDEX fix (watermark / stale line / wrong Type section) ------------------
 def plan_index(kd: Path) -> tuple:
-    """Return (new_index_text, old_index_text) — a canonical, skeleton-preserving
-    serialization that fixes watermark, removes stale catalog lines, and relocates
-    wrong-Type lines. Preserves each surviving catalog line verbatim (summary intact)
-    and ascending-NNN order. Does NOT add missing catalog lines (needs a summary).
+    """Return (new_index_text, old_index_text, refusals) — a canonical,
+    skeleton-preserving serialization that fixes watermark, removes stale catalog
+    lines, and relocates wrong-Type lines. Preserves each surviving catalog line
+    verbatim (summary intact) and ascending-NNN order. Does NOT add missing catalog
+    lines (needs a summary), and never DROPS a line it can't confidently place.
     """
     index_path = kd / "index.md"
     old = index_path.read_text() if index_path.exists() else ""
     entries = _entries(kd)
     max_nnn = max(entries) if entries else "000"
 
-    # Collect surviving catalog lines verbatim, keyed by NNN, from the existing index.
-    catalog = {}  # nnn -> verbatim line
+    # A missing/empty index can't be mechanically rebuilt (the fixer has no
+    # summaries to author) — refuse rather than write a hollow skeleton.
+    if not old.strip():
+        return old, old, [("index", "—", "index.md is missing/empty — run minerva:init "
+                                          "or author the catalog by hand (fixer won't fabricate summaries)")]
+
+    refusals = []
+    # Collect surviving catalog lines verbatim, with the section they're under, from
+    # the existing index. Stale lines (NNN with no entry file) are dropped.
+    parsed = []  # (nnn, verbatim_line, current_section)
+    cur_sec = None
     for ln in old.splitlines():
-        m = _CATALOG_LINE_RE.match(ln.strip())
-        if m and m.group(1) in entries:  # drop stale lines (NNN with no entry file)
-            catalog[m.group(1)] = ln.rstrip()
+        s = ln.strip()
+        if s in SECTION_TO_TYPE:  # a `## Type` header
+            cur_sec = s
+            continue
+        m = _CATALOG_LINE_RE.match(s)
+        if m and m.group(1) in entries:
+            parsed.append((m.group(1), ln.rstrip(), cur_sec))
 
     # Bucket each surviving line under the entry's DECLARED type (relocates wrong-Type).
+    # An entry whose declared type isn't one of the four known types is LEFT where it
+    # is (never dropped — that would delete its summary) and recorded as a refusal.
     buckets = {sec: [] for sec in SECTION_ORDER}
-    for nnn, line in catalog.items():
-        sec = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
-        if sec in buckets:
-            buckets[sec].append((nnn, line))
+    for nnn, line, cur in parsed:
+        target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
+        if target in buckets:
+            buckets[target].append((nnn, line))
+        elif cur in buckets:
+            buckets[cur].append((nnn, line))
+            refusals.append((nnn, "—", f"entry {nnn} has an unrecognized type; left under "
+                                       f"{cur}, not relocated"))
+        else:
+            # Can't place safely — refuse the whole index rewrite, leave index.md as-is.
+            return old, old, [(nnn, "—", f"entry {nnn} has an unrecognized type and is in "
+                                         f"an unknown section; index left unchanged")]
 
     # Canonical skeleton: each section is its header, then (blank + entries) only if
     # non-empty; sections separated by one blank line. An empty section (e.g.
@@ -110,22 +135,30 @@ def plan_index(kd: Path) -> tuple:
         + "\n\n".join(blocks)
         + "\n"
     )
-    return new, old
+    return new, old, refusals
 
 
 # --- ENTRY fix (missing reciprocal) ------------------------------------------
 def _forward_related(parsed_text: str) -> list:
-    """Parse an entry's `## Related` block -> [(target_nnn, label)]."""
-    out = []
-    in_related = False
-    for ln in parsed_text.splitlines():
+    """Parse an entry's `## Related` block -> [(target_nnn, label)].
+
+    Fence-aware, matching the detector's edge model (knowledge_lint is fence-aware
+    and a fenced `## Related` example — e.g. in a convention doc — must NOT be read
+    as a real edge). Uses the LAST non-fenced `## Related` header (the canonical
+    terminal block), per the detector's own block-selection rule.
+    """
+    nonfenced = [ln for _, ln in _strip_fences(parsed_text.splitlines())]
+    start = None
+    for i, ln in enumerate(nonfenced):
         if ln.strip() == "## Related":
-            in_related = True
-            continue
-        if in_related:
-            m = _RELATED_LINE_RE.match(ln.strip())
-            if m:
-                out.append((m.group(1), m.group(2).strip()))
+            start = i  # keep the last one
+    if start is None:
+        return []
+    out = []
+    for ln in nonfenced[start + 1:]:
+        m = _RELATED_LINE_RE.match(ln.strip())
+        if m:
+            out.append((m.group(1), m.group(2).strip()))
     return out
 
 
@@ -171,14 +204,24 @@ def _assert_body_preserved(before: str, after: str):
 # --- orchestration -----------------------------------------------------------
 def plan(kd: Path, date: str) -> dict:
     """Compute the full fix batch from one recompute. No writes."""
-    new_index, old_index = plan_index(kd)
-    recip_edits, refusals = plan_reciprocals(kd, date)
+    new_index, old_index, index_refusals = plan_index(kd)
+    recip_edits, recip_refusals = plan_reciprocals(kd, date)
     index_change = new_index if new_index != old_index else None
-    return {"index": index_change, "entries": recip_edits, "refusals": refusals}
+    return {"index": index_change, "entries": recip_edits,
+            "refusals": index_refusals + recip_refusals}
 
 
 def apply(kd: Path, date: str) -> dict:
-    """Recompute once, validate, then write the batch atomically."""
+    """Recompute once, validate, then write the batch.
+
+    Validation is all-or-nothing and pre-write: every entry edit is checked against
+    the `body_complement` byte-identity invariant BEFORE any file is written, so a
+    bad edit aborts the whole run with nothing on disk. (Note: this guards against
+    *bad edits*, not against an OS-level write failure mid-batch — there is no
+    temp-file/rename rollback. On a local filesystem with a validated, deterministic
+    plan that residual window is negligible; it is documented here, not engineered
+    away, given the low severity.)
+    """
     batch = plan(kd, date)
     entries = _entries(kd)
     # Validate every entry edit preserves the body BEFORE writing anything.
@@ -213,8 +256,9 @@ def main(argv=None) -> int:
     import datetime
     date = datetime.date.today().isoformat()
     if "--date" in argv:
-        date = argv[argv.index("--date") + 1]
-        argv = [a for i, a in enumerate(argv) if a not in ("--date", date)]
+        i = argv.index("--date")
+        date = argv[i + 1]
+        del argv[i:i + 2]  # pop the flag + its value by index (don't strip a path == date)
     if argv:
         kd = Path(argv[0])
     else:
