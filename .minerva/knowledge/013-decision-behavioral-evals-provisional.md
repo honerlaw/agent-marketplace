@@ -14,3 +14,6 @@ The behavioral tier ships, but **its output is not yet trustworthy** — two sta
 - **Don't trust the reported deltas** until the **mandatory validation spike** returns "go". Two things are unsolved: cleanly suppressing one auto-discovered skill as a control (the current control is a best-effort stub), and whether the delta is real signal vs. run-to-run noise. A no-go forces a runner replan. See `.minerva/work/018-behavioral-skill-value-runner/followups.md`.
 
 The format, run commands, and corrected prior-art framing live in **`evals/README.md`** — the source of truth; not restated here. This entry exists to carry the cross-cutting judgment (don't gate, don't trust yet) that a contributor needs *before* acting on any behavioral-eval output, which README reference docs don't guarantee surfacing.
+
+## Related
+- [[018-decision-phase-b-deterministic-lint-detector]] — see also

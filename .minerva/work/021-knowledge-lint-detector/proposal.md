@@ -1,7 +1,7 @@
 # Proposal: knowledge-lint-detector
 
 **Date**: 2026-06-02
-**Status**: Draft
+**Status**: Shipped (2026-06-02)
 
 > **Phase B.1** of the LLM-wiki effort. Phase 1 (navigability) shipped as unit 020.
 > The interactive `minerva:lint` skill — LLM-judged contradiction/staleness checks,
