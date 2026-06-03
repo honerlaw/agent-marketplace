@@ -1,0 +1,43 @@
+{
+  "skill": "lint-fix",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "lint-fix"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "knowledge_fix",
+    "--dry-run",
+    "## Related",
+    "git rev-parse --show-toplevel",
+    {
+      "any_of": [
+        "watermark",
+        "reciprocal"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "gate",
+        "confirm"
+      ],
+      "ignore_case": true
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}

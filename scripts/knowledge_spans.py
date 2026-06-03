@@ -8,9 +8,11 @@ spec of record in knowledge entry 016. Both the promote-invariant guard
 (``scripts/knowledge_lint.py``) import from here so the span model is defined once
 and cannot drift.
 
-Only the *constants* live here. Promote's mutation helpers (add_related_link,
-add_supersede_banner, body_complement) stay in the invariant test; the linter is
-read-only and builds its own fence-aware parser on top of these primitives.
+Only the *constants* live here. The span *editors* (add_related_link,
+add_supersede_banner, body_complement) live in `scripts/knowledge_edits.py` (moved
+there in work unit 023 so the fixer and the invariant guard share one
+implementation); the read-only linter builds its own fence-aware parser on top of
+these primitives and imports no editors.
 """
 import re
 

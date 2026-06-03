@@ -24,3 +24,12 @@
 - Index-editing logic in knowledge_fix.py (not knowledge_edits.py). Surgical (preserve skeleton/empty-Patterns/NNN order).
 - minerva:lint-fix: mutating, gated (dry-run → confirm → apply), allowed-tools Bash/Read/Grep/Glob, NO read-only anchor. Catalog ×3 + evals/lint-fix/contract.json (no read-only / no FIX-SUGGEST-IGNORE anchors).
 - NOT auto-fixed: missing catalog line (summary), broken links, judged dims (013).
+
+## Implementation log 2026-06-03
+
+- scripts/knowledge_edits.py: NEW — moved add_related_link/add_supersede_banner/_related_has_target/body_complement verbatim from test_promote_invariant.py (imports constants from knowledge_spans.py). test_promote_invariant.py now imports them; its 7 tests still pass. knowledge_spans.py docstring updated (constants unchanged). knowledge_lint.py: 0 changes (frozen, verified vs main).
+- scripts/knowledge_fix.py: NEW — deterministic fixer. plan_index (canonical serializer: watermark=max NNN, drop stale lines, relocate wrong-Type verbatim, NNN-sorted, skeleton incl. empty ## Patterns — block-join to avoid double-blank). plan_reciprocals (parse forward `## Related` labels, RECIPROCAL table {builds on→see also, supersedes↔superseded by, contradicts/see also symmetric}, refuse if ∉vocab; supersedes also writes banner; validate all before write). apply: recompute-once → validate body_complement per entry → atomic write → final lint verify. --dry-run + --date (deterministic). CLI git-root-anchored.
+- tests/test_knowledge_fix.py: 10 tests — each fix family + clean-noop + idempotent + body-preserved + index skeleton/order + invalid-label atomic refusal + dry-run-writes-nothing. All pass.
+- plugins/minerva/skills/lint-fix/SKILL.md: mutating, gated (dry-run→confirm→apply), allowed-tools Bash/Read/Grep/Glob (no Edit/Write), NO read-only anchor. evals/lint-fix/contract.json (no read-only / no FIX-SUGGEST-IGNORE anchors). Catalog ×3 (plugin README, using-minerva, root README). test_knowledge_fix.py added to evals.yml.
+- Verified: full gated suite 132 passed; drift gate clean; detector frozen; idempotent no-op on clean live corpus.
+- Fixed during build: serializer emitted a double blank line for the empty ## Patterns section → switched to block-join (header + blank+rows only if non-empty; sections joined by one blank).

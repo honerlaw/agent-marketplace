@@ -22,100 +22,18 @@ invariant the skill must honor:
 The SKILL.md prose mirrors these exact span definitions; if the two drift, this
 file is the spec of record.
 """
-# --- span delimiters (single source of truth: scripts/knowledge_spans.py) -----
-# These were defined inline here originally; work unit 021 extracted them to a
-# shared module so the linter (scripts/knowledge_lint.py) and this guard agree on
-# the span model (knowledge 016 calls them the spec of record). conftest.py puts
-# scripts/ on sys.path.
-from knowledge_spans import (  # noqa: E402
-    BANNER_MARKER_RE,
-    BANNER_QUOTE_RE,
-    RELATED_HEADER,
-    SECTION_RE,
+# --- span editors (single source of truth: scripts/knowledge_edits.py) --------
+# Originally defined inline here; work unit 023 moved them to scripts/knowledge_edits.py
+# so the fixer (scripts/knowledge_fix.py) and this guard share one editor
+# implementation (single-source rule, knowledge 019). This file remains the
+# reference-implementation spec of record for promote's two allowed mutations
+# (knowledge 016) — its property tests below exercise the moved editors. conftest.py
+# puts scripts/ on sys.path.
+from knowledge_edits import (  # noqa: E402
+    add_related_link,
+    add_supersede_banner,
+    body_complement,
 )
-
-
-# --- the two allowed mutations -----------------------------------------------
-def add_related_link(text: str, target: str, relationship: str) -> str:
-    """Ensure a ``- [[target]] — relationship`` line exists in the ``## Related``
-    block. Insert-iff-absent, keyed on the target stem (set semantics). Idempotent.
-    """
-    line = f"- [[{target}]] — {relationship}"
-    if _related_has_target(text, target):
-        return text  # already linked -> byte-level no-op
-    body = text.rstrip("\n")
-    if RELATED_HEADER in text.splitlines():
-        # append under the existing (always-last) Related section
-        return body + "\n" + line + "\n"
-    # create the section at EOF
-    return body + "\n\n" + RELATED_HEADER + "\n" + line + "\n"
-
-
-def add_supersede_banner(text: str, nnn: str, target: str, date: str) -> str:
-    """Insert a supersession banner between the metadata block and the first
-    ``## `` header. Idempotent on the superseding NNN.
-
-    Real knowledge entries always carry at least a ``## Context`` section, so the
-    banner lands before it. The degenerate "entry with no ``## `` section at all"
-    case (banner appended directly after metadata) is out of scope — the template
-    guarantees the sections exist.
-    """
-    if any(BANNER_MARKER_RE.match(ln) and ln.endswith(f"{nnn} -->") for ln in text.splitlines()):
-        return text  # banner for this NNN already present -> no-op
-    lines = text.splitlines()
-    insert_at = next((i for i, ln in enumerate(lines) if SECTION_RE.match(ln)), len(lines))
-    banner = [
-        f"<!-- superseded-by: {nnn} -->",
-        f"> **Superseded by [[{target}]]** ({date})",
-        "",
-    ]
-    new_lines = lines[:insert_at] + banner + lines[insert_at:]
-    return "\n".join(new_lines) + ("\n" if text.endswith("\n") else "")
-
-
-# --- helpers -----------------------------------------------------------------
-def _related_has_target(text: str, target: str) -> bool:
-    in_related = False
-    for ln in text.splitlines():
-        if ln.strip() == RELATED_HEADER:
-            in_related = True
-            continue
-        if in_related and f"[[{target}]]" in ln:
-            return True
-    return False
-
-
-def body_complement(text: str) -> str:
-    """Return the entry with both machine-managed spans removed — the surface the
-    invariant says promote must never touch.
-    """
-    lines = text.splitlines()
-    out = []
-    i = 0
-    while i < len(lines):
-        ln = lines[i]
-        # drop the Related span: header -> EOF, plus one preceding blank line.
-        # Contract (spec of record): ``## Related`` is the terminal section, so the
-        # span runs cleanly to EOF. Assert it, so a future entry that puts a body
-        # section *after* ``## Related`` can't make the byte-identity check vacuous.
-        if ln.strip() == RELATED_HEADER:
-            assert not any(SECTION_RE.match(later) for later in lines[i + 1:]), (
-                "## Related must be the last section — the cross-ref span runs to EOF"
-            )
-            if out and out[-1] == "":
-                out.pop()
-            break
-        # drop the banner span: marker + quote + one trailing blank
-        if BANNER_MARKER_RE.match(ln):
-            i += 1
-            if i < len(lines) and BANNER_QUOTE_RE.match(lines[i]):
-                i += 1
-            if i < len(lines) and lines[i] == "":
-                i += 1
-            continue
-        out.append(ln)
-        i += 1
-    return "\n".join(out).rstrip("\n")
 
 
 # --- fixture -----------------------------------------------------------------
