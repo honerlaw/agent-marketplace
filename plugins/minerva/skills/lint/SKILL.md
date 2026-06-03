@@ -23,9 +23,12 @@ deliberately can't compute.
 
 ## Target
 
-The canonical `.minerva/knowledge/` corpus at the project root (the merged wiki),
-**not** a work-unit scratchpad. `minerva:lint` takes no work-unit argument — it
-audits the whole knowledge base.
+The `.minerva/knowledge/` corpus of the **current working tree**, resolved from
+`git rev-parse --show-toplevel`. Run from the main repo it audits the canonical
+wiki; run from inside a worktree (mid-lifecycle) it audits that branch's corpus —
+the same per-branch semantics the unit-021 CI drift gate uses. `minerva:lint` takes
+no work-unit argument and reads no scratchpad — it audits the whole knowledge base
+of the working tree you are in.
 
 ## Step 1 — Mechanical pass (deterministic, high-confidence)
 
@@ -34,12 +37,14 @@ Run the frozen unit-021 detector through its **importable Python API** and read 
 the CLI exit code: `scripts/knowledge_lint.py` exits 0 when only warnings are
 present (e.g. a stale-slug warning), so the exit code would hide them.
 
-Call it with `Bash`, pinning the repo-root `scripts/` directory on `sys.path`:
+Call it with `Bash`, anchoring **both** the `scripts/` import path and the corpus
+path to the current working tree's root (`git rev-parse --show-toplevel`) so it works
+from any subdirectory and audits the corpus of the tree you're in:
 
 ```bash
-python3 -c "import sys, json; sys.path.insert(0, 'scripts'); \
+ROOT="$(git rev-parse --show-toplevel)"; python3 -c "import sys, json; sys.path.insert(0, '$ROOT/scripts'); \
 from knowledge_lint import lint_knowledge; \
-print(json.dumps([f._asdict() for f in lint_knowledge('.minerva/knowledge')], indent=0))"
+print(json.dumps([f._asdict() for f in lint_knowledge('$ROOT/.minerva/knowledge')]))"
 ```
 
 Each `Finding` has `family` (`index` / `broken-link` / `reciprocal`), `severity`
@@ -60,17 +65,19 @@ attention, so a clean result is not a guarantee).
   model can't drift from the gated one:
 
   ```bash
-  python3 -c "import sys, json; sys.path.insert(0, 'scripts'); \
+  ROOT="$(git rev-parse --show-toplevel)"; python3 -c "import sys, json; sys.path.insert(0, '$ROOT/scripts'); \
   from pathlib import Path; from knowledge_lint import parse_entry, ENTRY_RE; \
-  E={p.name: parse_entry(p) for p in Path('.minerva/knowledge').glob('*.md') if ENTRY_RE.match(p.name)}; \
+  E={p.name: parse_entry(p) for p in Path('$ROOT/.minerva/knowledge').glob('*.md') if ENTRY_RE.match(p.name)}; \
   inbound={e['nnn']: set() for e in E.values()}; \
-  [inbound[t].add(e['nnn']) for e in E.values() for t in e['related_out'] if t in inbound]; \
-  print(json.dumps(sorted(n for n,e in ((v['nnn'],v) for v in E.values()) if not e['related_out'] and not inbound[n])))"
+  [inbound[t].add(e['nnn']) for e in E.values() for t in e['backlinks'] if t in inbound]; \
+  print(json.dumps(sorted(n for n,e in ((v['nnn'],v) for v in E.values()) if not e['backlinks'] and not inbound[n])))"
   ```
 
-  An entry with no outbound and no inbound `## Related` edge is an **orphan
-  candidate for cross-linking** — *not* a defect. Whether an orphan should be linked
-  (and to what) is the only LLM judgment here; many entries legitimately stand alone.
+  An entry with no outbound and no inbound edge — where an edge is a `## Related`
+  link **or** a supersession-banner back-link, matching the detector's `backlinks`
+  edge model — is an **orphan candidate for cross-linking**, *not* a defect. Whether
+  an orphan should be linked (and to what) is the only LLM judgment here; many
+  entries legitimately stand alone.
 
 - **Contradictions.** Two entries whose findings disagree with no `contradicts` link
   or supersession between them. Report the pair and the apparent conflict.
