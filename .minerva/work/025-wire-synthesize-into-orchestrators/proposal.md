@@ -1,7 +1,7 @@
 # Proposal: wire-synthesize-into-orchestrators
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > Follow-up to unit 024 (Phase C — the `minerva:synthesize` capability). Discharges the
 > deferred orchestrator wiring named in [[024-decision-synthesis-layer-separate-file-advisory]].
