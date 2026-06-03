@@ -21,8 +21,11 @@ This module reuses the frozen detector's primitives (`_strip_fences`, `ENTRY_RE`
 `WIKILINK_RE`) rather than re-deriving them (knowledge entries 019 / 021 / 023). Live
 entries are enumerated via the `ENTRY_RE` glob — NOT `parse_index`, which only reads
 `index.md`'s fixed Type-section catalog and would report a *false* clean against a
-theme-grouped overview. The overview link scan is fence-aware (knowledge entry 023), so
-a fenced example link is never flagged as rot.
+theme-grouped overview. Both the link scan AND the watermark read are fence-aware
+(knowledge entry 023): a fenced example link is never flagged as rot, and a
+`synthesis-watermark` comment inside a code fence is never honored. Link-rot resolution
+is by NNN only — a wikilink whose NNN matches no live entry is rot — mirroring the frozen
+detector's `## Related` broken-link family (slug-accuracy is out of scope here).
 
 Limitations (the watermark is a NEW-SCOPE-ONLY floor):
   * detects ADDED entries (NNN > watermark), NOT in-place `## Related` / banner / body
@@ -62,7 +65,7 @@ def synthesis_status(knowledge_dir) -> dict:
       corpus_max_nnn       int  (-1 if the corpus has no entries)
       unsynthesized        sorted list[str] of entry NNNs with NNN > watermark
       link_rot             sorted list[str] of [[NNN-type-slug]] stems in the overview
-                           that do not resolve to a live entry
+                           whose NNN matches no live entry (resolution is by NNN only)
     """
     kd = Path(knowledge_dir)
     entry_nnns = _entry_nnns(kd)

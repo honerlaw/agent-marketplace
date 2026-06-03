@@ -84,9 +84,11 @@ overview for continuity) and draft `overview.md`:
   with a stale body is not detectable), and that new entries promoted after this
   synthesis will show as `unsynthesized` until the next refresh.
 
-Every `[[NNN-type-slug]]` you write must resolve to a live entry — re-run Step 1 after
-drafting (in a scratch copy or by inspection) to confirm `link_rot` is empty before you
-gate.
+Every `[[NNN-type-slug]]` you write must resolve to a live entry. Confirm **by
+inspection** that each link's NNN (and ideally its full stem, to keep navigation honest)
+matches a real entry filename in `.minerva/knowledge/` before you gate — the Step-1
+helper reads the *committed* `overview.md`, so it can only confirm `link_rot` is empty
+*after* the write, not validate an un-written draft.
 
 ## Step 4 — Gate, then write
 

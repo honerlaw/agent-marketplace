@@ -27,4 +27,22 @@
   `synthesis-watermark` doesn't trip `WATERMARK_RE` (anchored, index.md-only); ensure
   `## Limitations` documents staleness-by-1 after this unit promotes as 024.
 
+- [3/3 accept] completion verification: all 8 success criteria independently re-verified
+  (148 tests green, contracts green, runner exit 0, detector+fixer+signal clean on the
+  live corpus, no frozen file touched).
+- [skipped — small] review triage: 3 LOW findings, no medium+ (skip predicate met — all
+  low-severity). Disposition FIX all three (cheap doc/honesty fixes): (1) clarify
+  link_rot resolution is NNN-only in docstring + SKILL; (2) document the watermark read
+  is also fence-aware; (3) replace SKILL Step-3 "re-run Step 1 after drafting"
+  (half-actionable — helper reads the committed overview) with a by-inspection check.
+  Evidence: reviewer found no load-bearing issues; script logic correct + consistent with
+  the frozen detector.
+
+## Review triage 2026-06-03
+
+- FIX: synthesis_status.py docstring — link_rot is NNN-only resolution; watermark read is
+  fence-aware. (low)
+- FIX: synthesis_status() return-doc — "whose NNN matches no live entry". (low)
+- FIX: synthesize/SKILL.md Step 3 — by-inspection link check, not "re-run Step 1". (low)
+
 ## Notes
