@@ -17,3 +17,4 @@ The format, run commands, and corrected prior-art framing live in **`evals/READM
 
 ## Related
 - [[018-decision-phase-b-deterministic-lint-detector]] — see also
+- [[024-decision-synthesis-layer-separate-file-advisory]] — see also
