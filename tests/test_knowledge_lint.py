@@ -178,15 +178,20 @@ def test_banner_backlink_satisfies_reciprocity(tmp_path):
 
 
 def test_fenced_related_example_is_ignored(tmp_path):
-    """A ## Related example inside a code fence must not be parsed as the block."""
-    fenced = (
-        "\nThe convention looks like:\n\n```markdown\n## Related\n"
+    """A ## Related example inside a code fence must not be parsed as the block.
+
+    Discriminating: the fenced example is placed AFTER the real ## Related block, so
+    a non-fence-aware "last ## Related header wins" parser would select the fenced
+    one and flag its bogus [[099]] link. Only genuine fence-tracking keeps this clean.
+    """
+    real_001 = entry("decision", "foo", related=[("002-constraint-bar", "see also")])
+    fenced_after = (
+        "\nFor reference, the convention is:\n\n```markdown\n## Related\n"
         "- [[099-decision-bogus]] — see also\n```\n"
     )
     d = make_dir(
         tmp_path,
-        {"001-decision-foo.md": entry("decision", "foo", extra_body=fenced,
-                                      related=[("002-constraint-bar", "see also")]),
+        {"001-decision-foo.md": real_001 + fenced_after,
          "002-constraint-bar.md": entry("constraint", "bar",
                                         related=[("001-decision-foo", "see also")])},
         index("002", decisions=["001-decision-foo"], constraints=["002-constraint-bar"]),
