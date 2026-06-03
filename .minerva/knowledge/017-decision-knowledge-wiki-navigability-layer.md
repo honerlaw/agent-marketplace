@@ -26,3 +26,4 @@
 - [[015-constraint-knowledge-cross-reference-convention]] — see also
 - [[016-constraint-promote-narrowed-never-overwrite]] — see also
 - [[011-decision-minerva-reference-tier]] — builds on
+- [[018-decision-phase-b-deterministic-lint-detector]] — see also

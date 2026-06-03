@@ -26,3 +26,4 @@ This invariant is **mechanically guarded** by `tests/test_promote_invariant.py` 
 - [[015-constraint-knowledge-cross-reference-convention]] — see also
 - [[017-decision-knowledge-wiki-navigability-layer]] — builds on
 - [[012-constraint-skill-structural-contracts]] — builds on
+- [[019-constraint-knowledge-span-model-single-sourced]] — see also

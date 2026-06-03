@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 017 -->
+<!-- index-watermark: 019 -->
 
 ## Decisions
 
@@ -10,6 +10,7 @@
 - [[013-decision-behavioral-evals-provisional]] — behavioral skill-value evals are provisional: don't CI-gate, don't trust deltas yet
 - [[014-decision-per-decision-skip-over-sizing-gate]] — gate per-decision and fail closed, not via an up-front sizing classifier
 - [[017-decision-knowledge-wiki-navigability-layer]] — knowledge is a navigable wiki: maintained index.md + corpus-scan discovery (X′ over X)
+- [[018-decision-phase-b-deterministic-lint-detector]] — Phase B split: a deterministic knowledge-lint CI gate ships first; the LLM-judged minerva:lint skill is deferred
 
 ## Bugs
 
@@ -28,3 +29,4 @@
 - [[012-constraint-skill-structural-contracts]] — every skill carries a declarative structural contract, enforced by an enumerating test
 - [[015-constraint-knowledge-cross-reference-convention]] — entries cross-reference via a `## Related` block of wiki-links with a closed relationship vocabulary
 - [[016-constraint-promote-narrowed-never-overwrite]] — promote edits existing entries only within the `## Related`/banner span; bodies are append-only
+- [[019-constraint-knowledge-span-model-single-sourced]] — the wiki span model is single-sourced in scripts/knowledge_spans.py; import it, never re-derive

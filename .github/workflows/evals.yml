@@ -35,7 +35,11 @@ jobs:
           tests/test_minerva.py
           tests/test_skill_evals.py
           tests/test_promote_invariant.py
+          tests/test_knowledge_lint.py
           -q
 
       - name: Behavioral runner --dry-run (parse + plan, zero API)
         run: python scripts/run_skill_evals.py --dry-run
+
+      - name: Knowledge-wiki drift gate (deterministic, read-only)
+        run: python scripts/knowledge_lint.py .minerva/knowledge
