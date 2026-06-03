@@ -1,7 +1,7 @@
 # Proposal: init-routing-wiki-protocol
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03)
 
 > Make the agent-file Routing section teach the LLM the wiki **reading protocol** — what
 > to look at on session start and recover from after compaction — and give existing

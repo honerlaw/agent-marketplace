@@ -19,3 +19,4 @@ The detection logic in `init.md` was updated to check for either `.minerva/knowl
 
 ## Related
 - [[017-decision-knowledge-wiki-navigability-layer]] — see also
+- [[029-decision-routing-section-is-the-wiki-reading-protocol]] — see also

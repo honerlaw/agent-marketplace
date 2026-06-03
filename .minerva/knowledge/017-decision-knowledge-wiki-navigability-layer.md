@@ -30,3 +30,4 @@
 - [[024-decision-synthesis-layer-separate-file-advisory]] — see also
 - [[026-decision-migration-check-read-only-entry-re-blindspot]] — see also
 - [[001-decision-init-routing-detection-accepts-old-and-new-names]] — see also
+- [[029-decision-routing-section-is-the-wiki-reading-protocol]] — see also
