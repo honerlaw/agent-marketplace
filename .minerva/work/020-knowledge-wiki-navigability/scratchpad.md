@@ -20,3 +20,17 @@
 
 - Guard test must delimit BOTH mutable spans (banner span via `<!-- superseded-by: NNN -->`; `## Related`→EOF) and assert byte-identity of the complement, incl. a Mode-A-over-already-linked-pair zero-diff case. (folded into proposal §5)
 - index.md has two creators (init scaffold, promote create-if-absent) — both MUST emit the single canonical skeleton verbatim. (folded into proposal §Approach)
+
+## Implementation log 2026-06-02
+
+- promote/SKILL.md: added `## Related` + banner to the knowledge template; narrowed the "never overwritten" idempotency line to body-append-only with `## Related`/banner the sole mutable surfaces; added a "Wiki maintenance (index + cross-references)" section (canonical skeleton, recall-complete corpus-scan discovery with index-as-pre-filter-when-watermark-fresh, coupled reciprocal approval, NNN-keyed idempotency); wired it into Mode A (gate step 6 / write step 7) and Mode B (gate step 4 / write step 5, scoped to the single entry).
+- init/SKILL.md: Step 1 scaffolds index.md (canonical skeleton, watermark 000) + `.minerva/reference/`+.gitkeep; knowledge `.gitkeep` only when index.md absent; added Step 1b index-backfill offer (idempotent mode); Routing template mentions index.md + reference/; detection window 4→6; commit-offer + status-block updated.
+- using-minerva/SKILL.md: persistence hierarchy gains the reference tier + the navigable-knowledge-wiki paragraph (index, `## Related`, vocab, banners, inline coexistence).
+- evals/init/contract.json: +anchors `.minerva/reference/`, `index.md`, `index-watermark`, any_of[backfill]. evals/promote/contract.json: +anchors `## Related`, `index-watermark`, `[[`, any_of[cross-reference/wiki maintenance].
+- tests/test_promote_invariant.py: reference span-editor (add_related_link / add_supersede_banner / body_complement) + 6 property tests proving body-complement byte-identity + idempotency + already-linked zero-diff. Added to the evals.yml CI gate.
+- Dogfood: .minerva/knowledge/index.md generated (watermark 014, 14 entries); seeded 004↔010↔012 `## Related` cluster (builds on / see also).
+
+### Implementation note (not a load-bearing divergence)
+- minerva skills are prose executed by an LLM, not Python — so #8's "byte-guard test" can't invoke a `promote()` function. Implemented it as a reference span-editor + property tests serving as the executable spec the SKILL.md prose mirrors. Satisfies the criterion's substance (mechanical enforcement of the narrowed invariant). The SKILL.md is the runtime contract; the test is the spec-of-record for the span boundaries.
+- Relationship vocab is not fully symmetric: `supersedes`↔`superseded by` is the directional pair, `contradicts`/`see also` are symmetric, but `builds on` has no inverse term — reciprocal of a `builds on` edge is rendered as `see also` (used in the 004 dogfood). Acceptable; noted in case a future entry wants a richer inverse.
+- Pre-existing: tests/test_browser.py + tests/test_storage.py fail collection (`No module named 'lib'`); known on main, CI (evals.yml) deliberately scopes around them. Untouched by 020.

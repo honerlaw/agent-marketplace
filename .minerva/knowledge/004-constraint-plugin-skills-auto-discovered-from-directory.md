@@ -12,3 +12,7 @@ The Claude Code plugin system auto-discovers skills from subdirectories under `s
 
 ## Implications
 Adding a new minerva skill requires only: (1) create `plugins/minerva/skills/<name>/SKILL.md`, (2) populate the frontmatter and body. No other files change. Removing a skill is equally simple — delete the directory.
+
+## Related
+- [[010-constraint-minerva-skill-catalog-sync]] — see also
+- [[012-constraint-skill-structural-contracts]] — see also

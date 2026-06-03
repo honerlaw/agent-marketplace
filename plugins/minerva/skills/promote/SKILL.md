@@ -50,9 +50,10 @@ Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) l
    - **Keep** → append to `.minerva/work/<target>/followups.md` (create the file if missing) under a `## YYYY-MM-DD` header, one bullet per item. `minerva:propose` scans this file as part of project context.
    - **Seed new proposal** → after Mode A finishes, offer to invoke `minerva:propose "<the todo>"` for each chosen item.
    - **Discard** → drop, no record.
-6. **Hard gate:** do not write files until the user has confirmed the partition and the TODO dispositions.
+6. **Hard gate:** do not write files until the user has confirmed the partition, the TODO dispositions, **and the wiki-maintenance edits** (the proposed `## Related` cross-links, supersession banners, and `index.md` lines from [Wiki maintenance](#wiki-maintenance-index--cross-references), shown as concrete diffs against each affected neighbor and the index).
 7. On confirmation:
    - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, or `constraint`) and write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template below. Auto-increment NNN across the whole `.minerva/knowledge/` directory (3-digit pad). If `.minerva/knowledge/` doesn't exist, create it and start at `001`. Each entry must stand alone.
+   - **Run [Wiki maintenance](#wiki-maintenance-index--cross-references) for each PROMOTE item:** apply the approved `## Related` cross-links (bidirectional), any supersession banners, and the `index.md` line(s) + watermark bump. Edit neighbor entries only within their `## Related` block / banner span (never their body).
    - **Rewrite `proposal.md`:** the `## Approach` section (and any other section that's out of date) describes reality, not the original plan. Don't preserve obsolete planning prose just because it was there. Update `## Status` to `Shipped (YYYY-MM-DD)`.
    - **Apply TODO dispositions** per step 5.
    - **Archive the scratchpad:** create `.minerva/work/<target>/archive/` if needed, move `scratchpad.md` to `archive/scratchpad.md`, then write a new `scratchpad.md` containing exactly:
@@ -68,10 +69,11 @@ Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) l
 1. Read `scratchpad.md`.
 2. Locate the block matching the argument (substring or fuzzy match on the entry text). If multiple candidates, list them and ask which.
 3. **Idempotency check:** if the matched block already has a `→ promoted to .minerva/knowledge/...` trailing line, report the existing file path and stop.
-4. Confirm with the user that you've identified the right block and show the proposed knowledge entry. Wait for approval.
+4. Confirm with the user that you've identified the right block and show the proposed knowledge entry **plus the wiki-maintenance edits for this single entry** — its `## Related` cross-links (bidirectional), any supersession banner, and its `index.md` line + watermark bump, shown as concrete diffs (see [Wiki maintenance](#wiki-maintenance-index--cross-references)). Wait for approval.
 5. On approval:
    - Determine the type (`decision`, `bug`, `pattern`, or `constraint`) and the next NNN under `.minerva/knowledge/` (max+1, 3-digit pad; start at `001` if dir is missing).
    - Write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template.
+   - **Run [Wiki maintenance](#wiki-maintenance-index--cross-references)** scoped to this single entry: apply the approved cross-links, banner, and index line + watermark bump. Edit neighbor entries only within their `## Related` block / banner span. (Idempotency makes a later Mode A full pass a no-op over this entry.)
    - In `scratchpad.md`, append `→ promoted to .minerva/knowledge/NNN-<type>-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
 6. Report the knowledge file path.
 
@@ -79,7 +81,7 @@ Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) l
 
 - Mode A re-run: scratchpad marker → stops early.
 - Mode B re-run on a marked block: existing knowledge file → stops early.
-- Knowledge files are never overwritten — auto-incremented NNN guarantees uniqueness.
+- Knowledge files are **append-only in their body** — auto-incremented NNN guarantees each new entry is unique, and the body of an existing entry (its `# H1`/metadata block and the `## Context` / `## Finding` / `## Implications` sections) is **never rewritten**. The *only* machine-managed mutable surfaces are the delimited `## Related` block and the supersession-banner span — both edited idempotently by the [Wiki maintenance](#wiki-maintenance-index--cross-references) step. This narrowed invariant is what makes bidirectional cross-references safe: promoting a new entry can add a backlink to an older one without ever touching that older entry's recorded finding.
 
 If a user manually edits the scratchpad to remove markers, re-running `minerva:promote` could duplicate entries. This is a known footgun; not defended against.
 
@@ -108,4 +110,93 @@ chosen. For constraints: what the limit is and where it comes from.
 ## Implications
 What this means going forward — invariants other code now relies on,
 things future work has to honor, gotchas to watch for, tradeoffs accepted.
+
+## Related
+- [[NNN-type-slug]] — <relationship>
 ```
+
+The `## Related` block is the canonical, machine-managed cross-reference surface —
+see [Wiki maintenance](#wiki-maintenance-index--cross-references) below. Omit it
+from a fresh entry that has no neighbors; the wiki-maintenance step adds it when a
+relationship is confirmed. A superseded entry additionally carries a banner placed
+between its metadata block and the first `## ` header:
+
+```markdown
+<!-- superseded-by: NNN -->
+> **Superseded by [[NNN-type-slug]]** (YYYY-MM-DD)
+```
+
+## Wiki maintenance (index + cross-references)
+
+Every promote that writes a new knowledge entry also maintains the wiki's
+navigability layer: the `.minerva/knowledge/index.md` catalog and the
+cross-references between entries. This runs **inside promote's existing gate** — no
+new gate is introduced — and writes to neighbors / index **only on approval**.
+
+### The canonical `index.md` skeleton
+
+`minerva:init` and `minerva:promote` are the two creators of `index.md`; both emit
+this **exact** skeleton so they cannot diverge:
+
+```markdown
+# Knowledge index
+<!-- index-watermark: NNN -->
+
+## Decisions
+
+## Bugs
+
+## Patterns
+
+## Constraints
+```
+
+- The watermark `NNN` is the highest entry number the index reflects (`000` when
+  empty). It is a **content** freshness signal, used in preference to file mtime
+  (mtime is unreliable across git checkouts and worktrees).
+- Catalog lines go under the matching Type section, one per entry:
+  `- [[NNN-type-slug]] — <≤15-word summary>` (title from the entry H1, summary
+  condensed from its Finding). Sections are plural buckets; links use the singular
+  filename stem.
+
+### The maintenance step
+
+For **each** newly-written knowledge entry, before the gate:
+
+1. **Neighbor discovery (recall-complete floor).** Read the titles + Findings of
+   the existing `.minerva/knowledge/NNN-*.md` entries directly (a full corpus scan —
+   cheap at this scale) and identify genuine relationships. You MAY read
+   `index.md`'s one-line summaries first as a pre-filter, but **only** when it is
+   present AND fresh (its `index-watermark` ≥ the max NNN on disk). A stale or
+   absent index never blocks discovery — fall back to the full scan and recompute.
+   Dedup candidate hits by target NNN (an entry referenced both inline in prose and
+   in a `## Related` block collapses to one).
+2. **Propose the edits**, classifying each relationship with the closed vocabulary
+   `builds on` / `supersedes` / `superseded by` / `contradicts` / `see also`:
+   - a `## Related` line in the new entry: `- [[NNN-type-slug]] — <relationship>`;
+   - the **reciprocal** line in the neighbor entry (e.g. new→`supersedes`old pairs
+     with old→`superseded by`new);
+   - a `<!-- superseded-by: NNN -->` banner in any entry the new one supersedes.
+   Present each reciprocal pair as a **single coupled approval unit** — never let
+   one direction be approved while its reciprocal is dropped.
+3. **Propose the `index.md` line(s)**: the new entry's catalog line, the watermark
+   bump, and any line edits for superseded entries. If `index.md` is absent, create
+   it from the canonical skeleton with just the new entry (and point the user at
+   `minerva:init`'s backfill for the rest).
+4. **Gate.** Surface all proposed neighbor + index edits as **concrete diffs** in
+   the same confirmation gate that approves the promote (Mode A step 6 / Mode B
+   step 4). Use the `Edit` tool to apply them only after approval (Mode A step 7 /
+   Mode B step 5).
+
+### Idempotency of wiki edits
+
+- A `## Related` line is added only if no existing line in that block references the
+  target NNN (insert-iff-absent, set semantics keyed on NNN).
+- A supersession banner is added only if no `<!-- superseded-by: NNN -->` marker for
+  that superseding NNN is already present.
+- An index line is added only if no line for that NNN exists; the watermark bumps
+  **only** when an index line is actually added or changed.
+
+Re-running promote in either mode is therefore a **byte-level no-op** on
+already-present links, banners, and index lines — and never edits an entry body
+outside the `## Related` block or the banner span.

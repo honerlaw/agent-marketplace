@@ -40,9 +40,51 @@ If `.minerva/` doesn't exist, create:
 - `.minerva/work/`
 - `.minerva/work/.gitkeep` (empty file, so git tracks the empty directory)
 - `.minerva/knowledge/`
-- `.minerva/knowledge/.gitkeep` (empty file)
+- `.minerva/knowledge/index.md` — the knowledge catalog, written with the canonical
+  skeleton below (watermark `000`). A non-empty `index.md` already makes the
+  directory tracked by git, so **only** create `.minerva/knowledge/.gitkeep` when
+  `index.md` is absent (and never both).
+- `.minerva/reference/` — the present-tense operational-doc tier (see
+  `.minerva/knowledge/011-decision-minerva-reference-tier.md`).
+- `.minerva/reference/.gitkeep` (empty file, so git tracks the empty directory)
 
-If `.minerva/` already exists, skip whichever pieces are already in place. Don't overwrite existing `.gitkeep` files.
+**Canonical `index.md` skeleton** — `minerva:init` and `minerva:promote` are the two
+creators of this file; both emit this **exact** content so they cannot diverge:
+
+```markdown
+# Knowledge index
+<!-- index-watermark: 000 -->
+
+## Decisions
+
+## Bugs
+
+## Patterns
+
+## Constraints
+```
+
+The `index-watermark` is the highest knowledge-entry NNN the catalog reflects
+(`000` for a fresh scaffold); it is a content freshness signal preferred over file
+mtime (mtime is unreliable across git checkouts and worktrees).
+
+If `.minerva/` already exists, skip whichever pieces are already in place. Don't
+overwrite an existing `index.md`, `.gitkeep`, or `.minerva/reference/`.
+
+### Step 1b — index backfill offer (idempotent mode)
+
+If `.minerva/knowledge/` already holds entries (`NNN-<type>-<slug>.md` files) but
+`index.md` is missing or empty, **offer** to backfill it:
+
+> "`.minerva/knowledge/` has N entries but no populated `index.md`. Generate the
+> catalog from the existing entries now?"
+
+On acceptance, write `index.md` from the canonical skeleton, add one
+`- [[NNN-type-slug]] — <≤15-word summary>` line per entry under its Type section
+(title from the entry H1, summary condensed from its Finding), and set the watermark
+to the max NNN on disk. **Cross-reference backfill** (adding `## Related` blocks
+across existing entries) is a separate, judgment-heavy pass — offer it only if the
+user asks; it is not part of the index backfill.
 
 ## Step 2 — gitignore check
 
@@ -81,7 +123,8 @@ Use this exact template (verbatim, with the appended blank line at the end for r
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/knowledge/` — concrete, past-tense knowledge artifacts: decisions made, bugs fixed, patterns discovered. Read when starting work in this repo.
+- `.minerva/knowledge/` — concrete, past-tense knowledge artifacts: decisions made, bugs fixed, patterns discovered. Start from `.minerva/knowledge/index.md` (the catalog). Read when starting work in this repo.
+- `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
 Active work units live at `.minerva/work/NNN-<slug>/`. Invoke the `minerva:using-minerva` skill (via the `Skill` tool) for the full methodology.
@@ -91,7 +134,7 @@ Append the Routing section at the end of the file (don't try to find a "right" s
 
 ### Detecting existing Routing section
 
-A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 4 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic.
+A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 6 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic. (The window is 6, not 4, to accommodate the `.minerva/reference/` bullet added to the template above without breaking detection on older projects — widening only loosens detection and still requires both signals.)
 
 If the heading appears multiple times in the file, only the first occurrence is checked. (Unlikely in practice; if a user has multiple `## minerva` headings, the file is hand-managed and `init` should not touch it — surface a warning instead of writing.)
 
@@ -101,7 +144,7 @@ If the heading appears multiple times in the file, only the first occurrence is 
 
 If any files were newly created in steps 1–3, offer to commit them:
 
-> "Created `.minerva/{work,knowledge}` + Routing section in `<files>`. Stage and commit now?"
+> "Created `.minerva/{work,knowledge,reference}` (incl. `knowledge/index.md`) + Routing section in `<files>`. Stage and commit now?"
 
 If the user agrees:
 ```
@@ -117,6 +160,8 @@ Print a status block:
 
 ```
 .minerva/ layout       ✓ created (or: already present)
+.minerva/knowledge/index.md  ✓ scaffolded (or: ✓ backfilled from N entries; or: ✓ already present)
+.minerva/reference/    ✓ created (or: ✓ already present)
 .gitignore             ✓ ok       (or: skipped — not a git repo; or: ⚠ <pattern at file:line> would exclude .minerva/)
 .minerva/worktrees/    ✓ added to .gitignore (or: ✓ already ignored; or: — not a git repo)
 CLAUDE.md              ✓ Routing section added (or: ✓ already present; or: — not present)
