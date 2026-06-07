@@ -19,7 +19,8 @@
     "minerva:synthesize",
     "minerva:ship",
     "minerva:cleanup",
-    "panel"
+    "panel",
+    "No ceremony ratification"
   ],
   "cross_surface": {
     "root_readme": true,

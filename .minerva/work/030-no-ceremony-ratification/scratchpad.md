@@ -6,3 +6,8 @@
 > `.minerva/knowledge/`, `proposal.md` gets updated to match reality, and
 > the raw scratchpad is archived.
 
+## Notes 2026-06-06
+
+- `tests/test_browser.py` / `tests/test_storage.py` fail pytest collection (`ModuleNotFoundError: No module named 'lib'`) on `main` too — pre-existing, unrelated to this unit. Scope test runs to `tests/test_skill_contracts.py tests/test_minerva.py` (94 passed).
+- Origin of this unit: observed `propose-ship-auto` runs soliciting an up-front "ceremony + score-design ratification" and logging "STREAMLINED per user ratification + feedback memory" — the cited feedback memory did not exist in the project memory dir. The new section closes both the solicitation and the confabulated-evidence channels.
+

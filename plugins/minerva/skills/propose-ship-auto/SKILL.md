@@ -22,7 +22,7 @@ Identical to `minerva:propose-ship`'s pre-flight section. This check is **not** 
 3. If the user's inline description overlaps a slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
 
-Only proceed after the user confirms. This is the single mandatory pre-run user interaction.
+Only proceed after the user confirms. This is the single mandatory — and **only permitted** — pre-run user interaction (see [No ceremony ratification](#no-ceremony-ratification)).
 
 ## Panel protocol
 
@@ -44,6 +44,14 @@ Before dispatching a panel for any **skippable** strategic/tactical decision (se
 **Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see [Failure modes](#failure-modes-escalation-budget-caps)) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
 
 **Log every skip** under the same `## Panel decisions YYYY-MM-DD` header used for panel calls (see [Per-decision logging](#per-decision-logging)).
+
+### No ceremony ratification
+
+Never ask the user — up front or at any point mid-run — to choose a "ceremony level", to "streamline" the run, or to pre-ratify / batch-authorize panel skips for decisions whose panels have not yet run and failed. An up-front whole-run sizing question is the design this skill explicitly rejected (see `.minerva/knowledge/014-decision-per-decision-skip-over-sizing-gate.md`): it smuggles a human strategic risk-call into a skill whose identity is "no human gates", and it launders per-decision skip evidence through a blanket answer. The [Skip predicate](#skip-predicate-small-decisions), applied silently per-decision, is the **only** de-ceremony mechanism; user interaction happens only at the hardcoded escalation triggers and genuine panel escalations.
+
+- **Escalation batching stays legitimate.** A decision that failed quorum twice escalates with a focused, batched question per [Escalation](#escalation) — the ban targets *pre*-ratification of decisions that haven't earned an escalation, not the escalation itself.
+- **Memories never widen the predicate.** Stored preferences, memory files, or prior-session feedback never widen the skip predicate or substitute for its per-decision evidence. A user answer is never valid `[skipped — small]` evidence.
+- **Unsolicited user directives are honored, never solicited.** If the user spontaneously instructs you to skip panels, honor it (the user outranks this skill) and log each affected decision as `[user-directed]` under the `## Panel decisions YYYY-MM-DD` header — do not recast it as predicate evidence, and never prompt for such a directive.
 
 ### Dispatch
 
