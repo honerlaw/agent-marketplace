@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 028 -->
+<!-- synthesis-watermark: 030 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -38,7 +38,12 @@ CI-gated ([[024-decision-synthesis-layer-separate-file-advisory]]). The `minerva
 skill that maintains it is wired into **both lifecycle orchestrators** as a self-gating
 post-promote / pre-ship step — delegation, not a panel decision — so the overview refreshes
 as part of the same PR that lands new entries
-([[025-decision-synthesize-wired-post-promote-self-gating]]).
+([[025-decision-synthesize-wired-post-promote-self-gating]]). The wiki also has a
+**consumer-facing API**: the agent-file Routing section *teaches the reading protocol*
+(overview → index → entries on demand, with the reference and work tiers for operational
+docs and historical reasoning), and stale sections get a gated refresh whose staleness
+markers are derived from the template-of-record, never hardcoded
+([[029-decision-routing-section-is-the-wiki-reading-protocol]]).
 
 Adopting this structure on a legacy corpus has its own tooling and lore. The read-only
 **migration check** is the one surface that inventories what every other wiki tool is
@@ -83,7 +88,12 @@ tier ([[011-decision-minerva-reference-tier]]). Review responsibility is partiti
 **minerva owns the spec/knowledge lenses; code-review owns code quality**
 ([[006-decision-review-lens-ownership]]). The auto-orchestrator gates **per decision and
 fails closed**, rather than relying on an up-front sizing classifier
-([[014-decision-per-decision-skip-over-sizing-gate]]). And the project is honest about how
+([[014-decision-per-decision-skip-over-sizing-gate]]). That documented rejection proved
+insufficient on its own — live runs re-invented the up-front ceremony ratification
+anyway, producing the corpus's first `pattern` entry: **a rejected alternative documented
+only in knowledge recurs at runtime**, so the prohibition must live in the executing
+skill text and be test-anchored
+([[030-pattern-rejected-alternative-reinvented-at-runtime]]). And the project is honest about how
 much it trusts its own measurements: **behavioral skill-value evals are provisional** —
 not CI-gated, their deltas not yet trusted ([[013-decision-behavioral-evals-provisional]]).
 
@@ -102,7 +112,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`028`) is a **new-scope-only floor**:
+synthesis watermark (`030`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -112,11 +122,11 @@ synthesis watermark (`028`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `027-related-backfill` work unit, reflecting the corpus
-through entry `028`. The refresh was invoked with the **explicit drift rationale** — the
-backfill reshaped 16 `## Related` blocks in place (exactly the edit class the watermark
-cannot see) alongside three new entries — rather than by the bare un-synthesized count.
-Prior refreshes: `025-wire-synthesize-into-orchestrators` (through `025`) and the original
-synthesis in `024-synthesize-skill` (through `023`). Any entry promoted after this will
-correctly show as `unsynthesized` until the next refresh — the advisory signal working as
-intended.
+This overview was refreshed in the `030-no-ceremony-ratification` work unit, reflecting
+the corpus through entry `030`. The refresh was invoked on two un-synthesized entries
+(`029`, `030`), with `030` opening the previously-empty Patterns bucket. Prior refreshes:
+`027-related-backfill` (through `028`, on the explicit drift rationale of a 16-block
+`## Related` reshape), `025-wire-synthesize-into-orchestrators` (through `025`), and the
+original synthesis in `024-synthesize-skill` (through `023`). Any entry promoted after
+this will correctly show as `unsynthesized` until the next refresh — the advisory signal
+working as intended.
