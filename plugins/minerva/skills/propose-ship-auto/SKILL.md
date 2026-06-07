@@ -192,6 +192,8 @@ Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) inst
 - [skipped — small] approach selection: option B dominant (rejected: A — duplicates orchestration; C — coarse)
 ```
 
+Decisions skipped on an **unsolicited** user directive log under the same header, prefixed `[user-directed]` — the directive itself is the recorded justification, never recast as predicate evidence (see [No ceremony ratification](#no-ceremony-ratification)).
+
 [Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
 
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
