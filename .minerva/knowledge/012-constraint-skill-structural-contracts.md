@@ -22,3 +22,4 @@ The format itself (anchor grammar including the `{any_of, ignore_case}` disjunct
 - [[004-constraint-plugin-skills-auto-discovered-from-directory]] — builds on
 - [[010-constraint-minerva-skill-catalog-sync]] — builds on
 - [[016-constraint-promote-narrowed-never-overwrite]] — see also
+- [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also

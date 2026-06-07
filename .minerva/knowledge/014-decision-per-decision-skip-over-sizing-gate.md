@@ -28,3 +28,4 @@ The **per-decision fail-closed predicate** dominates both: each decision applies
 
 ## Related
 - [[025-decision-synthesize-wired-post-promote-self-gating]] — see also
+- [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
