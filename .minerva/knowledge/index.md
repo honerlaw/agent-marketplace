@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 029 -->
+<!-- index-watermark: 030 -->
 
 ## Decisions
 
@@ -25,6 +25,8 @@
 - [[028-bug-knowledge-edits-not-fence-aware]] — the span editors read fenced examples as structure: crash/false-dedupe on any edge into 015 (third fence-trap instance; fixed)
 
 ## Patterns
+
+- [[030-pattern-rejected-alternative-reinvented-at-runtime]] — rejected alternatives recur at runtime; prohibit in skill text, test-anchored
 
 ## Constraints
 
