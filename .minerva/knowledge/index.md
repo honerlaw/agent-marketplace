@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 030 -->
+<!-- index-watermark: 031 -->
 
 ## Decisions
 
@@ -18,6 +18,7 @@
 - [[026-decision-migration-check-read-only-entry-re-blindspot]] — minerva:migrate is the read-only migration-shape check; its reason to exist is the ENTRY_RE false-clean blind spot every wiki tool shares
 - [[027-decision-related-backfill-hand-authored-rename-redeferred]] — the initial ## Related backfill was hand-authored (the spike for any future skill); rename-APPLY stays deferred at zero live instances
 - [[029-decision-routing-section-is-the-wiki-reading-protocol]] — the Routing section teaches the wiki reading protocol; stale sections get a gated refresh with markers derived from the template-of-record
+- [[031-decision-phase-handoff-rides-observable-intake]] — phase-to-phase skill handoffs ride an observable intake (an inline arg), not a self-judged "did the prior phase converge?" predicate
 
 ## Bugs
 

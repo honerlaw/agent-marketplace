@@ -17,3 +17,6 @@ Remove the General quality lens from the minerva audit. `code-review:code-review
 - The minerva audit is narrower and more focused — it can only surface findings the design documents make possible.
 - `code-review:code-review` is the authoritative source for code quality findings; future changes to quality heuristics happen there, not in the minerva skill.
 - Any future review lens added to `minerva:review` must be minerva-specific (derivable from proposal, replan, or knowledge artifacts) — general quality findings belong in `code-review:code-review`.
+
+## Related
+- [[031-decision-phase-handoff-rides-observable-intake]] — see also

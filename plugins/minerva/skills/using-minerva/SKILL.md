@@ -26,7 +26,8 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Situation | Skill |
 |---|---|
 | First time using minerva in this project | `minerva:init` |
-| Starting a new unit of work (feature, refactor, investigation, spike) | `minerva:propose` |
+| Exploring a fuzzy idea before committing — not yet sure whether, or what, to build | `minerva:explore` (divergent, writes nothing; hands off to `minerva:propose` once a direction is chosen) |
+| Starting a new unit of work (feature, refactor, investigation, spike) — you know what you want to build | `minerva:propose` |
 | Resuming work on an existing unit | `minerva:work` (or `minerva:work <slug>` to target a specific unit) |
 | The plan still holds — keep going | (no skill — continue work normally) |
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
@@ -100,6 +101,9 @@ Review runs **before** promote so review-derived scratchpad notes flow through t
 
 **"This is a fresh project — let's start using minerva."**
 → `minerva:init`. Scaffolds `.minerva/work/` and `.minerva/knowledge/`, checks `.gitignore`, warns about any legacy `.minerva/decisions/`, adds a Routing section to the agent file, and offers to commit.
+
+**"I'm toying with the idea of payments, but I'm not sure it's worth it or what it'd look like."**
+→ `minerva:explore`. Divergent, commitment-free brainstorming: it asks questions one at a time, weighs a few high-level directions, and writes nothing — no proposal, no work unit, no branch/worktree. It may legitimately end in "let's not", a reframed problem, or a chosen direction. If you converge on something, it hands off to `minerva:propose` (passing the direction inline) to design it. Reach for `minerva:propose` directly when you already know what you want to build.
 
 **"Let's add a payments flow."**
 → `minerva:propose "add payments flow"` (or just `minerva:propose` — the skill infers your intent from context). Brainstorm the design through the skill's flow. After you approve every section, propose creates the `NNN-add-payments` branch and worktree at `.minerva/worktrees/NNN-add-payments/`, enters the worktree, writes `proposal.md` + `scratchpad.md` inside it, and commits the initial docs. Don't start coding until the proposal is written, self-reviewed, and you've approved the file directly.

@@ -18,8 +18,10 @@ If `.minerva/` doesn't exist yet at the project root, suggest the user run `mine
 
 This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/work/NNN-<slug>/proposal.md` instead of a generic spec path.
 
+**Convergent step — relationship to `minerva:explore`.** `minerva:propose` is the *convergent* step of the lifecycle: its job is to produce the `proposal.md` artifact (plus the branch and worktree). Its optional upstream counterpart is `minerva:explore` — the *divergent*, commitment-free phase for exploring a fuzzy idea before any work unit exists. The two diverge on different axes and compose: `minerva:explore` diverges on the **problem / direction** axis (*what* or *whether* to build), while `propose` diverges on the **implementation-approach** axis (*how* to build the chosen direction). When you arrive here from a `minerva:explore` handoff, the converged direction is passed as the inline description (see step 1) — the problem-space exploration is already done, so do **not** re-litigate *whether* or *what* to build; confirm the chosen direction and proceed to designing *how* (the approach work in steps 5–6). This boundary rides propose's existing inline-argument intake; there is no separate "did exploration happen?" detection to perform.
+
 1. **Context-sensitive intake.** Determine what the user wants to build before asking clarifying questions:
-   - If a description was passed inline → treat it as the draft goal; skip the "what do you want to build?" question and confirm/refine it.
+   - If a description was passed inline → treat it as the draft goal; skip the "what do you want to build?" question and confirm/refine it. (A handoff from `minerva:explore` arrives exactly this way — the converged direction is the inline description.)
    - If no description but current-session chat history is present → read the history and repo structure, state the inferred intent ("Based on our conversation, it sounds like you want to X — is that right?"), and let the user confirm or redirect.
    - If no description and no relevant current-session history → ask "What would you like to build?"
 
