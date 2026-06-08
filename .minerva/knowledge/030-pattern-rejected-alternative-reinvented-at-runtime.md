@@ -21,3 +21,4 @@ A knowledge entry recording a rejected alternative informs humans and planning-t
 ## Related
 - [[014-decision-per-decision-skip-over-sizing-gate]] — builds on
 - [[012-constraint-skill-structural-contracts]] — see also
+- [[031-decision-phase-handoff-rides-observable-intake]] — see also

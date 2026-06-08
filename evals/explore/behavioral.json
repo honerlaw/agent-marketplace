@@ -1,0 +1,17 @@
+{
+  "skill": "explore",
+  "cases": [
+    {
+      "id": "fuzzy-idea-maybe-not-worth-it",
+      "prompt": "I've been wondering whether we should add some kind of notification system to the app, but honestly I'm not even sure it's a good idea or what it would do. Can you help me think it through before we commit to anything?",
+      "rubric": [
+        "Asks questions one at a time to understand the problem before proposing any solution",
+        "Explores the problem space and whether to build at all, rather than jumping straight to a design",
+        "Surfaces multiple high-level directions with their tradeoffs",
+        "Does NOT write any file, allocate a work unit, or create a branch/worktree",
+        "Treats 'don't build this' or 'reframe the problem' as legitimate outcomes, not failures",
+        "Hands off to minerva:propose only once a direction is chosen, passing it as an inline argument"
+      ]
+    }
+  ]
+}

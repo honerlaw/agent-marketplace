@@ -1,7 +1,7 @@
 # Proposal: add-explore-skill
 
 **Date**: 2026-06-07
-**Status**: Draft
+**Status**: Shipped (2026-06-07)
 
 ## Goal
 Add a new minerva skill, `minerva:explore` — a divergent, commitment-free brainstorming skill that turns a fuzzy idea into clarity through collaborative, one-question-at-a-time dialogue, **without** writing any file, allocating a work unit, or creating a branch/worktree. It is the minerva analog of `superpowers:brainstorming`: the optional *divergent* phase **before** `minerva:propose`. It explores the problem space (including whether to build at all) and, when a direction is chosen, hands off to `minerva:propose` to design it.
@@ -12,7 +12,9 @@ Add a new minerva skill, `minerva:explore` — a divergent, commitment-free brai
 `superpowers:brainstorming` is exactly that divergent exploration, and the user asked for "the same thing as superpower brainstorming but in minerva … not building an exact plan yet, just exploring things." superpowers deliberately keeps brainstorming as a skill **separate** from its planning skill; minerva should mirror that separation with an `explore` skill whose terminal state is handing off to `minerva:propose`.
 
 ## Approach
-Add a pure-prose skill `plugins/minerva/skills/explore/SKILL.md` modeled on `superpowers:brainstorming`, plus a **bounded boundary edit** to `minerva:propose` and the standard skill scaffolding.
+**What shipped** (matches the plan below): a new pure-prose skill `plugins/minerva/skills/explore/SKILL.md`, a bounded boundary edit to `plugins/minerva/skills/propose/SKILL.md` + a `minerva:explore` anchor in `evals/propose/contract.json`, new `evals/explore/{contract,behavioral}.json`, and the three catalog edits (root `README.md`, `plugins/minerva/README.md`, `using-minerva/SKILL.md`). The durable design decision was promoted to [[031-decision-phase-handoff-rides-observable-intake]] (phase handoffs ride an observable intake, not a self-judged predicate). All 143 minerva tests pass; the knowledge wiki lints clean.
+
+Added a pure-prose skill `plugins/minerva/skills/explore/SKILL.md` modeled on `superpowers:brainstorming`, plus a **bounded boundary edit** to `minerva:propose` and the standard skill scaffolding.
 
 **`minerva:explore` (new skill):**
 - **Divergent dialogue on the problem axis.** Explore project context first (`CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/`, recent work), then ask questions **one at a time** (multiple-choice preferred), focused on the problem / purpose / constraints / high-level directions — *not* locking an implementation. Weigh multiple directions with tradeoffs.

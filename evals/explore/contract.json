@@ -1,26 +1,25 @@
 {
-  "skill": "propose",
+  "skill": "explore",
   "frontmatter": {
     "required_keys": [
       "name",
       "description"
     ],
     "values": {
-      "name": "propose"
+      "name": "explore"
     },
     "non_empty": [
       "description"
     ]
   },
   "anchors": [
-    "proposal.md",
-    ".minerva/work/",
-    "scratchpad.md",
-    "minerva:explore",
+    "one at a time",
+    "writes no file",
+    "minerva:propose",
     {
       "any_of": [
-        "brainstorm",
-        "questions one at a time"
+        "commitment-free",
+        "terminal outcomes"
       ],
       "ignore_case": true
     }
