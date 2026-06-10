@@ -24,3 +24,4 @@ The 012 work unit surfaced this constraint when the original proposal Approach e
 ## Related
 - [[004-constraint-plugin-skills-auto-discovered-from-directory]] — see also
 - [[010-constraint-minerva-skill-catalog-sync]] — see also
+- [[032-pattern-plugin-discovery-mostly-auto-crawl]] — see also

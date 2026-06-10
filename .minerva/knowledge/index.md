@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 031 -->
+<!-- index-watermark: 032 -->
 
 ## Decisions
 
@@ -28,6 +28,7 @@
 ## Patterns
 
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — rejected alternatives recur at runtime; prohibit in skill text, test-anchored
+- [[032-pattern-plugin-discovery-mostly-auto-crawl]] — plugin discoverability is mostly auto-crawl once public + licensed + topic-tagged; manual directories are web-form submissions, not source-vendor lists
 
 ## Constraints
 

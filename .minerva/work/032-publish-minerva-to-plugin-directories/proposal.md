@@ -1,7 +1,7 @@
 # Proposal: publish-minerva-to-plugin-directories
 
 **Date**: 2026-06-10
-**Status**: Draft
+**Status**: Shipped (2026-06-10)
 
 ## Goal
 Make minerva discoverable on the low-gatekeeping Claude Code plugin discovery
@@ -32,6 +32,22 @@ two gaps plus submitting to the channels converts "installable if you know about
 it" into "findable."
 
 ## Approach
+
+**What shipped.** Phase 1 landed as planned: `LICENSE` (MIT) committed to this
+repo and six GitHub topics set + readback-confirmed. Phase 2's per-channel
+verification revised the *outward* picture from the plan's "submit to each
+directory" assumption: most reach is won passively by **auto-crawlers**
+(`claude-plugins.dev`, `claudemarketplaces.com`) now that the preconditions hold,
+so those need no action; only two channels are manual **web-form URL submissions**
+(`claudepluginhub.com`, `cc-marketplace` via `claudecodecommands.directory`),
+captured as a submission-ready checklist for the user; `aitmpl.com` is
+curator-discretion; and `awesome-claude-plugins` was found to require **vendoring
+minerva's full source** into its repo (a maintenance fork) and recorded ineligible
+/ skip. The durable finding was promoted to
+[[032-pattern-plugin-discovery-mostly-auto-crawl]]; the pending user web-form sends
+live in `followups.md`. The committed footprint stayed lean (LICENSE only; topics
+applied out-of-band). The original plan follows.
+
 **Approach A — precondition-gated, verify-then-submit.**
 
 - **Phase 1 — Preconditions (committable, this repo).** Add `LICENSE` (MIT,
