@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 030 -->
+<!-- synthesis-watermark: 033 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -67,7 +67,11 @@ manifest to update ([[004-constraint-plugin-skills-auto-discovered-from-director
 the **marketplace registry is not** auto-discovered — `marketplace.json` and the README
 must be updated by hand ([[009-constraint-marketplace-plugin-registry-not-auto-discovered]]),
 and the human-facing **skill catalogs span three doc surfaces** that must be kept in sync
-([[010-constraint-minerva-skill-catalog-sync]]). Two conventions keep skills honest: a
+([[010-constraint-minerva-skill-catalog-sync]]). Beyond the repo's own registries,
+**discoverability is mostly auto-crawl**: once a plugin repo is public, OSS-licensed, and
+topic-tagged, the GitHub-crawling aggregators index it passively — the remaining manual
+directories are human web-form submissions, and full-source vendor lists are a
+maintenance fork to avoid ([[032-pattern-plugin-discovery-mostly-auto-crawl]]). Two conventions keep skills honest: a
 skill must **invoke tools directly, not narrate actions in prose**
 ([[007-constraint-skills-must-call-tools-not-prose]]), and a prose skill that wraps a
 sibling Python tool does so **via the tool's importable API, anchored to the working-tree
@@ -93,9 +97,18 @@ insufficient on its own — live runs re-invented the up-front ceremony ratifica
 anyway, producing the corpus's first `pattern` entry: **a rejected alternative documented
 only in knowledge recurs at runtime**, so the prohibition must live in the executing
 skill text and be test-anchored
-([[030-pattern-rejected-alternative-reinvented-at-runtime]]). And the project is honest about how
-much it trusts its own measurements: **behavioral skill-value evals are provisional** —
-not CI-gated, their deltas not yet trusted ([[013-decision-behavioral-evals-provisional]]).
+([[030-pattern-rejected-alternative-reinvented-at-runtime]]). Two newer decisions extend
+the automation arc along the same action-over-self-judgment grain: phase-to-phase skill
+handoffs ride an **observable intake** — an inline argument passed by the upstream skill —
+never a self-judged "did the prior phase converge?" scan
+([[031-decision-phase-handoff-rides-observable-intake]]); and the consensus-panel machinery
+was extracted along a **mechanism-vs-policy** line — standalone `minerva:round-table` owns
+the panel mechanics (briefs, vote semantics, revision round, escalation) for any caller,
+while orchestrators keep the policy: the quorum taxonomy, skip predicates, and all
+run-level state ([[033-decision-panel-mechanics-extracted-to-round-table]]). And the
+project is honest about how much it trusts its own measurements: **behavioral skill-value
+evals are provisional** — not CI-gated, their deltas not yet trusted
+([[013-decision-behavioral-evals-provisional]]).
 
 ## Git worktrees and promote/scratchpad mechanics
 
@@ -112,7 +125,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`030`) is a **new-scope-only floor**:
+synthesis watermark (`033`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -122,11 +135,12 @@ synthesis watermark (`030`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `030-no-ceremony-ratification` work unit, reflecting
-the corpus through entry `030`. The refresh was invoked on two un-synthesized entries
-(`029`, `030`), with `030` opening the previously-empty Patterns bucket. Prior refreshes:
-`027-related-backfill` (through `028`, on the explicit drift rationale of a 16-block
-`## Related` reshape), `025-wire-synthesize-into-orchestrators` (through `025`), and the
-original synthesis in `024-synthesize-skill` (through `023`). Any entry promoted after
+This overview was refreshed in the `033-extract-round-table` work unit, reflecting
+the corpus through entry `033`. The refresh was invoked on three un-synthesized entries
+(`031`, `032`, `033`). Prior refreshes: `030-no-ceremony-ratification` (through `030`,
+opening the previously-empty Patterns bucket), `027-related-backfill` (through `028`, on
+the explicit drift rationale of a 16-block `## Related` reshape),
+`025-wire-synthesize-into-orchestrators` (through `025`), and the original synthesis in
+`024-synthesize-skill` (through `023`). Any entry promoted after
 this will correctly show as `unsynthesized` until the next refresh — the advisory signal
 working as intended.
