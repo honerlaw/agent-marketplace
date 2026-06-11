@@ -179,15 +179,16 @@
     Forward-looking TODOs aren’t silently discarded. Idempotent.</dd>
 
     <dt><code>minerva:synthesize</code></dt>
-    <dd>Reports the deterministic un-synthesized-scope signal, then — behind a
-    confirmation gate — drafts and writes the theme-grouped
-    <code>overview.md</code> and bumps the synthesis watermark. The overview is
-    advisory; only the mechanical link-rot signal is deterministic.</dd>
+    <dd>Reports the deterministic un-synthesized-scope signal, then drafts the
+    theme-grouped <code>overview.md</code> and — behind a confirmation gate —
+    writes it and bumps the synthesis watermark. The overview is advisory; only
+    the mechanical link-rot signal is deterministic.</dd>
 
     <dt><code>minerva:ship</code></dt>
-    <dd>Commits outstanding changes to a branch, opens a pull request titled and
-    described from the proposal, watches CI by polling, runs a bounded auto-fix
-    loop, and enables auto-merge when permissions allow.</dd>
+    <dd>Commits outstanding changes to a branch, opens a pull request, watches
+    CI, fixes CI failures, and enables auto-merge. CI is watched by polling
+    instead of blocking. Closes the lifecycle after work, promote, and
+    review.</dd>
 
     <dt><code>minerva:cleanup</code></dt>
     <dd>Removes worktrees whose branches have been merged into the default
@@ -273,8 +274,8 @@
     <li>
       <span class="stamp">adversarial by default</span>
       <p>Artifacts earn acceptance by surviving an argument: a Proponent defends,
-      a Skeptic attacks, an Arbiter weighs — and a lone Skeptic dissent blocks a
-      strategic decision outright.</p>
+      a Skeptic attacks, an Arbiter weighs — and at the strictest decision tier,
+      where unanimity is required, a lone Skeptic dissent blocks outright.</p>
       <p class="src">source: <code>minerva:round-table</code> · knowledge 033 (panel mechanics extraction)</p>
     </li>
     <li>
@@ -288,7 +289,8 @@
       <span class="stamp">gates before mutation</span>
       <p>Anything that rewrites the durable record asks first. The wiki fixer,
       the synthesis layer, and promotion all sit behind explicit confirmation
-      gates; read-only companions exist for every mutating path.</p>
+      gates; every mutating path has a read-only companion or a gate that shows
+      its hand before writing.</p>
       <p class="src">source: <code>minerva:lint-fix</code>, <code>minerva:synthesize</code>, <code>minerva:promote</code></p>
     </li>
     <li>

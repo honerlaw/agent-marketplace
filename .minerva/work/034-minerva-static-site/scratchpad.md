@@ -21,6 +21,9 @@
 - Dependency wording per execution note 1: "pytest + pyyaml, no new deps" (the `_present` import transitively imports yaml).
 - Verified: 9-file suite 179 passed; single http(s) occurrence is the navigational repo link; no "19" in prose; HTML tag balance clean; file-touch set = site/ + test + one workflow line + lifecycle docs.
 
+- [3/3 accept] completion verification: all six criteria independently reproduced (fault-injection on markers fails loudly; 5 negative-path mutations verified on /tmp copies; protocol-relative + CSS vectors clean; 179/179); four prose-accuracy concerns bound as review FIX items
+- [panel-derived triage] review: dispositions inherited from the completion panel's binding (FIX: ship-entry provenance — fixed the stronger way, entry rewritten to frontmatter-faithful text; lone-dissent claim scoped to the unanimity tier; "read-only companions" reworded to include gates; synthesize entry gates only the write. IGNORE: str.index duplicate-marker hardening — test-infra outside this unit's page-edit scope; anomalous grep rendering — disproven at byte level). Re-verified post-fix: 179 passed, single permitted http occurrence.
+
 ## Panel concerns 2026-06-10
 
 - (low, logged) external-resource enumeration omits object/embed/SVG-use/fetch — the grep-every-http(s) clause is the operative verifier and subsumes them
