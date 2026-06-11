@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 033 -->
+<!-- index-watermark: 034 -->
 
 ## Decisions
 
@@ -45,3 +45,4 @@
 - [[019-constraint-knowledge-span-model-single-sourced]] — the wiki span model is single-sourced in scripts/knowledge_spans.py; import it, never re-derive
 - [[021-constraint-skill-wraps-script-via-importable-api]] — a prose skill wraps a sibling Python tool via its importable API, anchored to the working-tree root; not the CLI, not CWD-relative
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — any tool deriving wiki cross-ref edges must be fence-aware (a fenced `## Related` example is not a real edge)
+- [[034-constraint-site-fourth-catalog-surface]] — the static site’s skills catalog is a fourth, test-enforced catalog surface (bidirectional, site-only), extending 010’s three
