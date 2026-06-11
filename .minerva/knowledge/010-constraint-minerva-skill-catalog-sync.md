@@ -27,3 +27,4 @@ All three surfaces have a single-line HTML comment above them — added by work 
 - [[004-constraint-plugin-skills-auto-discovered-from-directory]] — builds on
 - [[012-constraint-skill-structural-contracts]] — see also
 - [[009-constraint-marketplace-plugin-registry-not-auto-discovered]] — see also
+- [[034-constraint-site-fourth-catalog-surface]] — see also

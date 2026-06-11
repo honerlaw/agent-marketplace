@@ -1,0 +1,362 @@
+/* minerva — field-guide / decision-ledger aesthetic.
+   Hand-authored; no external resources (system font stacks only). */
+
+:root {
+  --paper: #f4efe4;
+  --paper-deep: #ece5d3;
+  --ink: #211c16;
+  --ink-soft: #4f463a;
+  --oxblood: #7a2e1d;
+  --bronze: #8a6d3b;
+  --hairline: #c9bda3;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter,
+           "Bitstream Charter", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(138, 109, 59, 0.12), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(33, 28, 22, 0.012) 3px 4px),
+    var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+
+/* ---------- left rail ---------- */
+
+.rail {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 11rem;
+  padding: 2.2rem 1.4rem;
+  border-right: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
+}
+
+.rail-mark {
+  color: var(--oxblood);
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  letter-spacing: 0.14em;
+}
+
+.rail a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  width: fit-content;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.rail a:hover { color: var(--oxblood); border-color: var(--oxblood); }
+
+@media (max-width: 76rem) {
+  .rail { position: static; width: auto; flex-direction: row; flex-wrap: wrap;
+          border-right: none; border-bottom: 1px solid var(--hairline); }
+  .rail-mark { margin: 0 1rem 0 0; }
+}
+
+/* ---------- masthead ---------- */
+
+.masthead { text-align: center; margin-bottom: 4.5rem; }
+
+.overline {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  animation: settle 700ms ease-out both;
+}
+
+.masthead h1 {
+  font-size: clamp(4rem, 12vw, 7.5rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin: 0.5rem 0 1.2rem;
+  line-height: 1;
+  animation: settle 700ms 120ms ease-out both;
+}
+
+.masthead h1 .lig { color: var(--oxblood); font-style: italic; }
+
+.dek {
+  max-width: 34rem;
+  margin: 0 auto;
+  font-size: 1.12rem;
+  color: var(--ink-soft);
+  animation: settle 700ms 240ms ease-out both;
+}
+
+.masthead-rule, footer .rule {
+  color: var(--bronze);
+  font-size: 1.3rem;
+  letter-spacing: 0.6em;
+  margin-top: 2.6rem;
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overline, .masthead h1, .dek { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* ---------- sections ---------- */
+
+section { margin-bottom: 5rem; }
+
+h2 {
+  font-size: 1.65rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.45rem;
+  margin: 0 0 1.6rem;
+}
+
+.sec-no { color: var(--oxblood); font-style: italic; margin-right: 0.5rem; }
+
+.prose p { margin: 0 0 1rem; }
+
+.lede { font-size: 1.12rem; }
+
+.lede::first-letter {
+  font-size: 3.1em;
+  float: left;
+  line-height: 0.82;
+  padding: 0.04em 0.08em 0 0;
+  color: var(--oxblood);
+  font-style: italic;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  background: rgba(138, 109, 59, 0.10);
+  border-radius: 2px;
+  padding: 0.05em 0.3em;
+}
+
+a { color: var(--oxblood); }
+
+/* ---------- problems ---------- */
+
+.problems {
+  list-style: none;
+  counter-reset: prob;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.4rem;
+}
+
+.problems li {
+  counter-increment: prob;
+  border: 1px solid var(--hairline);
+  border-top: 3px solid var(--oxblood);
+  background: rgba(255, 252, 244, 0.6);
+  padding: 1.1rem 1.2rem 0.6rem;
+  position: relative;
+}
+
+.problems li::before {
+  content: counter(prob, decimal-leading-zero);
+  position: absolute;
+  top: 0.7rem; right: 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--bronze);
+}
+
+.problems h3 { margin: 0 0 0.5rem; font-size: 1.02rem; }
+.problems p  { margin: 0 0 0.8rem; font-size: 0.93rem; color: var(--ink-soft); }
+
+/* ---------- record tiers ---------- */
+
+.tiers { border-collapse: collapse; width: 100%; margin-top: 1.4rem; }
+
+.tiers th {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  text-align: left;
+  vertical-align: top;
+  color: var(--oxblood);
+  padding: 0.85rem 1.2rem 0.85rem 0;
+  white-space: nowrap;
+  width: 8.5rem;
+}
+
+.tiers td {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.tiers tr:first-child td, .tiers tr:first-child th { border-top: none; }
+.tiers th { border-top: 1px solid var(--hairline); }
+
+/* ---------- flow stations ---------- */
+
+.stations {
+  list-style: none;
+  margin: 2rem 0;
+  padding: 0;
+  counter-reset: stn;
+}
+
+.stations li {
+  counter-increment: stn;
+  position: relative;
+  padding: 0 0 1.5rem 3rem;
+  border-left: 2px solid var(--bronze);
+  margin-left: 0.7rem;
+}
+
+.stations li:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+.stations li::before {
+  content: counter(stn);
+  position: absolute;
+  left: -0.85rem; top: -0.15rem;
+  width: 1.6rem; height: 1.6rem;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--bronze);
+  color: var(--oxblood);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  display: grid;
+  place-items: center;
+}
+
+.stations b {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.stations span {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  margin-top: 0.15rem;
+}
+
+/* ---------- skills catalog ---------- */
+
+.cat-group {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin: 2.4rem 0 0.4rem;
+}
+
+.catalog { margin: 0; }
+
+.catalog dt {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  padding-top: 1.05rem;
+  margin-top: 0.55rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.catalog dt code { background: none; padding: 0; color: var(--oxblood); font-weight: 600; }
+
+.catalog dd {
+  margin: 0.3rem 0 0.9rem;
+  font-size: 0.94rem;
+  color: var(--ink-soft);
+  max-width: 42rem;
+}
+
+/* ---------- bias ledger ---------- */
+
+.ledger {
+  list-style: none;
+  counter-reset: bias;
+  margin: 2rem 0 0;
+  padding: 0;
+}
+
+.ledger li {
+  counter-increment: bias;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 252, 244, 0.6);
+  padding: 1.2rem 1.4rem 0.9rem 4rem;
+  margin-bottom: 1.1rem;
+  position: relative;
+}
+
+.ledger li::before {
+  content: counter(bias, upper-roman);
+  position: absolute;
+  left: 1.2rem; top: 1.25rem;
+  font-style: italic;
+  color: var(--bronze);
+  font-size: 1.05rem;
+}
+
+.stamp {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--oxblood);
+  border: 1.5px solid var(--oxblood);
+  border-radius: 2px;
+  padding: 0.18em 0.55em;
+  transform: rotate(-1.2deg);
+  margin-bottom: 0.55rem;
+}
+
+.ledger p { margin: 0.3rem 0 0.6rem; font-size: 0.95rem; }
+
+.ledger .src {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--bronze);
+  border-top: 1px dashed var(--hairline);
+  padding-top: 0.5rem;
+}
+
+/* ---------- footer ---------- */
+
+footer {
+  margin-top: 5rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+footer p { max-width: 36rem; margin: 0.6rem auto; }
