@@ -1,11 +1,11 @@
 ---
 name: propose-ship-auto
-description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → synthesize → ship → cleanup, where the self-gating `minerva:synthesize` step refreshes the knowledge-wiki overview when promote added scope), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel. Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
+description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → synthesize → ship → cleanup, where the self-gating `minerva:synthesize` step refreshes the knowledge-wiki overview when promote added scope), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (the panel mechanics are delegated to `minerva:round-table`). Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
 ---
 
 Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:synthesize` (Phase 4.5, self-gating), `minerva:ship`, and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
 
-The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents. Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a [Skip predicate](#skip-predicate-small-decisions) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
+The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents — the panel mechanics live in `minerva:round-table`, to which this skill delegates (see [Delegation to `minerva:round-table`](#delegation-to-minervaround-table)). Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a [Skip predicate](#skip-predicate-small-decisions) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
 
 ## Usage
 
@@ -39,7 +39,7 @@ Before dispatching a panel for any **skippable** strategic/tactical decision (se
 - **violates no identifiable `.minerva/knowledge/` constraint**;
 - **(approach-bearing decisions only)** the main LLM actually **enumerated ≥2 viable approaches and one is strictly dominant** on the stated criteria. This is an *action* check (did you do the enumeration), not a self-judgment that "no alternative exists" — the latter is gameable by an LLM that never looked.
 
-**Fails closed.** If any single clause fails — or you are unsure whether it holds — convene the panel exactly as specified below, at the decision's existing quorum. The predicate only ever decides *whether to convene*; it never changes a quorum. Because every clause must pass, the worst case of a wrong skip is bounded to an additive, single-surface, low-risk change; the worst case of a wrong *non*-skip is a panel you didn't strictly need.
+**Fails closed.** If any single clause fails — or you are unsure whether it holds — convene the panel exactly as `minerva:round-table` specifies, at the decision's existing quorum. The predicate only ever decides *whether to convene*; it never changes a quorum. Because every clause must pass, the worst case of a wrong skip is bounded to an additive, single-surface, low-risk change; the worst case of a wrong *non*-skip is a panel you didn't strictly need.
 
 **Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see [Failure modes](#failure-modes-escalation-budget-caps)) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
 
@@ -49,134 +49,28 @@ Before dispatching a panel for any **skippable** strategic/tactical decision (se
 
 Never ask the user — up front or at any point mid-run — to choose a "ceremony level", to "streamline" the run, or to pre-ratify / batch-authorize panel skips for decisions whose panels have not yet run and failed. An up-front whole-run sizing question is the design this skill explicitly rejected (see `.minerva/knowledge/014-decision-per-decision-skip-over-sizing-gate.md`): it smuggles a human strategic risk-call into a skill whose identity is "no human gates", and it launders per-decision skip evidence through a blanket answer. The [Skip predicate](#skip-predicate-small-decisions), applied silently per-decision, is the **only** de-ceremony mechanism; user interaction happens only at the hardcoded escalation triggers and genuine panel escalations.
 
-- **Escalation batching stays legitimate.** A decision that failed quorum twice escalates with a focused, batched question per [Escalation](#escalation) — the ban targets *pre*-ratification of decisions that haven't earned an escalation, not the escalation itself.
+- **Escalation batching stays legitimate.** A decision that failed quorum twice escalates with a focused, batched question per `minerva:round-table`'s Escalation step — the ban targets *pre*-ratification of decisions that haven't earned an escalation, not the escalation itself.
 - **Memories never widen the predicate.** Stored preferences, memory files, or prior-session feedback never widen the skip predicate or substitute for its per-decision evidence. A user answer is never valid `[skipped — small]` evidence.
 - **Unsolicited user directives are honored, never solicited.** If the user spontaneously instructs you to skip panels, honor it (the user outranks this skill) and log each affected decision as `[user-directed]` under the `## Panel decisions YYYY-MM-DD` header — do not recast it as predicate evidence, and never prompt for such a directive.
 
-### Dispatch
+### Delegation to `minerva:round-table`
 
-Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs.
+The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter agent briefs, vote semantics, the revision round, and escalation composition — live in `minerva:round-table`, a pure extraction of the protocol formerly inlined here (behavior unchanged; only its home moved). When the run's first panel-worthy decision arrives, invoke `minerva:round-table` via the `Skill` tool in its caller mode, leading with this auto-mode instruction:
 
-Each agent receives the **artifact under review** (the draft proposal, the proposed approach, the triage assignment, etc.) plus the **decision context** (relevant `.minerva/knowledge/` entries, `proposal.md` for downstream decisions, repo conventions from `CLAUDE.md`/`AGENTS.md`). Use `subagent_type: general-purpose` unless a more specialized agent fits the decision.
+> "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every decision of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Panel decisions YYYY-MM-DD` header."
 
-### Agent briefs
+Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the `Skill` tool** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode.
 
-**Proponent prompt template:**
-```
-You are the Proponent in a 3-agent consensus panel reviewing this artifact.
+Orchestrator-owned rules that `minerva:round-table` deliberately does not own:
 
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<relevant knowledge entries, proposal, repo conventions>
-
-YOUR ROLE: Argue for why this artifact is sound given the stated goal,
-project constraints, and conventions. Cite specific evidence from the
-context where you can.
-
-After you've made your strongest honest case, render a final verdict
-of one of: accept, revise, reject. Your role is to defend, but the
-verdict must be truthful — if the artifact has fundamental problems
-you couldn't argue around, say so.
-
-Output format:
-## Defense
-<your argument>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
-
-**Skeptic prompt template:**
-```
-You are the Skeptic in a 3-agent consensus panel reviewing this artifact.
-
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<relevant knowledge entries, proposal, repo conventions>
-
-YOUR ROLE: Surface every load-bearing risk, ambiguity, divergence from
-convention, missing piece, or unstated assumption in this artifact. Be
-specific — cite the part of the artifact you're critiquing.
-
-After your critique, render a final verdict of one of: accept, revise,
-reject. Your role is to find problems, but the verdict must reflect
-whether the problems you found are actually load-bearing — a list of
-nitpicks that don't block soundness should result in 'accept' with
-concerns logged.
-
-Output format:
-## Critique
-<your concerns, each as a numbered item with severity high/medium/low>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
-
-**Arbiter prompt template:**
-```
-You are the Arbiter in a 3-agent consensus panel. You have already
-received the Proponent's defense and the Skeptic's critique of this
-artifact.
-
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<same as above>
-
-PROPONENT'S DEFENSE:
-<full Proponent output>
-
-SKEPTIC'S CRITIQUE:
-<full Skeptic output>
-
-YOUR ROLE: Weigh both sides. Decide which arguments are load-bearing
-and which are not. Render a final verdict.
-
-Output format:
-## Reasoning
-<which arguments mattered and why>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
-
-### Vote semantics
-
-Each agent ends with a verdict of `accept` / `revise` / `reject`. Count `accept` votes against the decision's **required quorum** from the [Decision taxonomy](#decision-taxonomy):
-
-- **At or above quorum** → consensus, proceed.
-  - 3/3 accepts at a 3/3-quorum decision → strong consensus, proceed silently.
-  - 3/3 accepts at a 2/3-quorum decision → strong consensus, proceed silently.
-  - 2/3 accepts at a 2/3-quorum decision → sufficient consensus, proceed. If the Skeptic dissented, log their high/medium concerns to `scratchpad.md` under a `## Panel concerns YYYY-MM-DD` header so the next phase picks them up.
-- **Below quorum** → consensus failure. Trigger the **revision round** (below).
-  - 2/3 accepts at a **3/3-quorum** decision → consensus failure (strategic decisions require unanimity; one Skeptic dissent at this tier is load-bearing).
-  - ≤1/3 accepts at any quorum → consensus failure.
-
-### Revision round
-
-On consensus failure, the main LLM (not a new panel) synthesizes a revised draft using:
-- The Skeptic's load-bearing critiques as the primary input.
-- The Arbiter's reasoning to disambiguate which critiques mattered.
-- The original artifact, modified to address those critiques without overcorrecting.
-
-Re-dispatch the panel against the revised artifact. **Two votes maximum per decision point.** If the second vote also produces ≤1/3 accept, escalate to the user.
-
-### Escalation
-
-When a decision escalates:
-
-1. Compose a focused, batched question for the user — pull the load-bearing concerns from both vote rounds, phrase them as decisions the user can make (not as "we couldn't decide"). Use the `AskUserQuestion` tool with multiple-choice options when possible.
-2. Apply the user's answer as if the panel had voted to accept that path. Resume the flow from the next decision point.
-3. Increment the **global escalation counter** (see [Failure modes](#failure-modes-escalation-budget-caps)).
+- **Quorums** come from the [Decision taxonomy](#decision-taxonomy), never from round-table's standalone 2/3 default.
+- **Escalation aftermath** — when a delegated panel escalates and the user answers, round-table applies the answer as the accepted path and resumes; this skill then **increments the global escalation counter** (see [Failure modes](#failure-modes-escalation-budget-caps)). Run-level state stays here.
+- **The per-decision budget** in [Failure modes](#failure-modes-escalation-budget-caps) — one initial vote + one revision vote, 6 subagent dispatches max — is the same two-vote cap round-table itself enforces, restated here because the orchestrator audits it across the whole run.
+- **Whether to convene at all** — the [Skip predicate](#skip-predicate-small-decisions) and the taxonomy's `Skippable?` column are this skill's policy; round-table always convenes when applied.
 
 ### Per-decision logging
 
-After every panel call (regardless of outcome), append a one-line entry to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header:
+After every panel call (regardless of outcome), append a one-line entry to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header (the panel-line format is `minerva:round-table`'s; the prefixes below are this skill's policy on top of it):
 
 ```
 ## Panel decisions 2026-05-21
@@ -418,8 +312,8 @@ When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase di
 
 ## Out of scope
 
-- **Modifying any existing minerva skill.** The auto skill is purely additive. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are unchanged — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`); it does not alter the skill.
+- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`), and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
 - **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the auto skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.
-- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see [Decision taxonomy](#decision-taxonomy)). If a user wants different thresholds, they fork the skill.
+- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see [Decision taxonomy](#decision-taxonomy)); `minerva:round-table`'s standalone 2/3 default never applies inside this skill. If a user wants different thresholds, they fork the skill.

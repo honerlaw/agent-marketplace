@@ -32,6 +32,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | The plan still holds — keep going | (no skill — continue work normally) |
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
 | Just drafted a plan and want to stress-test it before approving | `minerva:grill-plan` (auto-invoked by `minerva:propose` and `minerva:replan`; usable standalone on any drafted plan) |
+| Want an independent multi-agent verdict on a decision or drafted artifact — agents argue it out rather than interviewing you | `minerva:round-table` (delegated to by `minerva:propose-ship-auto` for its panel decisions; usable standalone, default quorum 2/3) |
 | Approved a proposal but want to tweak it before coding starts | `minerva:replan` (pre-work amendment mode) |
 | Just hit something that's clearly a durable decision, mid-work | `minerva:promote "<short description>"` |
 | Want to audit shipped code against the proposal | `minerva:review` |
@@ -44,7 +45,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | After promoting several entries — build a theme-grouped overview of the knowledge corpus, or check whether enough un-synthesized scope has accumulated to warrant (re)synthesis | `minerva:synthesize` (read-mostly — reports the un-synthesized-scope signal, then gated write of `overview.md`) |
 | A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are manual / a future APPLY unit) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
-| Run the whole lifecycle end-to-end without human gates (consensus panels replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
+| Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
