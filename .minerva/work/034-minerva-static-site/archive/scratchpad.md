@@ -32,3 +32,7 @@
 - (low, logged) external-resource enumeration omits object/embed/SVG-use/fetch — the grep-every-http(s) clause is the operative verifier and subsumes them
 - (low, logged) pinned opening marker embeds an em dash and the test path; loud assertion failure is the designed mode if reworded
 - (low, logged) site intentionally unlinked from READMEs this unit — follow-up: link it (and optionally wire a Pages Actions workflow) in a later unit
+
+## Panel decisions 2026-06-10 (post-promote)
+
+- [synthesis] no-op (1 un-synthesized entry below threshold: 034 slots into an existing theme; no link rot)
