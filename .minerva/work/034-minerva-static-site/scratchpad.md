@@ -14,6 +14,13 @@
 - [1/3 accept → revision] whole-proposal v1: criterion "no other repo file modified" unsatisfiable under the lifecycle's own writes; 010-staleness fix had to take the 016-compliant form (new entry + Related-span link, NOT the Skeptic's body-append suggestion — promote-invariant test forbids it); external-ref criterion missed CSS vectors; markers unpinned
 - [3/3 accept] whole-proposal v2: revised draft accepted; binding execution notes: (1) dependency wording = "pytest + pyyaml, no new deps", (2) promote entry phrases itself as EXTENDING 010, (3) promote entry records why the site is not a SURFACE_FILES/cross_surface surface (19 contract.json edits would violate file-touch criterion; bespoke bidirectional test is stronger)
 
+## Work notes 2026-06-10
+
+- Site built per A′: parchment/ledger editorial design (system font stacks only — web fonts impossible under the no-external-resources criterion); sections problems / record hierarchy / flow stations / delimited catalog / bias ledger / colophon footer.
+- Catalog entries grouped lifecycle/orchestrators/utilities inside the markers (grouping is invisible to the test; both directions scan the whole delimited region).
+- Dependency wording per execution note 1: "pytest + pyyaml, no new deps" (the `_present` import transitively imports yaml).
+- Verified: 9-file suite 179 passed; single http(s) occurrence is the navigational repo link; no "19" in prose; HTML tag balance clean; file-touch set = site/ + test + one workflow line + lifecycle docs.
+
 ## Panel concerns 2026-06-10
 
 - (low, logged) external-resource enumeration omits object/embed/SVG-use/fetch — the grep-every-http(s) clause is the operative verifier and subsumes them
