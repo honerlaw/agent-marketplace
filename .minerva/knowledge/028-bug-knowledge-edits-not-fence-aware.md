@@ -64,3 +64,4 @@ fenced-only-header cases; the 7 existing property tests pass unchanged.
 ## Related
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — builds on
 - [[022-decision-knowledge-fix-two-safety-models]] — see also
+- [[037-constraint-fence-scans-import-fence-re]] — see also

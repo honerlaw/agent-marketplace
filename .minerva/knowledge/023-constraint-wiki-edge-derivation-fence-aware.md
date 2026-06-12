@@ -48,3 +48,4 @@ one-off fix:
 - [[022-decision-knowledge-fix-two-safety-models]] — see also
 - [[024-decision-synthesis-layer-separate-file-advisory]] — see also
 - [[028-bug-knowledge-edits-not-fence-aware]] — see also
+- [[037-constraint-fence-scans-import-fence-re]] — see also
