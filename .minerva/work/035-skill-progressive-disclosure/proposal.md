@@ -1,7 +1,7 @@
 # Proposal: skill-progressive-disclosure
 
 **Date**: 2026-06-11
-**Status**: Draft
+**Status**: Shipped (2026-06-11)
 
 ## Goal
 
@@ -19,17 +19,19 @@ The savings model is **late loading**, not pure avoidance: in a full auto run ev
 
 ## Approach
 
-Behavior-neutral by construction: same gates, panels, quorums, and skip predicates; **verbatim moves only**.
+What shipped (behavior-neutral: same gates, panels, quorums, and skip predicates; verbatim moves):
 
-1. **Progressive disclosure across the nine skills.** Each SKILL.md keeps: frontmatter, the protocol skeleton (numbered steps as one-liners with their tool calls), hard rules and gates, and explicit pointers of the form "before step N, read `references/<file>.md`". Detail prose — templates, edge-case catalogs, failure-mode appendices, worked examples, historical sections (e.g. the orchestrator's "Panel decisions 2026-05-21" log) — moves verbatim to `references/*.md` inside the same skill directory (shipped automatically with the plugin cache). Light stitching (headings, transition lines) is allowed; rewording is not. Outright deletion is permitted only for true duplicates: text that restates content which remains loaded at the same point — chiefly the orchestrator's per-phase walkthroughs that duplicate the delegated skill invoked at that phase, which shrink to invoke-and-gate.
+1. **Progressive disclosure across the nine skills.** Each ≥10KB SKILL.md was split into a thin core (frontmatter, protocol skeleton, hard rules/gates, mandatory read-before-step pointers) plus per-skill `references/*.md` holding the detail prose verbatim — propose-ship-auto (31.6KB→8.0KB; panel-protocol/phases/governance references), using-minerva (→8.4KB; guide), promote (→4.2KB; modes, wiki-maintenance), init (→3.5KB; steps), debug (→4.7KB; workflow), ship (→3.3KB; protocol), review (→3.1KB; protocol), propose (→5.9KB; on-approval), round-table (→7.7KB; briefs, caller-mode). The nine cores total 53.3KB vs 137.7KB before (−61%). Zero original lines were lost in eight skills; the anticipated orchestrator dedupe proved unnecessary (its inlined phases are the executable spec, so everything moved rather than deleted).
 
-2. **Contract checker extension.** `tests/test_skill_contracts.py` (and the contract format) gains an optional per-anchor `"file"` field, defaulting to `SKILL.md`. Each existing anchor is either kept in the thin core or deliberately retargeted to its reference file, with the rationale recorded in this unit's scratchpad. The format change is documented in `evals/README.md`, the contract format's source of truth.
+2. **Contract checker extension.** `tests/test_skill_contracts.py` gained the optional per-anchor `"file"` field (validated keys, dangling-target failure); 25 anchors were deliberately retargeted with rationale logged. Documented in `evals/README.md`, the format's source of truth.
 
-3. **Byte-budget + pointer-integrity test.** A new enumerating test (same pattern as `test_skill_contracts.py`) asserts for every skill directory: (a) SKILL.md ≤ 9216 bytes; (b) every `references/*.md` file is mentioned by name in its SKILL.md; (c) every `references/` mention in SKILL.md resolves to an existing file.
+3. **Byte-budget + pointer-integrity test.** `tests/test_skill_budget.py` enumerates all skill directories: SKILL.md ≤9216 bytes, every `references/*.md` mentioned from its core, every mention resolving. Wired into `.github/workflows/evals.yml`'s enumerated pytest list after the completion panel caught it missing (see replan.md).
 
-4. **Round-table cache alignment.** The Proponent/Skeptic/Arbiter templates are reordered so a byte-identical shared block (ARTIFACT + CONTEXT) leads and role-specific instructions trail. CONTEXT becomes an enumerated inclusion list codifying current intent, with no size cap: the artifact under review, the framed decision, the work unit's `proposal.md` when one is in context, knowledge entries already cited this session, and repo conventions from `CLAUDE.md`/`AGENTS.md`. Savings come from prompt ordering, not from withholding input.
+4. **Round-table cache alignment** — the one sanctioned content edit: prompts now lead with a byte-identical shared ARTIFACT+CONTEXT block (role briefs trail, in `references/briefs.md`), and CONTEXT is an enumerated no-cap inclusion list (framed decision/goal, the unit's proposal.md when in context, session-cited knowledge entries, CLAUDE.md/AGENTS.md conventions).
 
-5. **Recorded no-ops.** Ship's CI-polling cadence (`delaySeconds: 270`) is already under the 5-minute prompt-cache TTL — confirmed, no change. No skill names change, so the catalog surfaces from [[010-constraint-minerva-skill-catalog-sync]] and [[034-constraint-site-fourth-catalog-surface]] need no edits (verified by their existing tests).
+5. **Recorded no-ops.** Ship's 270s CI-polling cadence was already cache-aligned; no catalog surfaces changed.
+
+Knowledge promoted: [[035-constraint-ci-test-enumeration-explicit]], [[036-constraint-skill-progressive-disclosure]].
 
 ## Success criteria
 

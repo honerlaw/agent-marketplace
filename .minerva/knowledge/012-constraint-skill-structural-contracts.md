@@ -24,3 +24,4 @@ The format itself (anchor grammar including the `{any_of, ignore_case}` disjunct
 - [[016-constraint-promote-narrowed-never-overwrite]] — see also
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[034-constraint-site-fourth-catalog-surface]] — see also
+- [[036-constraint-skill-progressive-disclosure]] — see also
