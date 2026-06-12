@@ -5,7 +5,7 @@
 
 ## Goal
 
-Close the prose-alias gap in the progressive-disclosure pointer guard: strengthen `tests/test_skill_budget.py` so malformed reference pointers and reference files lacking a mandatory read instruction fail CI.
+Close the deterministically checkable part of the prose-alias gap in the progressive-disclosure pointer guard: strengthen `tests/test_skill_budget.py` so malformed reference pointers fail CI and every reference file must carry at least one canonical, read-directive mention. (A prose alias pointing at a *nonexistent* file remains undetectable without LLM judgment — out of scope for the CI floor.)
 
 This is followup #1 from unit 035. Followup #2 (unit 2 of the token-reduction program, subagent phase isolation) is **not in scope**: its recorded gate — token measurements from a real `propose-ship-auto` run on the restructured skills — is unmet; no measurement artifact exists yet.
 

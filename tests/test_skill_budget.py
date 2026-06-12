@@ -50,7 +50,10 @@ def _unfenced_lines(body: str) -> list[str]:
     """
     lines, fenced = [], False
     for line in body.splitlines():
-        if line.startswith("```"):
+        # lstrip: fences indented inside list items (live in init/lint/replan)
+        # toggle too. Safe today because no skill nests an indented fence
+        # inside a column-0 fence — pinned by the negative tests below.
+        if line.lstrip().startswith("```"):
             fenced = not fenced
             continue
         if not fenced:
@@ -64,7 +67,9 @@ def malformed_pointers(body: str) -> list[str]:
     bad = []
     for line in _unfenced_lines(body):
         for token in REF_LOOSE_RE.findall(line):
-            if not REF_MENTION_RE.fullmatch(token):
+            # Sentence-ending periods after .md are prose, not malformation;
+            # rstrip can't mask a real defect (".bak" doesn't end in dots).
+            if not REF_MENTION_RE.fullmatch(token.rstrip(".")):
                 bad.append(token)
     return bad
 
@@ -175,6 +180,20 @@ def test_malformed_pointer_detected():
     assert malformed_pointers("see references/briefs.md.bak") == ["references/briefs.md.bak"]
     # fenced examples are illustrations, not live pointers
     assert malformed_pointers("```\nreferences/briefs\n```") == []
+    # indented fences (list items) toggle too
+    assert malformed_pointers("1. step\n   ```\n   references/briefs\n   ```") == []
+    # sentence punctuation after .md is prose, not malformation — including ellipsis
+    assert malformed_pointers("Read references/foo.md.") == []
+    assert malformed_pointers("Read references/foo.md..") == []
+    # but a token malformed even after stripping dots stays flagged
+    assert malformed_pointers("read references/foo.") == ["references/foo."]
+
+
+def test_fence_toggle_semantics_pinned():
+    # a column-0 fence containing prose, plus an indented pair outside it:
+    # only the unfenced indented-pair content is visible, fences themselves never are
+    body = "```\nfenced references/a\n```\nvisible\n  ```\n  hidden references/b\n  ```\ntail"
+    assert _unfenced_lines(body) == ["visible", "tail"]
 
 
 def test_read_directive_check_detected(tmp_path):
