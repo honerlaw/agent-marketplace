@@ -6,7 +6,8 @@ name: evals
 #
 # Scope note: the suite is scoped to the minerva/eval tests on purpose. A bare
 # `pytest` currently aborts during collection on the unrelated financials tests
-# (`No module named 'lib'` in tests/test_browser.py and tests/test_storage.py),
+# (`No module named 'lib'` in tests/test_browser.py and tests/test_storage.py;
+# tests/test_pull.py collects but fails at runtime on the deleted `pull` module),
 # which pre-exist on main. Fixing that import is a separate follow-up; until
 # then this job runs exactly the tests these eval mechanisms own.
 
