@@ -15,7 +15,12 @@
   "anchors": [
     ".minerva/reference/",
     ".minerva/knowledge/",
-    "Evidence",
+    {
+      "any_of": [
+        "Evidence"
+      ],
+      "file": "references/workflow.md"
+    },
     {
       "any_of": [
         "Root cause"

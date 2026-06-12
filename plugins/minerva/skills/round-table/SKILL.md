@@ -21,95 +21,32 @@ This skill is a pure, behavior-preserving extraction of the panel protocol forme
 
 ## Dispatch
 
-Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs.
+Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision.
 
-Each agent receives the **artifact under review** (the draft, the proposed approach, the framed decision, etc.) plus the **decision context** (relevant `.minerva/knowledge/` entries, the work unit's `proposal.md` when one is in context, repo conventions from `CLAUDE.md`/`AGENTS.md`). Use `subagent_type: general-purpose` unless a more specialized agent fits the decision.
+### The shared block — cache-aligned prompt prefix
+
+Every panel prompt **begins** with the same shared block, **byte-identical across all three agents for a given dispatch**. Identical leading bytes are what let the three requests share the prompt cache — so all role-specific text comes after the block, never before it:
+
+```
+ARTIFACT:
+<the draft / proposal / decision under review>
+
+CONTEXT:
+<the enumerated decision context — see the inclusion list below>
+```
+
+CONTEXT is an **enumerated inclusion list**, not an open-ended dump. It contains, when each exists, exactly:
+
+- the framed decision or stated goal the artifact serves;
+- the work unit's `proposal.md`, when one is in context;
+- `.minerva/knowledge/` entries **already cited in this session** — never a fresh corpus scan;
+- repo conventions from `CLAUDE.md` / `AGENTS.md` that bear on the decision.
+
+There is no size cap: the list bounds *what kinds* of input the panel sees, not how much.
 
 ## Agent briefs
 
-**Proponent prompt template:**
-```
-You are the Proponent in a 3-agent consensus panel reviewing this artifact.
-
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<relevant knowledge entries, proposal, repo conventions>
-
-YOUR ROLE: Argue for why this artifact is sound given the stated goal,
-project constraints, and conventions. Cite specific evidence from the
-context where you can.
-
-After you've made your strongest honest case, render a final verdict
-of one of: accept, revise, reject. Your role is to defend, but the
-verdict must be truthful — if the artifact has fundamental problems
-you couldn't argue around, say so.
-
-Output format:
-## Defense
-<your argument>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
-
-**Skeptic prompt template:**
-```
-You are the Skeptic in a 3-agent consensus panel reviewing this artifact.
-
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<relevant knowledge entries, proposal, repo conventions>
-
-YOUR ROLE: Surface every load-bearing risk, ambiguity, divergence from
-convention, missing piece, or unstated assumption in this artifact. Be
-specific — cite the part of the artifact you're critiquing.
-
-After your critique, render a final verdict of one of: accept, revise,
-reject. Your role is to find problems, but the verdict must reflect
-whether the problems you found are actually load-bearing — a list of
-nitpicks that don't block soundness should result in 'accept' with
-concerns logged.
-
-Output format:
-## Critique
-<your concerns, each as a numbered item with severity high/medium/low>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
-
-**Arbiter prompt template:**
-```
-You are the Arbiter in a 3-agent consensus panel. You have already
-received the Proponent's defense and the Skeptic's critique of this
-artifact.
-
-ARTIFACT:
-<the draft / proposal / decision under review>
-
-CONTEXT:
-<same as above>
-
-PROPONENT'S DEFENSE:
-<full Proponent output>
-
-SKEPTIC'S CRITIQUE:
-<full Skeptic output>
-
-YOUR ROLE: Weigh both sides. Decide which arguments are load-bearing
-and which are not. Render a final verdict.
-
-Output format:
-## Reasoning
-<which arguments mattered and why>
-
-## Verdict
-<accept | revise | reject>: <one-sentence reason>
-```
+The three role briefs — Proponent, Skeptic, Arbiter — live in `references/briefs.md`. **Read it at this run's first dispatch**; each prompt is the shared block, then (Arbiter only) the Proponent's and Skeptic's outputs, then the role brief.
 
 ## Vote semantics
 
@@ -155,15 +92,6 @@ After every panel call (regardless of outcome), record a one-line entry under a 
 
 Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto`'s `[skipped — small]`, `[user-directed]`, and `[synthesis]` prefixes) — those are caller policy, not part of this protocol.
 
-## Caller mode (orchestrators)
+## Caller mode and scope boundaries
 
-Another skill can delegate its decision points here. Caller mode rides an observable intake: the caller invokes `minerva:round-table` via the `Skill` tool **once**, when its first panel-worthy decision arrives, leading with a standing instruction that names (a) where each decision's quorum comes from (e.g., the caller's decision taxonomy), (b) where log lines go, and (c) any standing auto-mode behavior. Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the Skill tool** — re-injection adds nothing; each application supplies that decision's artifact, context, and quorum.
-
-The caller owns — and this skill never does — the decision *taxonomy* (which decisions get a panel and at what quorum), any skip predicate (whether to convene at all), escalation budgets and abort triggers, and all other run-level state.
-
-## Out of scope
-
-- **Deciding whether to convene.** Invoking round-table always convenes a panel. Skip predicates ("is this decision too small to panel?") are caller policy — `minerva:propose-ship-auto` keeps its fail-closed skip predicate on its side of the boundary, and an ad-hoc user invocation is itself the decision to convene.
-- **Quorum policy.** Which decisions warrant 3/3 vs. 2/3 is the caller's taxonomy. This skill counts votes against whatever quorum it is given, and supplies the 2/3 default only when no caller specifies one.
-- **Run-level state.** Escalation counters, per-run budgets, and abort triggers belong to the orchestrating caller.
-- **Interviewing the user.** `minerva:grill-plan` stress-tests a drafted plan by questioning *you*, one question at a time; round-table convenes *agents* to argue it out and only reaches you on escalation. They compose — grill a draft to convergence, then round-table it for an independent verdict — but they do not overlap.
+When another skill delegates its decision points here (orchestrator use), read `references/caller-mode.md` **before the first delegated decision** — it defines caller-mode intake (quorum source, log destination, standing auto-mode behavior, no re-invocation per decision) and this skill's scope boundaries (convening is the caller's call; quorum policy, skip predicates, run-level state, and user-interviewing all live elsewhere).

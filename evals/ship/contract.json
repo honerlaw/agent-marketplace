@@ -13,11 +13,31 @@
     ]
   },
   "anchors": [
-    ".minerva/work/",
+    {
+      "any_of": [
+        ".minerva/work/"
+      ],
+      "file": "references/protocol.md"
+    },
     "proposal.md",
-    "gh pr create",
-    "gh pr merge --auto",
-    "git checkout -b",
+    {
+      "any_of": [
+        "gh pr create"
+      ],
+      "file": "references/protocol.md"
+    },
+    {
+      "any_of": [
+        "gh pr merge --auto"
+      ],
+      "file": "references/protocol.md"
+    },
+    {
+      "any_of": [
+        "git checkout -b"
+      ],
+      "file": "references/protocol.md"
+    },
     {
       "any_of": [
         "bare mode"
@@ -60,6 +80,7 @@
         "post-promote",
         "post-`minerva:promote`"
       ],
+      "file": "references/protocol.md",
       "ignore_case": true
     }
   ],
