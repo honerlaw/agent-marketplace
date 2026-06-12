@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from knowledge_spans import FENCE_RE
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 
@@ -50,10 +52,10 @@ def _unfenced_lines(body: str) -> list[str]:
     """
     lines, fenced = [], False
     for line in body.splitlines():
-        # lstrip: fences indented inside list items (live in init/lint/replan)
-        # toggle too. Safe today because no skill nests an indented fence
-        # inside a column-0 fence — pinned by the negative tests below.
-        if line.lstrip().startswith("```"):
+        # FENCE_RE is the single-sourced fence grammar (indented + tilde
+        # fences included) — imported, never re-derived (knowledge 019's rule,
+        # applied beyond the wiki corpus). Toggle semantics pinned below.
+        if FENCE_RE.match(line):
             fenced = not fenced
             continue
         if not fenced:
@@ -214,3 +216,5 @@ def test_read_directive_check_detected(tmp_path):
 
 def test_unfenced_lines_strips_fences():
     assert _unfenced_lines("a\n```\nb\n```\nc") == ["a", "c"]
+    # tilde fences are part of the single-sourced grammar
+    assert _unfenced_lines("a\n~~~\nb\n~~~\nc") == ["a", "c"]
