@@ -130,6 +130,16 @@ def analyze_transcript(path) -> dict:
     unpriced = set()
     n_assistant = 0
 
+    # Claude Code writes each assistant message to the transcript MULTIPLE times as
+    # it streams (one line per content-block update), every copy carrying the
+    # SAME message.id and the SAME final `usage`. Summing per line double-counts
+    # usage 2-5x, so each unique message.id is billed exactly once, and tool_use
+    # blocks are deduped by their own block id. (Verified against a real run: the
+    # naive per-line sum overshot Claude's total_cost_usd ~2.5x.)
+    seen_msg_ids: set = set()
+    seen_tool_block_ids: set = set()
+    fallback_idx = 0
+
     for line in Path(path).read_text().splitlines():
         line = line.strip()
         if not line:
@@ -141,36 +151,48 @@ def analyze_transcript(path) -> dict:
         if obj.get("type") != "assistant":
             continue
         msg = obj.get("message") or {}
-        raw_usage = msg.get("usage") or {}
         model = msg.get("model") or "unknown"
         scope = "subagent" if obj.get("isSidechain") else "main"
-        n_assistant += 1
 
-        # One message's billed usage.
-        u = _zero_usage()
-        _add_usage(u, raw_usage)
-        for k, v in u.items():
-            totals[k] += v
-            by_scope[scope]["usage"][k] += v
+        mid = msg.get("id")
+        if mid is None:
+            mid = f"__noid_{fallback_idx}"  # treat an id-less message as unique
+            fallback_idx += 1
 
-        cost = usage_cost(u, model)
-        if cost is None:
-            unpriced.add(normalize_model(model))
-            cost = 0.0
-        by_scope[scope]["cost_usd"] += cost
-        by_scope[scope]["messages"] += 1
+        # Bill each unique message's usage exactly once.
+        if mid not in seen_msg_ids:
+            seen_msg_ids.add(mid)
+            n_assistant += 1
+            u = _zero_usage()
+            _add_usage(u, msg.get("usage") or {})
+            for k, v in u.items():
+                totals[k] += v
+                by_scope[scope]["usage"][k] += v
 
-        m = by_model.setdefault(
-            normalize_model(model),
-            {"usage": _zero_usage(), "cost_usd": 0.0, "messages": 0},
-        )
-        for k, v in u.items():
-            m["usage"][k] += v
-        m["cost_usd"] += cost
-        m["messages"] += 1
+            cost = usage_cost(u, model)
+            if cost is None:
+                unpriced.add(normalize_model(model))
+                cost = 0.0
+            by_scope[scope]["cost_usd"] += cost
+            by_scope[scope]["messages"] += 1
 
+            m = by_model.setdefault(
+                normalize_model(model),
+                {"usage": _zero_usage(), "cost_usd": 0.0, "messages": 0},
+            )
+            for k, v in u.items():
+                m["usage"][k] += v
+            m["cost_usd"] += cost
+            m["messages"] += 1
+
+        # Tool calls can arrive across the message's repeated lines; dedupe by
+        # block id so a streamed tool_use is counted once.
         for block in msg.get("content") or []:
             if isinstance(block, dict) and block.get("type") == "tool_use":
+                bid = block.get("id") or f"__tb_{fallback_idx}"
+                if bid in seen_tool_block_ids:
+                    continue
+                seen_tool_block_ids.add(bid)
                 name = block.get("name", "?")
                 by_tool[name] = by_tool.get(name, 0) + 1
 

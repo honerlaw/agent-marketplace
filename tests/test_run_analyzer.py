@@ -99,6 +99,24 @@ def test_analyze_splits_main_subagent_tool_and_unpriced(tmp_path):
     assert report["totals"]["cache_read_tokens"] == 1_000_000
 
 
+def test_streamed_duplicate_message_billed_once(tmp_path):
+    # Claude Code writes the SAME assistant message multiple times as it streams,
+    # each copy carrying the same message.id and identical usage. Summing per line
+    # double-counts; the analyzer must bill each message.id once and dedupe
+    # tool_use by block id. (Regression: the naive sum overshot total_cost_usd ~2.5x.)
+    usage = {"output_tokens": 1000, "cache_creation": {
+        "ephemeral_1h_input_tokens": 0, "ephemeral_5m_input_tokens": 0}}
+    dup = {"type": "assistant", "isSidechain": False, "message": {
+        "id": "msg_dup", "model": "claude-sonnet-4-6", "usage": usage,
+        "content": [{"type": "tool_use", "id": "tb1", "name": "Bash"}]}}
+    lines = [dup, dict(dup), dict(dup)]  # same message streamed three times
+    report = analyze_transcript(_write_transcript(tmp_path, lines))
+
+    assert report["assistant_messages"] == 1          # billed once, not 3x
+    assert report["totals"]["output_tokens"] == 1000  # not 3000
+    assert report["by_tool"] == {"Bash": 1}           # tool deduped by block id
+
+
 def test_aggregate_cache_without_split_attributed_to_5m(tmp_path):
     # Older transcript: only cache_creation_input_tokens, no 5m/1h split.
     lines = [{"type": "assistant", "isSidechain": False, "message": {
