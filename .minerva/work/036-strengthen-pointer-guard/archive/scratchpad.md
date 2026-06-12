@@ -16,3 +16,4 @@
 - [1/3-equivalent → revision] promote partition vote 1: P accept / S revise — Skeptic showed FENCE_RE already single-sources the fence grammar (knowledge_spans.py:33) and the unit re-derived it; Arbiter not dispatched (revision clearly required, conservative direction)
 - [2/3 accept, revision round] promote partition vote 2: PROMOTE 037 (fence scans import single-sourced grammar, any corpus); code revised to import FENCE_RE (closes tilde residual); write-time accuracy fixes sanctioned: soften "imports FENCE_RE" to include _strip_fences consumers (applied), commit the working-tree revision (applied, 14d386b)
 - [skipped — small] TODO disposition: single unambiguous residual (4-space literal blocks → 036 followups.md; evidence: one item, prescribed path)
+- [synthesis] no-op (1 un-synthesized entry below threshold; link_rot empty; overview watermark stays 036)
