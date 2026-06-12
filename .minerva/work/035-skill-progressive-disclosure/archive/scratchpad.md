@@ -33,3 +33,4 @@
 - [1/3 accept → revision] promote partition: vote 1 failed — 036 restated evals/README.md + round-table SKILL.md against 012's source-of-truth precedent
 - [2/3 accept, skeptic dissented, revision round] promote partition: accepted with BINDING write-time amendment — 036's implications must state the true cross_surface gap (token presence only; wholesale matrix move reds ~10 checks; prose-gutting is the unguarded path) and not attribute it to the `file` mechanism; 012 reciprocal edge explicit (concerns logged: false-enforcement-claim defect class)
 - [skipped — small] TODO disposition: single unambiguous item (pointer-regex SUGGEST → followups.md; evidence: one TODO, one prescribed non-silent path)
+- [synthesis] refreshed overview.md (watermark 033→036; 3 entries synthesized)
