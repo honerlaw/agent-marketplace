@@ -42,3 +42,4 @@ that promote only ever edits within those spans.
 ## Related
 - [[016-constraint-promote-narrowed-never-overwrite]] — builds on
 - [[018-decision-phase-b-deterministic-lint-detector]] — see also
+- [[037-constraint-fence-scans-import-fence-re]] — see also

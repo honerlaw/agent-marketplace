@@ -1,7 +1,7 @@
 # Proposal: strengthen-pointer-guard
 
 **Date**: 2026-06-11
-**Status**: Draft
+**Status**: Shipped (2026-06-11)
 
 ## Goal
 
@@ -15,12 +15,12 @@ This is followup #1 from unit 035. Followup #2 (unit 2 of the token-reduction pr
 
 ## Approach
 
-Extend `tests/test_skill_budget.py` with two deterministic, enumerating checks (existing budget/orphan/dangling checks unchanged; no SKILL.md edits — scan evidence: zero malformed pointers and every reference file already has a read-verb mention line):
+What shipped: two deterministic, enumerating checks added to `tests/test_skill_budget.py` (no SKILL.md edits anywhere):
 
-1. **Malformed-pointer scan** — any loose `references/<token>` occurrence in a SKILL.md that does not match the canonical `references/<name>.md` form fails (catches `references/briefs`, `references/phases.md.bak`-style typos at the pointer site).
-2. **Read-directive check** — every `references/*.md` file must have **at least one** SKILL.md mention line containing the word "read" (case-insensitive, word-boundary). Per-file, not per-mention: secondary mentions without a read verb stay legal (three exist today in propose-ship-auto).
+1. **Malformed-pointer scan** — any unfenced `references/<token>` not matching the canonical `references/<name>.md` form fails; trailing sentence punctuation after `.md` is tolerated (`rstrip('.')` before fullmatch — cannot mask `.bak`-style defects).
+2. **Read-directive check** — every `references/*.md` must have at least one unfenced SKILL.md mention line containing word-bounded "read"; secondary verb-less mentions stay legal.
 
-Check logic lives in module-level helpers; negative coverage via `tmp_path`-fixture tests proving each check catches its violation class. TDD: fixtures red first, then green.
+Fence handling imports the single-sourced grammar (`FENCE_RE` from `scripts/knowledge_spans.py` — indented + tilde fences) rather than re-deriving it; the unit's own hand-rolled first cut missed indented fences (caught by the completion panel) and tilde fences (caught when the partition panel spotted the re-derivation), which became knowledge entry [[037-constraint-fence-scans-import-fence-re]]. Toggle semantics and both violation classes are pinned by negative tests. Helpers are module-level; the module was already in CI's enumerated pytest list.
 
 ## Success criteria
 

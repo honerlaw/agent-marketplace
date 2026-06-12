@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 036 -->
+<!-- index-watermark: 037 -->
 
 ## Decisions
 
@@ -48,3 +48,4 @@
 - [[034-constraint-site-fourth-catalog-surface]] — the static site’s skills catalog is a fourth, test-enforced catalog surface (bidirectional, site-only), extending 010’s three
 - [[035-constraint-ci-test-enumeration-explicit]] — new test modules are invisible to CI until appended to the enumerated pytest list
 - [[036-constraint-skill-progressive-disclosure]] — skills keep ≤9KB SKILL.md cores with detail in on-demand references/; contract anchors follow via the `file` field
+- [[037-constraint-fence-scans-import-fence-re]] — fence-aware scans import the single-sourced FENCE_RE grammar (or a parser built on it), whatever the corpus
