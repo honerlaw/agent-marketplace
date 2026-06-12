@@ -28,8 +28,18 @@
       ],
       "ignore_case": true
     },
-    "PROMOTE",
-    "DISCARD",
+    {
+      "any_of": [
+        "PROMOTE"
+      ],
+      "file": "references/modes.md"
+    },
+    {
+      "any_of": [
+        "DISCARD"
+      ],
+      "file": "references/modes.md"
+    },
     {
       "any_of": [
         "idempotent",
@@ -47,8 +57,18 @@
       "ignore_case": true
     },
     "## Related",
-    "index-watermark",
-    "[[",
+    {
+      "any_of": [
+        "index-watermark"
+      ],
+      "file": "references/wiki-maintenance.md"
+    },
+    {
+      "any_of": [
+        "[["
+      ],
+      "file": "references/wiki-maintenance.md"
+    },
     {
       "any_of": [
         "cross-reference",

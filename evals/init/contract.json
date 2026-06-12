@@ -13,14 +13,34 @@
     ]
   },
   "anchors": [
-    ".minerva/work/",
+    {
+      "any_of": [
+        ".minerva/work/"
+      ],
+      "file": "references/steps.md"
+    },
     ".minerva/knowledge/",
-    ".gitkeep",
+    {
+      "any_of": [
+        ".gitkeep"
+      ],
+      "file": "references/steps.md"
+    },
     ".gitignore",
     "CLAUDE.md",
     "AGENTS.md",
-    "overview.md",
-    "you may have customized it",
+    {
+      "any_of": [
+        "overview.md"
+      ],
+      "file": "references/steps.md"
+    },
+    {
+      "any_of": [
+        "you may have customized it"
+      ],
+      "file": "references/steps.md"
+    },
     {
       "any_of": [
         "Routing",
@@ -43,13 +63,29 @@
       ],
       "ignore_case": true
     },
-    ".minerva/reference/",
-    "index.md",
-    "index-watermark",
+    {
+      "any_of": [
+        ".minerva/reference/"
+      ],
+      "file": "references/steps.md"
+    },
+    {
+      "any_of": [
+        "index.md"
+      ],
+      "file": "references/steps.md"
+    },
+    {
+      "any_of": [
+        "index-watermark"
+      ],
+      "file": "references/steps.md"
+    },
     {
       "any_of": [
         "backfill"
       ],
+      "file": "references/steps.md",
       "ignore_case": true
     }
   ],

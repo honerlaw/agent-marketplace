@@ -26,294 +26,33 @@ Only proceed after the user confirms. This is the single mandatory — and **onl
 
 ## Panel protocol
 
-Used at every strategic/tactical decision point (see [Decision taxonomy](#decision-taxonomy)).
-
-### Skip predicate (small decisions)
-
-Before dispatching a panel for any **skippable** strategic/tactical decision (see the `Skippable?` column in the [Decision taxonomy](#decision-taxonomy)), the main LLM first applies an explicit **conjunctive** test to *that specific decision*. Skip the panel — the main LLM decides directly — **only if every** clause holds:
-
-- **additive / low-blast-radius** — the artifact adds rather than rewrites, with a bounded surface;
-- **objectively verifiable without a judgment call** — the supporting evidence is mechanical (a named passing test, a file that exists, a count), not an opinion;
-- **single-surface** — one file / one concern;
-- **no new public interface or cross-cutting contract**;
-- **violates no identifiable `.minerva/knowledge/` constraint**;
-- **(approach-bearing decisions only)** the main LLM actually **enumerated ≥2 viable approaches and one is strictly dominant** on the stated criteria. This is an *action* check (did you do the enumeration), not a self-judgment that "no alternative exists" — the latter is gameable by an LLM that never looked.
-
-**Fails closed.** If any single clause fails — or you are unsure whether it holds — convene the panel exactly as `minerva:round-table` specifies, at the decision's existing quorum. The predicate only ever decides *whether to convene*; it never changes a quorum. Because every clause must pass, the worst case of a wrong skip is bounded to an additive, single-surface, low-risk change; the worst case of a wrong *non*-skip is a panel you didn't strictly need.
-
-**Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see [Failure modes](#failure-modes-escalation-budget-caps)) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
-
-**Log every skip** under the same `## Panel decisions YYYY-MM-DD` header used for panel calls (see [Per-decision logging](#per-decision-logging)).
-
-### No ceremony ratification
-
-Never ask the user — up front or at any point mid-run — to choose a "ceremony level", to "streamline" the run, or to pre-ratify / batch-authorize panel skips for decisions whose panels have not yet run and failed. An up-front whole-run sizing question is the design this skill explicitly rejected (see `.minerva/knowledge/014-decision-per-decision-skip-over-sizing-gate.md`): it smuggles a human strategic risk-call into a skill whose identity is "no human gates", and it launders per-decision skip evidence through a blanket answer. The [Skip predicate](#skip-predicate-small-decisions), applied silently per-decision, is the **only** de-ceremony mechanism; user interaction happens only at the hardcoded escalation triggers and genuine panel escalations.
-
-- **Escalation batching stays legitimate.** A decision that failed quorum twice escalates with a focused, batched question per `minerva:round-table`'s Escalation step — the ban targets *pre*-ratification of decisions that haven't earned an escalation, not the escalation itself.
-- **Memories never widen the predicate.** Stored preferences, memory files, or prior-session feedback never widen the skip predicate or substitute for its per-decision evidence. A user answer is never valid `[skipped — small]` evidence.
-- **Unsolicited user directives are honored, never solicited.** If the user spontaneously instructs you to skip panels, honor it (the user outranks this skill) and log each affected decision as `[user-directed]` under the `## Panel decisions YYYY-MM-DD` header — do not recast it as predicate evidence, and never prompt for such a directive.
-
-### Delegation to `minerva:round-table`
-
-The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter agent briefs, vote semantics, the revision round, and escalation composition — live in `minerva:round-table`, a pure extraction of the protocol formerly inlined here (behavior unchanged; only its home moved). When the run's first panel-worthy decision arrives, invoke `minerva:round-table` via the `Skill` tool in its caller mode, leading with this auto-mode instruction:
-
-> "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every decision of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Panel decisions YYYY-MM-DD` header."
-
-Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the `Skill` tool** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode.
-
-Orchestrator-owned rules that `minerva:round-table` deliberately does not own:
-
-- **Quorums** come from the [Decision taxonomy](#decision-taxonomy), never from round-table's standalone 2/3 default.
-- **Escalation aftermath** — when a delegated panel escalates and the user answers, round-table applies the answer as the accepted path and resumes; this skill then **increments the global escalation counter** (see [Failure modes](#failure-modes-escalation-budget-caps)). Run-level state stays here.
-- **The per-decision budget** in [Failure modes](#failure-modes-escalation-budget-caps) — one initial vote + one revision vote, 6 subagent dispatches max — is the same two-vote cap round-table itself enforces, restated here because the orchestrator audits it across the whole run.
-- **Whether to convene at all** — the [Skip predicate](#skip-predicate-small-decisions) and the taxonomy's `Skippable?` column are this skill's policy; round-table always convenes when applied.
-
-### Per-decision logging
-
-After every panel call (regardless of outcome), append a one-line entry to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header (the panel-line format is `minerva:round-table`'s; the prefixes below are this skill's policy on top of it):
-
-```
-## Panel decisions 2026-05-21
-- [3/3 accept] scope check: single unit
-- [2/3 accept, skeptic dissented] approach selection: option B (concerns logged: race risk in step 4)
-- [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
-```
-
-Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) instead of a panel **are logged** under the **same** header, prefixed `[skipped — small]`, and **must record the concrete evidence** that satisfied the predicate (so a later `minerva:review` / `minerva:promote` pass can audit that the skip was honest, not rubber-stamped). Approach-decision skips additionally record the rejected alternatives:
-
-```
-- [skipped — small] scope check: single additive unit (evidence: only SKILL.md touched)
-- [skipped — small] approach selection: option B dominant (rejected: A — duplicates orchestration; C — coarse)
-```
-
-Decisions skipped on an **unsolicited** user directive log under the same header, prefixed `[user-directed]` — the directive itself is the recorded justification, never recast as predicate evidence (see [No ceremony ratification](#no-ceremony-ratification)).
-
-[Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
-
-These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
-
-## Decision taxonomy
-
-The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decisions): it gives the per-row bar a decision must clear for the main LLM to skip its panel. `No` = always run the panel (never-skippable). Operational rows are already main-LLM (no panel to skip).
-
-| Phase | Decision | Tier | Quorum | Skippable? |
-|---|---|---|---|---|
-| Pre-flight | In-flight work collision | n/a | Hardcoded user escalation | **No** — hardcoded user escalation |
-| Propose | Scope check (single unit vs. decompose) | Strategic | 3/3 | Only if obviously a single additive unit |
-| Propose | Approach selection (from 2-3 candidates) | Strategic | 3/3 | Only if ≥2 approaches enumerated & one strictly dominant; skip log records the rejected alternatives |
-| Propose | Whole-proposal acceptance | Strategic | 3/3 | Only if every section is trivially sound & single-surface |
-| Work | Mid-work load-bearing divergence (panel confirms main LLM's detection) | Strategic | 2/3 | **No** — precondition is a surfaced divergence |
-| Replan (if triggered) | New-plan acceptance | Strategic | 3/3 | **No** — convened only after a confirmed divergence |
-| Work | Completion verification (success criteria honestly met) | Strategic | 3/3 | **No** — independent check on the main LLM's self-assessment |
-| Review | Per-finding triage (single panel call for all findings) | Tactical | 2/3 | Only if all findings are low-severity (any medium+ → panel) |
-| Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 | **No** — precondition is a surfaced load-bearing finding |
-| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
-| Promote | TODO disposition | Tactical | 2/3 | Only if a single unambiguous disposition |
-| Promote→Ship | Synthesis refresh (Phase 4.5) | Operational | No panel (`minerva:synthesize` self-gates) | n/a — delegated, self-gating |
-| Ship | Commit message | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
-| Ship | PR title + body | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
-| Ship | CI auto-fix classification | Tactical | No panel (`ship`'s classifier handles it) | n/a — `ship`'s classifier |
-| Cleanup gate | PR state polling + cleanup | n/a | No panel | n/a |
-
-## Phase 1 — Propose (inline)
-
-This phase replaces the user-interactive intake in `minerva:propose`.
-
-1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/NNN-*/proposal.md` files for tone and conventions, and any `followups.md` whose entries could be adjacent.
-
-2. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
-
-3. **Scope-check panel.** Dispatch panel with artifact = "is this a single work unit, or should it decompose into multiple?". On `≤1/3 accept` after revision, escalate with the sub-units the Skeptic identified as options. If user picks "decompose", abort the auto run cleanly: "scope check escalated to decomposition — re-run with one sub-unit at a time."
-
-4. **Approach-selection panel.** Dispatch panel with artifact = the 2-3 candidate approaches + the recommended one. On consensus, the picked approach replaces the draft's `## Approach` section. On escalation, ask the user to pick.
-
-5. **Whole-proposal-acceptance panel.** Dispatch panel with artifact = the full Goal/Why/Approach/Success-criteria/Open-Questions draft (post step 4). On `accept`, the draft is final. On revision-round failure, escalate with the Skeptic's top 1-3 concerns as a batched question.
-
-6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes" section, steps 1–7:
-   - Derive slug, check duplicates, compute NNN across local work / local branches / remote branches.
-   - Resolve default branch.
-   - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
-   - `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`.
-   - `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
-
-7. **File writes (inside the worktree).** Identical to `minerva:propose` steps 8–9, 11:
-   - Create `.minerva/work/<NNN-slug>/`.
-   - Write `proposal.md` with the approved content per the template in `minerva:propose` step 9.
-   - Write `scratchpad.md` with the header-only template from `minerva:propose` step 9.
-   - Append the initial `## Panel decisions YYYY-MM-DD` block to `scratchpad.md` with the votes from steps 3–5.
-   - `git add` the work-unit directory; commit `chore: initialize <NNN-slug> work unit`.
-
-8. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose` step 10 (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal-acceptance panel already covered that role.
-
-9. Continue to Phase 2.
-
-## Phase 2 — Work (inline)
-
-This phase replaces the user-interactive setup and completion signal in `minerva:work`. Implementation work itself is unchanged — the main LLM writes code as normal, maintains `scratchpad.md` per `minerva:work`'s implementation protocol.
-
-1. **Setup.** Already inside the worktree from Phase 1. Read `proposal.md` and any `replan.md` entries (none on first pass). Skip the user-facing "resolve open questions" step — the proposal-acceptance panel already addressed open questions during whole-proposal review; any that remain are deferred deliberately and surface in the final report.
-
-2. **Implementation loop.** Main LLM implements per `minerva:work`'s "Implementation protocol" section: scratchpad maintenance, divergence detection. **No upper bound on implementation time** — the auto skill doesn't cap coding work.
-
-3. **Divergence detection.** When the main LLM notices what looks like a load-bearing divergence (a core assumption broke, the approach is shifting, scope is shifting), trigger the **divergence panel**: artifact = "is this divergence load-bearing enough to warrant a replan?". On `2/3 accept`, proceed to replan ([Phase 2.5](#phase-25--replan-inline-if-triggered)). On `≤1/3 accept`, continue implementing without replan — the panel determined the divergence was a routine choice. On escalation, ask the user.
-
-4. **Completion verification.** When the main LLM judges that every `## Success criteria` item appears met:
-   - Compose a checklist: each criterion, the evidence (test name, file path, behavior observed), and a yes/no.
-   - Dispatch the **completion-verification panel**: artifact = the checklist + the latest diff (`git diff <default>...HEAD`). The panel votes on whether each criterion is honestly checkable.
-   - On `3/3 accept`, advance to Phase 3.
-   - On `≤1/3 accept`, this is treated as a **success-criteria divergence**, not a regular consensus failure — auto-trigger Phase 2.5 (replan) to clarify the criteria, then resume implementation. Skip the standard revise-and-revote.
-   - On `2/3 accept`, proceed but log dissent concerns to scratchpad for the review phase to scrutinize.
-
-## Phase 2.5 — Replan (inline, if triggered)
-
-Mirrors `minerva:replan`'s protocol with panel-based acceptance.
-
-1. Already inside the worktree. Read `proposal.md`, prior `replan.md` entries, current `scratchpad.md`.
-
-2. **Frame the replan** around the three pieces: Original plan / What changed / New plan. The main LLM drafts all three.
-
-3. **New-plan-acceptance panel.** Artifact = the full replan entry draft + the proposal's current `## Approach` for comparison. On `3/3 accept`, write. On revision-round failure, escalate.
-
-4. **Write.** Append the entry to `replan.md` per `minerva:replan`'s "On approval — file write" section. If the new plan changes success criteria, also edit `proposal.md`'s `## Success criteria` section.
-
-5. Return control to Phase 2 (or Phase 3 if replan was triggered from review).
-
-## Phase 3 — Review (inline)
-
-Replaces the user-interactive triage in `minerva:review`. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
-
-1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md`, and relevant `.minerva/knowledge/` entries.
-
-2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution" section.
-
-3. **Generate findings.** Two passes:
-   - **Minerva audit** (inline): spec fidelity (does the diff achieve `## Goal`, `## Approach`, `## Success criteria`?) + knowledge compliance (does the diff violate any documented pattern/constraint/decision?).
-   - **Code review**: if a PR exists for this branch, invoke `code-review:code-review` via the `Skill` tool. Otherwise, perform the inline structured code review per `minerva:review`'s "Code review invocation" section.
-
-4. **Triage panel.** Single panel call for the full set of numbered findings. Artifact = the findings list + proposed dispositions (default: high → FIX, medium → SUGGEST, low → IGNORE). Each panel agent reviews the disposition for every finding and votes on the set as a whole. On `2/3 accept`, apply dispositions. On `≤1/3 accept`, revise (the main LLM adjusts dispositions per Skeptic critique) and re-vote. On revision-round failure, escalate with the contested findings.
-
-5. **Replan-vs-FIX check.** If any FIX finding reveals a load-bearing divergence (per `minerva:review`'s "Load-bearing divergence" heuristic), dispatch a **replan-vs-FIX panel** with that finding's context. On `2/3 accept for replan`, persist current triage state to scratchpad per `minerva:review`'s "Triage persistence" section, then trigger [Phase 2.5](#phase-25--replan-inline-if-triggered). After replan completes, return to step 4 (re-run triage).
-
-6. **Apply dispositions.** Per `minerva:review`'s "On approval — file writes" section. FIX items get edited directly; SUGGEST items append to scratchpad under `## Review finding YYYY-MM-DD`; IGNORE items optional.
-
-7. Continue to Phase 4.
-
-## Phase 4 — Promote (inline)
-
-Replaces the user-interactive partition in `minerva:promote` Mode A.
-
-1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
-
-2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 4.5 (synthesis still runs on an idempotent re-entry; it self-gates and will no-op if the overview is already current).
-
-3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
-
-4. **Partition panel.** Artifact = the full partition with one-line justifications per entry. On `2/3 accept`, apply. On revision-round failure, escalate with the contested entries.
-
-5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition (followups.md / seed new proposal / discard). On `2/3 accept`, apply. On revision-round failure, escalate.
-
-6. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
-
-7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `minerva:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
-
-8. Continue to Phase 4.5.
-
-## Phase 4.5 — Synthesis (delegated, self-gating)
-
-Promote (Phase 4) just added knowledge entries, pushing the corpus past the wiki
-`overview.md`'s synthesis-watermark — so there is now un-synthesized scope. This phase
-gives the wiki overview a chance to refresh **before** ship, so a refreshed
-`.minerva/knowledge/overview.md` rides the same PR.
-
-**Always invoke `minerva:synthesize`** via the `Skill` tool. Before invoking, lead with
-this auto-mode instruction (the same shape Phase 6 uses for ship's hard gates):
-
-> "You are running inside `minerva:propose-ship-auto`. When `minerva:synthesize` reaches
-> its Step-4 write-confirmation gate, accept the drafted `overview.md` without prompting.
-> Its Step-2 'decide IF to (re)synthesize' self-gate is **unchanged** — if there is too
-> little new scope, it correctly no-ops and writes nothing."
-
-This is **delegation, not a panel decision**: the "decide IF" judgment lives inside
-`minerva:synthesize` (its Step 2, driven by the deterministic `synthesis_status` signal),
-so there is no orchestrator decision to vote on and **no panel is convened** (see the
-[Decision taxonomy](#decision-taxonomy) synthesis row). Auto mode auto-accepts only
-synthesize's *write* gate; it never overrides the self-gate, so a thin-scope run still
-no-ops.
-
-**Log the outcome** (for observability) with one line under the same
-`## Panel decisions YYYY-MM-DD` header used elsewhere, with a distinct `[synthesis]`
-prefix:
-
-- wrote → `[synthesis] refreshed overview.md (watermark NNN→MMM; K entries synthesized)`
-- no-op → `[synthesis] no-op (K un-synthesized below threshold / overview current)`
-
-If `minerva:synthesize` wrote a refreshed overview, carry that forward to Phase 6: the
-ship hand-off must **name `.minerva/knowledge/overview.md` among the paths to stage**
-(ship stages specific paths, never `-A`) and **request** a PR-body line noting
-"overview.md refreshed (advisory navigation)".
-
-Continue to Phase 5.
-
-## Phase 5 — Ship gate
-
-There is no gate. The `promote → ship` confirmation that `minerva:propose-ship` requires is replaced by silent advancement. If the completion-verification panel in Phase 2 voted with full consensus and the review + promote panels also accepted, the auto skill trusts those signals and proceeds.
-
-If the global escalation counter has reached 3 by this point, halt instead of shipping (see [Failure modes](#failure-modes-escalation-budget-caps)).
-
-## Phase 6 — Ship (delegated)
-
-Invoke `minerva:ship` via the `Skill` tool. Before invoking, lead with this auto-mode instruction:
-
-> "You are running inside `minerva:propose-ship-auto`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
-
-These two gates are operational tier and don't warrant panel calls — the main LLM's draft from `proposal.md` is good enough by definition.
-
-If `minerva:ship`'s CI auto-fix classifier marks a failure as `other` or bails on a non-trivial test/build, **do not panel-vote on the bail** — escalate to the user with the failing job log. This is a hard escalation trigger.
-
-## Phase 7 — Cleanup gate
-
-Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
-
-1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes` via the `Skill` tool. Report and exit.
-3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `delaySeconds: 300`, `prompt: minerva:propose-ship-auto --cleanup-only <NNN-slug> --retry=N`. Cap retries at 12. On exhaustion, surface manual instructions.
-4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
-5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.
-6. **No PR found** → exit silently (ship must have bailed before opening one — already reported above).
-
-When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase directly.
+The full panel-protocol policy — the **Skip predicate (small decisions)**, **No ceremony ratification**, **Delegation to `minerva:round-table`**, and **Per-decision logging** (formats and worked examples) — lives in `references/panel-protocol.md`. **Read that file once, in full, before this run's first strategic/tactical decision point**; its rules then apply to every decision that follows.
+
+Binding floor, even before the reference is read:
+
+- The conjunctive skip predicate is applied silently per-decision, only where the **Decision taxonomy** row (in `references/panel-protocol.md`) is skippable, and **fails closed** to a panel on any uncertainty. It is the only de-ceremony mechanism — never ask the user to pre-ratify skips or pick a "ceremony level".
+- **Never-skippable:** completion verification, mid-work divergence confirmation, new-plan acceptance (replan), Replan-vs-FIX, and every hardcoded escalation trigger.
+- Panel mechanics (dispatch, Proponent/Skeptic/Arbiter briefs, votes, revision round, escalation composition) are delegated to `minerva:round-table` in caller mode; quorums always come from the Decision taxonomy (in `references/panel-protocol.md`), never round-table's standalone default.
+- Every panel call, predicate skip (`[skipped — small]` + evidence), user-directed bypass (`[user-directed]`), and synthesis outcome (`[synthesis]`) logs one line to `scratchpad.md` under `## Panel decisions YYYY-MM-DD`.
+
+## Phases
+
+Execute the phases in order. The full inline protocols — panel artifacts, vote handling, escalation aftermath, and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
+
+1. **Propose (inline)** — assemble context → design synthesis → scope-check panel (3/3) → approach-selection panel (3/3) → whole-proposal-acceptance panel (3/3) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
+2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence panel (2/3) when a load-bearing divergence is suspected; completion-verification panel (3/3) on the success-criteria checklist + diff.
+   - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan-acceptance panel (3/3); append to `replan.md`.
+3. **Review (inline)** — minerva audit + code review (PR mode delegates to `code-review:code-review`); single triage panel (2/3) over all findings; replan-vs-FIX panel (2/3) if a load-bearing finding surfaces.
+4. **Promote (inline)** — partition panel (2/3); TODO-disposition panel (2/3); apply writes per `minerva:promote` Mode A; archive scratchpad.
+   - **4.5 Synthesis (delegated, self-gating)** — invoke `minerva:synthesize` via the `Skill` tool with its auto-mode instruction (auto-accept the write gate only; the Step-2 self-gate is unchanged). Log the `[synthesis]` outcome line; if it wrote, ship must stage `.minerva/knowledge/overview.md` and note the refresh in the PR body.
+5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
+6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` escalate to the user — never panel-voted.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup <NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 
-**Per-decision budget.** Hard cap: one initial vote + one revision vote per decision. 6 subagent dispatches max per decision point.
-
-**Per-phase abort triggers.**
-- Propose phase: if 2 of the 3 propose-phase panels (scope, approach, whole-proposal) escalate, abort the auto run. The strategic intent is too ambiguous for panel-driven decisions. Recommend: "switch to manual `minerva:propose`."
-
-**Global escalation counter.** Maintain across the run. Increment on every user escalation. If it reaches **3**, halt before the next panel call and report status. Recovery: run individual minerva skills manually from the current state.
-
-**Hard escalation triggers (skip the panel entirely).**
-- In-flight work collision (pre-flight).
-- Worktree creation failure (git error, gitignore missing, slug collision).
-- Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
-- Global escalation counter reaching 3.
-
-**Final report on bail.**
-- Phase reached.
-- Reason for bail (escalation count / hard trigger / CI failure).
-- Current state of `.minerva/work/<NNN-slug>/` (proposal status, scratchpad summary, committed state).
-- Exact next manual command (e.g., `minerva:work <NNN-slug>`, `minerva:ship <NNN-slug>`).
-
-## Observability
-
-- Every panel call logs one line to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header per the [Per-decision logging](#per-decision-logging) section.
-- Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
-- The final report (success or bail) lists total panel calls and total escalations for the run.
+Binding caps: **one initial vote + one revision vote per decision** (6 subagent dispatches max); **propose-phase abort** when 2 of its 3 panels escalate; **global escalation counter** halts the run at **3**. Hard escalation triggers that skip the panel entirely: in-flight collision, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), counter at 3. The full trigger list, final-report-on-bail format, and observability requirements live in `references/governance.md` — read it at the first escalation or before reporting any bail.
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`), and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
-- **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the auto skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
-- **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
-- **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.
-- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see [Decision taxonomy](#decision-taxonomy)); `minerva:round-table`'s standalone 2/3 default never applies inside this skill. If a user wants different thresholds, they fork the skill.
+Never modify any existing minerva skill at run time (this skill orchestrates by *invocation only*); never auto-cascade into new work units; never cap implementation time; review/promote ordering is fixed; quorums are not configurable. Rationale and detail: `references/governance.md`.

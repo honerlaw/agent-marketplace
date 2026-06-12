@@ -7,7 +7,10 @@ Each skill under ``plugins/minerva/skills/<name>/`` must carry a companion
   raw substrings the frontmatter block must contain.
 * ``anchors``     — substrings the SKILL.md body must contain. An anchor is
   either a plain string (must-contain, case-sensitive) or an object
-  ``{"any_of": [...], "ignore_case": true}`` expressing a disjunction.
+  ``{"any_of": [...], "ignore_case": true}`` expressing a disjunction. An
+  object anchor may carry ``"file": "references/<name>.md"`` to check a
+  reference file in the skill directory instead of the SKILL.md body — used
+  when work unit 035 moved anchored prose verbatim into references/.
 * ``cross_surface`` — which catalog surfaces (root README, plugin README,
   using-minerva body) must list ``minerva:<skill>``.
 
@@ -98,11 +101,29 @@ def _anchor_satisfied(anchor, body: str) -> bool:
     return any(_present(alt, body, ignore_case) for alt in anchor["any_of"])
 
 
+def _anchor_text(skill: str, anchor, skill_body: str) -> str:
+    """Resolve the text an anchor is checked against.
+
+    Default is the SKILL.md body. An object anchor with a ``file`` key is
+    checked against that file (path relative to the skill directory) — the
+    deliberate-retarget mechanism for prose moved into ``references/``.
+    """
+    if isinstance(anchor, dict) and "file" in anchor:
+        path = SKILLS_DIR / skill / anchor["file"]
+        assert path.is_file(), (
+            f"{skill} contract anchor targets {anchor['file']!r}, "
+            "which does not exist in the skill directory"
+        )
+        return path.read_text()
+    return skill_body
+
+
 def _anchor_label(anchor) -> str:
     if isinstance(anchor, str):
         return repr(anchor)
     flag = " (ignore_case)" if anchor.get("ignore_case") else ""
-    return f"any_of {anchor['any_of']}{flag}"
+    where = f" in {anchor['file']}" if anchor.get("file") else ""
+    return f"any_of {anchor['any_of']}{flag}{where}"
 
 
 def test_evals_dir_exists():
@@ -162,9 +183,28 @@ def test_frontmatter_contract(skill):
 def test_body_anchors(skill):
     _, _, body = _read_skill(skill)
     for anchor in _load_contract(skill).get("anchors", []):
-        assert _anchor_satisfied(anchor, body), (
-            f"{skill}/SKILL.md body missing required anchor: {_anchor_label(anchor)}"
+        text = _anchor_text(skill, anchor, body)
+        where = anchor.get("file", "SKILL.md body") if isinstance(anchor, dict) else "SKILL.md body"
+        assert _anchor_satisfied(anchor, text), (
+            f"{skill} {where} missing required anchor: {_anchor_label(anchor)}"
         )
+
+
+def test_anchor_object_keys_are_known():
+    """An object anchor may only use any_of / ignore_case / file — typos in a
+    contract must fail loudly rather than silently widening the check."""
+    allowed = {"any_of", "ignore_case", "file"}
+    for skill in SKILLS:
+        for anchor in _load_contract(skill).get("anchors", []):
+            if isinstance(anchor, dict):
+                unknown = set(anchor) - allowed
+                assert not unknown, (
+                    f"{skill} contract anchor {_anchor_label(anchor)} has "
+                    f"unknown keys: {sorted(unknown)}"
+                )
+                assert anchor.get("any_of"), (
+                    f"{skill} object anchor must carry a non-empty any_of"
+                )
 
 
 @pytest.mark.parametrize("skill", SKILLS)

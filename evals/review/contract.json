@@ -13,20 +13,41 @@
     ]
   },
   "anchors": [
-    ".minerva/work/",
-    "proposal.md",
-    "scratchpad.md",
+    {
+      "any_of": [
+        ".minerva/work/"
+      ],
+      "file": "references/protocol.md"
+    },
+    {
+      "any_of": [
+        "proposal.md"
+      ],
+      "file": "references/protocol.md"
+    },
+    {
+      "any_of": [
+        "scratchpad.md"
+      ],
+      "file": "references/protocol.md"
+    },
     {
       "any_of": [
         "git diff",
         "git status"
-      ]
+      ],
+      "file": "references/protocol.md"
     },
     "FIX",
     "SUGGEST",
     "IGNORE",
     "minerva:promote",
-    "minerva:replan",
+    {
+      "any_of": [
+        "minerva:replan"
+      ],
+      "file": "references/protocol.md"
+    },
     {
       "any_of": [
         "most-recently-modified",

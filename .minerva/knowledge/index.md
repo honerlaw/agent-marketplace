@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 034 -->
+<!-- index-watermark: 036 -->
 
 ## Decisions
 
@@ -46,3 +46,5 @@
 - [[021-constraint-skill-wraps-script-via-importable-api]] — a prose skill wraps a sibling Python tool via its importable API, anchored to the working-tree root; not the CLI, not CWD-relative
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — any tool deriving wiki cross-ref edges must be fence-aware (a fenced `## Related` example is not a real edge)
 - [[034-constraint-site-fourth-catalog-surface]] — the static site’s skills catalog is a fourth, test-enforced catalog surface (bidirectional, site-only), extending 010’s three
+- [[035-constraint-ci-test-enumeration-explicit]] — new test modules are invisible to CI until appended to the enumerated pytest list
+- [[036-constraint-skill-progressive-disclosure]] — skills keep ≤9KB SKILL.md cores with detail in on-demand references/; contract anchors follow via the `file` field

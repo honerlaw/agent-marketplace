@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 033 -->
+<!-- synthesis-watermark: 036 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -79,7 +79,19 @@ root** — never the CLI, never CWD-relative
 ([[021-constraint-skill-wraps-script-via-importable-api]]). Coverage is enforced
 structurally: **every skill carries a declarative contract** checked by an enumerating
 test, so the skill set can never silently outrun its guarantees
-([[012-constraint-skill-structural-contracts]]).
+([[012-constraint-skill-structural-contracts]]). The static **site's skills catalog is a
+fourth surface** — the only one enforced bidirectionally (presence *and* orphans), via a
+bespoke enumerating test deliberately kept out of `cross_surface`
+([[034-constraint-site-fourth-catalog-surface]]).
+
+Two newer constraints govern the *size and CI reality* of the skill set. Skills keep
+**≤9KB SKILL.md cores** with detail prose in on-demand per-skill `references/` files,
+enforced by an enumerating byte-budget + pointer-integrity test; contract anchors follow
+moved prose via a per-anchor `file` field
+([[036-constraint-skill-progressive-disclosure]]). And a trap that test itself fell into:
+**new test modules are invisible to CI until appended to the workflow's explicitly
+enumerated pytest list** — the failure mode is silent, so a green local run proves
+nothing about CI ([[035-constraint-ci-test-enumeration-explicit]]).
 
 ## The lifecycle and its automation
 
@@ -125,7 +137,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`033`) is a **new-scope-only floor**:
+synthesis watermark (`036`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -135,9 +147,10 @@ synthesis watermark (`033`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `033-extract-round-table` work unit, reflecting
-the corpus through entry `033`. The refresh was invoked on three un-synthesized entries
-(`031`, `032`, `033`). Prior refreshes: `030-no-ceremony-ratification` (through `030`,
+This overview was refreshed in the `035-skill-progressive-disclosure` work unit,
+reflecting the corpus through entry `036`. The refresh was invoked on three
+un-synthesized entries (`034`, `035`, `036`). Prior refreshes:
+`033-extract-round-table` (through `033`), `030-no-ceremony-ratification` (through `030`,
 opening the previously-empty Patterns bucket), `027-related-backfill` (through `028`, on
 the explicit drift rationale of a 16-block `## Related` reshape),
 `025-wire-synthesize-into-orchestrators` (through `025`), and the original synthesis in

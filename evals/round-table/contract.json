@@ -19,9 +19,19 @@
     "quorum",
     "2/3",
     "Two votes maximum",
-    "accept | revise | reject",
+    {
+      "any_of": [
+        "accept | revise | reject"
+      ],
+      "file": "references/briefs.md"
+    },
     "Caller mode",
-    "always convenes a panel"
+    {
+      "any_of": [
+        "always convenes a panel"
+      ],
+      "file": "references/caller-mode.md"
+    }
   ],
   "cross_surface": {
     "root_readme": true,

@@ -26,8 +26,10 @@ behavioral runner never reads `contract.json`.
   },
   "anchors": [                          // substrings the SKILL.md *body* must contain
     "proposal.md",                      //   plain string  -> must-contain, case-sensitive
-    { "any_of": ["brainstorm", "questions one at a time"], "ignore_case": true }
+    { "any_of": ["brainstorm", "questions one at a time"], "ignore_case": true },
                                         //   object        -> disjunction; ignore_case folds case for the whole group
+    { "any_of": ["EnterWorktree"], "file": "references/on-approval.md" }
+                                        //   file          -> check a reference file instead of the SKILL.md body
   ],
   "cross_surface": {                    // which catalogs must list `minerva:<skill>`
     "root_readme": true,                //   README.md
@@ -47,6 +49,16 @@ An anchor is **either**:
   legacy `... in body.lower()` checks are represented. To express a **case-insensitive single
   anchor**, use a one-element `any_of`: `{"any_of": ["Root cause"], "ignore_case": true}` —
   there is no `ignore_case` flag on plain-string anchors.
+
+An object anchor may additionally carry `"file": "references/<name>.md"` — the anchor is then
+checked against that file (path relative to the skill directory) instead of the SKILL.md body.
+This is the **deliberate-retarget** mechanism from work unit 035 (skill-progressive-disclosure):
+when anchored prose moves verbatim from a fat SKILL.md into an on-demand `references/` file, the
+contract follows it via `file` rather than being weakened or deleted. The target file must exist
+(the runner fails on a dangling `file`), and a plain-string anchor that needs retargeting becomes
+a one-element `any_of` with `file`, since plain strings carry no fields. Companion guards live in
+`tests/test_skill_budget.py`: every SKILL.md stays ≤9 KB, every `references/*.md` is pointed to
+from its SKILL.md, and every `references/` mention resolves.
 
 A `minerva:<skill>` anchor (or cross-surface token) is matched on a **token boundary**, so
 `minerva:propose` is not satisfied by `minerva:propose-ship` — a dropped catalog row can't hide
