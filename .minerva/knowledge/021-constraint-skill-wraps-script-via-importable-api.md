@@ -24,12 +24,20 @@ A prose skill that wraps a sibling Python tool should:
   `knowledge_lint.py` returns `1` only on *error*-severity findings and `0` on
   warnings-only, so exit-code branching silently drops warning-severity findings
   (e.g. a stale-slug warning). The API returns the full list regardless.
-- **Anchor every path to the working-tree root**, computed once as
-  `ROOT="$(git rev-parse --show-toplevel)"`, and use `$ROOT/scripts` (for the
-  `sys.path` insert) and `$ROOT/.minerva/knowledge`. **Never use CWD-relative paths**
-  — invoked from a subdirectory they raise `ModuleNotFoundError` or, worse, glob an
-  empty/wrong directory and silently produce a falsely-clean result from a tool whose
-  whole value is trustworthy coverage.
+- **Resolve the scripts directory via plugin cache first, falling back to the
+  working-tree root.** Compute once as:
+  ```bash
+  PLUGIN_SCRIPTS=$(find "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" \
+    "${HOME}/.claude/plugins/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+  SCRIPTS="${PLUGIN_SCRIPTS:-$ROOT/scripts}"
+  ```
+  Use `$SCRIPTS` (not `$ROOT/scripts`) for the `sys.path` insert and direct
+  invocations. The real script files live in `plugins/minerva/scripts/` and are
+  deployed to the plugin cache; the repo's `scripts/` directory holds relative
+  symlinks to them for development. **Never use CWD-relative paths** — invoked from
+  a subdirectory they raise `ModuleNotFoundError` or, worse, glob an empty/wrong
+  directory and silently produce a falsely-clean result from a tool whose whole value
+  is trustworthy coverage.
 
 ## Implications
 
