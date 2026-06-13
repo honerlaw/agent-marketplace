@@ -36,11 +36,15 @@ Run the importable status helper (it never writes):
 SCRIPTS_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; python3 -c "import sys, json; sys.path.insert(0, '$SCRIPTS_ROOT/scripts'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$KNOWLEDGE'), indent=2))"
 ```
 
-**Worktree note:** `--git-common-dir` always resolves to the shared `.git` directory of
-the main repository, even from inside a git worktree, so `scripts/` is found correctly
-regardless of whether you are in the main working tree or a worktree under
-`.minerva/worktrees/`. `--show-toplevel` still resolves to the current working tree's
-root, so the knowledge corpus is the worktree-local one (correct per-branch semantics).
+**Worktree note:** `--git-common-dir` outputs a path to the shared `.git` directory —
+absolute when invoked from inside a git worktree (e.g.,
+`/repo/.git`), or relative to the CWD when invoked from the main working tree (e.g.,
+`.git` from the root, `../../.git` from a subdirectory like `plugins/minerva/`). In all
+cases, `cd "$(dirname ...)" && pwd` resolves to the correct absolute path of the main
+repo root, making `scripts/` findable regardless of whether you are in the main working
+tree, a subdirectory of it, or a worktree under `.minerva/worktrees/`. `--show-toplevel`
+still resolves to the current working tree's root, so the knowledge corpus is the
+worktree-local `.minerva/knowledge/` (correct per-branch semantics).
 
 **Failure fallback:** If the command exits non-zero for any reason (Python unavailable,
 `synthesis_status` module missing, permission error), treat the result as if it were
