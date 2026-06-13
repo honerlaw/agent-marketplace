@@ -1,13 +1,12 @@
-# Deploys site/ to GitHub Pages (followup recorded in
-# .minerva/work/034-minerva-static-site/followups.md — the no-Actions /docs
-# mode was rejected because docs/ holds internal specs).
+# Builds the MkDocs site and deploys to GitHub Pages.
 name: pages
 
 on:
   push:
     branches: [main]
     paths:
-      - "site/**"
+      - "pages/**"
+      - "mkdocs.yml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -28,6 +27,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install MkDocs
+        run: pip install "mkdocs==1.6.1"
+      - name: Build site
+        run: mkdocs build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

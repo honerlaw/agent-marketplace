@@ -1,4 +1,4 @@
-"""Drift checks for the static site's skills catalog (``site/index.html``).
+"""Drift checks for the static site's skills catalog (``pages/index.md``).
 
 The site is a fourth skill-catalog surface (alongside the three from
 ``010-constraint-minerva-skill-catalog-sync``), deliberately enforced by this
@@ -11,6 +11,10 @@ names mentioned elsewhere on the page (the flow narrative, the bias ledger)
 can never mask a missing or orphaned catalog entry. Token matching reuses
 ``_present`` from ``test_skill_contracts`` — hyphen-aware boundaries, so
 ``minerva:propose`` is not satisfied by ``minerva:propose-ship``.
+
+The source is the Markdown file ``pages/index.md``; MkDocs builds the site
+from it, but the test reads the source directly so no build step is needed
+in CI. HTML comment markers pass through MkDocs to the rendered output.
 """
 import re
 from pathlib import Path
@@ -18,7 +22,7 @@ from pathlib import Path
 from tests.test_skill_contracts import _present
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SITE_HTML = REPO_ROOT / "site" / "index.html"
+SITE_SRC = REPO_ROOT / "pages" / "index.md"
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 
 OPEN_MARKER = (
@@ -35,19 +39,19 @@ TOKEN_RE = re.compile(r"minerva:[a-z0-9-]+")
 
 def _catalog_section() -> str:
     """The delimited catalog region; fails loudly if either marker is gone."""
-    html = SITE_HTML.read_text(encoding="utf-8")
-    assert OPEN_MARKER in html, (
-        f"opening marker missing from {SITE_HTML}; the catalog test cannot "
+    src = SITE_SRC.read_text(encoding="utf-8")
+    assert OPEN_MARKER in src, (
+        f"opening marker missing from {SITE_SRC}; the catalog test cannot "
         f"locate its section. Expected exactly: {OPEN_MARKER!r}"
     )
-    assert CLOSE_MARKER in html, (
-        f"closing marker missing from {SITE_HTML}; expected exactly: "
+    assert CLOSE_MARKER in src, (
+        f"closing marker missing from {SITE_SRC}; expected exactly: "
         f"{CLOSE_MARKER!r}"
     )
-    start = html.index(OPEN_MARKER) + len(OPEN_MARKER)
-    end = html.index(CLOSE_MARKER)
+    start = src.index(OPEN_MARKER) + len(OPEN_MARKER)
+    end = src.index(CLOSE_MARKER)
     assert start < end, "catalog markers are out of order"
-    return html[start:end]
+    return src[start:end]
 
 
 def _skill_names() -> list[str]:
@@ -68,7 +72,7 @@ def test_every_skill_listed_on_site():
     ]
     assert not missing, (
         f"skills missing from the site catalog section: {missing} — add an "
-        f"entry to site/index.html between the skills-catalog markers"
+        f"entry to pages/index.md between the skills-catalog markers"
     )
 
 
@@ -79,7 +83,7 @@ def test_no_orphaned_site_entries():
     orphans = sorted(listed - known)
     assert not orphans, (
         f"site catalog section names skills that no longer exist: {orphans} — "
-        f"remove their entries from site/index.html"
+        f"remove their entries from pages/index.md"
     )
 
 
