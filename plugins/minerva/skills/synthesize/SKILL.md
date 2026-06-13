@@ -33,8 +33,19 @@ and the fixer (`scripts/knowledge_fix.py`) never touch it.
 Run the importable status helper (it never writes):
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; python3 -c "import sys, json; sys.path.insert(0, '$ROOT/scripts'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$ROOT/.minerva/knowledge'), indent=2))"
+SCRIPTS_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; python3 -c "import sys, json; sys.path.insert(0, '$SCRIPTS_ROOT/scripts'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$KNOWLEDGE'), indent=2))"
 ```
+
+**Worktree note:** `--git-common-dir` always resolves to the shared `.git` directory of
+the main repository, even from inside a git worktree, so `scripts/` is found correctly
+regardless of whether you are in the main working tree or a worktree under
+`.minerva/worktrees/`. `--show-toplevel` still resolves to the current working tree's
+root, so the knowledge corpus is the worktree-local one (correct per-branch semantics).
+
+**Failure fallback:** If the command exits non-zero for any reason (Python unavailable,
+`synthesis_status` module missing, permission error), treat the result as if it were
+`{"unsynthesized": [], "link_rot": []}` — a no-op signal. Report the error and stop at
+Step 2 with "no-op: signal unavailable." Do not retry; do not stall.
 
 The JSON reports:
 
