@@ -4,3 +4,5 @@ docs_dir: pages
 site_dir: site
 theme:
   name: mkdocs
+markdown_extensions:
+  - def_list
