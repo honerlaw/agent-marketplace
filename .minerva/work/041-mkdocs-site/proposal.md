@@ -1,7 +1,7 @@
 # Proposal: mkdocs-site
 
 **Date**: 2026-06-13
-**Status**: In Progress
+**Status**: Shipped (2026-06-13)
 
 ## Goal
 Replace the hand-authored `site/index.html` + `site/style.css` with an MkDocs-based static site using the default built-in theme (`mkdocs`), with source Markdown in `pages/`, deployed via a build step in the existing GitHub Pages CI workflow.
