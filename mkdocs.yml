@@ -1,0 +1,6 @@
+site_name: minerva
+site_description: Durable record discipline for software work done with agents.
+docs_dir: pages
+site_dir: site
+theme:
+  name: mkdocs

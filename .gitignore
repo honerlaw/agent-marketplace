@@ -6,3 +6,4 @@ __pycache__/
 .minerva/worktrees/
 .DS_Store
 .claude/scheduled_tasks.lock
+/site/
