@@ -33,18 +33,10 @@ and the fixer (`scripts/knowledge_fix.py`) never touch it.
 Run the importable status helper (it never writes):
 
 ```bash
-PLUGIN_SCRIPTS=$(find "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" "${HOME}/.claude/plugins/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); SCRIPTS_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)/scripts"; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$SCRIPTS_ROOT}'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$KNOWLEDGE'), indent=2))"
+PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); SCRIPTS_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)/scripts"; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$SCRIPTS_ROOT}'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$KNOWLEDGE'), indent=2))"
 ```
 
-**Worktree note:** `--git-common-dir` outputs a path to the shared `.git` directory —
-absolute when invoked from inside a git worktree (e.g.,
-`/repo/.git`), or relative to the CWD when invoked from the main working tree (e.g.,
-`.git` from the root, `../../.git` from a subdirectory like `plugins/minerva/`). In all
-cases, `cd "$(dirname ...)" && pwd` resolves to the correct absolute path of the main
-repo root, making `scripts/` findable regardless of whether you are in the main working
-tree, a subdirectory of it, or a worktree under `.minerva/worktrees/`. `--show-toplevel`
-still resolves to the current working tree's root, so the knowledge corpus is the
-worktree-local `.minerva/knowledge/` (correct per-branch semantics).
+**Script resolution:** `PLUGIN_SCRIPTS` uses `find -L` (follow symlinks) to locate `scripts/` in the local plugin install (`~/.claude/plugins/minerva` → symlink to the development checkout) first, then in the versioned plugin cache. The `-L` flag is required because the local install path is a symlink; without it, `find` stops at the symlink without descending. `SCRIPTS_ROOT` via `--git-common-dir` is a last-resort fallback that only works inside the agent-marketplace repo itself — it resolves to the wrong path in any other project. `--show-toplevel` still resolves to the current working tree's root, so the knowledge corpus is the worktree-local `.minerva/knowledge/` (correct per-branch semantics).
 
 **Failure fallback:** If the command exits non-zero for any reason (Python unavailable,
 `synthesis_status` module missing, permission error), treat the result as if it were

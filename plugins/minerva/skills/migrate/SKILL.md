@@ -48,7 +48,7 @@ Run `migration_status` through its **importable Python API**, anchoring both the
 subdirectory (`scripts/migration_status.py` is read-only — it never writes):
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" "${HOME}/.claude/plugins/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
 from migration_status import migration_status; \
 print(json.dumps(migration_status('$ROOT/.minerva/knowledge'), indent=2))"
 ```
