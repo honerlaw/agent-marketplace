@@ -21,7 +21,7 @@ This skill is a pure, behavior-preserving extraction of the panel protocol forme
 
 ## Dispatch
 
-Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision.
+Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter.
 
 ### The shared block — cache-aligned prompt prefix
 
@@ -42,7 +42,7 @@ CONTEXT is an **enumerated inclusion list**, not an open-ended dump. It contains
 - `.minerva/knowledge/` entries **already cited in this session** — never a fresh corpus scan;
 - repo conventions from `CLAUDE.md` / `AGENTS.md` that bear on the decision.
 
-There is no size cap: the list bounds *what kinds* of input the panel sees, not how much.
+There is no size cap: the list bounds *what kinds* of input the panel sees, not how much. When `proposal.md` exceeds roughly 2,000 tokens, include only the section most relevant to the decision under review (e.g. `## Approach` for approach-selection panels, `## Success criteria` for completion-verification panels) rather than the full document.
 
 ## Agent briefs
 

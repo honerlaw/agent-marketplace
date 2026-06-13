@@ -62,17 +62,45 @@ def _transcript_for_session(session_id: str, cwd: Path) -> "Path | None":
     return hits[0] if hits else None
 
 
-def build_record(result: dict, transcript_path, task_id: str, git_sha: str) -> dict:
-    """Assemble one baseline record from a ``claude -p`` result + its transcript."""
+def build_record(
+    result: dict,
+    transcript_path,
+    task_id: str,
+    git_sha: str,
+    subagent_paths=None,
+) -> dict:
+    """Assemble one baseline record from a ``claude -p`` result + its transcript.
+
+    ``subagent_paths`` accepts additional transcript JSONL files for Agent-spawned
+    subagent sessions (written to separate files by Claude Code, not isSidechain
+    in the main transcript). Their costs are summed into ``subagent_cost_usd`` and
+    merged into ``by_model``, making panel spend visible in the baseline. Paths
+    are provided manually — Agent-spawned transcripts live in
+    ``~/.claude/projects/<encoded-cwd>/`` alongside the main transcript.
+    The ``cost_crosscheck_ok`` cross-check is against the main transcript only,
+    since Claude's ``total_cost_usd`` does not include separate subagent sessions.
+    """
     report = analyze_transcript(transcript_path)
     claude_cost = result.get("total_cost_usd")
     derived = report["total_cost_usd"]
-    # Cross-check: flag (don't fail) when the two costs diverge beyond tolerance.
+    # Cross-check main transcript only (subagent sessions excluded from claude_cost).
     cost_ok = (
         claude_cost is not None
         and claude_cost > 0
         and abs(derived - claude_cost) / claude_cost <= COST_TOLERANCE_FRAC
     )
+
+    # Aggregate Agent-spawned subagent sessions from separate JSONL files.
+    sub_cost = report["by_scope"]["subagent"]["cost_usd"]
+    sub_messages = report["by_scope"]["subagent"]["messages"]
+    by_model = {m: v["cost_usd"] for m, v in report["by_model"].items()}
+    for sp in subagent_paths or []:
+        sub_report = analyze_transcript(sp)
+        sub_cost = round(sub_cost + sub_report["total_cost_usd"], 6)
+        sub_messages += sub_report["assistant_messages"]
+        for m, v in sub_report["by_model"].items():
+            by_model[m] = round(by_model.get(m, 0.0) + v["cost_usd"], 6)
+
     return {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git_sha": git_sha,
@@ -84,11 +112,11 @@ def build_record(result: dict, transcript_path, task_id: str, git_sha: str) -> d
         "cost_crosscheck_ok": cost_ok,
         "unpriced_models": report["unpriced_models"],
         "assistant_messages": report["assistant_messages"],
-        "num_subagent_messages": report["by_scope"]["subagent"]["messages"],
+        "num_subagent_messages": sub_messages,
         "main_cost_usd": report["by_scope"]["main"]["cost_usd"],
-        "subagent_cost_usd": report["by_scope"]["subagent"]["cost_usd"],
+        "subagent_cost_usd": sub_cost,
         "totals": report["totals"],
-        "by_model": {m: v["cost_usd"] for m, v in report["by_model"].items()},
+        "by_model": by_model,
         "by_tool": report["by_tool"],
     }
 
@@ -174,6 +202,7 @@ def cmd_record(args) -> int:
         result, args["transcript"],
         args.get("task_id", DEFAULT_TASK_ID),
         args.get("git_sha") or _git_sha(),
+        subagent_paths=args.get("subagent") or [],
     )
     append_record(record, args.get("baseline", DEFAULT_BASELINE))
     print(json.dumps(record, indent=2))
@@ -188,7 +217,11 @@ def cmd_diff(args) -> int:
 
 
 def _parse(argv):
-    """Tiny flag parser (kept dependency-free, matching the other scripts)."""
+    """Tiny flag parser (kept dependency-free, matching the other scripts).
+
+    ``--subagent <path>`` may be repeated; its values accumulate as a list.
+    All other flags use last-wins semantics.
+    """
     if not argv:
         return None, {}
     sub, rest, args = argv[0], argv[1:], {}
@@ -198,7 +231,11 @@ def _parse(argv):
         if tok.startswith("--"):
             key = tok[2:].replace("-", "_")
             if i + 1 < len(rest) and not rest[i + 1].startswith("--"):
-                args[key] = rest[i + 1]
+                val = rest[i + 1]
+                if key == "subagent":
+                    args.setdefault("subagent", []).append(val)
+                else:
+                    args[key] = val
                 i += 2
             else:
                 args[key] = True

@@ -171,3 +171,44 @@ def test_diff_needs_two_records(tmp_path):
     baseline.write_text(json.dumps(
         {"task_id": "t", "totals": {}}) + "\n")
     assert "error" in run_benchmark.diff_last_two("t", baseline)
+
+
+def test_build_record_subagent_paths_aggregated(tmp_path):
+    # Main transcript: one Sonnet turn with 1h cache write ($6.00).
+    main_lines = [{"type": "assistant", "isSidechain": False, "message": {
+        "model": "claude-sonnet-4-6",
+        "usage": {"cache_creation": {"ephemeral_1h_input_tokens": 1_000_000,
+                                     "ephemeral_5m_input_tokens": 0}},
+        "content": []}}]
+    main_t = _write_transcript(tmp_path, main_lines)
+
+    # Subagent session transcript: two Haiku turns with plain output ($0.01 each).
+    sub_lines = [
+        {"type": "assistant", "isSidechain": False, "message": {
+            "model": "claude-haiku-4-5",
+            "usage": {"output_tokens": 2_000}, "content": []}},
+        {"type": "assistant", "isSidechain": False, "message": {
+            "model": "claude-haiku-4-5",
+            "usage": {"output_tokens": 2_000}, "content": []}},
+    ]
+    sub_t = tmp_path / "sub.jsonl"
+    sub_t.write_text("\n".join(json.dumps(l) for l in sub_lines) + "\n")
+
+    # 2 × 2000 haiku output tokens at $5/1M = $0.02 total for the subagent session.
+    record = run_benchmark.build_record(
+        {"total_cost_usd": 6.0, "session_id": "s", "num_turns": 1},
+        main_t, "task", "abc123",
+        subagent_paths=[str(sub_t)],
+    )
+
+    # subagent_cost_usd includes the subagent session.
+    assert record["subagent_cost_usd"] == pytest.approx(0.02, rel=1e-6)
+    # num_subagent_messages counts agents in the subagent session.
+    assert record["num_subagent_messages"] == 2
+    # by_model merged: sonnet from main, haiku from sub.
+    assert "claude-sonnet-4-6" in record["by_model"]
+    assert "claude-haiku-4-5" in record["by_model"]
+    assert record["by_model"]["claude-haiku-4-5"] == pytest.approx(0.02, rel=1e-6)
+    # derived_cost_usd covers main transcript only (cross-check stays valid).
+    assert record["derived_cost_usd"] == pytest.approx(6.0)
+    assert record["cost_crosscheck_ok"] is True
