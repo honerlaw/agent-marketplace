@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install MkDocs
-        run: pip install "mkdocs==1.6.1"
+        run: pip install "mkdocs==1.6.1" mkdocs-gitbook
       - name: Build site
         run: mkdocs build
       - uses: actions/configure-pages@v5
