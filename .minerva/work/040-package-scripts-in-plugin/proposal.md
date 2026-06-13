@@ -1,7 +1,7 @@
 # Proposal: package-scripts-in-plugin
 
 **Date**: 2026-06-13
-**Status**: Draft
+**Status**: Shipped (2026-06-13)
 
 ## Goal
 

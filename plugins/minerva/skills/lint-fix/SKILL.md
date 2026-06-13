@@ -29,7 +29,7 @@ unit-021 CI drift gate and `minerva:lint`.
 Show what would change, via the fixer's `--dry-run`:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; python3 "$ROOT/scripts/knowledge_fix.py" --dry-run "$ROOT/.minerva/knowledge"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" "${HOME}/.claude/plugins/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_fix.py" --dry-run "$ROOT/.minerva/knowledge"
 ```
 
 It re-derives every edit from the detector's structured output (`parse_index` /
@@ -49,7 +49,7 @@ On confirmation, apply (the script **recomputes** the batch from the live corpus
 the plan can't go stale between dry-run and apply):
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; python3 "$ROOT/scripts/knowledge_fix.py" "$ROOT/.minerva/knowledge"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" "${HOME}/.claude/plugins/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_fix.py" "$ROOT/.minerva/knowledge"
 ```
 
 The script applies the batch atomically and then re-runs the detector to verify the
