@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 036 -->
+<!-- synthesis-watermark: 042 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -22,7 +22,10 @@ The span model that defines those editable regions is **single-sourced** in
 `scripts/knowledge_spans.py` so no tool re-derives it
 ([[019-constraint-knowledge-span-model-single-sourced]]), and any tool deriving cross-ref
 edges must be **fence-aware** — a `[[…]]` inside a code fence is an example, not a real
-edge ([[023-constraint-wiki-edge-derivation-fence-aware]]). On top of these invariants
+edge ([[023-constraint-wiki-edge-derivation-fence-aware]]). That fence-awareness is itself
+single-sourced: any fence-aware scan **imports the `FENCE_RE` grammar** (or a parser built
+on it) rather than re-deriving it, for whatever corpus it walks
+([[037-constraint-fence-scans-import-fence-re]]). On top of these invariants
 sits a deliberately phased tooling effort: a **deterministic lint detector** ships as the
 CI gate first, with the LLM-judged skill deferred
 ([[018-decision-phase-b-deterministic-lint-detector]]); the
@@ -82,7 +85,10 @@ test, so the skill set can never silently outrun its guarantees
 ([[012-constraint-skill-structural-contracts]]). The static **site's skills catalog is a
 fourth surface** — the only one enforced bidirectionally (presence *and* orphans), via a
 bespoke enumerating test deliberately kept out of `cross_surface`
-([[034-constraint-site-fourth-catalog-surface]]).
+([[034-constraint-site-fourth-catalog-surface]]). After the move to MkDocs, that fourth
+surface's **source of truth is `pages/index.md`** (the MkDocs source the test reads
+directly); the built `site/` is gitignored output, never the checked surface
+([[038-constraint-site-catalog-source-is-pages-index]]).
 
 Two newer constraints govern the *size and CI reality* of the skill set. Skills keep
 **≤9KB SKILL.md cores** with detail prose in on-demand per-skill `references/` files,
@@ -117,7 +123,13 @@ never a self-judged "did the prior phase converge?" scan
 was extracted along a **mechanism-vs-policy** line — standalone `minerva:round-table` owns
 the panel mechanics (briefs, vote semantics, revision round, escalation) for any caller,
 while orchestrators keep the policy: the quorum taxonomy, skip predicates, and all
-run-level state ([[033-decision-panel-mechanics-extracted-to-round-table]]). And the
+run-level state ([[033-decision-panel-mechanics-extracted-to-round-table]]). A **third
+orchestrator** then joined the ladder by adjudication cost (human gates · main model ·
+panels): `propose-ship-quick` runs the identical lifecycle but has the **main model
+adjudicate every decision directly** — no panel — for small low-risk changes, its
+fail-closed **escalation predicate** the structural *inverse* of auto's skip predicate
+(deciding-alone is the default, escalation the fail-closed exception)
+([[042-decision-propose-ship-quick-main-model-adjudication]]). And the
 project is honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[013-decision-behavioral-evals-provisional]]).
@@ -137,7 +149,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`036`) is a **new-scope-only floor**:
+synthesis watermark (`042`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -147,9 +159,9 @@ synthesis watermark (`036`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `035-skill-progressive-disclosure` work unit,
-reflecting the corpus through entry `036`. The refresh was invoked on three
-un-synthesized entries (`034`, `035`, `036`). Prior refreshes:
+This overview was refreshed in the `042-add-propose-ship-quick` work unit, reflecting the
+corpus through entry `042`. The refresh was invoked on three un-synthesized entries
+(`037`, `038`, `042`). Prior refreshes: `035-skill-progressive-disclosure` (through `036`);
 `033-extract-round-table` (through `033`), `030-no-ceremony-ratification` (through `030`,
 opening the previously-empty Patterns bucket), `027-related-backfill` (through `028`, on
 the explicit drift rationale of a 16-block `## Related` reshape),
