@@ -105,6 +105,9 @@ Each entry below is excerpted from the skill's own `description:` frontmatter â€
 **`minerva:propose-ship-auto`**
 : The same lifecycle, but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (the panel mechanics are delegated to `minerva:round-table`). Human input is only a fallback when the panel can't agree after one revision round; small, low-risk decisions skip the panel via a fail-closed skip predicate.
 
+**`minerva:propose-ship-quick`**
+: The lightweight fast-path sibling â€” the same lifecycle with no scheduled human gates, but the main model adjudicates every decision directly instead of convening a panel. Built for small, low-risk changes (small UI fixes, bug fixes) you want done quickly. A fail-closed escalation predicate sends genuinely-undecidable decisions to the user, and a scope-fit escape recommends `propose-ship-auto`/`propose-ship` if the change turns out not to be small.
+
 ### The utilities
 
 **`minerva:round-table`**
