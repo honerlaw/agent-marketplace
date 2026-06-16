@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 038 -->
+<!-- index-watermark: 042 -->
 
 ## Decisions
 
@@ -20,6 +20,7 @@
 - [[029-decision-routing-section-is-the-wiki-reading-protocol]] — the Routing section teaches the wiki reading protocol; stale sections get a gated refresh with markers derived from the template-of-record
 - [[031-decision-phase-handoff-rides-observable-intake]] — phase-to-phase skill handoffs ride an observable intake (an inline arg), not a self-judged "did the prior phase converge?" predicate
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — panel mechanics live in minerva:round-table; orchestrators delegate and keep policy (quorum taxonomy, skip predicates, run-level state)
+- [[042-decision-propose-ship-quick-main-model-adjudication]] — a third orchestrator (propose-ship-quick) has the main model decide solo; its fail-closed escalation predicate is the structural inverse of auto's skip predicate
 
 ## Bugs
 

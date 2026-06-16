@@ -46,6 +46,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are manual / a future APPLY unit) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
+| Run the whole lifecycle end-to-end quickly for a small, low-risk change (small UI fix, bug fix) — the main model decides each point directly instead of a panel, escalating to the user only when it genuinely can't decide | `minerva:propose-ship-quick` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
