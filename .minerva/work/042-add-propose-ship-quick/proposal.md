@@ -1,7 +1,7 @@
 # Proposal: add-propose-ship-quick
 
 **Date**: 2026-06-16
-**Status**: Draft
+**Status**: Shipped (2026-06-16)
 
 ## Goal
 Add a new minerva orchestrator skill, `minerva:propose-ship-quick` — a lightweight fast-path sibling of `minerva:propose-ship-auto`. It runs the same end-to-end lifecycle (propose → work → review → promote → synthesize → ship → cleanup) with **no scheduled human gates**, but the **main model adjudicates every strategic/tactical decision directly** instead of convening a 3-agent `minerva:round-table` panel. The same user-escalation fallback is preserved as an **exceptional** path: when the main model genuinely cannot decide, it escalates to the user — the role panel-escalation plays in `propose-ship-auto`. Optimized for small, low-risk changes (small UI fixes, bug fixes) the user wants done quickly, without multi-agent deliberation or long runs.
@@ -12,7 +12,7 @@ The three orchestrators form a ladder by adjudication cost: `propose-ship` (huma
 `propose-ship-auto` dispatches fresh-context subagent panels at every decision point — thorough, but slow and token-heavy, and overkill for a one-line UI tweak or a small bug fix. Users want to run the full minerva lifecycle quickly for small changes where the main model's own judgment is sufficient, reserving the panel machinery (`propose-ship-auto`) for genuinely ambiguous / high-stakes work and the human-gated path (`propose-ship`) for staying in the loop. This fills the gap between "fully manual lifecycle" and "panel-governed lifecycle".
 
 ## Approach
-**Option A — standalone, self-contained skill** (selected; B/C rejected — see Open Questions). Create `plugins/minerva/skills/propose-ship-quick/` mirroring `propose-ship-auto`'s structure with the decision mechanism swapped:
+What shipped (see [[042-decision-propose-ship-quick-main-model-adjudication]] for the adjudication-cost-ladder decision, the fail-closed-escalation-predicate framing, and the rejected alternatives). **Option A — standalone, self-contained skill** (selected; B/C rejected — see Open Questions). Created `plugins/minerva/skills/propose-ship-quick/` mirroring `propose-ship-auto`'s structure with the decision mechanism swapped:
 
 1. **`SKILL.md`** — thin core (≤9 KB; `tests/test_skill_budget.py` enforces). Same phase map and hardcoded escalation triggers as auto; auto's "Panel protocol" section becomes a "Solo-decision protocol" section that points (with a *read* directive) at the reference files.
 2. **`references/solo-decision-protocol.md`** — the differentiator:

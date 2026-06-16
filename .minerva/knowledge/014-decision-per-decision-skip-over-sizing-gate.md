@@ -31,3 +31,4 @@ The **per-decision fail-closed predicate** dominates both: each decision applies
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[031-decision-phase-handoff-rides-observable-intake]] — see also
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — see also
+- [[042-decision-propose-ship-quick-main-model-adjudication]] — see also
