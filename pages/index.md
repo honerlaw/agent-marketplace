@@ -162,11 +162,3 @@ minerva is opinionated, and the opinions are load-bearing. Each entry below name
 
 **Distrust its own metrics** — The behavioral "does this skill add value" measurements are marked provisional in the record itself — not CI-gated, deltas not yet trusted. The system is biased toward saying so out loud.
 *source: knowledge 013 (behavioral evals provisional)*
-
----
-
-## Colophon
-
-Generated with [MkDocs](https://www.mkdocs.org/) using the default theme. The *presence* of every skill in the catalog above is enforced by `tests/test_site_catalog.py` in this repository; the descriptions are excerpts taken at authoring time, and the narrative reflects the repository as of June 13, 2026.
-
-minerva lives in the [honerlaw/agent-marketplace](https://github.com/honerlaw/agent-marketplace) repository, under `plugins/minerva/`.

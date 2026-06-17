@@ -25,3 +25,4 @@ The test was updated to scan `pages/index.md` directly (the Markdown source), no
 ## Related
 - [[034-constraint-site-fourth-catalog-surface]] — supplements; the site is still the fourth test-enforced catalog surface
 - [[010-constraint-minerva-skill-catalog-sync]] — the three other catalog surfaces remain unchanged
+- [[043-decision-site-gitbook-theme-overrides]] — builds on; the theme is now gitbook, customized via overrides/, with the catalog source unchanged
