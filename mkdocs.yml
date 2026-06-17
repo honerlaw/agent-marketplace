@@ -4,5 +4,8 @@ docs_dir: pages
 site_dir: site
 theme:
   name: gitbook
+  custom_dir: overrides
+extra_css:
+  - css/extra.css
 markdown_extensions:
   - def_list

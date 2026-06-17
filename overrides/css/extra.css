@@ -1,0 +1,8 @@
+/* The gitbook theme's bundled gitbook.min.js never toggles the search-results
+   block (it targets none of the .search-results / .search-noresults selectors,
+   and no theme CSS hides it), so the "results matching" / "No results matching"
+   placeholders render permanently at the bottom of the page. Hide the dead
+   block; the "Type to search" input is left intact. */
+#book-search-results .search-results {
+  display: none;
+}
