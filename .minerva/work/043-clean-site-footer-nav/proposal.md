@@ -1,7 +1,7 @@
 # Proposal: clean-site-footer-nav
 
 **Date**: 2026-06-16
-**Status**: Draft
+**Status**: Shipped (2026-06-16)
 
 ## Goal
 Remove visible chrome cruft from the MkDocs (gitbook theme) site at https://… : the page-bottom Colophon, the always-visible dead search-results placeholder ("results matching"/"No results matching"), the two left-nav footer links ("Published with MkDocs", "Theme by GitBook"), and the duplicate "minerva" nav link (two entries collapse to one).

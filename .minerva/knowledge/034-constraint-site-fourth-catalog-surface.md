@@ -26,3 +26,4 @@ The site is **deliberately not** a `SURFACE_FILES` / `cross_surface` surface: ad
 - [[010-constraint-minerva-skill-catalog-sync]] — builds on
 - [[012-constraint-skill-structural-contracts]] — see also
 - [[038-constraint-site-catalog-source-is-pages-index]] — supersedes: catalog surface is now pages/index.md (MkDocs source), not site/index.html
+- [[043-decision-site-gitbook-theme-overrides]] — see also; site chrome cleanup that left the catalog markers untouched
