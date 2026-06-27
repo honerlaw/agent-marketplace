@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 043 -->
+<!-- index-watermark: 044 -->
 
 ## Decisions
 
@@ -22,6 +22,7 @@
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — panel mechanics live in minerva:round-table; orchestrators delegate and keep policy (quorum taxonomy, skip predicates, run-level state)
 - [[042-decision-propose-ship-quick-main-model-adjudication]] — a third orchestrator (propose-ship-quick) has the main model decide solo; its fail-closed escalation predicate is the structural inverse of auto's skip predicate
 - [[043-decision-site-gitbook-theme-overrides]] — gitbook-theme site chrome is customized via `theme.custom_dir → overrides/`, never the installed theme; the dead search-results block is CSS-hidden
+- [[044-decision-worktree-addressing-no-enterworktree]] — minerva dropped `EnterWorktree`; worktrees are addressed by `.minerva/worktrees/<NNN-slug>/`-prefixed paths + `git -C` (it only natively enters `.claude/worktrees/`)
 
 ## Bugs
 

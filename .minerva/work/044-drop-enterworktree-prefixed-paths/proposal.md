@@ -1,7 +1,7 @@
 # Proposal: drop-enterworktree-prefixed-paths
 
 **Date**: 2026-06-27
-**Status**: Draft
+**Status**: Shipped (2026-06-27)
 
 ## Goal
 
@@ -29,13 +29,13 @@ Canonical replacement wording (applied verbatim, adjusted per site):
 
 ## Success criteria
 
-- No operative minerva skill file instructs a call to `EnterWorktree` or `ExitWorktree` (`grep -rn 'EnterWorktree\|ExitWorktree' plugins/minerva/skills/` returns nothing).
+- No operative minerva skill file instructs a *call* to `EnterWorktree`/`ExitWorktree`. (Shipped: the grep over `plugins/minerva/skills/` now returns only explicit **prohibitions** — "do not call `EnterWorktree`" — which is stronger than silence; no remaining mention is an instruction to invoke it.)
 - Every former call site instead names the prefixed-path + `git -C .minerva/worktrees/<NNN-slug>` mechanism, and no skill still claims paths are "relative to the worktree root" or that operations run "inside the worktree session".
 - `cleanup/SKILL.md`'s worktree pre-flight no longer contrasts against other skills "calling EnterWorktree"; it states cleanup's own parent-repo invariant.
 - `evals/README.md` no longer uses `EnterWorktree` as its example anchor, and the example substring it does use is actually present in `references/on-approval.md`.
 - Knowledge 007 keeps its principle but drops the EnterWorktree mandate; knowledge 008 documents prefixed-path addressing as the standing model with its `[[008-…]]` slug unchanged; `index.md` line for 008 matches its new summary; `overview.md` has no stale EnterWorktree claim.
 - The test suite passes (`pytest tests/test_skill_contracts.py tests/test_skill_budget.py`), confirming no contract anchor regressed.
-- A new `decision`-type knowledge entry captures the EnterWorktree-removal decision (created at promote).
+- A new `decision`-type knowledge entry captures the EnterWorktree-removal decision. (Shipped: `044-decision-worktree-addressing-no-enterworktree.md` records the three-way fork and why option B was chosen; 008 holds the constraint, 044 holds the decision + rejected alternatives, reciprocally cross-linked with 005/007/008; index watermark bumped to 044; knowledge-lint clean.)
 
 ## Open Questions
 

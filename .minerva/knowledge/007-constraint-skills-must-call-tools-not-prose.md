@@ -22,3 +22,4 @@ When a skill requires the model to change execution context (working directory, 
 - [[008-constraint-enter-worktree-absolute-paths]] — see also
 - [[021-constraint-skill-wraps-script-via-importable-api]] — see also
 - [[031-decision-phase-handoff-rides-observable-intake]] — see also
+- [[044-decision-worktree-addressing-no-enterworktree]] — see also
