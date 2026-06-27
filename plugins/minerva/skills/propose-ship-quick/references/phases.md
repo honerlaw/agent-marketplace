@@ -16,7 +16,7 @@ Replaces the user-interactive intake in `minerva:propose`.
 
 5. **Whole-proposal soundness.** The main model reviews the full draft for internal consistency and soundness. Escalate if a public-interface or cross-cutting-contract aspect is one it cannot confidently get right alone.
 
-6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup" steps 1–7: derive slug, check duplicates, compute NNN across local work / local branches / remote branches; resolve default branch; pre-flight gitignore check on `.minerva/worktrees/` (abort to user if missing); `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`; `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
+6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup" steps 1–7: derive slug, check duplicates, compute NNN across local work / local branches / remote branches; resolve default branch; pre-flight gitignore check on `.minerva/worktrees/` (abort to user if missing); `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`; then address the worktree by prefix (**no `EnterWorktree`** — it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<NNN-slug>/` and run git as `git -C .minerva/worktrees/<NNN-slug> …`.
 
 7. **File writes (inside the worktree).** Per `minerva:propose` steps 8–9, 11: create `.minerva/work/<NNN-slug>/`; write `proposal.md` and the header-only `scratchpad.md`; append the initial `## Quick decisions YYYY-MM-DD` block with the decisions from steps 3–5; `git add` + commit `chore: initialize <NNN-slug> work unit`.
 

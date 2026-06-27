@@ -10,13 +10,13 @@ The initial `minerva:work` SKILL.md instructed the model to "switch to the workt
 
 ## Finding
 
-When a skill requires the model to change execution context (working directory, branch, environment), it must instruct the model to call the specific tool that enacts the change — not describe the desired state. For worktree switching, this means explicitly calling `EnterWorktree` with the `path` parameter pointing at the existing worktree directory.
+When a skill requires the model to change execution context (working directory, branch, environment), it must instruct the model to call the specific tool that enacts the change — not describe the desired state. Where **no** tool reliably enacts the change, the skill must instead spell out the concrete mechanism that substitutes for it. minerva's worktrees are the live example: the `EnterWorktree` tool only reliably enters worktrees under `.claude/worktrees/`, and minerva's live under `.minerva/worktrees/`, so minerva never switches context into them — it addresses them by worktree-prefixed file paths and `git -C .minerva/worktrees/<NNN-slug>` commands instead (see [[008-constraint-enter-worktree-absolute-paths]]). Either way, prose like "work inside the worktree" is insufficient on its own.
 
 ## Implications
 
 - Skill authors must identify the concrete tool call for every context-switching step and name it explicitly in the skill prose.
 - Prose like "work inside X" or "treat Y as the working directory" is insufficient on its own — pair it with the tool invocation.
-- This applies to any future skills that use `EnterWorktree`, `ExitWorktree`, or analogous context-switching tools.
+- This applies to any skill step that changes or pins execution context — whether via a context-switching tool, or (as with worktrees) via explicit path / `git -C` addressing when no reliable tool exists.
 
 ## Related
 - [[008-constraint-enter-worktree-absolute-paths]] — see also

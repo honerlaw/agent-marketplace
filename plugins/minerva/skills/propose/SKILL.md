@@ -41,7 +41,7 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
 ## On approval — worktree setup + file writes
 
-The full on-approval sequence — slug derivation, duplicate check, NNN computation across all three sources, default-branch resolution, gitignore pre-flight, `git worktree add`, `EnterWorktree`, the `proposal.md` + `scratchpad.md` templates, self-review, initial commit, and the post-write user gate — lives verbatim in `references/on-approval.md`. **Read it in full the moment every section is approved, before writing anything.**
+The full on-approval sequence — slug derivation, duplicate check, NNN computation across all three sources, default-branch resolution, gitignore pre-flight, `git worktree add`, worktree-prefixed addressing (no `EnterWorktree`), the `proposal.md` + `scratchpad.md` templates, self-review, initial commit, and the post-write user gate — lives verbatim in `references/on-approval.md`. **Read it in full the moment every section is approved, before writing anything.**
 
 ## Out of scope
 

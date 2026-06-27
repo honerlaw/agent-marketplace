@@ -20,9 +20,9 @@ Same pattern used by `minerva:replan`, `minerva:promote`, `minerva:review`, `min
 4. **Ambiguity** — if multiple recent candidates exist and context can't pick, list them and ask the user.
 5. **None found** — report "no work units found — run `minerva:propose` first" and stop.
 
-## Worktree entry (run before Setup)
+## Worktree addressing (run before Setup)
 
-Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs.
+Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs. **minerva never calls `EnterWorktree`** — it only reliably enters worktrees under `.claude/worktrees/`, and minerva's live under `.minerva/worktrees/`. The session's working directory stays the parent repo; you address the worktree by writing every file path with the `.minerva/worktrees/NNN-slug/` prefix and running every git command as `git -C .minerva/worktrees/NNN-slug …`.
 
 1. **Determine NNN-slug** from the resolved target (e.g. `005-add-payments`).
 
@@ -32,7 +32,7 @@ Every active work unit lives in an isolated git worktree created by `minerva:pro
 
    `.minerva/worktrees/NNN-slug/` exists. This is the common case after `minerva:propose`.
 
-   - Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`.
+   - Address it by prefix (no `EnterWorktree`): every file path gets the `.minerva/worktrees/NNN-slug/` prefix; git runs as `git -C .minerva/worktrees/NNN-slug …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
    - Continue to Setup.
 
    ### Exceptional path — worktree missing, docs only on default branch
@@ -44,7 +44,7 @@ Every active work unit lives in an isolated git worktree created by `minerva:pro
       - Fall back to `main`, then `master`.
    2. Confirm `.minerva/worktrees/` is gitignored on `<default-branch>` (`git show <default-branch>:.gitignore | grep -q '\.minerva/worktrees/'`). If missing, bail with "run `minerva:init` first to install the gitignore entry, then retry."
    3. `git worktree add -b NNN-slug .minerva/worktrees/NNN-slug <default-branch>` — branches from the merged default, picking up the shipped docs automatically.
-   4. Call `EnterWorktree` with `path: ".minerva/worktrees/NNN-slug"`.
+   4. Address it by prefix (no `EnterWorktree`): prefix file paths with `.minerva/worktrees/NNN-slug/` and run git as `git -C .minerva/worktrees/NNN-slug …`.
    5. Continue to Setup. (No file move or commit needed — the docs are already on the branch.)
 
    ### Neither location has the unit
@@ -53,12 +53,12 @@ Every active work unit lives in an isolated git worktree created by `minerva:pro
 
 ## Setup (run at the start of every `minerva:work` invocation)
 
-All paths below are relative to the worktree root (`.minerva/worktrees/NNN-slug/`).
+All paths below are **prefixed with** the worktree root (`.minerva/worktrees/NNN-slug/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .minerva/worktrees/NNN-slug …`.
 
 1. Read `.minerva/work/NNN-slug/proposal.md`.
 2. Read **all** `.minerva/work/NNN-slug/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
 3. Read `.minerva/work/NNN-slug/scratchpad.md` to figure out where work left off.
-4. Glance at `git status` and the last 3 commits (run from inside the worktree) to corroborate.
+4. Glance at `git status` and the last 3 commits (run via `git -C .minerva/worktrees/NNN-slug`) to corroborate.
 5. **Resolve open questions.** If `## Open Questions` in `proposal.md` has unresolved items, surface them to the user before implementation begins:
    > "The proposal lists these open questions — let's settle them before implementing: [list]. Once answered, I'll edit the proposal to record the resolutions."
    When the user answers, edit `proposal.md` to either remove resolved items from `## Open Questions` or move them into `## Approach` as decisions.

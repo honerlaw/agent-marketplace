@@ -38,7 +38,7 @@
 - [[003-constraint-post-promote-scratchpad-canonical-empty]] — the post-promote scratchpad is the canonical empty state downstream skills expect
 - [[004-constraint-plugin-skills-auto-discovered-from-directory]] — plugin skills are auto-discovered from `skills/`; no manifest update needed
 - [[007-constraint-skills-must-call-tools-not-prose]] — skills must invoke tools directly, not describe actions in prose
-- [[008-constraint-enter-worktree-absolute-paths]] — `EnterWorktree` does not redirect absolute paths
+- [[008-constraint-enter-worktree-absolute-paths]] — worktree file ops use `.minerva/worktrees/<NNN-slug>/`-prefixed paths, not `EnterWorktree`
 - [[009-constraint-marketplace-plugin-registry-not-auto-discovered]] — marketplace registry isn't auto-discovered: update `marketplace.json` + README
 - [[010-constraint-minerva-skill-catalog-sync]] — skill catalogs aren't auto-generated: three doc surfaces must stay synced
 - [[012-constraint-skill-structural-contracts]] — every skill carries a declarative structural contract, enforced by an enumerating test
