@@ -2,7 +2,7 @@
 
 ## On approval — worktree setup + file writes
 
-Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 enters the worktree. Steps 8–13 run **inside the worktree**.
+Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 establishes how to address the worktree. Steps 8–13 write into the worktree **via its prefixed path** — the session's working directory never changes.
 
 **Non-git repo escape clause:** in a non-git project (no `.git/` directory at the project root), there's nothing to commit and no worktree to create. Skip steps 4, 5, 6, 7, and 11 entirely; run steps 1–3 (NNN computation already has its own non-git fallback), then jump from step 3 to step 8 — create `.minerva/work/<NNN-slug>/` directly at the project root and continue with steps 9, 10, 12, 13.
 
@@ -46,9 +46,9 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
    Branching explicitly from `<default-branch>` (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name uses the `NNN-` prefix so reviewers can tie a branch to its work unit number, and so propose's own NNN-collision scan picks up in-flight worktrees by branch.
 
-7. **Enter the worktree** — call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. All subsequent file operations happen inside the worktree session.
+7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.minerva/worktrees/`, which the `EnterWorktree` tool does not reliably enter (its contract only switches into worktrees under `.claude/worktrees/`), so minerva never uses it. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.minerva/worktrees/<NNN-slug>/` and run each git command as `git -C .minerva/worktrees/<NNN-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 
-8. **Create the work-unit directory** at `.minerva/work/<NNN-slug>/` (relative to the worktree root).
+8. **Create the work-unit directory** `.minerva/work/<NNN-slug>/`, addressed via the step-7 prefix (i.e. `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`).
 
 9. **Write `proposal.md`** using the approved content, structured as:
 
@@ -100,8 +100,8 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 11. **Commit the initial docs on the branch:**
 
     ```
-    git add .minerva/work/<NNN-slug>/
-    git commit -m "chore: initialize <NNN-slug> work unit"
+    git -C .minerva/worktrees/<NNN-slug> add .minerva/work/<NNN-slug>/
+    git -C .minerva/worktrees/<NNN-slug> commit -m "chore: initialize <NNN-slug> work unit"
     ```
 
     (In a non-git repo, skip this step — there's no branch to commit on.)
@@ -112,5 +112,5 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
     Wait for the user's response. If they request changes, edit `proposal.md` directly, re-run the self-review, and create a **follow-up commit** (no `--amend` — the initial commit was already published as the branch's starting state). Only once the user approves the written file is the proposal considered final.
 
-13. Suggest `minerva:work` as the next step. The work skill will detect the existing worktree and enter it.
+13. Suggest `minerva:work` as the next step. The work skill will detect the existing worktree and address it by the same prefix.
 

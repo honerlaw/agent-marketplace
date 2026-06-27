@@ -25,15 +25,15 @@ Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `miner
 4. **Ambiguity** — list candidates, ask the user.
 5. **None found** — "no work units found — run `minerva:propose` first" and stop.
 
-## Worktree entry
+## Worktree addressing
 
 After resolving the target and before reading or writing any files:
 
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
-- If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo without entering a worktree.
-- If the session is already in the matching worktree, do nothing.
+- **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.minerva/worktrees/<NNN-slug>/`, and run every git command as `git -C .minerva/worktrees/<NNN-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo directly.
 
-This makes the skill robust against being invoked from a stale cwd — all subsequent file paths in this skill are resolved relative to the right working tree.
+This keeps the skill correct regardless of where it's invoked from — every file path it touches names the right working tree explicitly.
 
 ## Protocol
 

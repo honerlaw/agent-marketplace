@@ -28,7 +28,7 @@ behavioral runner never reads `contract.json`.
     "proposal.md",                      //   plain string  -> must-contain, case-sensitive
     { "any_of": ["brainstorm", "questions one at a time"], "ignore_case": true },
                                         //   object        -> disjunction; ignore_case folds case for the whole group
-    { "any_of": ["EnterWorktree"], "file": "references/on-approval.md" }
+    { "any_of": ["git worktree add"], "file": "references/on-approval.md" }
                                         //   file          -> check a reference file instead of the SKILL.md body
   ],
   "cross_surface": {                    // which catalogs must list `minerva:<skill>`

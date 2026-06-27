@@ -138,9 +138,9 @@ evals are provisional** — not CI-gated, their deltas not yet trusted
 
 The smallest theme is hard-won operational lore about git and the lifecycle's bookkeeping.
 `.minerva/worktrees/` must be added to `.gitignore` **before** running `git worktree add`
-([[005-decision-gitignore-before-worktree]]), and `EnterWorktree` **does not redirect
-absolute paths** — a sharp edge when scripting inside a worktree
-([[008-constraint-enter-worktree-absolute-paths]]). Two entries capture promote's state
+([[005-decision-gitignore-before-worktree]]), and minerva addresses worktrees by **`.minerva/worktrees/<NNN-slug>/`-prefixed
+paths and `git -C`, not `EnterWorktree`** — that tool only reliably enters worktrees
+under `.claude/worktrees/` ([[008-constraint-enter-worktree-absolute-paths]]). Two entries capture promote's state
 handling: a fixed bug where the **idempotency check missed the old scratchpad marker
 format** ([[002-bug-promote-idempotency-check-misses-old-marker]]), and the constraint that
 the **post-promote scratchpad's one-line marker is the canonical empty state** downstream

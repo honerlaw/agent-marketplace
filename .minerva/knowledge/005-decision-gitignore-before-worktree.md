@@ -20,3 +20,4 @@ Update `.gitignore` to include `.minerva/worktrees/` and commit that change on `
 
 ## Related
 - [[008-constraint-enter-worktree-absolute-paths]] — see also
+- [[044-decision-worktree-addressing-no-enterworktree]] — see also

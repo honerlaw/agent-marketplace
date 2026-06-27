@@ -10,13 +10,13 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → run in **bare mode**: ship from git state alone, no proposal-derived PR title/body. Bare mode is a first-class fallback, not an error path.
 
-## Worktree entry
+## Worktree addressing
 
 After resolving the target and before running any git commands:
 
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` and the current session is **not** already in that worktree, call `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`. The work-unit branch is already checked out there, so the rest of ship (branch detection, commit, push, PR open) runs against the correct branch automatically.
-- If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** enter a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
-- If the session is already in the matching worktree, do nothing.
+- **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<NNN-slug> …` and prefix any file path with `.minerva/worktrees/<NNN-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
 ## Default-branch detection
 

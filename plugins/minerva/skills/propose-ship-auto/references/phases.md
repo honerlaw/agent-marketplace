@@ -21,7 +21,7 @@ This phase replaces the user-interactive intake in `minerva:propose`.
    - Resolve default branch.
    - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
    - `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`.
-   - `EnterWorktree` with `path: ".minerva/worktrees/<NNN-slug>"`.
+   - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<NNN-slug>/` and run git as `git -C .minerva/worktrees/<NNN-slug> …`.
 
 7. **File writes (inside the worktree).** Identical to `minerva:propose` steps 8–9, 11:
    - Create `.minerva/work/<NNN-slug>/`.
