@@ -17,3 +17,4 @@
 - 15 files edited, all via worktree-prefixed paths; verified parent repo `main` stayed clean (no misroute). The footgun the user accepted (Option B) was real and present this whole run — every Edit needed the `.minerva/worktrees/044-…/` prefix.
 - Verification: `grep EnterWorktree plugins/minerva/skills/` → only prohibitions; no "relative to the worktree root" / "inside the worktree session" left; `pytest tests/test_skill_contracts.py tests/test_skill_budget.py` → 209 passed; `scripts/knowledge_lint.py` → clean.
 - evals/README.md example anchor swapped `EnterWorktree` → `git worktree add` (still present in on-approval.md).
+- [synthesis] no-op (signal: watermark 42, corpus_max 44, unsynthesized [043,044], link_rot []; below threshold — 2 minor entries, no dead links, overview worktree-theme already hand-corrected this run).
