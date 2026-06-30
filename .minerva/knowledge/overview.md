@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 042 -->
+<!-- synthesis-watermark: 045 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -88,7 +88,10 @@ bespoke enumerating test deliberately kept out of `cross_surface`
 ([[034-constraint-site-fourth-catalog-surface]]). After the move to MkDocs, that fourth
 surface's **source of truth is `pages/index.md`** (the MkDocs source the test reads
 directly); the built `site/` is gitignored output, never the checked surface
-([[038-constraint-site-catalog-source-is-pages-index]]).
+([[038-constraint-site-catalog-source-is-pages-index]]). The site's **chrome** is
+customized through a `theme.custom_dir → overrides/` layer rather than by editing the
+installed gitbook theme, with the dead search-results block CSS-hidden
+([[043-decision-site-gitbook-theme-overrides]]).
 
 Two newer constraints govern the *size and CI reality* of the skill set. Skills keep
 **≤9KB SKILL.md cores** with detail prose in on-demand per-skill `references/` files,
@@ -124,12 +127,21 @@ was extracted along a **mechanism-vs-policy** line — standalone `minerva:round
 the panel mechanics (briefs, vote semantics, revision round, escalation) for any caller,
 while orchestrators keep the policy: the quorum taxonomy, skip predicates, and all
 run-level state ([[033-decision-panel-mechanics-extracted-to-round-table]]). A **third
-orchestrator** then joined the ladder by adjudication cost (human gates · main model ·
-panels): `propose-ship-quick` runs the identical lifecycle but has the **main model
-adjudicate every decision directly** — no panel — for small low-risk changes, its
-fail-closed **escalation predicate** the structural *inverse* of auto's skip predicate
-(deciding-alone is the default, escalation the fail-closed exception)
-([[042-decision-propose-ship-quick-main-model-adjudication]]). And the
+orchestrator** then joined the ladder by adjudication cost: `propose-ship-quick` runs the
+identical lifecycle but has the **main model adjudicate every decision directly** — no
+panel — for small low-risk changes, its fail-closed **escalation predicate** the
+structural *inverse* of auto's skip predicate (deciding-alone is the default, escalation
+the fail-closed exception) ([[042-decision-propose-ship-quick-main-model-adjudication]]).
+A **fourth** then split the difference: `propose-ship-balanced` runs the same lifecycle on
+quick's main-model engine but dispatches a **single advisory reviewer** (a Skeptic, or a
+Verifier at completion) at a fixed set of high-signal gates — scope, approach,
+completion-verification — arbitrated inline, with no panel, no sequential Arbiter, and no
+revision round. Its gate taxonomy is **telemetry-driven**: it spends independent scrutiny
+only where past-run logs showed it changes outcomes, and a behavioral "load-bearing
+critique" definition plus an anti-circularity escape (can't-confidently-adjudicate →
+escalate, never self-confirm) keep the inline arbitration honest
+([[045-decision-propose-ship-balanced-single-reviewer]]). The four orchestrators now form
+a full ladder — human gates · main model · one reviewer · panels. And the
 project is honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[013-decision-behavioral-evals-provisional]]).
@@ -140,7 +152,9 @@ The smallest theme is hard-won operational lore about git and the lifecycle's bo
 `.minerva/worktrees/` must be added to `.gitignore` **before** running `git worktree add`
 ([[005-decision-gitignore-before-worktree]]), and minerva addresses worktrees by **`.minerva/worktrees/<NNN-slug>/`-prefixed
 paths and `git -C`, not `EnterWorktree`** — that tool only reliably enters worktrees
-under `.claude/worktrees/` ([[008-constraint-enter-worktree-absolute-paths]]). Two entries capture promote's state
+under `.claude/worktrees/` ([[008-constraint-enter-worktree-absolute-paths]]), the decision
+to drop `EnterWorktree` outright recorded in
+[[044-decision-worktree-addressing-no-enterworktree]]. Two entries capture promote's state
 handling: a fixed bug where the **idempotency check missed the old scratchpad marker
 format** ([[002-bug-promote-idempotency-check-misses-old-marker]]), and the constraint that
 the **post-promote scratchpad's one-line marker is the canonical empty state** downstream
@@ -149,7 +163,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`042`) is a **new-scope-only floor**:
+synthesis watermark (`045`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -159,9 +173,10 @@ synthesis watermark (`042`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `042-add-propose-ship-quick` work unit, reflecting the
-corpus through entry `042`. The refresh was invoked on three un-synthesized entries
-(`037`, `038`, `042`). Prior refreshes: `035-skill-progressive-disclosure` (through `036`);
+This overview was refreshed in the `045-add-propose-ship-balanced` work unit, reflecting
+the corpus through entry `045`. The refresh was invoked on three un-synthesized entries
+(`043`, `044`, `045`). Prior refreshes: `042-add-propose-ship-quick` (through `042`, on
+entries `037`/`038`/`042`); `035-skill-progressive-disclosure` (through `036`);
 `033-extract-round-table` (through `033`), `030-no-ceremony-ratification` (through `030`,
 opening the previously-empty Patterns bucket), `027-related-backfill` (through `028`, on
 the explicit drift rationale of a 16-block `## Related` reshape),

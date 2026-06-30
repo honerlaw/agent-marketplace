@@ -1,0 +1,5 @@
+# Followups: add-propose-ship-balanced
+
+Deferred work surfaced during unit 045 that was out of scope for this run.
+
+- **Refresh the ladder-prose count in existing orchestrator skills.** `plugins/minerva/skills/propose-ship-quick/SKILL.md` (line ~8) says "The **three** orchestrators form a ladder by adjudication cost" and lists only three rungs — now stale with `propose-ship-balanced` shipped as the fourth. Update it to four rungs (propose-ship · quick · balanced · auto). `propose-ship-auto/SKILL.md` was checked and has no equivalent "three orchestrators" line, but re-scan when fixing. **Why deferred:** unit 045 was run via `minerva:propose-ship-auto`, whose out-of-scope rule forbids modifying an existing minerva skill at runtime, so this edit could not be made in-run. Handle via a `minerva:propose-ship-quick`/`-balanced` run or a manual edit. (Catalog surfaces — root README, plugin README, using-minerva, pages/index.md — were all updated in 045; only the in-skill ladder prose remains.)

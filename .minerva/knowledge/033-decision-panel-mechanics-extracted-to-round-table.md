@@ -30,3 +30,4 @@ Caller mode is a composition device distinct from the [[031-decision-phase-hando
 - [[031-decision-phase-handoff-rides-observable-intake]] — builds on
 - [[014-decision-per-decision-skip-over-sizing-gate]] — see also
 - [[042-decision-propose-ship-quick-main-model-adjudication]] — see also
+- [[045-decision-propose-ship-balanced-single-reviewer]] — see also

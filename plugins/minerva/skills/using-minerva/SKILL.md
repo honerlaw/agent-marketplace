@@ -47,6 +47,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
 | Run the whole lifecycle end-to-end quickly for a small, low-risk change (small UI fix, bug fix) — the main model decides each point directly instead of a panel, escalating to the user only when it genuinely can't decide | `minerva:propose-ship-quick` |
+| Run the whole lifecycle end-to-end for a **medium** change — bigger than a one-file tweak (a multi-file refactor, a feature with 2-3 plausible designs, a cross-module bug fix) — where you want independent eyes on scope, approach, and "is it really done" without a full panel; the main model decides each point but dispatches one reviewer at the high-signal gates. (One-file tweak → `propose-ship-quick`; unfamiliar public contract / high-stakes → `propose-ship-auto`.) | `minerva:propose-ship-balanced` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 
