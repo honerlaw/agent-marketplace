@@ -55,7 +55,7 @@ The lifecycle is a rail with stations. You can board anywhere, but each skill as
 7. **ship** — commit, open the PR, watch CI by polling, bounded auto-fix, auto-merge where permitted
 8. **cleanup** — after merge: remove the worktree, prune the branch
 
-Two orchestrators run the whole rail end-to-end: `minerva:propose-ship` with human gates at every strategic decision, and `minerva:propose-ship-auto` with those gates replaced by three-agent consensus panels. The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
+Four orchestrators run the whole rail end-to-end, differing only in how decisions get adjudicated — from `minerva:propose-ship`'s human gates, through `minerva:propose-ship-quick`'s solo main-model calls and `minerva:propose-ship-balanced`'s single reviewer at the high-signal gates, to `minerva:propose-ship-auto`'s three-agent consensus panels (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
 
 ---
 
@@ -107,6 +107,9 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 
 **`minerva:propose-ship-quick`**
 : The lightweight fast-path sibling — the same lifecycle with no scheduled human gates, but the main model adjudicates every decision directly instead of convening a panel. Built for small, low-risk changes (small UI fixes, bug fixes) you want done quickly. A fail-closed escalation predicate sends genuinely-undecidable decisions to the user, and a scope-fit escape recommends `propose-ship-auto`/`propose-ship` if the change turns out not to be small.
+
+**`minerva:propose-ship-balanced`**
+: The middle rung between `propose-ship-quick` (main model decides every gate solo) and `propose-ship-auto` (a panel at every gate). The main model decides each point directly, but at the high-signal gates — scope check, approach selection, completion-verification (plus the rare divergence/replan gates) — it dispatches a single fresh-context advisory reviewer (a Skeptic, or a Verifier at completion) and arbitrates the critique inline, with no sequential Arbiter and no consensus revision round. Built for medium changes that want an independent second opinion on the load-bearing calls without paying for a full panel everywhere.
 
 ### The utilities
 

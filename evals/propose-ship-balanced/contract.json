@@ -1,0 +1,36 @@
+{
+  "skill": "propose-ship-balanced",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "propose-ship-balanced"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    "Verify protocol",
+    "main model",
+    "minerva:synthesize",
+    "minerva:ship",
+    "minerva:cleanup",
+    { "any_of": ["escalat"], "ignore_case": true },
+    { "any_of": ["reviewer gate"], "ignore_case": true, "file": "references/phases.md" },
+    { "any_of": ["load-bearing"], "ignore_case": true, "file": "references/verify-protocol.md" },
+    { "any_of": ["Verifier"], "file": "references/verify-protocol.md" },
+    { "any_of": ["Skeptic brief"], "file": "references/verify-protocol.md" },
+    { "any_of": ["Balanced decisions"], "file": "references/verify-protocol.md" },
+    { "any_of": ["escalation predicate"], "ignore_case": true, "file": "references/verify-protocol.md" },
+    { "any_of": ["scope-fit escape"], "ignore_case": true, "file": "references/governance.md" },
+    { "any_of": ["final report on bail", "final-report-on-bail"], "ignore_case": true, "file": "references/governance.md" }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
