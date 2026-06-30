@@ -36,3 +36,4 @@ The chosen path is a standalone clone, mirroring how `-auto` itself is a near-cl
 - [[014-decision-per-decision-skip-over-sizing-gate]] — builds on
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
+- [[045-decision-propose-ship-balanced-single-reviewer]] — see also

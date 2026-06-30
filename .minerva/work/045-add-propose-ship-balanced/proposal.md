@@ -1,7 +1,7 @@
 # Proposal: add-propose-ship-balanced
 
 **Date**: 2026-06-29
-**Status**: Draft
+**Status**: Shipped (2026-06-29)
 
 ## Goal
 Add a fourth minerva lifecycle orchestrator skill, `minerva:propose-ship-balanced` — the middle rung between `propose-ship-quick` (the main model decides solo) and `propose-ship-auto` (a 3-agent `minerva:round-table` consensus panel at every gate). It runs the same end-to-end lifecycle (propose → work → review → promote → synthesize → ship → cleanup) on `propose-ship-quick`'s main-model-decides engine, but dispatches a **single fresh-context advisory reviewer** at exactly the decision gates where run-log telemetry shows independent review pays: scope check, approach selection, completion-verification (plus the rare never-elide divergence / replan-acceptance / replan-vs-FIX gates, only when they trigger). The main model decides first and arbitrates the reviewer's critique inline; there is **no 3-agent panel, no sequential Arbiter, and no consensus revision round**. The result is quick-class latency with auto-class assurance on the gates that matter.
