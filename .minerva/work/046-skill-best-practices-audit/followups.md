@@ -52,3 +52,4 @@ Mechanism findings and deferred items from `findings.md` — seeds, not commitme
 - **ScheduleWakeup portability note** — the reviewer claim that the tool is missing
   was wrong for this harness, but orchestrators could state a fallback (background
   poll with the same retry cap) for harnesses that lack it.
+- **Internal script docstrings carry old phase vocabulary** (`scripts/knowledge_lint.py` "Phase B.2", `scripts/knowledge_fix.py` "(Phase B.3)") — not user-facing catalog surfaces, but the same retired vocabulary this unit scrubbed elsewhere; scrub opportunistically.
