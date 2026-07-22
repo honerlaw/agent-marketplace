@@ -60,3 +60,4 @@ Cross-cutting at synthesis: ambient-trigger diagnosis, handoff diagnosis, cross-
 - [2/2 accept — quorum met] promote partition, vote 2: both agents verified fixes landed; Arbiter not dispatched (quorum already met). Write-time notes honored: closed-vocabulary `builds on`, K1 body carries the inert-until-loader-fixed caveat.
 - [skipped — small] TODO disposition: single unambiguous disposition (evidence: all forward-looking items already live in followups.md, the unit's designed TODO home; nothing else in scratchpad is forward-looking).
 - Promote applied: knowledge entries 046-049 written; reciprocal Related lines in 007/010/030/031/034/036 (fence-aware, insert-iff-absent); index watermark 045→049; knowledge-lint clean; proposal Approach rewritten, Status Shipped (2026-07-21).
+- [synthesis] refreshed overview.md (watermark 045→049; 4 entries synthesized)
