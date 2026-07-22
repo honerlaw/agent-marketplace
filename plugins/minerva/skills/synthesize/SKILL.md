@@ -1,6 +1,6 @@
 ---
 name: synthesize
-description: Use when the user invokes `minerva:synthesize`, asks to (re)synthesize / build / refresh the knowledge-wiki `overview.md`, or wants a theme-grouped summary across `.minerva/knowledge/`. This skill first reports the deterministic un-synthesized-scope signal (how many entries were added since the last synthesis, plus any broken overview wikilinks) so YOU decide IF there is enough new scope to warrant (re)synthesis. If there is, it drafts a theme-grouped `overview.md` (narratives + `[[NNN-type-slug]]` wikilinks), and — behind a confirmation gate — writes it and bumps the synthesis watermark. The overview is advisory (its editorial quality is never CI-gated); only the mechanical link-rot signal is deterministic.
+description: Refreshes the knowledge-wiki overview — first reports the deterministic un-synthesized-scope signal (entries added since the last synthesis, plus broken overview wikilinks) so the caller decides IF resynthesis is warranted; if so, drafts a theme-grouped `overview.md` (narratives + `[[NNN-type-slug]]` wikilinks) and, behind a confirmation gate, writes it and bumps the synthesis watermark. Use after `minerva:promote` adds knowledge entries and `overview.md` hasn't been refreshed, when the overview is missing or has broken wikilinks, when the user wants a theme-grouped summary across `.minerva/knowledge/`, or when they invoke `minerva:synthesize`. The overview is advisory (never CI-gated); only the mechanical link-rot signal is deterministic.
 allowed-tools:
   - Bash
   - Read
@@ -100,23 +100,12 @@ helper reads the *committed* `overview.md`, so it can only confirm `link_rot` is
 ## Step 4 — Gate, then write
 
 Show the drafted `overview.md` to the user and **wait for explicit confirmation** before
-writing. On confirmation, `Write` the file to `$ROOT/.minerva/knowledge/overview.md` and
+writing. (When invoked by an autonomous orchestrator, its adjudication mechanism
+provides this confirmation.) On confirmation, `Write` the file to `$ROOT/.minerva/knowledge/overview.md` and
 report the new watermark and the themes.
 
-## Advisory, not gated — and the deliberate asymmetry
+## Advisory, not gated
 
-The overview's **content** (theme grouping, narratives) is LLM-judged and therefore
-**advisory** — it is never added to the CI floor (knowledge 013). The mechanical
-`link_rot` check *is* deterministic, and is structurally the same class of defect as the
-entry `## Related` broken-link family that `scripts/knowledge_lint.py` **does** CI-gate.
-We **deliberately keep overview link-rot advisory** (surfaced by this skill, repaired on
-the next synthesis) rather than CI-gating it: the overview is a navigation aid, not a
-corpus-integrity invariant, so a stale link degrades navigation but never corrupts the
-record. 013's mechanical-vs-judged exemption would *permit* gating the link check; this
-is a deliberate scoping choice, not a 013 prohibition.
-
-## Out of scope
-
-- Editing the frozen detector, the fixer, or `index.md` (the synthesis layer is a
-  separate file).
-- A `log.md` running changelog (a possible later Phase-C increment).
+Overview content and its link-rot are deliberately advisory, never CI-gated — the
+frozen detector/fixer cannot see this file. Broken overview wikilinks surface via
+the Step-1 signal and are repaired at the next synthesis.

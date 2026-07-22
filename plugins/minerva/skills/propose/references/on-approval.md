@@ -1,4 +1,4 @@
-# propose — on approval: worktree setup + file writes (verbatim from SKILL.md, work unit 035)
+# propose — on approval: worktree setup + file writes
 
 ## On approval — worktree setup + file writes
 

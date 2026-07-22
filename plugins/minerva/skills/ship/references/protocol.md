@@ -1,4 +1,4 @@
-# ship — full step protocols (verbatim from SKILL.md, work unit 035)
+# ship — full step protocols
 
 ## Target resolution
 
@@ -15,7 +15,7 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 After resolving the target and before running any git commands:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<NNN-slug> …` and prefix any file path with `.minerva/worktrees/<NNN-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<NNN-slug> …` and prefix any file path with `.minerva/worktrees/<NNN-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
 ## Default-branch detection
@@ -50,7 +50,7 @@ Only if `git status --porcelain` is non-empty:
    In bare mode, use the diff and recent commit messages as the source.
 
    If `scratchpad.md` is the post-promote one-line marker (`Summarized at minerva:promote on YYYY-MM-DD — see archive/.`), that's the canonical post-`minerva:promote` state and means there's nothing to skim. Fall back to `## Goal` + filenames only.
-2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept.
+2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept. (When an invoking skill or the user has pre-authorized non-interactive shipping, accept the draft without prompting — this applies to gate #2 as well.)
 3. `git add` with **specific file paths** (never `-A` or `.`) for tracked changes and untracked files the user wants included.
 4. `git commit -m "$(cat <<'EOF' ... EOF)"` using a HEREDOC for clean formatting. Honor the project's git footer conventions if any are visible in recent commits.
 
@@ -166,7 +166,7 @@ Surface both nudges as part of the initial summary, then proceed. The user can s
 
 ## Worktree handling
 
-The [Worktree entry](#worktree-entry) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `minerva:propose`, so the rest of ship works against the correct state automatically.
+The [Worktree addressing](#worktree-addressing) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `minerva:propose`, so the rest of ship works against the correct state automatically.
 
 After merge, the worktree and its branch should be cleaned up via `minerva:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
 

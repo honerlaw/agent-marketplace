@@ -1,4 +1,4 @@
-# init — step protocols 1–5 (verbatim from SKILL.md, work unit 035)
+# init — step protocols 1–5
 
 ## Step 1 — scaffold `.minerva/`
 
@@ -11,8 +11,7 @@ If `.minerva/` doesn't exist, create:
   skeleton below (watermark `000`). A non-empty `index.md` already makes the
   directory tracked by git, so **only** create `.minerva/knowledge/.gitkeep` when
   `index.md` is absent (and never both).
-- `.minerva/reference/` — the present-tense operational-doc tier (see
-  `.minerva/knowledge/011-decision-minerva-reference-tier.md`).
+- `.minerva/reference/` — the present-tense operational-doc tier.
 - `.minerva/reference/.gitkeep` (empty file, so git tracks the empty directory)
 
 **Canonical `index.md` skeleton** — `minerva:init` and `minerva:promote` are the two
@@ -64,7 +63,7 @@ Read `.gitignore` at the project root and any nested `.gitignore` files that wou
 - If a matching pattern is found, report the offending file path, line number, and the offending pattern. **Do not auto-edit** `.gitignore` to remove user-authored patterns — that file is user territory. Suggest the user remove or narrow the pattern.
 - If none found, report `gitignore ✓ (committed dirs)`.
 
-**Part B — install `.minerva/worktrees/` if missing.** Every worktree created by `minerva:propose` lives under `.minerva/worktrees/` and must be ignored on the default branch (see `.minerva/knowledge/005-decision-gitignore-before-worktree.md`). Init installs this entry up front so propose doesn't have to modify `.gitignore` from inside a worktree later.
+**Part B — install `.minerva/worktrees/` if missing.** Every worktree created by `minerva:propose` lives under `.minerva/worktrees/` and must be ignored on the default branch (the ignore entry must exist before any worktree is created, or git status breaks inside every worktree). Init installs this entry up front so propose doesn't have to modify `.gitignore` from inside a worktree later.
 
 - If `.gitignore` does not already contain a line matching `.minerva/worktrees/` (exact match, or a parent pattern like `.minerva/` — both effectively ignore the path), append `.minerva/worktrees/` to the end of the project-root `.gitignore` (create the file if it doesn't exist). Report `gitignore: added .minerva/worktrees/`.
 - If already present, report `gitignore ✓ (worktrees ignored)`.
@@ -102,7 +101,7 @@ Append the Routing section at the end of the file (don't try to find a "right" s
 
 ### Detecting existing Routing section
 
-A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 6 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic. (The window is 6, not 4, to accommodate template growth without breaking detection on older projects — widening only loosens detection and still requires both signals. In the current template the first qualifying line is the `overview.md` bullet, the **4th** line after the heading — its path `.minerva/knowledge/overview.md` contains the required substring — so the window holds with no further widening.)
+A re-run is detected by checking the file for a line matching the exact heading `## minerva`, followed within the **next 6 lines** by either the literal substring `.minerva/knowledge/` or `.minerva/decisions/` (the old name, kept for projects initialized before the rename). Both signals are required — the heading alone is too generic.
 
 If the heading appears multiple times in the file, only the first occurrence is checked. (Unlikely in practice; if a user has multiple `## minerva` headings, the file is hand-managed and `init` should not touch it — surface a warning instead of writing.)
 
@@ -117,10 +116,7 @@ automatic**:
    as a bullet in the **current template above** (today: `.minerva/knowledge/overview.md`,
    `.minerva/knowledge/index.md`, `.minerva/reference/`, `.minerva/work/`), check whether
    the detected section contains that substring. If **any** is missing, the section is
-   a refresh candidate. (Note the deliberate quantifier asymmetry: *detection* requires
-   both of its signals — a conjunction; *staleness* fires on any missing marker — a
-   disjunction. Deriving the markers from the template-of-record, rather than a
-   hardcoded list, keeps this check from rotting when the template next changes.)
+   a refresh candidate. (Derive the markers from the template-of-record above, never from a hardcoded list.)
 2. **Gate.** Show the full before/after diff of the section and ask:
    > "Your `## minerva` section doesn't match the current template — it may be from an
    > older template, or **you may have customized it**. Refreshing replaces the whole

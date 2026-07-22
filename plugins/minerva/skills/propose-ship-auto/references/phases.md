@@ -1,4 +1,4 @@
-# Phase protocols — full inline walkthroughs (verbatim from SKILL.md, work unit 035)
+# Phase protocols — full inline walkthroughs
 
 Read each phase's section before executing that phase.
 
@@ -123,7 +123,7 @@ this auto-mode instruction (the same shape Phase 6 uses for ship's hard gates):
 This is **delegation, not a panel decision**: the "decide IF" judgment lives inside
 `minerva:synthesize` (its Step 2, driven by the deterministic `synthesis_status` signal),
 so there is no orchestrator decision to vote on and **no panel is convened** (see the
-[Decision taxonomy](#decision-taxonomy) synthesis row). Auto mode auto-accepts only
+Decision taxonomy (`references/panel-protocol.md`) synthesis row). Auto mode auto-accepts only
 synthesize's *write* gate; it never overrides the self-gate, so a thin-scope run still
 no-ops.
 
@@ -145,7 +145,7 @@ Continue to Phase 5.
 
 There is no gate. The `promote → ship` confirmation that `minerva:propose-ship` requires is replaced by silent advancement. If the completion-verification panel in Phase 2 voted with full consensus and the review + promote panels also accepted, the auto skill trusts those signals and proceeds.
 
-If the global escalation counter has reached 3 by this point, halt instead of shipping (see [Failure modes](#failure-modes-escalation-budget-caps)).
+If the global escalation counter has reached 3 by this point, halt instead of shipping (see the failure-modes caps in `references/governance.md`).
 
 ## Phase 6 — Ship (delegated)
 

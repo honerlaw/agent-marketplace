@@ -1,6 +1,6 @@
 ---
 name: propose-ship
-description: Use when the user invokes `minerva:propose-ship`, wants to run the full minerva lifecycle end-to-end in one command, or says things like "propose and ship", "full lifecycle", "start to finish", "kick off and ship". Orchestrates propose → work → review → promote → ship → cleanup by delegating to each skill in sequence with no logic duplication, and folds an optional `minerva:synthesize` overview-refresh offer into the promote → ship gate. Refuses to start if in-flight work exists for the same intent. Advances out of the work phase only on explicit user signal. Waits for the PR to actually merge before invoking cleanup.
+description: Runs the full minerva lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, folds an optional `minerva:synthesize` overview-refresh offer into the promote-ship gate, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `minerva:propose-ship`.
 ---
 
 Orchestrate the full minerva lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
@@ -41,7 +41,7 @@ This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" 
   - The user invoking `minerva:review`, `minerva:promote`, or `minerva:ship` directly.
   - The `minerva:work` skill itself signaling completion (success criteria checked off, surfaced as "ready for promote").
 
-  If none of these happen, stay in work mode. Do not advance silently or prompt the user repeatedly.
+  The signal list is illustrative, not closed — any unambiguous completion statement (e.g. "looks good, let's move on") counts as an explicit signal. Absent such a signal, stay in work mode; do not advance silently or prompt the user repeatedly.
 
 - **review → promote**: hand off automatically once `minerva:review` reaches its natural completion point AND triage is clean (zero pending, all FIX items applied). If review surfaced findings the user routed back to `minerva:replan`, return control to work and re-enter review afterward.
 

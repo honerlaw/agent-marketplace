@@ -1,4 +1,4 @@
-# promote — the two mode protocols (verbatim from SKILL.md, work unit 035)
+# promote — the two mode protocols
 
 ## Two modes
 
@@ -19,7 +19,7 @@
    - **Keep** → append to `.minerva/work/<target>/followups.md` (create the file if missing) under a `## YYYY-MM-DD` header, one bullet per item. `minerva:propose` scans this file as part of project context.
    - **Seed new proposal** → after Mode A finishes, offer to invoke `minerva:propose "<the todo>"` for each chosen item.
    - **Discard** → drop, no record.
-6. **Hard gate:** do not write files until the user has confirmed the partition, the TODO dispositions, **and the wiki-maintenance edits** (the proposed `## Related` cross-links, supersession banners, and `index.md` lines from [Wiki maintenance](#wiki-maintenance-index--cross-references), shown as concrete diffs against each affected neighbor and the index).
+6. **Hard gate:** do not write files until the user — or, when invoked by an autonomous orchestrator, its adjudication mechanism — has confirmed the partition, the TODO dispositions, **and the wiki-maintenance edits** (the proposed `## Related` cross-links, supersession banners, and `index.md` lines from [Wiki maintenance](#wiki-maintenance-index--cross-references), shown as concrete diffs against each affected neighbor and the index).
 7. On confirmation:
    - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, or `constraint`) and write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template below. Auto-increment NNN across the whole `.minerva/knowledge/` directory (3-digit pad). If `.minerva/knowledge/` doesn't exist, create it and start at `001`. Each entry must stand alone.
    - **Run [Wiki maintenance](#wiki-maintenance-index--cross-references) for each PROMOTE item:** apply the approved `## Related` cross-links (bidirectional), any supersession banners, and the `index.md` line(s) + watermark bump. Edit neighbor entries only within their `## Related` block / banner span (never their body).

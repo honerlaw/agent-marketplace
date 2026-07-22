@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: Use when the user invokes `minerva:migrate`, asks to migrate / restructure / refactor an existing `.minerva/knowledge/` folder to the current LLM-wiki structure, or wants a "migration check" of a corpus adopted before the wiki conventions existed. Read-only — it runs the deterministic `migration_status` shape signal (which files are non-conforming and therefore invisible to the wiki tooling, whether index.md / overview.md are present, which entries have no `## Related` cross-refs) and emits a migration checklist naming the existing skills that close each gap. It never edits files; it reports. The actual renames and cross-ref authoring are manual / await a future migration-APPLY unit.
+description: Checks an existing `.minerva/knowledge/` folder against the current LLM-wiki structure — read-only; runs the deterministic `migration_status` shape signal (files that don't conform to the naming convention and are therefore invisible to the wiki tooling — a false clean — plus missing index.md / overview.md and entries with no `## Related` cross-refs) and emits a migration checklist naming the existing skills that close each gap. It never edits files; renames and cross-ref authoring are judgment calls done by hand. Use when old notes don't appear in the index or lint reports clean on a corpus that predates the wiki conventions, when the user asks to migrate / restructure / refactor a legacy knowledge folder or wants a migration check, or when they invoke `minerva:migrate`.
 allowed-tools:
   - Bash
   - Read
@@ -73,17 +73,15 @@ closes it and a one-line effect — do **not** run it, and do not reproduce its 
 
 - **`non_conforming_files` non-empty** → these files must be **renamed** to
   `NNN-type-slug.md` (e.g. `decision` / `bug` / `pattern` / `constraint`) so the tooling
-  can see them. ⚠️ **Not automated** — rename by hand; a future migration-APPLY unit may
-  automate it (renames must update every `[[…]]` wikilink + the index catalog, so it is
-  deferred mutation, not part of this read-only check).
+  can see them. ⚠️ **Not automated** — rename by hand (renames must update every `[[…]]` wikilink +
+  the index catalog — deliberate mutation this read-only check never performs).
 - **`index_present` false** → run `minerva:init` (it scaffolds / backfills `index.md` from
   the existing entries).
 - **`overview_present` false** → run `minerva:synthesize` (it creates the theme-grouped
   `overview.md`).
 - **`entries_without_related` non-empty** → these entries need `## Related` cross-refs
   **authored**. ⚠️ **Not automated** — authoring which entries relate (and the
-  relationship label) is LLM judgment; do it by hand or await a future cross-ref-backfill
-  unit. `minerva:lint-fix` only repairs *reciprocals of links that already exist*, not the
+  relationship label) is LLM judgment; do it by hand. `minerva:lint-fix` only repairs *reciprocals of links that already exist*, not the
   initial edges.
 - **Always, after the corpus conforms** → run `minerva:lint` to surface mechanical drift
   (index watermark, broken links, missing reciprocals) and `minerva:lint-fix` to repair

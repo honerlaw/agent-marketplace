@@ -1,6 +1,6 @@
 ---
 name: lint-fix
-description: Use when the user invokes `minerva:lint-fix`, asks to auto-repair / fix the `.minerva/knowledge/` wiki, or wants to apply the fixes `minerva:lint` reported. This skill MUTATES the wiki — behind a confirmation gate it applies the deterministically-repairable findings (index watermark, stale catalog lines, wrong Type-section placement, missing reciprocal `## Related` links) via the tested `scripts/knowledge_fix.py`. It does NOT touch entry bodies, and it does NOT auto-fix judgment calls (missing catalog summaries, broken links, contradictions/staleness) — those it surfaces for you to handle. The read-only companion is `minerva:lint`.
+description: Applies the deterministically-repairable subset of `minerva:lint` findings — MUTATES the `.minerva/knowledge/` wiki behind a confirmation gate (index watermark, stale catalog lines, wrong Type-section placement, missing reciprocal `## Related` links) via the tested `scripts/knowledge_fix.py`. Never touches entry bodies and never auto-fixes judgment calls (missing catalog summaries, broken links, contradictions/staleness) — those it surfaces to handle by hand. Use after a lint run when the user asks to apply the safe/reported fixes or auto-repair the wiki, or when they invoke `minerva:lint-fix`. The read-only companion is `minerva:lint`.
 allowed-tools:
   - Bash
   - Read

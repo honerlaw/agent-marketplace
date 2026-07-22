@@ -1,4 +1,4 @@
-# promote — knowledge-entry template + wiki maintenance (verbatim from SKILL.md, work unit 035)
+# promote — knowledge-entry template + wiki maintenance
 
 ## Knowledge entry template
 

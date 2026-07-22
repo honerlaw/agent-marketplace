@@ -5,7 +5,7 @@ description: Use when starting work in a project that uses minerva (a `.minerva/
 
 # Using minerva
 
-minerva is the durable-record discipline for software work in this project. It encodes a persistence hierarchy where **artifacts get promoted, not just accumulated** — concrete, past-tense knowledge items become `.minerva/knowledge/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
+minerva is the durable-record discipline for software work in this project: **artifacts get promoted, not just accumulated** — past-tense knowledge items become `.minerva/knowledge/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
 
 The heuristic: **would a new engineer (or new agent) joining the project in a year benefit from reading this?** If yes, keep. If no, summarize and discard.
 
@@ -17,7 +17,7 @@ You're in a minerva project if any of these are true:
 - The user invoked any `minerva:` skill earlier in the session.
 - `CLAUDE.md`, `AGENTS.md`, or similar has a `## minerva` Routing section pointing at `.minerva/`.
 
-If none are true, the project isn't using minerva. Don't reach for these skills unsolicited — but if the user is clearly starting durable work that would benefit from the discipline, suggest `minerva:init` as the entry point (it scaffolds the directory and adds a Routing section to the agent file).
+If none are true, the project isn't using minerva; don't reach for these skills unsolicited. If the user is clearly starting durable work that would benefit, suggest `minerva:init` as the entry point.
 
 ## Skill decision matrix
 
@@ -95,9 +95,12 @@ Skip the workflow entirely for:
 
 - **Trivial edits** — typo fixes, renames, single-line tweaks.
 - **Routine bugfixes** — straightforward bugs with no architectural implications.
-- **One-shot Q&A** — "what does this function do?", "why is this slow?".
-- **Exploratory reads** — scanning code to understand it without changing anything.
+- **One-shot Q&A**.
+- **Exploratory reads** — understanding code without changing it.
 - **Quick refactors** — small, mechanical changes contained within a function or file.
 
 The ceremony only pays off when the work is substantial enough that future readers will need the context. Don't impose it on work that ships in a single commit.
 
+When a scenario here names a minerva skill as the next step, invoke it yourself
+via the `Skill` tool (with any argument shown); only suggest the command when
+the decision is the user's.

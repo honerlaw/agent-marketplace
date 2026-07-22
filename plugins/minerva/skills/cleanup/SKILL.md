@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Use when the user invokes `minerva:cleanup`, asks to remove merged worktrees, prune stale minerva branches, or generally tidy up after shipped work. Removes `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prunes the corresponding local branches. Idempotent. Never touches the default branch or unmerged work.
+description: Removes `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prunes the corresponding local branches. Idempotent; never touches the default branch or unmerged work. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
 ---
 
 Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
