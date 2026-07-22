@@ -1,6 +1,6 @@
 ---
 name: init
-description: Use when the user invokes `minerva:init`, wants to start using minerva in a project for the first time, or needs to scaffold the .minerva/ directory layout. Idempotent — re-runs report per-piece status without rewriting anything in place. Warns about legacy `.minerva/decisions/` layouts.
+description: Scaffolds the `.minerva/` directory layout and agent-file Routing section — durable records, knowledge tracking, and project memory for agent work in a project. Idempotent — re-runs report per-piece status without rewriting anything in place, and it warns about legacy `.minerva/decisions/` layouts. Use when adopting minerva or setting up durable record/knowledge discipline for the first time in a project, or when the user invokes `minerva:init`.
 ---
 
 One-time scaffolding for a project. Creates the `.minerva/` directory layout, verifies it's not being gitignored, adds a Routing section to the project's agent file, and offers to commit the scaffold.

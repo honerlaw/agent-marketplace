@@ -1,11 +1,11 @@
 ---
 name: propose-ship-auto
-description: Use when the user invokes `minerva:propose-ship-auto`, wants to run the full minerva lifecycle end-to-end with no human gates, or says things like "auto propose and ship", "fully automated", "do the whole thing without asking". Same lifecycle as `minerva:propose-ship` (propose → work → review → promote → synthesize → ship → cleanup, where the self-gating `minerva:synthesize` step refreshes the knowledge-wiki overview when promote added scope), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (the panel mechanics are delegated to `minerva:round-table`). Human input is only a fallback when the panel can't agree after one revision round. Small, low-risk decisions skip the panel via a fail-closed skip predicate, so a genuinely small task runs effectively panel-free.
+description: Runs the full minerva lifecycle end-to-end with no human gates — fully automated, for unattended runs ("do the whole thing without asking", "handle decisions yourself", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - synthesize - ship - cleanup, where the self-gating `minerva:synthesize` step refreshes the knowledge-wiki overview when promote added scope), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (mechanics delegated to `minerva:round-table`). Human input is only a fallback when a panel can't agree after one revision round, and a fail-closed skip predicate lets genuinely small decisions run panel-free. Use for non-trivial changes the user wants shipped autonomously, or when they invoke `minerva:propose-ship-auto`.
 ---
 
 Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:synthesize` (Phase 4.5, self-gating), `minerva:ship`, and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
 
-The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents — the panel mechanics live in `minerva:round-table`, to which this skill delegates (see [Delegation to `minerva:round-table`](#delegation-to-minervaround-table)). Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a [Skip predicate](#skip-predicate-small-decisions) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
+The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents — the panel mechanics live in `minerva:round-table`, to which this skill delegates (see the Delegation section of `references/panel-protocol.md`). Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a Skip predicate (`references/panel-protocol.md`) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
 
 ## Usage
 
@@ -22,7 +22,7 @@ Identical to `minerva:propose-ship`'s pre-flight section. This check is **not** 
 3. If the user's inline description overlaps a slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
 
-Only proceed after the user confirms. This is the single mandatory — and **only permitted** — pre-run user interaction (see [No ceremony ratification](#no-ceremony-ratification)).
+Only proceed after the user confirms. This is the single mandatory — and **only permitted** — pre-run user interaction (see No ceremony ratification in `references/panel-protocol.md`).
 
 ## Panel protocol
 
@@ -46,8 +46,8 @@ Execute the phases in order. The full inline protocols — panel artifacts, vote
 4. **Promote (inline)** — partition panel (2/3); TODO-disposition panel (2/3); apply writes per `minerva:promote` Mode A; archive scratchpad.
    - **4.5 Synthesis (delegated, self-gating)** — invoke `minerva:synthesize` via the `Skill` tool with its auto-mode instruction (auto-accept the write gate only; the Step-2 self-gate is unchanged). Log the `[synthesis]` outcome line; if it wrote, ship must stage `.minerva/knowledge/overview.md` and note the refresh in the PR body.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
-6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` escalate to the user — never panel-voted.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup <NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never panel-voted.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

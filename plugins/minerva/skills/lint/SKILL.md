@@ -1,6 +1,6 @@
 ---
 name: lint
-description: Use when the user invokes `minerva:lint`, asks to health-check / audit the `.minerva/knowledge/` wiki, wants to know why the knowledge-lint CI gate is failing, or wants to surface orphaned / contradictory / stale knowledge entries. Read-only — it runs the deterministic detector for mechanical defects (index drift, broken `## Related` links, missing reciprocals) and adds LLM-judged advisory findings (orphans, contradictions, stale/superseded claims), presenting everything in `minerva:review`'s finding format. It never edits files; it reports. Durable repairs are applied by hand or by the gated fix path (Phase B.3), not by this skill.
+description: Health-checks the `.minerva/knowledge/` wiki — runs the deterministic detector for mechanical defects (index drift, broken `## Related` links, missing reciprocals) and adds LLM-judged advisory findings (orphans, contradictions, stale/superseded claims), presenting everything in `minerva:review`'s finding format. Read-only — it reports; deterministic repairs are applied via `minerva:lint-fix`, judgment-call repairs by hand. Use when the knowledge-lint CI gate is failing, the user asks to health-check / audit the wiki, or wants to surface orphaned / contradictory / stale knowledge entries, or when they invoke `minerva:lint`.
 allowed-tools:
   - Bash
   - Read
@@ -17,8 +17,9 @@ deliberately can't compute.
 
 > **Read-only contract.** This skill must not modify any file. Its `allowed-tools`
 > omits `Edit` / `Write` / `MultiEdit` by design. It proposes no FIX disposition and
-> offers no "apply"/"write" affordance. Durable repairs are made by hand or by the
-> gated fix path (Phase B.3); index/scratchpad knowledge writes go through
+> offers no "apply"/"write" affordance. Durable repairs in the deterministic subset
+> are applied by invoking the `minerva:lint-fix` skill via the `Skill` tool; the
+> rest by hand. Index/scratchpad knowledge writes go through
 > `minerva:promote`, never through this skill.
 
 ## Target
@@ -111,9 +112,10 @@ apply it:
 
 - **Mechanical** findings (index drift, broken links, missing reciprocals) are
   repaired within the `## Related` / banner spans per
-  `.minerva/knowledge/016-constraint-promote-narrowed-never-overwrite.md`. Until the
-  gated fix path (Phase B.3) lands, the user applies them by hand (or re-runs
-  `minerva:promote`, which maintains the index + reciprocals when it ingests).
+  `.minerva/knowledge/016-constraint-promote-narrowed-never-overwrite.md`. Findings in the
+  deterministic subset are repaired by invoking `minerva:lint-fix` via the `Skill`
+  tool; the remainder by hand (or re-run `minerva:promote`, which maintains the
+  index + reciprocals when it ingests).
 - **Advisory** findings are suggestions for the user to act on; never auto-apply
   them.
 
@@ -122,8 +124,8 @@ findings; advisory pass surfaced nothing (spot-checked).`
 
 ## Out of scope
 
-- **Any file mutation.** The gated, span-confined fix-applier is Phase B.3 — it will
-  import the span constants from `scripts/knowledge_spans.py`
+- **Any file mutation.** The gated, span-confined fix-applier is `minerva:lint-fix` — it
+  imports the span constants from `scripts/knowledge_spans.py`
   (`.minerva/knowledge/019-constraint-knowledge-span-model-single-sourced.md`) and
   apply repairs behind a confirmation gate.
 - **Editing the detector.** `scripts/knowledge_lint.py` is frozen; consume its API.

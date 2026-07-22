@@ -5,7 +5,7 @@ description: Use when starting work in a project that uses minerva (a `.minerva/
 
 # Using minerva
 
-minerva is the durable-record discipline for software work in this project. It encodes a persistence hierarchy where **artifacts get promoted, not just accumulated** — concrete, past-tense knowledge items become `.minerva/knowledge/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
+minerva is the durable-record discipline for software work in this project: **artifacts get promoted, not just accumulated** — past-tense knowledge items become `.minerva/knowledge/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
 
 The heuristic: **would a new engineer (or new agent) joining the project in a year benefit from reading this?** If yes, keep. If no, summarize and discard.
 
@@ -17,7 +17,7 @@ You're in a minerva project if any of these are true:
 - The user invoked any `minerva:` skill earlier in the session.
 - `CLAUDE.md`, `AGENTS.md`, or similar has a `## minerva` Routing section pointing at `.minerva/`.
 
-If none are true, the project isn't using minerva. Don't reach for these skills unsolicited — but if the user is clearly starting durable work that would benefit from the discipline, suggest `minerva:init` as the entry point (it scaffolds the directory and adds a Routing section to the agent file).
+If none are true, the project isn't using minerva; don't reach for these skills unsolicited. If the user is clearly starting durable work that would benefit, suggest `minerva:init` as the entry point.
 
 ## Skill decision matrix
 
@@ -43,7 +43,7 @@ If none are true, the project isn't using minerva. Don't reach for these skills 
 | Health-check the `.minerva/knowledge/` wiki (index drift, broken links, orphans, contradictions, stale claims) | `minerva:lint` (read-only — reports; repairs by hand or the gated path) |
 | Apply the mechanical wiki fixes `minerva:lint` reported (watermark, stale/misfiled catalog lines, missing reciprocals) | `minerva:lint-fix` (mutating — gated; deterministic fixes only) |
 | After promoting several entries — build a theme-grouped overview of the knowledge corpus, or check whether enough un-synthesized scope has accumulated to warrant (re)synthesis | `minerva:synthesize` (read-mostly — reports the un-synthesized-scope signal, then gated write of `overview.md`) |
-| A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are manual / a future APPLY unit) |
+| A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are judgment calls done by hand) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
 | Run the whole lifecycle end-to-end quickly for a small, low-risk change (small UI fix, bug fix) — the main model decides each point directly instead of a panel, escalating to the user only when it genuinely can't decide | `minerva:propose-ship-quick` |
@@ -95,9 +95,12 @@ Skip the workflow entirely for:
 
 - **Trivial edits** — typo fixes, renames, single-line tweaks.
 - **Routine bugfixes** — straightforward bugs with no architectural implications.
-- **One-shot Q&A** — "what does this function do?", "why is this slow?".
-- **Exploratory reads** — scanning code to understand it without changing anything.
+- **One-shot Q&A**.
+- **Exploratory reads** — understanding code without changing it.
 - **Quick refactors** — small, mechanical changes contained within a function or file.
 
 The ceremony only pays off when the work is substantial enough that future readers will need the context. Don't impose it on work that ships in a single commit.
 
+When a scenario here names a minerva skill as the next step, invoke it yourself
+via the `Skill` tool (with any argument shown); only suggest the command when
+the decision is the user's.

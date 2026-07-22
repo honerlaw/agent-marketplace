@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 045 -->
+<!-- synthesis-watermark: 049 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -74,12 +74,15 @@ and the human-facing **skill catalogs span three doc surfaces** that must be kep
 **discoverability is mostly auto-crawl**: once a plugin repo is public, OSS-licensed, and
 topic-tagged, the GitHub-crawling aggregators index it passively — the remaining manual
 directories are human web-form submissions, and full-source vendor lists are a
-maintenance fork to avoid ([[032-pattern-plugin-discovery-mostly-auto-crawl]]). Two conventions keep skills honest: a
+maintenance fork to avoid ([[032-pattern-plugin-discovery-mostly-auto-crawl]]). Three conventions keep skills honest: a
 skill must **invoke tools directly, not narrate actions in prose**
-([[007-constraint-skills-must-call-tools-not-prose]]), and a prose skill that wraps a
+([[007-constraint-skills-must-call-tools-not-prose]]); a prose skill that wraps a
 sibling Python tool does so **via the tool's importable API, anchored to the working-tree
 root** — never the CLI, never CWD-relative
-([[021-constraint-skill-wraps-script-via-importable-api]]). Coverage is enforced
+([[021-constraint-skill-wraps-script-via-importable-api]]); and every skill-to-skill
+handoff **names the Skill tool and the argument to pass** — bare prose ("run the X
+protocol") licenses a literal-reading model to inline the target from memory, the
+observed handoff failure mode ([[049-constraint-handoffs-name-skill-tool]]). Coverage is enforced
 structurally: **every skill carries a declarative contract** checked by an enumerating
 test, so the skill set can never silently outrun its guarantees
 ([[012-constraint-skill-structural-contracts]]). The static **site's skills catalog is a
@@ -101,6 +104,23 @@ moved prose via a per-anchor `file` field
 **new test modules are invisible to CI until appended to the workflow's explicitly
 enumerated pytest list** — the failure mode is silent, so a green local run proves
 nothing about CI ([[035-constraint-ci-test-enumeration-explicit]]).
+
+A 2026-07 audit of all 21 skills against Anthropic's current guidance turned this
+theme into a **triggering discipline**. Descriptions follow a house style that
+**leads with function and ambient trigger scenarios**, demoting the explicit
+"invokes `minerva:X`" clause to last position and staying under the platform's
+1024-character limit ([[047-constraint-skill-description-house-style]]) — the audit's
+census showed the invocation-first ordering correlated exactly with the skills that
+failed to trigger ambiently. It also surfaced an open environmental defect: the
+**listing pipeline drops some valid frontmatter descriptions** (lint and lint-fix
+render as bare names), making ambient triggering structurally impossible for the
+affected skills until the loader is fixed — no description polish can compensate
+([[046-bug-skill-listing-description-drop]]). And the catalog-sync constraint gained
+an empirical sting: **semantic drift between skill text and the catalog surfaces
+recurs even while a unit is actively scrubbing that exact staleness** — the
+token-presence tests cannot see the class, so meaning-changing skill edits demand a
+systematic sweep of all four surfaces
+([[048-pattern-catalog-semantic-drift-recurs]]).
 
 ## The lifecycle and its automation
 
@@ -163,7 +183,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`045`) is a **new-scope-only floor**:
+synthesis watermark (`049`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -173,9 +193,11 @@ synthesis watermark (`045`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `045-add-propose-ship-balanced` work unit, reflecting
-the corpus through entry `045`. The refresh was invoked on three un-synthesized entries
-(`043`, `044`, `045`). Prior refreshes: `042-add-propose-ship-quick` (through `042`, on
+This overview was refreshed in the `046-skill-best-practices-audit` work unit,
+reflecting the corpus through entry `049`. The refresh was invoked on four
+un-synthesized entries (`046`–`049`). Prior refreshes:
+`045-add-propose-ship-balanced` (through `045`, on entries `043`/`044`/`045`);
+`042-add-propose-ship-quick` (through `042`, on
 entries `037`/`038`/`042`); `035-skill-progressive-disclosure` (through `036`);
 `033-extract-round-table` (through `033`), `030-no-ceremony-ratification` (through `030`,
 opening the previously-empty Patterns bucket), `027-related-backfill` (through `028`, on

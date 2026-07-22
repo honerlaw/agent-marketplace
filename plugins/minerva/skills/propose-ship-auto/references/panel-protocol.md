@@ -1,4 +1,4 @@
-# Panel protocol — full policy (verbatim from SKILL.md, work unit 035)
+# Panel protocol — full policy
 
 Read once, in full, before the run's first strategic/tactical decision point.
 
@@ -19,7 +19,7 @@ Before dispatching a panel for any **skippable** strategic/tactical decision (se
 
 **Fails closed.** If any single clause fails — or you are unsure whether it holds — convene the panel exactly as `minerva:round-table` specifies, at the decision's existing quorum. The predicate only ever decides *whether to convene*; it never changes a quorum. Because every clause must pass, the worst case of a wrong skip is bounded to an additive, single-surface, low-risk change; the worst case of a wrong *non*-skip is a panel you didn't strictly need.
 
-**Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see [Failure modes](#failure-modes-escalation-budget-caps)) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
+**Never-skippable — one rule.** Any panel whose trigger precondition is "a load-bearing divergence/finding has already surfaced," plus the completion self-check, is **never** skippable regardless of how small the change looks — its whole value is an independent second pair of eyes on the main LLM's own assessment, and its precondition is the negation of the low-blast-radius clause. Concretely: **completion verification**, **mid-work divergence confirmation**, **new-plan acceptance (replan)**, and **Replan-vs-FIX**. All hard user-escalation triggers and hardcoded gates (see the failure-modes caps in `references/governance.md`) are likewise never skipped. Late-emerging risk needs no separate escape hatch: a decision that looks small but proves load-bearing simply fails the predicate and convenes its panel.
 
 **Log every skip** under the same `## Panel decisions YYYY-MM-DD` header used for panel calls (see [Per-decision logging](#per-decision-logging)).
 
@@ -37,13 +37,13 @@ The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter agent briefs, vo
 
 > "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every decision of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Panel decisions YYYY-MM-DD` header."
 
-Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the `Skill` tool** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode.
+Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the `Skill` tool** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode. If the round-table protocol is no longer available in context (e.g. after compaction), re-invoke it via the `Skill` tool before the next panel.
 
 Orchestrator-owned rules that `minerva:round-table` deliberately does not own:
 
 - **Quorums** come from the [Decision taxonomy](#decision-taxonomy), never from round-table's standalone 2/3 default.
-- **Escalation aftermath** — when a delegated panel escalates and the user answers, round-table applies the answer as the accepted path and resumes; this skill then **increments the global escalation counter** (see [Failure modes](#failure-modes-escalation-budget-caps)). Run-level state stays here.
-- **The per-decision budget** in [Failure modes](#failure-modes-escalation-budget-caps) — one initial vote + one revision vote, 6 subagent dispatches max — is the same two-vote cap round-table itself enforces, restated here because the orchestrator audits it across the whole run.
+- **Escalation aftermath** — when a delegated panel escalates and the user answers, round-table applies the answer as the accepted path and resumes; this skill then **increments the global escalation counter** (see the failure-modes caps in `references/governance.md`). Run-level state stays here.
+- **The per-decision budget** in the failure-modes caps in `references/governance.md` — one initial vote + one revision vote, 6 subagent dispatches max — is the same two-vote cap round-table itself enforces, restated here because the orchestrator audits it across the whole run.
 - **Whether to convene at all** — the [Skip predicate](#skip-predicate-small-decisions) and the taxonomy's `Skippable?` column are this skill's policy; round-table always convenes when applied.
 
 ### Per-decision logging
@@ -66,7 +66,7 @@ Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) inst
 
 Decisions skipped on an **unsolicited** user directive log under the same header, prefixed `[user-directed]` — the directive itself is the recorded justification, never recast as predicate evidence (see [No ceremony ratification](#no-ceremony-ratification)).
 
-[Phase 4.5](#phase-45--synthesis-delegated-self-gating) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
+Phase 4.5 (`references/phases.md`) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
 
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
 
@@ -85,7 +85,7 @@ The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decis
 | Work | Completion verification (success criteria honestly met) | Strategic | 3/3 | **No** — independent check on the main LLM's self-assessment |
 | Review | Per-finding triage (single panel call for all findings) | Tactical | 2/3 | Only if all findings are low-severity (any medium+ → panel) |
 | Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 | **No** — precondition is a surfaced load-bearing finding |
-| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
+| Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
 | Promote | TODO disposition | Tactical | 2/3 | Only if a single unambiguous disposition |
 | Promote→Ship | Synthesis refresh (Phase 4.5) | Operational | No panel (`minerva:synthesize` self-gates) | n/a — delegated, self-gating |
 | Ship | Commit message | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |

@@ -26,3 +26,4 @@ A handoff between two phased skills should ride an **existing, observable intake
 - [[006-decision-review-lens-ownership]] — see also
 - [[007-constraint-skills-must-call-tools-not-prose]] — see also
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — see also
+- [[049-constraint-handoffs-name-skill-tool]] — see also

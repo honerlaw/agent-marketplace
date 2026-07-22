@@ -1,6 +1,6 @@
 ---
 name: propose
-description: Use when the user invokes `minerva:propose`, asks to start a new unit of work, or wants to plan/design a new feature, refactor, or investigation for a minerva-tracked project. Runs a brainstorm-style intake flow, asks clarifying questions one at a time, proposes 2–3 approaches, drafts the design and stress-tests it via `minerva:grill-plan` before approval, presents the design in sections, creates the work unit's branch + worktree, writes the approved design to .minerva/work/NNN-<slug>/proposal.md inside the worktree, then runs a self-review and a post-write user gate.
+description: Starts a new minerva work unit — brainstorm-style intake with one-question-at-a-time clarification, 2-3 candidate approaches, a `minerva:grill-plan` stress-test before approval, then creates the unit's branch + worktree and writes the approved design to `.minerva/work/NNN-<slug>/proposal.md`, with a self-review and a post-write user gate. Use when the user wants to plan or design a new feature, refactor, or investigation in a minerva-tracked project, says things like "let's build X", "let's plan Y", or "start a new unit of work", when `minerva:explore` hands off a converged direction, or when the user invokes `minerva:propose`.
 ---
 
 Start a new work unit by brainstorming, creating its branch + worktree, and writing its proposal inside the worktree.
@@ -33,7 +33,7 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
 5. **Propose 2–3 approaches** with tradeoffs and a recommendation. Lead with the recommendation. Iterate based on user feedback.
 
-6. **Draft the design internally**, then **stress-test it before showing it for approval.** Pull the chosen approach plus everything gathered so far into a complete first-pass draft of Goal / Why / Approach / Success criteria / Open Questions — keep it in conversation, do not write any file yet. Then invoke `minerva:grill-plan` against that draft. Let grill-plan walk the decision tree, edit affected sections of the draft in place as answers surface, and return only once shared understanding is reached. The draft that exits grilling is what step 7 presents.
+6. **Draft the design internally**, then **stress-test it before showing it for approval.** Pull the chosen approach plus everything gathered so far into a complete first-pass draft of Goal / Why / Approach / Success criteria / Open Questions — keep it in conversation, do not write any file yet. Then invoke the `minerva:grill-plan` skill via the `Skill` tool against that draft (it takes no argument — it reads the drafted design from conversation); do not paraphrase its protocol inline. Let grill-plan walk the decision tree, edit affected sections of the draft in place as answers surface, and return only once shared understanding is reached. The draft that exits grilling is what step 7 presents.
 
 7. **Present the design in sections** (Goal, Why, Approach, Success criteria, Open Questions). Get approval per section before moving on.
 

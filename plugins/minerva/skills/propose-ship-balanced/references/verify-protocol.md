@@ -10,7 +10,7 @@ At each strategic/tactical decision point (see the [Decision taxonomy](#decision
 
 ## The reviewer gates
 
-A **single reviewer** fires only at the fixed gates below — never at the solo gates. This is a per-decision-**type** policy (which *kinds* of decision warrant an independent look), not an up-front whole-run sizing classifier; that distinction is what keeps it compatible with [[014]] (gate per-decision, fail closed).
+A **single reviewer** fires only at the fixed gates below — never at the solo gates. This is a per-decision-**type** policy (which *kinds* of decision warrant an independent look), not an up-front whole-run sizing classifier; that distinction preserves the gate-per-decision, fail-closed design rule.
 
 **Fire on every run:** scope check, approach selection, completion-verification.
 
@@ -18,14 +18,14 @@ A **single reviewer** fires only at the fixed gates below — never at the solo 
 
 **Always solo (main model decides, quick-style):** whole-proposal soundness, review triage, promote partition, TODO disposition.
 
-The gate selection is evidence-grounded: a cross-tab of past `propose-ship-auto` runs' `## Panel decisions` logs showed completion-verification was ~90% unanimous (its value is independent *reproduction*, not debate), approach-selection produced by far the most revisions (independent review changes the outcome there), scope misses are rare but expensive, and triage/partition/TODO were mostly skipped or low-blast-radius. The reviewer is spent only where independence demonstrably pays. If a benchmark later shows a solo gate is missing real defects, that taxonomy line can be revisited via `minerva:replan`.
+The gate selection is evidence-grounded in past run logs: independent scrutiny is spent only where it demonstrably changes outcomes (approach selection), independently reproduces claims (completion verification), or averts rare-but-expensive misses (scope check). If a solo gate is later shown to miss real defects, revisit the taxonomy via `minerva:replan`.
 
 ## Single-reviewer mechanism
 
 At a reviewer gate:
 
 1. **Decide first.** The main model makes its decision exactly as it would solo, and writes it down (the proposed scope cut / chosen approach / completion checklist). Decide-first-then-review is intentional: a fresh-context reviewer that reads the *committed* decision carries no confirmation bias from the main model's reasoning, and this is cheaper than a parallel re-derivation (no second agent to generate the decision).
-2. **Dispatch one reviewer.** Spawn **one** subagent via the `Agent` tool, fresh context, `subagent_type: general-purpose`, `model: sonnet`. The reviewer is a **Skeptic** at scope / approach / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass it the gate's ARTIFACT + CONTEXT per `references/phases.md`. The model is pinned to `sonnet` regardless of the main session's tier: an independent critique/verification is a structured-judgment task Sonnet handles well (the same call unit 039 made for round-table's panelists), and pinning it keeps cost deterministic.
+2. **Dispatch one reviewer.** Spawn **one** subagent via the `Agent` tool, fresh context, `subagent_type: general-purpose`, `model: sonnet`. The reviewer is a **Skeptic** at scope / approach / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass it the gate's ARTIFACT + CONTEXT per `references/phases.md`. The model is pinned to `sonnet` regardless of the main session's tier: an independent critique/verification is a structured-judgment task Sonnet handles well (the same cost-determinism call made for round-table's panelists), and pinning it keeps cost deterministic.
 3. **Arbitrate inline.** The main model reads the reviewer's critique and acts as the Arbiter — **no revision-round re-dispatch; at most one reviewer dispatch per gate**. It folds load-bearing points, proceeds past non-load-bearing ones, or escalates (see below).
 
 ### What "load-bearing critique" means
@@ -82,12 +82,12 @@ Output format:
 
 Before committing any decision — solo or post-review — the main model applies an explicit test to *that specific decision*. It is the same fail-closed predicate `propose-ship-quick` uses. **Decide directly only if you are confident on all of these. Escalate to the user if any holds — or if you are unsure whether it holds:**
 
-- **genuine ambiguity** — after honestly enumerating the options, none is dominant (a coin-flip between materially different paths is the user's call). A reviewer critique you cannot confidently adjudicate is genuine ambiguity.
+- **genuine ambiguity** — after honestly enumerating the options, none is dominant (a coin-flip between materially different paths is the user's call). A reviewer critique that is load-bearing and cannot be confidently adjudicated is genuine ambiguity; non-load-bearing uncertainty is logged with the concern and does not escalate.
 - **high blast-radius / irreversible** — hard to walk back, or a broad rather than bounded surface;
 - **unfamiliar public interface or cross-cutting contract** — introduces/changes a public interface, API, or cross-cutting contract you cannot confidently get right alone;
 - **knowledge conflict** — would violate or sits in tension with a documented `.minerva/knowledge/` constraint.
 
-**Fails closed.** If any clause holds, or you cannot rule it out, **escalate** — compose a focused multiple-choice question with `AskUserQuestion`, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
+**Fails closed.** If any named clause holds — or you cannot confidently rule one out — **escalate** — compose a focused multiple-choice question with `AskUserQuestion`, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
 
 ## Scope-fit escape
 
@@ -146,7 +146,7 @@ The `Reviewer?` column marks which gates dispatch the single reviewer. Every oth
 | Work | Completion verification | Main model self-checks | **Yes — Verifier** |
 | Review | Per-finding triage | Main model decides | No (solo) |
 | Review | Replan-vs-FIX | Main model decides | **Yes — Skeptic** (when triggered) |
-| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No (solo) |
+| Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No (solo) |
 | Promote | TODO disposition | Main model decides | No (solo) |
 | Promote→Ship | Synthesis refresh (Phase 4.5) | Delegated, self-gating | n/a |
 | Ship | Commit message / PR title+body | Main model accepts draft | n/a (operational) |

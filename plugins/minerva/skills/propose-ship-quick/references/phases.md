@@ -92,7 +92,7 @@ These two gates are operational tier — the main model's draft from `proposal.m
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes`. Report and exit.
+2. **`MERGED`** → invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`. Report and exit.
 3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `delaySeconds: 300`, `prompt: minerva:propose-ship-quick --cleanup-only <NNN-slug> --retry=N`. Cap retries at 12; on exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule.
 5. **`CLOSED` (not merged)** → leave the worktree; surface manual instructions.

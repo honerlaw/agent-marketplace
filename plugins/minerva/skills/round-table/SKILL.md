@@ -1,6 +1,6 @@
 ---
 name: round-table
-description: Use when the user invokes `minerva:round-table`, asks to convene a round table / decision panel / multi-agent consensus on a decision or drafted artifact, or when another skill delegates a decision to the consensus-panel protocol. Dispatches a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents over the artifact, counts accept votes against a caller-specified quorum (default 2/3), runs at most one revision round, and escalates to the user when consensus fails twice. A pure extraction of the panel protocol formerly inlined in `minerva:propose-ship-auto`, which now delegates its panel calls here; usable standalone for any decision.
+description: Dispatches a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents over a decision or drafted artifact, counts accept votes against a caller-specified quorum (default 2/3), runs at most one revision round, and escalates to the user when consensus fails twice. Use when another skill delegates a decision to the consensus-panel protocol, when the user asks to convene a round table / decision panel / multi-agent consensus on a decision or drafted artifact, or when they invoke `minerva:round-table`. Usable standalone for any decision.
 ---
 
 Convene a 3-agent consensus panel — **Proponent**, **Skeptic**, **Arbiter** — of fresh-context subagents over a decision or drafted artifact, and convert their verdicts into a single accept / revise / reject outcome against a quorum.
@@ -11,8 +11,6 @@ Three uses:
 2. **Drafted-artifact review** — a concrete draft (plan, doc, design, diff) gets the Proponent/Skeptic/Arbiter treatment before you commit to it.
 3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every strategic/tactical decision; see [Caller mode](#caller-mode-orchestrators)).
 
-This skill is a pure, behavior-preserving extraction of the panel protocol formerly inlined in `minerva:propose-ship-auto` — the mechanics are unchanged; only their home moved.
-
 ## Usage
 
 - `minerva:round-table "<framed decision or artifact>"` — the inline argument carries the decision (an observable intake — no session-scanning to guess what's under review). A "choose among options" decision is framed as an artifact: the candidate options plus the recommended pick, which the panel accepts, revises, or rejects.
@@ -21,7 +19,7 @@ This skill is a pure, behavior-preserving extraction of the panel protocol forme
 
 ## Dispatch
 
-Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter.
+Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter. (A cheaper tier than the orchestrator — the pin keeps panel cost deterministic; update the alias if the model lineup shifts.)
 
 ### The shared block — cache-aligned prompt prefix
 

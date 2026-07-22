@@ -1,6 +1,6 @@
-# round-table — agent briefs (work unit 035: cache-aligned layout; role text otherwise verbatim)
+# round-table — agent briefs
 
-Each prompt is the **shared block first** (see SKILL.md § Dispatch), then — for the Arbiter only — the other agents' outputs, then the role brief. Role semantics are unchanged from the pre-035 templates; only the layout moved the shared block to the front.
+Each prompt is the **shared block first** (see SKILL.md § Dispatch), then — for the Arbiter only — the other agents' outputs, then the role brief.
 
 **Proponent prompt** — the shared block, then:
 ```

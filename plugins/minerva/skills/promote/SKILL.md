@@ -1,6 +1,6 @@
 ---
 name: promote
-description: Use when the user invokes `minerva:promote`, implementation on a work unit is done and they want to finalize the record, or a significant mid-work decision/bug/pattern should be captured immediately. Promotes durable knowledge to .minerva/knowledge/, rewrites proposal.md to match reality, and archives the scratchpad. Forward-looking TODOs aren't silently discarded — the user is offered to keep them as followups.md or seed a new proposal. Idempotent.
+description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; forward-looking TODOs are offered as `followups.md` or a new-proposal seed, never silently discarded. Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
 ---
 
 Promote durable items from `scratchpad.md` to `.minerva/knowledge/`, and (in the end-of-work pass) reshape the work unit's persistent record to match what shipped.

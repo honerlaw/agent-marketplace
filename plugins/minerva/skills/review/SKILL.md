@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when the user invokes `minerva:review`, asks to review or audit a changeset, or wants to verify shipped code matches what was designed. With a minerva work unit in context, runs a spec/knowledge audit alongside a code quality review, presenting both result sets in parallel before unified triage. Without minerva context, runs a code quality review directly. If a GitHub PR exists for the current branch, delegates the code quality pass to `code-review:code-review`; otherwise performs a structured inline check using the same finding format. Triage state is persisted to scratchpad so re-runs can pre-fill prior dispositions.
+description: Reviews a changeset against both the minerva spec/knowledge lenses and code quality. With a work unit in context it runs a spec/knowledge audit alongside the code quality review, presenting both result sets before unified triage; if a GitHub PR exists for the branch it delegates code quality to `code-review:code-review`, otherwise it performs a check via a fresh-context subagent in the same finding format. Triage state persists to the scratchpad so re-runs pre-fill prior dispositions. Use when implementation on a work unit has just finished and the diff is unreviewed, when the user asks to review or audit a changeset or to verify shipped code matches what was designed, or when they invoke `minerva:review`.
 ---
 
 Review the active changeset for both design compliance and code quality. Works against the local diff — no PR required. When a minerva work unit is found, runs a spec/knowledge audit alongside the code quality review and presents both result sets in parallel before triage. When no minerva context exists, runs the code quality review alone.
@@ -12,7 +12,7 @@ Review the active changeset for both design compliance and code quality. Works a
 
 ## Protocol
 
-The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree entry** → **Diff resolution** → **Minerva audit** (spec fidelity + knowledge compliance; only when minerva context exists) → **Code review invocation** (delegates to `code-review:code-review` when a PR exists, inline structured check otherwise) → **Parallel presentation** → **Interactive triage** (FIX / SUGGEST / IGNORE) → **Triage persistence** (scratchpad pre-fill for re-runs) → **On approval — file writes** → **Report**.
+The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree entry** → **Diff resolution** → **Minerva audit** (spec fidelity + knowledge compliance; only when minerva context exists) → **Code review invocation** (delegates to `code-review:code-review` when a PR exists, fresh-context subagent check otherwise) → **Parallel presentation** → **Interactive triage** (FIX / SUGGEST / IGNORE) → **Triage persistence** (scratchpad pre-fill for re-runs) → **On approval — file writes** → **Report**.
 
 ## Lifecycle ordering
 

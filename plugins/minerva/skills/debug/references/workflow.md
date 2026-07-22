@@ -1,4 +1,4 @@
-# debug — the three-phase workflow + project-reading protocol (verbatim from SKILL.md, work unit 035)
+# debug — the three-phase workflow + project-reading protocol
 
 ## The three-phase workflow
 

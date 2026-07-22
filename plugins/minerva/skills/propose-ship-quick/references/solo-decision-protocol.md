@@ -21,13 +21,13 @@ Before committing to any decision, the main model applies an explicit test to *t
 - **unfamiliar public interface or cross-cutting contract** — it introduces or changes a public interface, API, or cross-cutting contract you cannot confidently get right alone;
 - **knowledge conflict** — it would violate or sits in tension with a documented `.minerva/knowledge/` constraint.
 
-**Fails closed.** If any single clause holds, or you cannot honestly rule it out, **escalate** — compose a focused, multiple-choice question with `AskUserQuestion`, apply the user's answer as the decision, and continue. The predicate only ever decides *whether to escalate*; deciding directly is never the safe default under doubt. Because deciding-alone requires confidence on every clause, the worst case of a wrong escalation is one extra question; the worst case of a wrong decide-alone is an undetected bad call on an ambiguous or high-blast-radius decision — so the asymmetry favors escalation.
+**Fails closed.** If any of the four named clauses holds, **escalate** — compose a focused, multiple-choice question with `AskUserQuestion`, apply the user's answer as the decision, and continue. The predicate only ever decides *whether to escalate*; deciding directly is never the safe default under doubt. Because deciding-alone requires confidence on every clause, the worst case of a wrong escalation is one extra question; the worst case of a wrong decide-alone is an undetected bad call on an ambiguous or high-blast-radius decision — so the asymmetry favors escalation. Ordinary implementation uncertainty — naming, file placement, test structure — never satisfies a clause and is never grounds for escalation.
 
 This is the inverse posture of `propose-ship-auto`: there, the *panel* is the default and the skip predicate is the (fail-closed) exception; here, *deciding alone* is the default and escalation is the (fail-closed) exception. Both fail toward the more conservative reviewer.
 
 ## Scope-fit escape
 
-This skill is for small, low-risk changes. If, at any point, the change proves **not** small — scope explosion, a core assumption breaks open into a large redesign, or the work turns out to need sustained complex reasoning — **escalate**, recommending a switch to `minerva:propose-ship-auto` (panel-governed) or `minerva:propose-ship` (human-gated). Leave the work unit recoverable and emit the [final-report-on-bail](governance.md) shape so the user can resume under the heavier orchestrator. Do not silently grind a large change through the fast path.
+This skill is for small, low-risk changes. If, at any point, the change proves **not** small — scope explosion, a core assumption breaks open into a large redesign, or the work turns out to need sustained complex reasoning — **escalate**, recommending a switch to `minerva:propose-ship-balanced` (single-reviewer), `minerva:propose-ship-auto` (panel-governed), or `minerva:propose-ship` (human-gated). Leave the work unit recoverable and emit the [final-report-on-bail](governance.md) shape so the user can resume under the heavier orchestrator. Do not silently grind a large change through the fast path.
 
 ## Never-bypassed self-checks
 
@@ -81,10 +81,10 @@ Every strategic/tactical decision is **main-model-decided by default**, with the
 | Propose | Whole-proposal soundness | Main model decides | No — escalate if a public-interface/contract call is uncertain |
 | Work | Mid-work load-bearing divergence | Main model confirms | **Yes** — precondition is a surfaced divergence |
 | Replan | New-plan acceptance | Main model accepts | **Yes** — convened only after a confirmed divergence |
-| Work | Completion verification | Main model self-checks | **Yes** — independent check on the model's own work |
+| Work | Completion verification | Main model self-checks | **Yes** — a deliberate second look at the model's own work (self-check; for a fresh-context verifier at this gate use `minerva:propose-ship-balanced`) |
 | Review | Per-finding triage | Main model decides | No — escalate if a finding's disposition is contested |
 | Review | Replan-vs-FIX | Main model decides | **Yes** — precondition is a surfaced load-bearing finding |
-| Promote | Three-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No — escalate if an entry is genuinely ambiguous |
+| Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No — escalate if an entry is genuinely ambiguous |
 | Promote | TODO disposition | Main model decides | No |
 | Promote→Ship | Synthesis refresh (Phase 4.5) | Delegated, self-gating | n/a |
 | Ship | Commit message / PR title+body | Main model accepts draft | n/a — operational |

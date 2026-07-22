@@ -1,4 +1,4 @@
-# review — full step protocols (verbatim from SKILL.md, work unit 035)
+# review — full step protocols
 
 ## Target resolution
 
@@ -65,7 +65,7 @@ If a finding reveals that the implementation diverged from the proposal in a way
 - Scope shifted in or out → replan.
 - Routine implementation choice or small edge case → just FIX.
 
-If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and run the `minerva:replan` protocol. Re-enter `minerva:review` once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
+If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and invoke the `minerva:replan` skill via the `Skill` tool. Invoke `minerva:review` again via the `Skill` tool once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
 
 ## Code review invocation
 
@@ -74,13 +74,13 @@ This always runs — with or without minerva context — on the same diff resolv
 **Check for an existing PR first:** run `gh pr view --json url,number,state 2>/dev/null`.
 
 - **PR exists and is OPEN** → invoke the `code-review:code-review` skill (via the Skill tool). It will fetch the PR and run its full review flow.
-- **No PR (or PR is closed/merged)** → perform a structured inline code quality review using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Inline scope covers, at minimum:
+- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Local-diff scope covers, at minimum:
   1. **Bugs** — logic errors, off-by-one, null/undefined handling, race conditions visible in the diff.
   2. **CLAUDE.md / AGENTS.md compliance** — read the agent file once and check the diff against any explicit rules it states (style, security, prohibited patterns).
   3. **Test coverage** — does the diff touch behavior without adding or updating tests? Flag, don't assume.
   4. **Obvious quality** — duplicated logic, dead code introduced, missing error handling at boundaries.
 
-  Do **not** invoke `code-review:code-review` inline — it requires a live PR and will not work against a local diff. Note in the report header that inline mode was used so the user knows the depth is shallower than the PR-mode pass.
+  Do **not** invoke `code-review:code-review` inline — it requires a live PR and will not work against a local diff. Note in the report header that local-diff mode (fresh-context subagent) was used so the user knows the depth is shallower than the PR-mode pass.
 
 ## Parallel presentation (when both ran)
 
@@ -106,7 +106,7 @@ Present findings as a numbered list. For each finding, propose a default disposi
 - **SUGGEST** — append a note to `scratchpad.md` so the next `minerva:promote` decides whether it's durable knowledge.
 - **IGNORE** — explicitly accept. Optionally log rationale to scratchpad as a `→ accepted` line.
 
-The user can batch ("fix 1-3, ignore 4, suggest 5") or go one at a time. **Hard gate:** do not write any files until the user has confirmed dispositions.
+The user can batch ("fix 1-3, ignore 4, suggest 5") or go one at a time. **Hard gate:** do not write any files until the user has confirmed dispositions. (When invoked by an orchestrator that substitutes its own adjudication for human gates, that orchestrator's decision satisfies this gate.)
 
 ## Triage persistence
 
@@ -140,7 +140,7 @@ Findings:        N total  (minerva: N, code-review: N)
   Fixed:         N (files: <list>)
   Suggested:     N (logged to scratchpad)
   Ignored:       N
-Mode:            PR-driven (code-review:code-review) | inline
+Mode:            PR-driven (code-review:code-review) | local-diff (fresh-context subagent)
 Next:            <recommendation>
 ```
 

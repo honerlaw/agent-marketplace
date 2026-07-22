@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Use when the user invokes `minerva:ship`, asks to ship / push / open a PR for / merge the current work, or wants the agent to commit outstanding changes to a branch, open a pull request, watch CI, fix CI failures, and enable auto-merge. CI is watched via ScheduleWakeup polling instead of blocking. Closes the minerva lifecycle after `minerva:work` / `minerva:promote` / `minerva:review`.
+description: Ships the current work — commits outstanding changes to a branch, opens a pull request, watches CI via non-blocking ScheduleWakeup polling, fixes CI failures, and enables auto-merge. Use when the user asks to ship, push, open a PR for, or merge the current work — closing the minerva lifecycle after `minerva:work` / `minerva:promote` / `minerva:review` — or when they invoke `minerva:ship`.
 ---
 
 Close the minerva lifecycle by committing outstanding work to a branch, opening a PR titled and described from the active work unit's `proposal.md`, watching CI to green with a bounded auto-fix loop (3 iterations) via ScheduleWakeup polling, and enabling auto-merge when repo permissions allow.
@@ -23,7 +23,7 @@ Bail with a clear, one-line message on any failure:
 
 ## Protocol
 
-The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree entry** → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (ScheduleWakeup polling at `delaySeconds: 270`, bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
+The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree addressing** → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (ScheduleWakeup polling at `delaySeconds: 270`, bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
 
 ## Idempotency
 

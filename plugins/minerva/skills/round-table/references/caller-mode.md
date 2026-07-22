@@ -1,4 +1,4 @@
-# round-table — caller mode + out of scope (verbatim from SKILL.md, work unit 035)
+# round-table — caller mode + out of scope
 
 ## Caller mode (orchestrators)
 

@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 045 -->
+<!-- index-watermark: 049 -->
 
 ## Decisions
 
@@ -29,11 +29,13 @@
 
 - [[002-bug-promote-idempotency-check-misses-old-marker]] — promote idempotency check missed the old scratchpad marker format
 - [[028-bug-knowledge-edits-not-fence-aware]] — the span editors read fenced examples as structure: crash/false-dedupe on any edge into 015 (third fence-trap instance; fixed)
+- [[046-bug-skill-listing-description-drop]] — valid frontmatter descriptions dropped from rendered listing; ambient triggering impossible for affected skills
 
 ## Patterns
 
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — rejected alternatives recur at runtime; prohibit in skill text, test-anchored
 - [[032-pattern-plugin-discovery-mostly-auto-crawl]] — plugin discoverability is mostly auto-crawl once public + licensed + topic-tagged; manual directories are web-form submissions, not source-vendor lists
+- [[048-pattern-catalog-semantic-drift-recurs]] — catalog surfaces drift semantically even during active scrubbing; sweep all four
 
 ## Constraints
 
@@ -54,3 +56,5 @@
 - [[035-constraint-ci-test-enumeration-explicit]] — new test modules are invisible to CI until appended to the enumerated pytest list
 - [[036-constraint-skill-progressive-disclosure]] — skills keep ≤9KB SKILL.md cores with detail in on-demand references/; contract anchors follow via the `file` field
 - [[037-constraint-fence-scans-import-fence-re]] — fence-aware scans import the single-sourced FENCE_RE grammar (or a parser built on it), whatever the corpus
+- [[047-constraint-skill-description-house-style]] — descriptions lead with ambient triggers, invocation clause last, ≤1024 chars
+- [[049-constraint-handoffs-name-skill-tool]] — handoffs invoke the target via the Skill tool with argument, never bare prose

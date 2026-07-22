@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `minerva:propose` to design it. Use `minerva:propose` directly instead when you already know what you want to build and are ready to commit to a proposal.
+description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `minerva:propose` to design it. Use `minerva:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a minerva project (`.minerva/` present), use this instead of generic brainstorming skills — it is the minerva-native front-end that hands off to `minerva:propose`.
 ---
 
 # Explore an idea
@@ -20,9 +20,7 @@ The two diverge on **different axes** and compose cleanly, so a handoff is never
 
 `explore` settles the direction; `minerva:propose` then designs it.
 
-<HARD-RULE>
-Do NOT write any file, create `.minerva/work/`, allocate an NNN, create a branch, or create a worktree during exploration. Exploration is conversation only. If the user converges on a direction and wants to commit, hand off to `minerva:propose` — do not start doing propose's job yourself.
-</HARD-RULE>
+Exploration is conversation only — everything it produces lives in the transcript; no files, work units, branches, or worktrees are created here. When the user converges and wants to commit, hand off to `minerva:propose`, which owns all file, branch, and worktree creation.
 
 ## The process
 

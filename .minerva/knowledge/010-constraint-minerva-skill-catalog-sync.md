@@ -29,3 +29,4 @@ All three surfaces have a single-line HTML comment above them — added by work 
 - [[009-constraint-marketplace-plugin-registry-not-auto-discovered]] — see also
 - [[034-constraint-site-fourth-catalog-surface]] — see also
 - [[038-constraint-site-catalog-source-is-pages-index]] — see also: site surface is now pages/index.md, not site/index.html
+- [[048-pattern-catalog-semantic-drift-recurs]] — see also

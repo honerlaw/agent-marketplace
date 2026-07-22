@@ -1,6 +1,6 @@
 ---
 name: work
-description: Use when the user invokes `minerva:work`, asks to implement or resume a minerva work unit, or is ready to start coding on a proposed feature. Reads the proposal and any replans, maintains a live scratchpad, and auto-invokes the minerva:replan protocol when reality drifts in a load-bearing way. Checks proposal Open Questions on resume and proposal Success criteria before signaling completion.
+description: Implements a minerva work unit — reads the proposal and any replans, maintains a live scratchpad, auto-invokes the `minerva:replan` protocol when reality drifts in a load-bearing way, and checks proposal Open Questions on resume and Success criteria before signaling completion. Use when the user is ready to start coding on a proposed feature, wants to implement or resume a work unit ("pick up where we left off"), or invokes `minerva:work`.
 ---
 
 Implement the active work unit while maintaining the scratchpad and honoring the persistence hierarchy.
@@ -86,7 +86,7 @@ The scratchpad is **ephemeral working memory**. `minerva:promote` will later par
 
 Continuously check: does the approach I'm taking still match `proposal.md` (as superseded by the latest `replan.md`)?
 
-**Auto-trigger the `minerva:replan` protocol** when reality diverges in a load-bearing way:
+**Invoke the `minerva:replan` skill (via the `Skill` tool)** when reality diverges in a load-bearing way:
 - A core assumption from the proposal turns out to be wrong.
 - The approach itself is changing (not just an implementation detail within the approach).
 - Scope is shifting (in or out of the work unit).
@@ -96,7 +96,7 @@ Continuously check: does the approach I'm taking still match `proposal.md` (as s
 - Small refactors along the way.
 - Edge-case handling that wasn't in the proposal but doesn't change the approach.
 
-**On trigger:** pause implementation. Tell the user "this looks like a load-bearing divergence — running the replan protocol." Then invoke the `minerva:replan` skill and follow its protocol. Once the replan entry is written, resume implementation with the new plan in context.
+**On trigger:** pause implementation. Tell the user "this looks like a load-bearing divergence — running the replan protocol." Then invoke the `minerva:replan` skill via the `Skill` tool and follow its protocol. Once the replan entry is written, resume implementation with the new plan in context.
 
 ### Completion signal
 
