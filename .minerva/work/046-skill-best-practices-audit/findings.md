@@ -11,10 +11,22 @@
 - S5 Prompting Claude Sonnet 5 — https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5
 
 Fable-specific guidance **does exist publicly** (S3), resolving the proposal's open
-question — no fallback needed. Rubric dimensions R1–R10 are defined in `scratchpad.md`
-(§ Rubric); method: 8 fresh-context subagent reviewers over themed batches of 2–3
-skills, deterministic census by the main model, synthesis and arbitration by the main
-model.
+question — no fallback needed. Method: 8 fresh-context subagent reviewers over themed
+batches of 2–3 skills, deterministic census by the main model, synthesis and
+arbitration by the main model.
+
+## Rubric dimensions
+
+- R1 Description triggering quality — third person; what + when; specific key terms; ambient/contextual trigger scenarios present and prominent (not buried behind "when the user invokes X"); ≤1024 chars [S1]
+- R2 Naming — gerund/action form, not vague [S1]
+- R3 Conciseness — "Claude is already very smart"; every token justified; no over-explaining [S1]
+- R4 Degrees of freedom — specificity matched to task fragility; over-prescription degrades fable output [S1, S3]
+- R5 Progressive disclosure — body <500 lines; references one level deep; TOC in files >100 lines [S1]
+- R6 Workflow clarity — numbered steps, checklists for complex flows, feedback loops [S1]
+- R7 Content hygiene — consistent terminology; single default over option lists; no time-sensitive info [S1]
+- R8 Instruction-tone calibration — aggressive MUST/CRITICAL language now over-triggers on opus 4.5+/sonnet 5/fable; positive instructions over negative [S4, S5]
+- R9 Invocation explicitness & scope literalism — skill-to-skill handoffs name the Skill tool and the argument; scope stated explicitly (sonnet 5 won't generalize); fully-qualified tool names [S4, S5]
+- R10 Model-behavior hazards — reasoning-echo instructions (reasoning_extraction refusal risk on fable); context-budget mentions; pause/checkpoint language that fights autonomy; fresh-context verifiers > self-critique [S3]
 
 ## Coverage matrix
 

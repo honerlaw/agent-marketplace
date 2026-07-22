@@ -1,7 +1,7 @@
 # Proposal: skill-best-practices-audit
 
 **Date**: 2026-07-21
-**Status**: Draft
+**Status**: Shipped (2026-07-21)
 
 ## Goal
 
@@ -41,43 +41,33 @@ slash-command-only.
 
 ## Approach
 
-1. **Rubric.** Fetch Anthropic's current published guidance live at audit time
-   — the skill-authoring best-practices documentation, agent-skills engineering
-   material, and any model-behavior notes covering opus / sonnet / fable.
-   Distill a numbered rubric; every dimension cites its source. Record source
-   URLs and fetch date in the findings artifact so the audit is reproducible
-   and datable.
-2. **Fan-out review.** Dispatch fresh-context subagents via the Agent tool,
-   each auditing a batch of 2–3 skills against the rubric and returning
-   structured findings (dimension, evidence, severity, citation). Fresh
-   contexts are deliberate: a cold reader judges frontmatter descriptions the
-   way a cold model deciding whether to trigger would, avoiding the main
-   context's familiarity bias.
-3. **Synthesis.** The main model dedups findings, builds the 21-skill ×
-   rubric-dimension coverage matrix, writes the cross-cutting triggering
-   diagnosis for the two anchor failure classes — each diagnosis stating its
-   mechanism, citing the guidance it rests on, and carrying an explicit
-   confidence label (high / medium / speculative) — classifies every finding
-   prose-fixable vs needs-a-mechanism, and writes `findings.md` in this work
-   unit.
-4. **Prose fixes.** Applied during `minerva:work`, confined to
-   `plugins/minerva/skills/*/SKILL.md` (and per-skill `references/` files).
-   Where a description's *meaning* changes, sync the site-catalog blurb in
-   `pages/index.md` and the README entry per the catalog-sync constraint
-   ([[010-constraint-minerva-skill-catalog-sync]],
-   [[034-constraint-site-fourth-catalog-surface]]) — the site test only checks
-   token presence, so semantic sync is on us. All contract tests stay green
-   (≤9KB cores per [[036-constraint-skill-progressive-disclosure]], catalog
-   surfaces, site catalog test). The gate for these fixes is the normal
-   review → promote → ship flow — no extra per-fix ceremony.
-5. **Follow-up seeds.** Written, not built: mechanism findings (e.g. a
-   SessionStart-style hook, init-template Routing-section changes — explicitly
-   out of scope here because the Routing section is a template-of-record with
-   distribution-level blast radius per
-   [[029-decision-routing-section-is-the-wiki-reading-protocol]] — description
-   contract tests, mechanized rubric checks) and empirical validation of the
-   triggering diagnosis via captured session transcripts / PostHog LLM
-   analytics.
+As shipped:
+
+1. **Rubric.** Five Anthropic guidance sources fetched live 2026-07-21 (including
+   fable-specific guidance, resolving the open question) and distilled into ten
+   cited dimensions R1–R10 — recorded inline in `findings.md`.
+2. **Fan-out review.** Eight fresh-context subagent reviewers audited themed batches
+   of 2–3 skills each (full 21-skill coverage), returning structured findings plus
+   cold-read trigger probes; the main model added a deterministic census
+   (invocation-first ordering 17/21, three descriptions over the 1024-char limit).
+3. **Synthesis.** 77 raw findings deduped into 12 clusters + 4 mechanism seeds;
+   confidence-labeled diagnoses for the two anchor failures (ambient triggering:
+   high — a listing-pipeline description drop plus invocation-first ordering;
+   handoffs: medium-high — bare-prose handoffs vs. Skill-tool-explicit ones);
+   one reviewer finding rejected as factually wrong. All in `findings.md`.
+4. **Prose fixes.** 19 descriptions rewritten to the ambient-triggers-lead house
+   style; ~60 body edits across 42 files (Skill-tool handoff phrasing,
+   delegated-approver gate clauses, tone calibration, stale-content and anchor
+   repairs, portability fixes, provenance cleanup); catalog surfaces semantically
+   synced — including three stale rows caught only by verification-panel Skeptics;
+   six self-introduced edit artifacts caught by fresh-context review and fixed.
+   TOC additions and a governance dedup were declined with rationale. Suite green
+   throughout (311 passed; three collection failures pre-existing on main).
+5. **Seeds, not mechanisms.** followups.md carries the mechanism seeds (listing
+   description-drop diagnosis + rendered-listing contract test, six-block sync,
+   step-number coupling, ≤1024 test, handoff lint, enforcement layer, empirical
+   validation) and declined/deferred items. Four knowledge entries promoted
+   (046–049); overview refresh delegated to `minerva:synthesize`.
 
 ## Success criteria
 

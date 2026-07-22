@@ -25,3 +25,4 @@ A knowledge entry recording a rejected alternative informs humans and planning-t
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[042-decision-propose-ship-quick-main-model-adjudication]] — see also
 - [[045-decision-propose-ship-balanced-single-reviewer]] — see also
+- [[049-constraint-handoffs-name-skill-tool]] — see also

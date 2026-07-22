@@ -53,3 +53,4 @@ Mechanism findings and deferred items from `findings.md` — seeds, not commitme
   was wrong for this harness, but orchestrators could state a fallback (background
   poll with the same retry cap) for harnesses that lack it.
 - **Internal script docstrings carry old phase vocabulary** (`scripts/knowledge_lint.py` "Phase B.2", `scripts/knowledge_fix.py` "(Phase B.3)") — not user-facing catalog surfaces, but the same retired vocabulary this unit scrubbed elsewhere; scrub opportunistically.
+- **Document the resume-under-auto precedent** — unit 046 exercised a previously undocumented path: `propose-ship-auto`'s pre-flight collision gate resumed an in-flight unit whose proposal was human-approved in an interactive `propose` run, treating that approval as satisfying Phase 1 (user approval outranks the three propose-phase panels). Add this resume path to `propose-ship-auto`'s pre-flight text so the next run doesn't re-derive it.
