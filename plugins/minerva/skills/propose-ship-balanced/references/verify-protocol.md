@@ -87,7 +87,7 @@ Before committing any decision — solo or post-review — the main model applie
 - **unfamiliar public interface or cross-cutting contract** — introduces/changes a public interface, API, or cross-cutting contract you cannot confidently get right alone;
 - **knowledge conflict** — would violate or sits in tension with a documented `.minerva/knowledge/` constraint.
 
-**Fails closed.** If any named clause holds, **escalate** — compose a focused multiple-choice question with `AskUserQuestion`, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
+**Fails closed.** If any named clause holds — or you cannot confidently rule one out — **escalate** — compose a focused multiple-choice question with `AskUserQuestion`, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
 
 ## Scope-fit escape
 

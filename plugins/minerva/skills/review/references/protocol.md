@@ -74,13 +74,13 @@ This always runs — with or without minerva context — on the same diff resolv
 **Check for an existing PR first:** run `gh pr view --json url,number,state 2>/dev/null`.
 
 - **PR exists and is OPEN** → invoke the `code-review:code-review` skill (via the Skill tool). It will fetch the PR and run its full review flow.
-- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Inline scope covers, at minimum:
+- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Local-diff scope covers, at minimum:
   1. **Bugs** — logic errors, off-by-one, null/undefined handling, race conditions visible in the diff.
   2. **CLAUDE.md / AGENTS.md compliance** — read the agent file once and check the diff against any explicit rules it states (style, security, prohibited patterns).
   3. **Test coverage** — does the diff touch behavior without adding or updating tests? Flag, don't assume.
   4. **Obvious quality** — duplicated logic, dead code introduced, missing error handling at boundaries.
 
-  Do **not** invoke `code-review:code-review` inline — it requires a live PR and will not work against a local diff. Note in the report header that inline mode was used so the user knows the depth is shallower than the PR-mode pass.
+  Do **not** invoke `code-review:code-review` inline — it requires a live PR and will not work against a local diff. Note in the report header that local-diff mode (fresh-context subagent) was used so the user knows the depth is shallower than the PR-mode pass.
 
 ## Parallel presentation (when both ran)
 
@@ -140,7 +140,7 @@ Findings:        N total  (minerva: N, code-review: N)
   Fixed:         N (files: <list>)
   Suggested:     N (logged to scratchpad)
   Ignored:       N
-Mode:            PR-driven (code-review:code-review) | inline
+Mode:            PR-driven (code-review:code-review) | local-diff (fresh-context subagent)
 Next:            <recommendation>
 ```
 

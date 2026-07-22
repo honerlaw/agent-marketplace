@@ -11,8 +11,6 @@ Three uses:
 2. **Drafted-artifact review** — a concrete draft (plan, doc, design, diff) gets the Proponent/Skeptic/Arbiter treatment before you commit to it.
 3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every strategic/tactical decision; see [Caller mode](#caller-mode-orchestrators)).
 
-
-
 ## Usage
 
 - `minerva:round-table "<framed decision or artifact>"` — the inline argument carries the decision (an observable intake — no session-scanning to guess what's under review). A "choose among options" decision is framed as an artifact: the candidate options plus the recommended pick, which the panel accepts, revises, or rejects.

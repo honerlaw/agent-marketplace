@@ -23,7 +23,7 @@
 
 ## Observability
 
-- Every panel call logs one line to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header per the the Per-decision logging format in `references/panel-protocol.md` section.
+- Every panel call logs one line to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header per the Per-decision logging format in `references/panel-protocol.md`.
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
 - The final report (success or bail) lists total panel calls and total escalations for the run.
 
