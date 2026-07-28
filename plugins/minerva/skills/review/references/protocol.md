@@ -74,7 +74,7 @@ This always runs — with or without minerva context — on the same diff resolv
 **Check for an existing PR first:** run `gh pr view --json url,number,state 2>/dev/null`.
 
 - **PR exists and is OPEN** → invoke the `code-review:code-review` skill (via the Skill tool). It will fetch the PR and run its full review flow.
-- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Local-diff scope covers, at minimum:
+- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Pass `run_in_background: false`: the findings are presented in this same turn, and a backgrounded dispatch returns only a handle, parking the review. Local-diff scope covers, at minimum:
   1. **Bugs** — logic errors, off-by-one, null/undefined handling, race conditions visible in the diff.
   2. **CLAUDE.md / AGENTS.md compliance** — read the agent file once and check the diff against any explicit rules it states (style, security, prohibited patterns).
   3. **Test coverage** — does the diff touch behavior without adding or updating tests? Flag, don't assume.

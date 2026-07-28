@@ -19,7 +19,7 @@ Three uses:
 
 ## Dispatch
 
-Spawn 3 subagents via the `Agent` tool with fresh context. The Proponent and Skeptic run **in parallel** (single message with two `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter. (A cheaper tier than the orchestrator — the pin keeps panel cost deterministic; update the alias if the model lineup shifts.)
+Spawn 3 subagents via the `Agent` tool with fresh context. Pass `run_in_background: false` in **every** panel `Agent` call — the panel is blocking by construction (votes are counted in the same turn, and the Arbiter needs the Proponent's and Skeptic's outputs), while a backgrounded dispatch returns only a handle and strands the run mid-panel with no legal next step. The pin costs no parallelism: the Proponent and Skeptic still run **in parallel** (single message with two synchronous `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter. (A cheaper tier than the orchestrator — the pin keeps panel cost deterministic; update the alias if the model lineup shifts.)
 
 ### The shared block — cache-aligned prompt prefix
 
