@@ -57,8 +57,13 @@ SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 DISPATCH_VERB_RE = re.compile(r"\b(spawn|dispatch|launch|invoke|create)", re.IGNORECASE)
 
 # A dispatch-parameter token: evidence the line is configuring a real call
-# rather than describing one. Any of the three is enough.
-DISPATCH_TOKEN_RE = re.compile(r"`Agent` tool|subagent_type|model:\s*\"?sonnet")
+# rather than describing one. Any of the three is enough. The tool reference is
+# tolerant of how the markdown happens to fall (``` `Agent` tool ```,
+# ``` `Agent tool` ```, or unbackticked) — one site rests on this token alone,
+# so a cosmetic reformat there must not drop it out of detection.
+DISPATCH_TOKEN_RE = re.compile(
+    r"`?Agent`?\s+tool`?|subagent_type|model:\s*\"?sonnet", re.IGNORECASE
+)
 
 # The pin this module exists to enforce.
 EXECUTION_MODE_KEY = "run_in_background"
@@ -86,20 +91,67 @@ PROSE_NEAR_MISSES = [
 ]
 
 
+def _fence_delimiter(line: str) -> tuple[str, int] | None:
+    """The (character, run-length) of the fence on ``line``, or None.
+
+    ``FENCE_RE`` stays the single source of truth for *whether* a line is a
+    fence (knowledge 019 / 023 / 037 — import the grammar, never re-derive it);
+    the run length is measured here because pairing needs it and the shared
+    regex does not expose it. This is the sanctioned "parser built on it" form.
+    """
+    match = FENCE_RE.match(line)
+    if match is None:
+        return None
+    char = match.group(1)[0]
+    stripped = line.strip()
+    return char, len(stripped) - len(stripped.lstrip(char))
+
+
+def _scan(body: str) -> tuple[list[tuple[int, str]], bool]:
+    """``(lines outside fences, ends-inside-a-fence)``.
+
+    Fences are **paired** rather than toggled: a fence closes only on the same
+    character at the same-or-greater run length, so a ``~~~`` line inside a
+    ```` ``` ```` block is literal content, not a close. A bare toggle gets that
+    wrong, and the failure is silent in the direction that matters here —
+    content wrongly treated as fenced is content this module never inspects.
+
+    Both results come from one walk because they are the same walk; computing
+    them separately is how the two drift apart.
+    """
+    out: list[tuple[int, str]] = []
+    open_delim: tuple[str, int] | None = None
+    for lineno, line in enumerate(body.splitlines(), 1):
+        delim = _fence_delimiter(line)
+        if delim is not None:
+            if open_delim is None:
+                open_delim = delim
+                continue
+            if delim[0] == open_delim[0] and delim[1] >= open_delim[1]:
+                open_delim = None
+                continue
+        if open_delim is None:
+            out.append((lineno, line))
+    return out, open_delim is not None
+
+
 def _unfenced_lines(body: str) -> list[tuple[int, str]]:
     """1-indexed lines outside fenced code blocks.
 
     A fenced example is an illustration, not an instruction the model executes
     — the same reasoning as knowledge 023's fence-aware edge derivation.
     """
-    out, fenced = [], False
-    for lineno, line in enumerate(body.splitlines(), 1):
-        if FENCE_RE.match(line):
-            fenced = not fenced
-            continue
-        if not fenced:
-            out.append((lineno, line))
-    return out
+    return _scan(body)[0]
+
+
+def has_unclosed_fence(body: str) -> bool:
+    """True if ``body`` ends inside a fence.
+
+    An unclosed fence makes every line after it invisible to this module, which
+    would silently hide a real dispatch instruction. Cheaper to reject the
+    malformed file outright than to reason about what it hid.
+    """
+    return _scan(body)[1]
 
 
 def is_dispatch_instruction(line: str) -> bool:
@@ -175,6 +227,79 @@ def test_dispatch_instructions_pin_execution_mode(relpath):
         f"{relpath}: dispatch instruction(s) on line(s) "
         f"{', '.join(map(str, unpinned))} do not pin {EXECUTION_MODE_KEY} — "
         f"a backgrounded dispatch returns only a handle and strands the run"
+    )
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Spawn 3 subagents via the `Agent` tool with fresh context.",
+        "Launch a fresh-context subagent via the `Agent` tool.",
+        "the main model dispatches one agent (`subagent_type: general-purpose`)",
+        "Dispatch one reviewer, `model: sonnet`, and arbitrate inline.",
+        'Spawn a reviewer with `model: "sonnet"`.',
+        "spawn a subagent via the `Agent tool` (backticks fall differently)",
+        "Dispatch a subagent via the Agent tool with no backticks at all.",
+    ],
+)
+def test_detector_recall(line):
+    """Positive axis: phrasings that DO instruct a dispatch."""
+    assert is_dispatch_instruction(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Verb, no dispatch token — prose about dispatching.
+        "Each reviewer gate dispatches one subagent and the main model arbitrates.",
+        "6 subagent dispatches max per decision point.",
+        # Dispatch token, no verb — describing the parameters, not calling.
+        "The `subagent_type` default is general-purpose and `model: sonnet` is standard.",
+        # Neither — the Skill-tool handoff form, which must never be caught.
+        "invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction",
+    ],
+)
+def test_detector_precision(line):
+    """Negative axis: both halves of the conjunction must be required."""
+    assert not is_dispatch_instruction(line)
+
+
+def test_fence_pairing_semantics():
+    """A non-matching fence inside a block is content, not a close."""
+    body = "\n".join(
+        [
+            "outside-before",
+            "```",
+            "~~~",  # different char: literal content, must not close
+            "``",  # too short to be a fence at all
+            "```",  # the real close
+            "outside-after",
+        ]
+    )
+    assert [line for _, line in _unfenced_lines(body)] == [
+        "outside-before",
+        "outside-after",
+    ]
+    assert not has_unclosed_fence(body)
+
+
+def test_unclosed_fence_detected():
+    """A file ending inside a fence hides everything after it."""
+    body = "outside\n```\nswallowed\n"
+    assert has_unclosed_fence(body)
+    assert [line for _, line in _unfenced_lines(body)] == ["outside"]
+
+
+@pytest.mark.parametrize(
+    "relpath",
+    sorted(p.relative_to(SKILLS_DIR).as_posix() for p in SKILLS_DIR.rglob("*.md")),
+)
+def test_no_unclosed_fences_in_corpus(relpath):
+    """Corpus-wide guard: no skill file may hide content behind a stray fence."""
+    body = (SKILLS_DIR / relpath).read_text(encoding="utf-8")
+    assert not has_unclosed_fence(body), (
+        f"{relpath} ends inside a fenced block — every line after the stray "
+        f"fence is invisible to the dispatch detector"
     )
 
 
