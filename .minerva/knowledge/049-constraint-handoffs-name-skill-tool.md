@@ -31,3 +31,4 @@ unit 046's followups.md.
 - [[007-constraint-skills-must-call-tools-not-prose]] — builds on
 - [[031-decision-phase-handoff-rides-observable-intake]] — builds on
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
+- [[050-constraint-agent-dispatch-pins-execution-mode]] — see also

@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 049 -->
+<!-- index-watermark: 050 -->
 
 ## Decisions
 
@@ -58,3 +58,4 @@
 - [[037-constraint-fence-scans-import-fence-re]] — fence-aware scans import the single-sourced FENCE_RE grammar (or a parser built on it), whatever the corpus
 - [[047-constraint-skill-description-house-style]] — descriptions lead with ambient triggers, invocation clause last, ≤1024 chars
 - [[049-constraint-handoffs-name-skill-tool]] — handoffs invoke the target via the Skill tool with argument, never bare prose
+- [[050-constraint-agent-dispatch-pins-execution-mode]] — dispatch instructions pin `run_in_background: false`; the Agent tool backgrounds by default and strands the run

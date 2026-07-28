@@ -1,7 +1,7 @@
 # Proposal: pin-agent-dispatch-sync
 
 **Date**: 2026-07-27
-**Status**: Draft
+**Status**: Shipped (2026-07-27)
 
 ## Goal
 Stop minerva orchestrator runs from parking mid-lifecycle at their subagent gates. Every place in minerva skill text that instructs spawning a subagent via the `Agent` tool must pin the execution mode — `run_in_background: false` — alongside the `subagent_type` / `model` pins it already carries, and a new enumerating test must fail any future dispatch site that omits it.
@@ -45,11 +45,15 @@ Site 1 carries the reason, stated once where the panel mechanism lives: the pane
 An enumerating test in the mould of `test_skill_contracts.py` / `test_skill_budget.py`. Both reviewers independently showed that the two obvious heuristics fail in opposite directions — matching `subagent` false-positives on frontmatter descriptions and prose framing; matching the literal `` `Agent` tool `` misses site 4, which names no tool. The detector is therefore **conjunctive**. A markdown block counts as a dispatch instruction iff it contains **both**:
 
 - a dispatch verb (`spawn` / `dispatch` / `launch` / `invoke` / `create`, any case) — deliberately wider than the phrasings in the corpus today, since `launch` is the `Agent` tool's own canonical verb and a future author is at least as likely to reach for it, **and**
-- a dispatch token — a `` `Agent` `` tool reference **or** `subagent_type` **or** `model: sonnet` / `model: "sonnet"`.
+- a dispatch token — an `Agent`-tool reference **or** `subagent_type` **or** `model: sonnet` / `model: "sonnet"`. Matching is case-insensitive and tolerant of how the markdown falls (`` `Agent` tool ``, `` `Agent tool` ``, or unbackticked), because one site rests on this token alone and a cosmetic reformat there must not drop it out of detection.
 
-Every block that matches must also contain `run_in_background`. Blocks are fence-stripped before matching, importing `FENCE_RE` from `knowledge_spans` rather than re-deriving the grammar ([[023]], [[037]]).
+Every matching line must also contain `run_in_background`. Detection is line-based: this corpus writes one paragraph or list item per line, so a line is the natural instruction unit and gives the tightest scope for the pin check.
+
+Fenced regions are excluded first, built on `knowledge_spans`'s `FENCE_RE` rather than a re-derived grammar ([[023]], [[037]]). Fences are **paired**, not toggled: a fence closes only on the same character at the same-or-greater run length, so a `~~~` line inside a ``` block is content rather than a close. A bare toggle fails silently in the direction that matters — content wrongly treated as fenced is content the detector never inspects — so the same scan also reports a file that *ends* inside a fence, and a corpus-wide test rejects one.
 
 Verified against the current corpus, this detector selects exactly the five sites above and excludes every near-miss: `round-table/SKILL.md`'s description and body framing (verb, no token), `review/SKILL.md`'s description (no verb, no token), `propose-ship-auto/SKILL.md:8` (delegates panel mechanics to round-table rather than dispatching), and the budget statements in both orchestrators' `governance.md` ("6 subagent dispatches max", "dispatches **one** subagent"). To keep the detector honest as the corpus grows, the test also **pins the detected-site set** — a new dispatch site is a deliberate update, not a silent pass.
+
+Beyond the corpus checks, synthetic unit tests pin both halves of the conjunction independently (recall over seven dispatch phrasings; precision over verb-without-token, token-without-verb, and the `Skill`-tool handoff form that must never be caught) plus the fence-pairing and unclosed-fence semantics — so a future edit to either regex reds a test rather than silently narrowing the guarantee.
 
 The module is appended to the CI enumerated pytest list, without which it is invisible to CI ([[035-constraint-ci-test-enumeration-explicit]]).
 

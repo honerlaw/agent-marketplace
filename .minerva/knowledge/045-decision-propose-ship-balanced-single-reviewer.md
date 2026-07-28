@@ -37,3 +37,4 @@ The chosen path is a standalone clone of `-quick`, consistent with the project's
 - [[033-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[014-decision-per-decision-skip-over-sizing-gate]] — see also
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
+- [[050-constraint-agent-dispatch-pins-execution-mode]] — see also

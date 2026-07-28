@@ -24,3 +24,4 @@ When a skill requires the model to change execution context (working directory, 
 - [[031-decision-phase-handoff-rides-observable-intake]] — see also
 - [[044-decision-worktree-addressing-no-enterworktree]] — see also
 - [[049-constraint-handoffs-name-skill-tool]] — see also
+- [[050-constraint-agent-dispatch-pins-execution-mode]] — see also

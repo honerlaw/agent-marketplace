@@ -21,3 +21,4 @@ Any fence-aware scan in this repo — over **any** corpus: wiki entries, skill p
 - [[021-constraint-skill-wraps-script-via-importable-api]] — see also
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — see also
 - [[028-bug-knowledge-edits-not-fence-aware]] — see also
+- [[050-constraint-agent-dispatch-pins-execution-mode]] — see also
