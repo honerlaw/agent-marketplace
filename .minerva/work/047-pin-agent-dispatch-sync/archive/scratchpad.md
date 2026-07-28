@@ -15,3 +15,4 @@
 - **F7 [low] IGNORE** — `docs/superpowers/specs/` and prior `.minerva/work/*/proposal.md` describe the old mechanism; those are frozen point-in-time records, not living docs.
 - **F8 [informational] → promote** — knowledge entry `045-decision-propose-ship-balanced-single-reviewer.md` states the reviewer dispatch params without the pin; cross-link it when promoting 047.
 - [decided] whole-proposal soundness: sound (solo gate) — skill prose + one test, no public interface, contract anchors untouched, aligns with [[007]]/[[030]]/[[049]]
+- [synthesis] no-op (below threshold: 1 un-synthesized entry (050), link_rot empty; overview watermark stays 049)
