@@ -2,7 +2,7 @@
 
 Read each phase's section before executing that phase. These mirror `minerva:propose-ship-auto`'s and `minerva:propose-ship-quick`'s phases 1-to-1. The decision rule is `references/verify-protocol.md`: every gate is **main-model-decided**, and at the **reviewer gates** (scope check, approach selection, completion-verification, plus mid-work divergence / replan-acceptance / replan-vs-FIX when triggered) the main model dispatches **one** fresh-context reviewer after deciding and arbitrates inline. No phase is removed.
 
-Each reviewer gate dispatches with a gate-specific **ARTIFACT + CONTEXT** (below), `subagent_type: general-purpose`, `model: sonnet`, at most **one** dispatch per gate (no re-dispatch). CONTEXT is bounded to the run's proposal/diff, `CLAUDE.md`/`AGENTS.md`, and `.minerva/knowledge/` entries already cited this session — never a fresh corpus scan.
+Each reviewer gate dispatches with a gate-specific **ARTIFACT + CONTEXT** (below), `subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false` (the critique is arbitrated inline in the same turn), at most **one** dispatch per gate (no re-dispatch). CONTEXT is bounded to the run's proposal/diff, `CLAUDE.md`/`AGENTS.md`, and `.minerva/knowledge/` entries already cited this session — never a fresh corpus scan.
 
 ## Phase 1 — Propose (inline)
 
