@@ -48,8 +48,13 @@ from knowledge_spans import FENCE_RE
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 
-# A dispatch verb: the imperative that actually spawns an agent.
-DISPATCH_VERB_RE = re.compile(r"\b(spawn|dispatch)", re.IGNORECASE)
+# A dispatch verb: the imperative that actually spawns an agent. The list is
+# deliberately wider than the phrasings currently in the corpus (which only use
+# spawn/dispatch) — "launch" is the Agent tool's own canonical verb, so a future
+# author is at least as likely to reach for it. Widening costs no precision
+# here: a verb only matters when a dispatch-parameter token appears on the same
+# line, and `test_detector_excludes_prose` guards that boundary.
+DISPATCH_VERB_RE = re.compile(r"\b(spawn|dispatch|launch|invoke|create)", re.IGNORECASE)
 
 # A dispatch-parameter token: evidence the line is configuring a real call
 # rather than describing one. Any of the three is enough.

@@ -44,7 +44,7 @@ Site 1 carries the reason, stated once where the panel mechanism lives: the pane
 ### 2. Mechanize it — `tests/test_skill_dispatch.py`
 An enumerating test in the mould of `test_skill_contracts.py` / `test_skill_budget.py`. Both reviewers independently showed that the two obvious heuristics fail in opposite directions — matching `subagent` false-positives on frontmatter descriptions and prose framing; matching the literal `` `Agent` tool `` misses site 4, which names no tool. The detector is therefore **conjunctive**. A markdown block counts as a dispatch instruction iff it contains **both**:
 
-- a dispatch verb (`spawn` / `dispatch`, any case), **and**
+- a dispatch verb (`spawn` / `dispatch` / `launch` / `invoke` / `create`, any case) — deliberately wider than the phrasings in the corpus today, since `launch` is the `Agent` tool's own canonical verb and a future author is at least as likely to reach for it, **and**
 - a dispatch token — a `` `Agent` `` tool reference **or** `subagent_type` **or** `model: sonnet` / `model: "sonnet"`.
 
 Every block that matches must also contain `run_in_background`. Blocks are fence-stripped before matching, importing `FENCE_RE` from `knowledge_spans` rather than re-deriving the grammar ([[023]], [[037]]).
