@@ -47,7 +47,7 @@ Execute the phases in order. The full inline protocols — panel artifacts, vote
    - **4.5 Synthesis (delegated, self-gating)** — invoke `minerva:synthesize` via the `Skill` tool with its auto-mode instruction (auto-accept the write gate only; the Step-2 self-gate is unchanged). Log the `[synthesis]` outcome line; if it wrote, ship must stage `.minerva/knowledge/overview.md` and note the refresh in the PR body.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
 6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never panel-voted.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12, delay sized per ship); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

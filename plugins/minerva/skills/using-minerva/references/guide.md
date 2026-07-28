@@ -45,7 +45,7 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — you decide per-item whether to keep them in `followups.md`, seed a new proposal, or discard.
 
 **"OK, ship it — commit, PR, watch CI, and merge if it goes green."**
-→ `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, schedules a ScheduleWakeup-based CI watch (~270s intervals, no blocking), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
+→ `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, watches CI without blocking (the wait is sized from the repo's own recent run durations — a bounded background watcher resumes when checks settle, with a long `ScheduleWakeup` armed underneath), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
 
 **"PR is merged — let's clean up."**
 → `minerva:cleanup`. Removes worktrees whose branches have been merged into the default branch, and prunes the local branches. Idempotent and conservative — never touches unmerged work without explicit override.

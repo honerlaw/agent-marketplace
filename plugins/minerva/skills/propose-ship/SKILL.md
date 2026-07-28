@@ -71,9 +71,9 @@ After `minerva:ship` returns, check PR merge state and decide what to do with th
 1. Read the PR state for the work-unit branch: `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
 2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes` via the `Skill` tool. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
 3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. Schedule a wake-up:
-   - `ScheduleWakeup` with `delaySeconds: 300` and a `prompt` of `minerva:propose-ship --cleanup-only <NNN-slug> --retry=N` so the next firing re-enters this gate.
-   - Cap the retries at **12** (~1 hour total). Carry the retry count in the wake-up `prompt`.
-   - On cap exhaustion, surface "auto-merge still pending after ~1 hour — run `minerva:cleanup <NNN-slug>` manually once the PR merges" and exit.
+   - `ScheduleWakeup` with `delaySeconds` sized per ship's watch policy and a `prompt` of `minerva:propose-ship --cleanup-only <NNN-slug> --retry=N` so the next firing re-enters this gate.
+   - Cap the retries at **12**. Carry the retry count in the wake-up `prompt`.
+   - On cap exhaustion, surface "auto-merge still pending — run `minerva:cleanup <NNN-slug>` manually once the PR merges" and exit.
 4. **`OPEN`, auto-merge declined / not enabled** → no automatic merge is coming. Surface "merge the PR manually when ready, then run `minerva:cleanup <NNN-slug>`" and exit. Do **not** schedule a wake-up — the gate has no signal to wait on.
 5. **`CLOSED` (not merged)** → the PR was closed without merging. Surface "PR closed without merging — worktree left in place at `.minerva/worktrees/<NNN-slug>/` for manual review. Run `minerva:cleanup <NNN-slug>` if you want to discard it." Exit.
 6. **No PR found** → ship must have bailed before opening one. Skip cleanup and exit.

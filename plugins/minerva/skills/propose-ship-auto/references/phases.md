@@ -129,7 +129,7 @@ no-ops.
 
 **Log the outcome** (for observability) with one line under the same
 `## Panel decisions YYYY-MM-DD` header used elsewhere, with a distinct `[synthesis]`
-prefix:
+prefix: Phase 4 has already archived the scratchpad, so this line goes to `archive/scratchpad.md` — the live `scratchpad.md` is by then the one-line post-promote marker that downstream skills rely on being empty (knowledge 003), and must stay that way.
 
 - wrote → `[synthesis] refreshed overview.md (watermark NNN→MMM; K entries synthesized)`
 - no-op → `[synthesis] no-op (K un-synthesized below threshold / overview current)`
@@ -163,7 +163,7 @@ Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
 2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes` via the `Skill` tool. Report and exit.
-3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `delaySeconds: 300`, `prompt: minerva:propose-ship-auto --cleanup-only <NNN-slug> --retry=N`. Cap retries at 12. On exhaustion, surface manual instructions.
+3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-auto --cleanup-only <NNN-slug> --retry=N`, sizing `delaySeconds` as `minerva:ship`'s watch policy does — roughly the expected remaining CI time for this repo (`gh run list`), clamped `[60, 3600]`; 600 when there is no history. Auto-merge lands within seconds of checks going green, so the wait *is* the CI wait; a fixed constant is wrong at both ends of the range. Cap retries at 12. On exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.
 6. **No PR found** → exit silently (ship must have bailed before opening one — already reported above).

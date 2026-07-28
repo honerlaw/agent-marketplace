@@ -79,16 +79,43 @@ If nothing is uncommitted, skip this step entirely.
 5. **Hard gate #2 (PR title + body).** Show the proposed title and body block and prompt the user to redirect or accept. The user can edit either in place. Routine work can accept with one word ("ok"); bigger changes get a real preview.
 6. `gh pr create --title "<title>" --body "$(cat <<'EOF' ... EOF)"`. Capture the returned PR URL.
 
-## CI watch & auto-fix loop (ScheduleWakeup polling)
+## CI watch & auto-fix loop (tracked watcher + durable fallback)
 
 Bounded at **3 fix iterations**. The loop does **not** block the agent — between checks, the session can do other work or end and be re-entered.
 
-### Polling cadence
+### Sizing the wait
+
+A wait is sized from what is actually being waited on, never from a constant. Measured CI durations differ by two orders of magnitude across repos this skill runs in (~10-26s in a docs/tests-only repo; ~1000s for a full CI suite), so any fixed cadence idles for minutes on one and burns wake-ups on the other.
 
 1. Immediately after `gh pr create` (or detecting an existing OPEN PR), run `gh pr checks --json name,state,conclusion` once to get the initial state.
-2. If any check is still `IN_PROGRESS` / `QUEUED` / `PENDING`, schedule the next check via `ScheduleWakeup` with `delaySeconds: 270` (stays under the 5-minute prompt-cache TTL — see ScheduleWakeup docs). The wake-up `prompt` re-invokes `minerva:ship` for the same work unit.
-3. Each subsequent wake re-runs `gh pr checks --json …` once. **Do not** stack multiple sleeps inside a single session — one schedule per wake-up.
-4. If all checks have `state: COMPLETED` → proceed to result handling.
+2. If any check is still `IN_PROGRESS` / `QUEUED` / `PENDING`, estimate how long this repo's CI actually takes:
+
+   ```
+   gh run list --workflow <name> --limit 10 --json createdAt,updatedAt,conclusion
+   ```
+
+   Take the **maximum** elapsed time among recent completed runs. A max over a small window, not a percentile — observed per-repo variance is tight, so percentile machinery is not earned. No history (new workflow) → treat the estimate as 600s.
+
+### Waiting
+
+Run both of the following. They are complements, not alternatives.
+
+3. **Tracked watcher (resume-when-settled).** Start a backgrounded `until` loop via `Bash` with `run_in_background: true` that re-checks every 30s and exits once nothing is pending:
+
+   ```bash
+   # MAX_POLLS = min(120, ceil(2 * estimate_seconds / 30)) — substitute the number.
+   for _ in $(seq MAX_POLLS); do
+     gh pr checks <pr> --json bucket --jq 'all(.[]; .bucket != "pending")' | grep -qx true && break
+     sleep 30
+   done
+   ```
+
+   The harness re-invokes you when it exits, so the run resumes when CI genuinely settles rather than at an arbitrary poll boundary. The loop is **bounded on purpose** — `2 ×` the estimate, hard-capped at 120 polls (~60 min) — so a check wedged in `pending` cannot leave a process looping forever; write the bound into the command rather than relying on the watcher being killed. Poll no faster than 30s: `gh` is a remote API with rate limits.
+
+   This does *not* make CI itself harness-tracked; only the wrapper process is. The benefit is resume latency, nothing more.
+4. **Durable fallback (always armed).** Independently schedule one `ScheduleWakeup` at `max(1200, estimate)`, clamped to `[60, 3600]`, whose `prompt` re-invokes `minerva:ship` for the same work unit. Arm it *even when* step 3 is running: it is what survives a watcher that dies, a wedged check, or a session that ends — the property this section's opening sentence promises. Long interval by design, so it stays a safety net rather than a poll.
+5. Whichever path resumes you, re-run `gh pr checks --json …` **once**. **Do not** stack sleeps or arm a second watcher for the same wait.
+6. If all checks have `state: COMPLETED` → proceed to result handling.
 
 ### Result handling per fix iteration
 
@@ -116,7 +143,7 @@ Once checks are no longer pending:
    - Fix iterations hit the cap (3).
    - The fix itself introduces git conflicts that can't be resolved cleanly.
    - The failure family is `other` or a non-trivial `test`/`build`.
-6. **Commit & push.** Create a **new commit** (never `--amend` — the previous push already published it). Push to the PR branch. Schedule the next watch wake-up (delaySeconds: 270) and exit this turn. The next wake handles re-checking.
+6. **Commit & push.** Create a **new commit** (never `--amend` — the previous push already published it). Push to the PR branch. Re-enter the watch per **Waiting** above (re-size the estimate — a fix push starts a fresh run) and exit this turn. Whichever path resumes you handles the re-check.
 
 ### Track iteration count across wakes
 
