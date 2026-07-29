@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 049 -->
+<!-- synthesis-watermark: 051 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -165,6 +165,26 @@ a full ladder — human gates · main model · one reviewer · panels. And the
 project is honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[013-decision-behavioral-evals-provisional]]).
+
+Running that ladder in anger then exposed a defect class *below* the level of any policy:
+skill text can name the right tool and still get the control flow wrong by leaving a
+default unstated. Dispatch instructions pinned `subagent_type` and `model` but not the
+execution mode, and the `Agent` tool backgrounds by default — so roughly half of all
+observed dispatches returned a handle instead of a verdict, stranding protocols that
+count votes in the same turn, and orchestrator runs visibly parked mid-lifecycle. The rule
+that closed it generalizes the handoff constraints one level down: **an instruction must
+pin every argument the next protocol step depends on**, and it is enforced by an
+enumerating test rather than recorded and hoped for
+([[050-constraint-agent-dispatch-pins-execution-mode]]). The same investigation found the
+lifecycle's *waits* built on unexamined constants, yielding the corpus's second `pattern`
+entry: **match a wait's shape to what is actually being awaited** — CI completion is
+duration-shaped and varies by two orders of magnitude across repos, while auto-merge
+landing is queue-shaped and rightly keeps a constant — and **prefer the tool's own
+blocking primitive** (`gh pr checks --watch`) over any interval you would have to invent,
+since a hand-rolled poll loop must design around a bound, a rate limit, and an empty-set
+edge case that the primitive simply does not have
+([[051-pattern-wait-shape-matches-what-is-awaited]]). Both entries share the older lesson's
+grain: a convention that lives only in prose gets re-improvised at runtime.
 
 ## Git worktrees and promote/scratchpad mechanics
 

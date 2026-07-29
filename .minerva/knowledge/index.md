@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 050 -->
+<!-- index-watermark: 051 -->
 
 ## Decisions
 
@@ -36,6 +36,7 @@
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — rejected alternatives recur at runtime; prohibit in skill text, test-anchored
 - [[032-pattern-plugin-discovery-mostly-auto-crawl]] — plugin discoverability is mostly auto-crawl once public + licensed + topic-tagged; manual directories are web-form submissions, not source-vendor lists
 - [[048-pattern-catalog-semantic-drift-recurs]] — catalog surfaces drift semantically even during active scrubbing; sweep all four
+- [[051-pattern-wait-shape-matches-what-is-awaited]] — size a wait to what's awaited (CI-shaped vs queue-shaped); prefer the CLI's own blocking primitive over a poll loop
 
 ## Constraints
 

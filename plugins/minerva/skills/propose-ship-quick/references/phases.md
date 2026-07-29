@@ -73,7 +73,7 @@ Promote just added knowledge entries, so there is now un-synthesized scope. **Al
 
 > "You are running inside `minerva:propose-ship-quick`. When `minerva:synthesize` reaches its Step-4 write-confirmation gate, accept the drafted `overview.md` without prompting. Its Step-2 'decide IF to (re)synthesize' self-gate is **unchanged** — if there is too little new scope, it correctly no-ops and writes nothing."
 
-This is **delegation, not a decision** — the "decide IF" judgment lives inside `minerva:synthesize`. **Log the outcome** with one line under `## Quick decisions YYYY-MM-DD`, `[synthesis]` prefix (wrote → `refreshed overview.md (watermark NNN→MMM; K entries)`; no-op → `no-op (below threshold / current)`). If it wrote, Phase 6 must **name `.minerva/knowledge/overview.md` among the paths to stage** and note "overview.md refreshed (advisory navigation)" in the PR body. Continue to Phase 5.
+This is **delegation, not a decision** — the "decide IF" judgment lives inside `minerva:synthesize`. **Log the outcome** with one line under `## Quick decisions YYYY-MM-DD`, `[synthesis]` prefix (wrote → `refreshed overview.md (watermark NNN→MMM; K entries)`; no-op → `no-op (below threshold / current)`). Phase 4 has already archived the scratchpad, so this line goes to `archive/scratchpad.md` — the live `scratchpad.md` is by then the one-line post-promote marker that downstream skills rely on being empty (knowledge 003), and must stay that way. If it wrote, Phase 6 must **name `.minerva/knowledge/overview.md` among the paths to stage** and note "overview.md refreshed (advisory navigation)" in the PR body. Continue to Phase 5.
 
 ## Phase 5 — Ship gate
 
@@ -93,7 +93,7 @@ Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
 2. **`MERGED`** → invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`. Report and exit.
-3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `delaySeconds: 300`, `prompt: minerva:propose-ship-quick --cleanup-only <NNN-slug> --retry=N`. Cap retries at 12; on exhaustion, surface manual instructions.
+3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-quick --cleanup-only <NNN-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12; on exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule.
 5. **`CLOSED` (not merged)** → leave the worktree; surface manual instructions.
 6. **No PR found** → exit silently (ship bailed before opening one — already reported).

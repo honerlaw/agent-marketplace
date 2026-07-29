@@ -1,0 +1,25 @@
+# Scratchpad: 048-right-size-lifecycle-waits
+
+## Balanced decisions 2026-07-28
+- [reviewed — folded] scope check: single unit — Skeptic `accept` (after two prior dispatches died on infrastructure without a verdict; the completed one was re-briefed with all evidence inline so it needed no repo investigation). Folded two mediums: surfaces 2/4 must describe the *actual* hybrid rather than a re-numbered constant, and `propose-ship/SKILL.md`'s minimum-viable path + named fallback trim must be stated up front rather than discovered mid-work.
+- [reviewed — folded] approach: A′ — Skeptic `revise` on the original A. Folded: bound the watcher loop and arm a long `ScheduleWakeup` fallback in parallel (the docs' own prescription, and what preserves ship's "session can end" property against unverified detached-process durability); orchestrators keep `ScheduleWakeup` because 3 of 4 SKILL.md files are byte-crunched; dropped the overclaim that a background loop makes CI harness-tracked (its real benefit is resume latency); simplified the estimate to max-of-last-10 rather than percentile machinery; dropped candidate C, which Monitor's own docs rule out for single-notification waits.
+- [decided] empirical resolution of the reviewer's HIGH finding on the 600 000 ms Bash cap (solo): launched a detached probe; it completed 780s and remained alive, so an OS-level detached child is not bounded by that documented max. Caveat recorded in Open Questions — the probe used `nohup`, not the harness's `run_in_background` mode, so the design bounds the loop explicitly instead of relying on either answer.
+- [reviewed — folded] completion verification: Verifier `accept` on all 8 criteria (re-ran the suite, swept every SKILL.md budget, checked for splice damage). Folded its one nit — prose said "until loop" over a `for`-loop snippet.
+- [reviewed — folded] replan acceptance: Skeptic `revise` → folded both gaps. Stated that the 1800s fallback is a re-arming keep-alive rather than a budget (so long-CI repos are not cut off), and **exercised** `gh pr checks --watch --fail-fast` rather than assuming it — gh 2.92.0 accepts both flags, returns immediately on a settled PR, and runs detached. Not yet observed blocking through a live pending run; this unit's own ship phase is that test.
+- [decided] replan-vs-FIX (reviewer gate, triggered): replan. Two review findings invalidated a success criterion, which is load-bearing by definition — see `replan.md`.
+- [decided] whole-proposal soundness: sound (solo gate)
+
+## Review triage 2026-07-28
+Local-diff reviewer returned 2 high, 6 medium, 6 low. Three prior reviewer dispatches died on API/stall errors; the one that completed was given the diff inline so it needed ~4 tool calls.
+
+- **F1 [high] FIX (inherited)** — `gh pr checks --json name,state,conclusion` hard-errors: `conclusion` is not a field. Verified directly (`Unknown JSON field: "conclusion"`). Pre-existing, not introduced here, but inside the rewritten section.
+- **F2 [high] → replan** — `MAX_POLLS = min(120, ceil(2 × estimate/30))` had no floor: at a 10s estimate it computed to a single immediate poll, so the watcher exited instantly and fell through to the 1200s fallback — **worse than the 270s constant this unit removes**. Triggered the pivot to `gh pr checks --watch`.
+- **F3 [medium] FIX (inherited)** — `state: COMPLETED` is never emitted; `state` is `SUCCESS`/`FAILURE`. Vocabulary unified on `bucket == "pending"`.
+- **F4 [medium] FIX** — the armed fallback was never neutralized, so a late wake-up on already-merged work would route into "create a new PR". Push & open PR now exits on a merged PR with no new commits.
+- **F5 [medium] FIX** — the wake-up prompt was prose, dropping the `--watch-iteration=N` the 3-iteration bound needs across a resume. Now pinned. (This is the 007/049 failure class inside a unit descended from it.)
+- **F6 [medium] FIX** — "sized per ship's watch policy" was dangling in `propose-ship/SKILL.md`: no clamp, no default, and its Phase 7 runs *after* ship has exited. Reverted.
+- **F7 [medium] FIX** — sizing the merge poll by CI time made the retry cap ~12 min instead of ~1 hour. Constant restored with rationale.
+- **F8 [medium] FIX** — `plugins/minerva/README.md` was stale and had been missed; it is a fifth prose surface describing the mechanism.
+- **F9-F13 [low] resolved by the pivot** — the `--workflow` placeholder, the `updatedAt − createdAt` undershoot, the dead `[60,` floor, the backgrounded-`sleep` question, and the zero-checks edge all disappeared with the hand-rolled loop.
+- **F14 [low] IGNORE** — mild tension between balanced's sonnet-pinned reviewers and review's now-unpinned one. Deliberate: a code review's yield scales with tier, a structured vote's does not. — prose + policy text only, no code paths, worktree-isolated; contract anchors and the 050 dispatch-site set both preserved by construction.
+- [synthesis] refreshed overview.md (watermark 049→051; 2 entries, folded into the lifecycle theme)
