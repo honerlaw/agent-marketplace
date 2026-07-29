@@ -22,3 +22,4 @@ Local-diff reviewer returned 2 high, 6 medium, 6 low. Three prior reviewer dispa
 - **F8 [medium] FIX** — `plugins/minerva/README.md` was stale and had been missed; it is a fifth prose surface describing the mechanism.
 - **F9-F13 [low] resolved by the pivot** — the `--workflow` placeholder, the `updatedAt − createdAt` undershoot, the dead `[60,` floor, the backgrounded-`sleep` question, and the zero-checks edge all disappeared with the hand-rolled loop.
 - **F14 [low] IGNORE** — mild tension between balanced's sonnet-pinned reviewers and review's now-unpinned one. Deliberate: a code review's yield scales with tier, a structured vote's does not. — prose + policy text only, no code paths, worktree-isolated; contract anchors and the 050 dispatch-site set both preserved by construction.
+- [synthesis] refreshed overview.md (watermark 049→051; 2 entries, folded into the lifecycle theme)
