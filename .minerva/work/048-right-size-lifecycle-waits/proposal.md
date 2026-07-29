@@ -1,7 +1,7 @@
 # Proposal: right-size-lifecycle-waits
 
 **Date**: 2026-07-28
-**Status**: Draft
+**Status**: Shipped (2026-07-28)
 
 ## Goal
 Close unit 047's three followups. The substantial one: minerva's lifecycle skills wait on external state with hardcoded polling constants (`delaySeconds: 270` for CI, `300` for PR merge) whose stated justification no longer holds. Give each wait a stated, defensible policy, and where possible resume when the watched state actually settles rather than at an arbitrary poll boundary. Plus the two one-line corrections 047 recorded.
@@ -23,26 +23,26 @@ A fixed 270s idles ~4.5 minutes on a repo whose CI finishes in 18 seconds, and b
 Each `ScheduleWakeup` also **ends the turn** — the "it stopped and says it's waiting" symptom unit 047 fixed at the panel gates and explicitly did not address here.
 
 ## Approach
-Approach A′ — the recommended A, materially revised after both propose-phase reviewer gates. One principle, applied at two fidelities according to what each site's problem shape and byte budget can carry.
+*(Rewritten at promote to match what shipped. The run began on "Approach A′" — estimate CI duration from `gh run list` and drive a bounded hand-rolled poll loop — and the Phase 3 review invalidated it; see `replan.md` for the pivot and its evidence.)*
 
-**The principle:** size a wait from what is actually being waited on — for CI, this repo's own recent run durations — rather than from a constant; and prefer a mechanism that resumes when the state settles over one that resumes on a timer.
+**The principle as it ended up:** match the *shape* of the wait to what is actually being awaited, and prefer the tool's own blocking primitive over any interval you would have to invent.
 
-### 1. `ship/references/protocol.md` — the full policy (file is uncapped)
-1. Check once immediately after the PR is opened.
-2. If anything is pending, size the wait: take the **maximum** duration among the last ~10 completed runs of the same workflow (`gh run list --workflow <name> --limit 10 --json createdAt,updatedAt`). A max over a small window, not a percentile — the measured per-repo variance is tight (10-26s; 1005-1034s), so the extra machinery a percentile would need is not earned.
-3. **Primary — a bounded background watcher.** Start a backgrounded `until` loop (Bash `run_in_background: true`) that re-checks every 30s and exits when no check is pending. The harness re-invokes on exit, so the run resumes when CI actually settles. Bound it explicitly: stop after `2 ×` the estimate, hard-capped at ~60 minutes.
-4. **Always-armed durable fallback.** Independently arm one `ScheduleWakeup` at `max(1200, estimate)` clamped to `[60, 3600]`. This is not an either/or with step 3 — the `ScheduleWakeup` docs prescribe exactly this ("schedule a long fallback (1200s+) so the loop survives if the work hangs or never notifies"), and it is what preserves ship's documented "the session can do other work or end and be re-entered" property, which a detached process may not.
-5. The 3-iteration auto-fix bound, the bail conditions, and cross-wake iteration tracking are **unchanged**.
-6. The prompt-cache-TTL sentence is deleted, not re-numbered.
+### 1. `ship/references/protocol.md` — no interval is guessed at all
+1. Check once immediately after the PR is opened, with `gh pr checks <pr> --json name,state,bucket`. State vocabulary is `bucket` (`pass`/`fail`/`pending`/`skipping`/`cancel`) throughout — the section previously named a `conclusion` field that does not exist (a hard error) and a `state: COMPLETED` value `gh` never emits. Both inherited bugs are fixed.
+2. Nothing pending → straight to result handling.
+3. **Primary wait — `gh`'s own blocking watch.** A detached `gh pr checks <pr> --watch --fail-fast` (Bash `run_in_background: true`) exits exactly when checks settle or the first one fails; the harness re-invokes on exit. This deletes the interval, the bound arithmetic, the rate-limit exposure and the zero-checks edge case in one move — every one of which the hand-rolled loop had to design around, and one of which (a missing `MAX_POLLS` floor) shipped a regression past a reviewer.
+4. **Durable fallback — a re-arming keep-alive.** One `ScheduleWakeup` at 1800s, prompt pinned as `minerva:ship <NNN-slug> --watch-iteration=<N>` so the 3-iteration bound survives a resume. It is *not* a budget: each firing that still finds work pending schedules the next, so a slow-CI repo is never cut off. It exists for a dead watcher, a wedged check, or an ended session.
+5. **Stale-wake-up exit.** A fallback firing after the work already merged now reports "already shipped as #N" and exits, instead of falling into the branch that opens a second PR.
+6. The 3-iteration auto-fix bound, its bail conditions, and cross-wake iteration tracking are **unchanged**.
 
-**What is deliberately not claimed.** A backgrounded loop does not make CI itself harness-tracked — only the wrapper process. Its benefit is *resume latency*, not the elimination of a turn boundary. The reviewer was right that the original framing overclaimed, and the text says the narrower true thing.
+**What is deliberately not claimed.** A detached watcher does not make CI itself harness-tracked — only the watcher process. The benefit is resume latency, nothing more.
 
-### 2. The four orchestrators' Phase 7 — minimal text, same principle
-The merge poll is a trivial boolean check, not a branching fix loop, and three of the four `SKILL.md` files are near the 9216-byte cap (`propose-ship` **10 bytes free**, `propose-ship-balanced` 228, `propose-ship-quick` 320, `propose-ship-auto` 1145). So the mechanism stays `ScheduleWakeup`; only the sizing changes.
+### 2. The orchestrators' Phase 7 — the constant stays, the rationale arrives
+Sizing this wait by CI duration was drafted and then **withdrawn**: when the cleanup gate runs, CI is already green and auto-merge is queued behind a required review or a merge queue, so "remaining CI time" collapses toward zero and the 12-retry cap degrades from a ~1 hour bound to ~12 minutes. A constant is the correct answer for a wait that is not proportional to anything measurable.
 
-- The three orchestrators with a `references/phases.md` (uncapped) carry the sizing rule there: size the delay as ship's watch policy does — roughly the expected remaining CI duration, clamped `[60, 3600]` — retry cap 12 unchanged.
-- Their `SKILL.md` one-liners get an equal-or-shorter edit pointing at that rule rather than restating a constant.
-- **`propose-ship/SKILL.md` has no `references/` directory**, so its minimum-viable change is a byte-neutral-or-shorter edit inline. Named fallback if the principled phrasing will not fit in 10 bytes: trim the parenthetical `(~1 hour total)`, which the adjacent retry-cap sentence already implies.
+- The three orchestrators with `references/phases.md` keep `delaySeconds: 300` and gain the missing rationale there.
+- Their `SKILL.md` one-liners are unchanged.
+- **`propose-ship/SKILL.md` is untouched.** It has no `references/` directory and 10 bytes of headroom against the 9216-byte cap, so there was nowhere to put the rationale; the terse pointer tried instead was dangling, since its Phase 7 runs after `minerva:ship` has exited. The resulting asymmetry with its three siblings is recorded in `followups.md` as a progressive-disclosure extraction.
 
 ### 3. Keep the prose surfaces honest
 `ship/SKILL.md` (description + body) and `using-minerva/references/guide.md` both describe the mechanism as "ScheduleWakeup polling / ~270s intervals". Because §1 lands a **hybrid**, these must be rewritten to describe the hybrid — not merely have a number swapped. Leaving them as a re-numbered constant would reproduce the doc/reality mismatch this unit exists to remove. `ship/SKILL.md`'s description stays ≤1024 chars and in house style ([[047]]).
@@ -52,7 +52,8 @@ The merge poll is a trivial boolean check, not a branching fix loop, and three o
 - **`review/references/protocol.md`** — its local-diff dispatch pins no agent parameters. Pin `subagent_type: general-purpose`, and **deliberately leave the model unpinned** so it inherits the session tier: a code-quality review's value scales with model capability, unlike the structured accept/revise vote `round-table` pins to sonnet. The site must stay detected by `tests/test_skill_dispatch.py` ([[050]]).
 
 ### Rejected alternatives
-- **B — keep `ScheduleWakeup`, only right-size it.** Simplest, and the reviewer made a real case that the tool docs bless it for exactly this "external work the harness cannot track" exception. A′ keeps B's mechanism everywhere the budget is tight and *adds* the watcher only where text is free and the wait is long — so B is not rejected so much as absorbed.
+- **A′ — estimate CI duration, drive a bounded hand-rolled poll loop.** The plan this unit started with; withdrawn mid-run. Its bound had no floor, so a fast repo got a single immediate poll and then fell through to the long fallback — worse than the constant being removed. Superseded by `gh pr checks --watch`, which needs no estimate at all. Full reasoning in `replan.md`.
+- **B — keep `ScheduleWakeup`, only right-size it.** Not rejected so much as *vindicated at one of the two sites*: the merge poll ended up exactly here, keeping its constant with a stated reason.
 - **C — `Monitor`-based watch.** Ruled out by Monitor's own documentation: for a single "tell me when it's done" notification it directs you to Bash `run_in_background` instead. Monitor is for per-occurrence streams.
 
 ## Success criteria

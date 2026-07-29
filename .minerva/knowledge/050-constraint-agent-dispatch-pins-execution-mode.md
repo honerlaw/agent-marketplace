@@ -26,3 +26,4 @@ Any skill text that **instructs** a subagent dispatch must pin `run_in_backgroun
 - [[030-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[037-constraint-fence-scans-import-fence-re]] — see also
 - [[045-decision-propose-ship-balanced-single-reviewer]] — see also
+- [[051-pattern-wait-shape-matches-what-is-awaited]] — see also

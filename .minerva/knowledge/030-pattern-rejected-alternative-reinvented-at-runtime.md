@@ -27,3 +27,4 @@ A knowledge entry recording a rejected alternative informs humans and planning-t
 - [[045-decision-propose-ship-balanced-single-reviewer]] — see also
 - [[049-constraint-handoffs-name-skill-tool]] — see also
 - [[050-constraint-agent-dispatch-pins-execution-mode]] — see also
+- [[051-pattern-wait-shape-matches-what-is-awaited]] — see also

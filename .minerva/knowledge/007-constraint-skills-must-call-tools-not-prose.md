@@ -25,3 +25,4 @@ When a skill requires the model to change execution context (working directory, 
 - [[044-decision-worktree-addressing-no-enterworktree]] — see also
 - [[049-constraint-handoffs-name-skill-tool]] — see also
 - [[050-constraint-agent-dispatch-pins-execution-mode]] — see also
+- [[051-pattern-wait-shape-matches-what-is-awaited]] — see also
