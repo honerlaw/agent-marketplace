@@ -4,7 +4,9 @@
 **Status**: Draft
 
 ## Goal
-Close unit 047's three followups. The substantial one: minerva's lifecycle skills wait on external state with hardcoded polling constants (`delaySeconds: 270` for CI, `300` for PR merge) whose stated justification no longer holds and whose values are wrong at both ends of the repo-size range. Replace them with a stated, right-sized policy — and, where the byte budget allows the text, resume when the watched state actually settles rather than at an arbitrary poll boundary. Plus the two one-line corrections 047 recorded.
+Close unit 047's three followups. The substantial one: minerva's lifecycle skills wait on external state with hardcoded polling constants (`delaySeconds: 270` for CI, `300` for PR merge) whose stated justification no longer holds. Give each wait a stated, defensible policy, and where possible resume when the watched state actually settles rather than at an arbitrary poll boundary. Plus the two one-line corrections 047 recorded.
+
+**Outcome, stated plainly** (it narrowed during the run — see `replan.md`): the CI watch stops guessing an interval entirely. The **merge poll keeps its 300s constant** — investigation showed sizing that one by CI duration makes it strictly worse — and gains the rationale it was missing. So this unit removes one unjustified constant and *justifies* the other; it does not eliminate both.
 
 ## Why
 `ship/references/protocol.md:89` justifies its cadence as *"stays under the 5-minute prompt-cache TTL — see ScheduleWakeup docs"*. That premise is stale: this session type uses a 1-hour TTL, under which the sentence explains nothing — almost any legal delay satisfies it. So the number is now unjustified rather than merely mis-tuned.
@@ -54,9 +56,9 @@ The merge poll is a trivial boolean check, not a branching fix loop, and three o
 - **C — `Monitor`-based watch.** Ruled out by Monitor's own documentation: for a single "tell me when it's done" notification it directs you to Bash `run_in_background` instead. Monitor is for per-occurrence streams.
 
 ## Success criteria
-1. `ship/references/protocol.md`'s CI-watch section specifies: the immediate first check; the `gh run list` max-of-last-10 estimate; the bounded background watcher; the always-armed `ScheduleWakeup` fallback at `max(1200, estimate)` clamped `[60, 3600]`; and contains **no** reference to a prompt-cache TTL.
+1. *(amended by `replan.md` 2026-07-28)* `ship/references/protocol.md`'s CI-watch section specifies: the immediate first check; a detached `gh pr checks <pr> --watch --fail-fast` as the primary wait; an always-armed 1800s `ScheduleWakeup` whose prompt is pinned including `--watch-iteration=<N>`; `bucket`-based check-state vocabulary throughout; and contains **no** reference to a prompt-cache TTL.
 2. The auto-fix loop's 3-iteration bound, bail conditions, and cross-wake iteration tracking are textually unchanged.
-3. All four orchestrators' Phase 7 no longer hardcodes `delaySeconds: 300`; the three with `references/phases.md` state the sizing rule there.
+3. *(replaced by `replan.md` 2026-07-28)* The three orchestrators with `references/phases.md` state **why** the merge poll keeps `delaySeconds: 300` — the wait is not CI-shaped, and `300 × 12` is what makes the retry cap a ~1 hour bound; `propose-ship/SKILL.md` is unmodified.
 4. `ship/SKILL.md` and `using-minerva/references/guide.md` describe the hybrid mechanism, with no "~270s" or "ScheduleWakeup polling"-only characterization left.
 5. Phase 4.5 in the three autonomous orchestrators names `archive/scratchpad.md` as its log destination.
 6. `review/references/protocol.md` pins `subagent_type: general-purpose`, leaves the model unpinned with the reason stated, and remains one of the five sites `tests/test_skill_dispatch.py` detects.
