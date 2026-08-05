@@ -27,8 +27,17 @@ the default branch. So the two conditions a not-yet-reconciled entry trips — n
 line, and no reverse link for the forward links it declares — are **always warnings**,
 never errors, and reconciliation repairs them.
 
-They are deliberately NOT gated on the `index-watermark`. A scalar floor would assume
-entries reconcile in NNN order, and they do not: units merge whenever their PRs land.
+Be precise about what that costs. No *promote-driven* path can produce a genuinely
+drifted uncatalogued entry, because promote never writes catalog lines at all. But a
+hand-edit or a bad merge that drops an already-reconciled catalog line is no longer
+reported loudly — it is silently self-healed by the next reconciliation instead. That
+trade is deliberate: `index.md` is machine-generated content now, and the alternative
+(a scalar floor) misclassified the out-of-order merges this design exists to support,
+which is a far more frequent and more damaging failure. A test in
+`tests/test_knowledge_lint.py` pins the trade so it is not "fixed" back unwittingly.
+
+That alternative — gating on the `index-watermark` — assumes entries reconcile in NNN
+order, and they do not: units merge whenever their PRs land.
 Unit A takes 050 and unit B takes 051; B merges and reconciles the watermark to 051;
 then A merges, and its 050 sits *below* the floor. A floor-based rule calls that drift
 — reddening A's branch — and emits no pending warning, which is the signal cleanup
@@ -219,9 +228,11 @@ def lint_knowledge(knowledge_dir) -> list:
                 f"watermark {watermark} is above max entry NNN {max_nnn} — the index "
                 f"claims entries that do not exist"))
         catalog = idx["catalog"]
-        # An uncatalogued entry is ALWAYS pending, never drift. Promote no longer
-        # writes catalog lines at all, so nothing can produce a genuinely-drifted
-        # uncatalogued entry — and reconciliation repairs whatever it finds.
+        # An uncatalogued entry is ALWAYS pending. No promote-driven path can drift
+        # (promote never writes catalog lines), and reconciliation repairs whatever it
+        # finds — including a line lost to a hand-edit or a bad merge, which is
+        # therefore self-healed silently rather than reported. See the module
+        # docstring: that cost is deliberate and pinned by a test.
         #
         # This deliberately does NOT compare against the watermark. A scalar floor
         # assumes entries reconcile in NNN order, and they do not: units merge in

@@ -42,6 +42,9 @@
 ## Panel decisions 2026-08-05
 
 - [3/3 accept] completion verification: all 9 success criteria honestly met; 410 CI-enumerated tests green, knowledge_lint clean. Panel independently reproduced the suite, the lint exit code, the byte caps and the Phase-4.5 excision rather than trusting the checklist.
+- [1/3 accept — REVISE] review triage + replan-vs-FIX: dispositions upheld (13 fixed, 2 SUGGEST), but the panel rejected the write-up. Arbiter independently reproduced the false claim. Decision B carried **2/3 for REPLAN** → `replan.md` written.
+
+Note on protocol: the triage panel (2/3) and the replan-vs-FIX panel (2/3) were dispatched as ONE panel over a combined artifact rather than two sequential ones. Both questions got an independent 3-agent verdict; neither was skipped. Recorded because it is a deviation from `references/phases.md` steps 4 and 5.
 
 ## Panel concerns 2026-08-05
 
@@ -69,3 +72,28 @@ Logged despite the 3/3 accept — two were acted on in-run rather than deferred.
 - **[low, accepted] Contract JSON reflow noise.** Two `evals/*/contract.json` diffs reflow
   every anchor to multi-line JSON for a one-token removal, inflating the diff stat.
   Cosmetic; not churned further.
+
+## Review concerns 2026-08-05
+
+- **[high, FIXED] The "no genuine drift" claim was false.** I wrote, in code, that
+  "nothing can produce a genuinely-drifted uncatalogued entry." The Skeptic reproduced
+  the counterexample and the Arbiter reproduced it independently: with entry 002
+  catalogued and the watermark at 002, hand-deleting entry 001's catalog line yields a
+  warning where the pre-change code errored. The engineering trade is fine and
+  deliberate — but the claim was not true, and it was baked into production code a
+  future reader would trust. Corrected to state exactly what is and isn't guaranteed,
+  and pinned by `test_corruption_below_the_watermark_is_self_healed_not_errored` so the
+  trade isn't silently reverted.
+
+- **[medium, noted] H1's rationale was floor-dependent.** The reason I gave for fixing
+  the watermark ("it silences the pending signal") only holds under the floor design
+  that the same changeset deletes. The fix is still right, for a reason I hadn't
+  written down: `wiki-maintenance.md`'s promote-time freshness pre-filter is a live
+  consumer of the watermark, so an inflated one makes a later promote trust a stale
+  index as fresh and skip full-corpus neighbour discovery. Now stated in `replan.md`.
+
+- **Two panels in a row caught things a passing 413-test suite did not.** Both HIGH
+  findings were in code that was green, reviewed, and had already taken a 3/3
+  completion-verification accept. The suite tested the mechanism as designed; what was
+  wrong was the design's assumption that entries reconcile in NNN order. Worth
+  remembering that "tests pass" and "the model is right" are different claims.

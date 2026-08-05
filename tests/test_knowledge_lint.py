@@ -356,3 +356,30 @@ def test_live_knowledge_clean():
     """The real .minerva/knowledge/ wiki must pass the deterministic linter."""
     findings = lint_knowledge(LIVE_KNOWLEDGE)
     assert errors(findings) == [], "\n".join(f.message for f in errors(findings))
+
+
+def test_corruption_below_the_watermark_is_self_healed_not_errored(tmp_path):
+    """Pins a DELIBERATE trade-off, not an oversight — do not "fix" this back.
+
+    Entry 001 is already reconciled (watermark 002), then its catalog line is dropped
+    by a hand-edit or a bad merge. The scalar-floor design reported that as a hard
+    error; this design reports a pending warning and lets the next reconciliation
+    regenerate the line from the entry's `**Summary**`.
+
+    Restoring the loud error means restoring the floor, which misclassifies
+    out-of-order merges — see `test_out_of_order_merge_stays_green`. That failure is
+    both more frequent and more damaging: it reddens an innocent branch AND suppresses
+    the pending signal cleanup gates reconciliation on, so the entry is never
+    catalogued at all. Losing loud detection of corruption in a machine-generated file
+    is the cheaper side of that trade.
+    """
+    d = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-constraint-bar.md": entry("constraint", "bar")},
+        index("002", constraints=["002-constraint-bar"]),  # 001's line dropped
+    )
+    f = lint_knowledge(d)
+    assert errors(f) == []
+    assert any("001 has no catalog line" in x.message and x.severity == "warning"
+               for x in f)

@@ -30,3 +30,23 @@
   rewrote the criterion at promote time to state what is actually guaranteed. If a
   future unit wants the stronger check, it needs a harness that executes a skill
   end-to-end — which does not exist in this repo today.
+
+- **`plan_reciprocals` runs even when `plan_index` refuses** (`knowledge_fix.py` `plan()`
+  invokes the two independently). So a refusal on the index side still lets neighbour
+  entries be written, leaving a half-reconciled corpus. The panel corrected my initial
+  scoping of this: it is NOT limited to "index.md is missing" — it fires on every
+  `plan_index` early-return refusal, including an unrecognized type or a duplicate NNN
+  sitting in an unknown section. Pre-existing (verified against `6d424a7`); recorded as
+  SUGGEST rather than fixed because it is outside this unit's goal.
+
+- **A doubled catalog line for one entry is invisible.** `parse_index` keys its catalog
+  on NNN, so two lines for the same entry collapse to one and the fixer re-emits both
+  verbatim. This is structurally the same defect class this unit fixed for entry *files*
+  (duplicate-NNN detection), left asymmetrically for catalog *lines* — a deliberate
+  scoping call, not an oversight. It matters slightly more now that `index.md` is
+  machine-generated rather than hand-authored.
+
+- **The live `index.md` has one entry out of ascending order** (`038` sits between `034`
+  and `035`). Cosmetic, pre-existing, and invisible to the lint — but it means the very
+  first reconciliation run that fires for another reason will also re-sort it, which
+  will look like unrelated churn in that PR.
