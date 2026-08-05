@@ -65,7 +65,6 @@ After every decision point (regardless of outcome), append a one-line entry to t
 
 - `[decided]` — the main model decided directly; record the one-line rationale (and, for approach decisions, the rejected alternatives) so a later `minerva:review` / `minerva:promote` pass can audit the call.
 - `[escalated to user]` — the predicate (or a hardcoded trigger) sent it to the user; record what was asked and the answer.
-- `[synthesis]` — Phase 4.5 observability line (wrote / no-op); not a decision, recorded so a later pass can confirm the phase fired.
 
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a decision reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition.
 
@@ -86,7 +85,7 @@ Every strategic/tactical decision is **main-model-decided by default**, with the
 | Review | Replan-vs-FIX | Main model decides | **Yes** — precondition is a surfaced load-bearing finding |
 | Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No — escalate if an entry is genuinely ambiguous |
 | Promote | TODO disposition | Main model decides | No |
-| Promote→Ship | Synthesis refresh (Phase 4.5) | Delegated, self-gating | n/a |
+| Cleanup | Knowledge reconciliation (index, reciprocals, overview) | Delegated, self-gating | n/a |
 | Ship | Commit message / PR title+body | Main model accepts draft | n/a — operational |
 | Ship | CI auto-fix `other` bail | Hardcoded user escalation | **Yes** — hardcoded |
 | Cleanup gate | PR state polling + cleanup | No decision | n/a |

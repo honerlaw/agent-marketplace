@@ -24,6 +24,26 @@ The `.minerva/knowledge/` corpus of the **current working tree**, resolved by th
 fixer from `git rev-parse --show-toplevel` — the same per-branch semantics as the
 unit-021 CI drift gate and `minerva:lint`.
 
+### Default-branch guard (mutating path only)
+
+**Refuse to apply fixes when the working tree is not on the default branch.** Resolve
+it the way `ship` and `cleanup` do (`git symbolic-ref refs/remotes/origin/HEAD`, then
+fall back to `main`, then `master`); if the current branch differs, report and stop:
+
+> "`minerva:lint-fix` only applies fixes on `<default-branch>` — you're on
+> `<branch>`. Wiki aggregates are reconciled on the default branch by
+> `minerva:cleanup`; applying them here would put an `index.md` rewrite and neighbor
+> edits on a work-unit branch, which is exactly the conflict that add-only promotes
+> exist to avoid. Run `minerva:lint` for a read-only report instead."
+
+This is not a style preference. `plan_index` rewrites `index.md` wholesale and bumps
+the watermark to the branch's max NNN, and `plan_reciprocals` edits neighbor entries —
+the two highest-frequency merge-conflict surfaces in the repo. Doing that on a
+work-unit branch silently reintroduces both.
+
+**Step 1 (`--dry-run`) is exempt** — it writes nothing, so planning on any branch is
+safe and useful. The guard gates Step 2 onward.
+
 ## Step 1 — Plan (dry run, no writes)
 
 Show what would change, via the fixer's `--dry-run`:

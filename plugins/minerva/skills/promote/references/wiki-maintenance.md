@@ -4,11 +4,14 @@
 
 The `**Context**` field is a stable pointer that should remain meaningful even after the work-unit worktree is removed (`minerva:cleanup`). Use the canonical `.minerva/work/NNN-<slug>` path even if the actual files currently live in a worktree — after merge + cleanup, the docs are reconstructible from git history at that path on the merge commit.
 
+The `**Summary**` field is **required**. It is the entry's own catalog line — the ≤15-word condensation of its Finding that `index.md` will carry. Because the entry states it, the main-side reconciliation can catalogue the entry mechanically instead of needing an LLM to re-read and re-condense the Finding. Write it in the same voice as a catalog line: declarative, specific, no leading article.
+
 ```markdown
 # <Short, declarative title — what was decided, fixed, or discovered>
 
 **Date**: YYYY-MM-DD
 **Type**: decision | bug | pattern | constraint
+**Summary**: <≤15-word condensation of the Finding — becomes the index catalog line>
 **Context**: .minerva/work/NNN-<slug> (see git history if the worktree has been cleaned up)
 
 ## Context
@@ -30,88 +33,89 @@ things future work has to honor, gotchas to watch for, tradeoffs accepted.
 - [[NNN-type-slug]] — <relationship>
 ```
 
-The `## Related` block is the canonical, machine-managed cross-reference surface —
-see [Wiki maintenance](#wiki-maintenance-index--cross-references) below. Omit it
-from a fresh entry that has no neighbors; the wiki-maintenance step adds it when a
-relationship is confirmed. A superseded entry additionally carries a banner placed
-between its metadata block and the first `## ` header:
+The `## Related` block is the canonical cross-reference surface. Omit it from a fresh
+entry that has no neighbors. A superseded entry additionally carries a banner placed
+between its metadata block and the first `## ` header — but promote **never writes
+that banner itself** (see below); reconciliation derives it:
 
 ```markdown
 <!-- superseded-by: NNN -->
 > **Superseded by [[NNN-type-slug]]** (YYYY-MM-DD)
 ```
 
-## Wiki maintenance (index + cross-references)
+## Wiki maintenance (add-only)
 
-Every promote that writes a new knowledge entry also maintains the wiki's
-navigability layer: the `.minerva/knowledge/index.md` catalog and the
-cross-references between entries. This runs **inside promote's existing gate** — no
-new gate is introduced — and writes to neighbors / index **only on approval**.
+**A promote run writes new entry files and nothing else.** No `index.md` catalog
+line, no watermark bump, no edit to any neighbor entry, no supersession banner.
 
-### The canonical `index.md` skeleton
+This is the invariant that makes concurrent work units safe. A work-unit branch's
+entire `.minerva/` footprint becomes *newly-added files*, and new files merge cleanly
+no matter how many PRs are in flight. Every shared surface — `index.md`,
+`overview.md`, and the reverse direction of every cross-link — is written on the
+default branch instead, by the reconciliation step in `minerva:cleanup`, where there
+is exactly one writer at a time.
 
-`minerva:init` and `minerva:promote` are the two creators of `index.md`; both emit
-this **exact** skeleton so they cannot diverge:
+Do not "just add the index line while you're here." That single line is the file that
+appeared in 78% of commits and conflicted on every concurrent pair.
 
-```markdown
-# Knowledge index
-<!-- index-watermark: NNN -->
+### Entry numbering
 
-## Decisions
+Allocate NNN with the tested allocator, never by eyeballing the directory:
 
-## Bugs
-
-## Patterns
-
-## Constraints
+```bash
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_next_nnn.py" "$ROOT/.minerva/knowledge" --fetch
 ```
 
-- The watermark `NNN` is the highest entry number the index reflects (`000` when
-  empty). It is a **content** freshness signal, used in preference to file mtime
-  (mtime is unreliable across git checkouts and worktrees).
-- Catalog lines go under the matching Type section, one per entry:
-  `- [[NNN-type-slug]] — <≤15-word summary>` (title from the entry H1, summary
-  condensed from its Finding). Sections are plural buckets; links use the singular
-  filename stem.
+A plain `max+1` over the local directory is **wrong** here: entries on other in-flight
+branches are invisible to it, so two units allocate the same number, and since each
+entry is a new file git merges both without a conflict. The allocator unions the
+working tree with every entry ever added across all refs. `--fetch` refreshes remotes
+first so a branch pushed from elsewhere is counted (best-effort — offline is fine).
 
 ### The maintenance step
 
 For **each** newly-written knowledge entry, before the gate:
 
 1. **Neighbor discovery (recall-complete floor).** Read the titles + Findings of
-   the existing `.minerva/knowledge/NNN-*.md` entries directly (a full corpus scan —
-   cheap at this scale) and identify genuine relationships. You MAY read
-   `index.md`'s one-line summaries first as a pre-filter, but **only** when it is
-   present AND fresh (its `index-watermark` ≥ the max NNN on disk). A stale or
-   absent index never blocks discovery — fall back to the full scan and recompute.
-   Dedup candidate hits by target NNN (an entry referenced both inline in prose and
-   in a `## Related` block collapses to one).
-2. **Propose the edits**, classifying each relationship with the closed vocabulary
-   `builds on` / `supersedes` / `superseded by` / `contradicts` / `see also`:
-   - a `## Related` line in the new entry: `- [[NNN-type-slug]] — <relationship>`;
-   - the **reciprocal** line in the neighbor entry (e.g. new→`supersedes`old pairs
-     with old→`superseded by`new);
-   - a `<!-- superseded-by: NNN -->` banner in any entry the new one supersedes.
-   Present each reciprocal pair as a **single coupled approval unit** — never let
-   one direction be approved while its reciprocal is dropped.
-3. **Propose the `index.md` line(s)**: the new entry's catalog line, the watermark
-   bump, and any line edits for superseded entries. If `index.md` is absent, create
-   it from the canonical skeleton with just the new entry (and point the user at
-   `minerva:init`'s backfill for the rest).
-4. **Gate.** Surface all proposed neighbor + index edits as **concrete diffs** in
-   the same confirmation gate that approves the promote (Mode A step 6 / Mode B
-   step 4). Use the `Edit` tool to apply them only after approval (Mode A step 7 /
-   Mode B step 5).
+   the existing `.minerva/knowledge/NNN-*.md` entries directly (a full corpus scan)
+   and identify genuine relationships. You MAY read `index.md`'s one-line summaries
+   first as a pre-filter, but **only** when it is present AND its `index-watermark` ≥
+   the max NNN among entries *this run did not write*. (The watermark legitimately
+   lags the corpus now, so comparing it against the raw max would reject a perfectly
+   usable index on every run.) A stale or absent index never blocks discovery — fall
+   back to the full scan. Dedup candidate hits by target NNN.
+2. **Write forward links only.** Classify each relationship with the closed
+   vocabulary `builds on` / `supersedes` / `superseded by` / `contradicts` /
+   `see also`, and record it as a `## Related` line **in the new entry**:
+   `- [[NNN-type-slug]] — <relationship>`.
 
-### Idempotency of wiki edits
+   Do **not** write the reciprocal line into the neighbor, and do **not** write a
+   supersession banner. Both are derived on the default branch by
+   `knowledge_fix.plan_reciprocals`, which already turns a `supersedes` forward edge
+   into the neighbor's banner *and* its `superseded by` line. Editing the neighbor
+   here is the second-most-common conflict source after the index, and it is
+   redundant with a step that runs anyway.
+3. **Gate.** Surface the new entry files as concrete diffs in the same confirmation
+   gate that approves the promote (Mode A step 6 / Mode B step 4). There are no
+   neighbor or index diffs to show — if you find yourself with one, something has
+   gone wrong.
 
-- A `## Related` line is added only if no existing line in that block references the
-  target NNN (insert-iff-absent, set semantics keyed on NNN).
-- A supersession banner is added only if no `<!-- superseded-by: NNN -->` marker for
-  that superseding NNN is already present.
-- An index line is added only if no line for that NNN exists; the watermark bumps
-  **only** when an index line is actually added or changed.
+### What reconciliation does with this later
 
-Re-running promote in either mode is therefore a **byte-level no-op** on
-already-present links, banners, and index lines — and never edits an entry body
-outside the `## Related` block or the banner span.
+`minerva:cleanup` runs `knowledge_fix.py` on the default branch after the PR merges.
+It adds each entry's catalog line from its `**Summary**`, bumps the watermark to the
+new max, writes every missing reciprocal and banner, and opens a single PR. Until
+then the entries sit above the watermark and `knowledge_lint` reports them as
+`pending reconciliation` **warnings**, so the branch's CI drift gate stays green.
+
+The canonical `index.md` skeleton lives with its sole creator, `minerva:init`.
+Promote no longer creates `index.md` — if it is missing, that is an `minerva:init`
+gap and both the linter and the fixer say so.
+
+### Idempotency
+
+Re-running promote is a byte-level no-op on an entry that already exists: the
+allocator never reissues a number, and a `## Related` line is added only if no
+existing line in that block references the target NNN (insert-iff-absent, set
+semantics keyed on NNN). Promote never edits an entry body outside the `## Related`
+block of the entry it is currently writing.

@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Removes `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prunes the corresponding local branches. Idempotent; never touches the default branch or unmerged work. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
+description: Removes `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
 ---
 
 Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
@@ -9,7 +9,7 @@ Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories
 
 - `minerva:cleanup` — sweep all merged worktrees + branches in the current repo
 - `minerva:cleanup 005-add-payments` — clean up only the named work unit (slug or path)
-- `minerva:cleanup --dry-run` — list what would be removed without removing anything
+- `minerva:cleanup --dry-run` — list what would be removed and what reconciliation would do, changing nothing
 
 ## Target resolution
 
@@ -88,9 +88,17 @@ Remaining worktrees:   N (<list>)
 
 If any worktrees were skipped due to uncommitted changes, recommend the user inspect each (`cd .minerva/worktrees/<slug>; git status`) and decide whether the changes are valuable.
 
+## Knowledge reconciliation
+
+Because `minerva:promote` is add-only — it writes new knowledge entries on a work-unit branch and touches no aggregate — the `index.md` catalog lines, watermark, reciprocal `## Related` links, supersession banners, and `overview.md` are all written **here**, on the default branch, where there is one writer at a time. This is what makes concurrent minerva PRs conflict-free.
+
+**Run it on every invocation**, decoupled from worktree removal: a merge done through the GitHub UI leaves pending entries with no worktree to remove. It is cheap and silent when nothing is pending.
+
+The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Two rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR), and if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way.
+
 ## Idempotency
 
-Cleanup is stateless. Re-running on a fresh tree finds zero candidates and reports zero removed. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
+Cleanup is stateless. Re-running on a fresh tree finds zero candidates and reports zero removed. Reconciliation is likewise idempotent — `knowledge_fix` is a byte-level no-op on an already-reconciled corpus, so a second run reports nothing pending. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
 
 If a user manually removed a worktree directory without running `git worktree remove`, the next `minerva:cleanup` call will see stale worktree metadata; `git worktree prune` at the end of the run handles this.
 

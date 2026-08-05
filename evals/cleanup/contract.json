@@ -15,7 +15,8 @@
   "anchors": [
     ".minerva/worktrees/",
     "merged",
-    "default branch"
+    "default branch",
+    "reconcil"
   ],
   "cross_surface": {
     "root_readme": true,

@@ -127,7 +127,6 @@ After every decision point, append a one-line entry to the work unit's `scratchp
 - `[decided]` — a solo gate; record the one-line rationale (approach decisions also record the rejected alternatives).
 - `[reviewed — folded]` / `[reviewed — clean]` — a reviewer gate; record what the reviewer flagged and whether it was folded.
 - `[escalated to user]` — record what was asked and the answer.
-- `[synthesis]` — Phase 4.5 observability line (wrote / no-op); not a decision.
 
 These are scratchpad data — `minerva:promote` treats them as routine noise unless a decision reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition.
 
@@ -148,7 +147,7 @@ The `Reviewer?` column marks which gates dispatch the single reviewer. Every oth
 | Review | Replan-vs-FIX | Main model decides | **Yes — Skeptic** (when triggered) |
 | Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Main model decides | No (solo) |
 | Promote | TODO disposition | Main model decides | No (solo) |
-| Promote→Ship | Synthesis refresh (Phase 4.5) | Delegated, self-gating | n/a |
+| Cleanup | Knowledge reconciliation (index, reciprocals, overview) | Delegated, self-gating | n/a |
 | Ship | Commit message / PR title+body | Main model accepts draft | n/a (operational) |
 | Ship | CI auto-fix `other` bail | Hardcoded user escalation | No (hardcoded) |
 | Cleanup gate | PR state polling + cleanup | No decision | n/a |

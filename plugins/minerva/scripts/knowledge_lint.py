@@ -7,6 +7,10 @@ skill, Phase B.2). The corpus is the source of truth; `index.md` is never assume
 authoritative — index problems are reported as the defect (knowledge entry 017).
 
 Checks:
+  0. duplicate NNN   — two entry files sharing a number. Reported FIRST because every
+                       other check is NNN-keyed: before this existed, the second entry
+                       of a pair silently overwrote the first in the lookup map, so a
+                       duplicate was invisible by construction.
   1. index drift     — watermark vs max NNN; NNN-keyed catalog<->file bijection
                        (slug mismatch = warning, not error); Type-section grouping
                        vs each entry's declared **Type**.
@@ -16,6 +20,16 @@ Checks:
   3. missing recips  — if A's ## Related links B, B links back to A (presence keyed
                        on NNN, NOT label-match; back-link counts in B's ## Related
                        block OR B's supersession banner).
+
+The `index-watermark` is a LAGGING FLOOR, not an equality invariant: it records the
+highest NNN the index reflects, and entries above it are *pending reconciliation*
+rather than drift. This is what lets `minerva:promote` be add-only on a work-unit
+branch — it writes entry files and leaves every aggregate/cross-entry write to the
+main-side reconciliation pass. Consequently the two checks that a pending entry would
+otherwise trip — its missing catalog line, and the missing reciprocal for the forward
+links it declares — degrade to warnings above the watermark and stay errors at or
+below it. A watermark ABOVE max NNN is still an error: the index is claiming entries
+that do not exist. Same shape as `synthesis_status`'s deliberately-lagging watermark.
 
 CLI: `python3 scripts/knowledge_lint.py <knowledge-dir>` — prints findings grouped
 by family and exits non-zero iff any error-severity finding is present.
@@ -37,6 +51,9 @@ Finding = namedtuple("Finding", ["family", "severity", "message"])  # severity: 
 ENTRY_RE = re.compile(r"^(\d{3})-([a-z]+)-.+\.md$")
 WATERMARK_RE = re.compile(r"^<!--\s*index-watermark:\s*(\d{3})\s*-->")
 TYPE_RE = re.compile(r"^\*\*Type\*\*:\s*([a-z]+)")
+# The entry's own one-line catalog summary. Its presence is what lets the index be
+# rebuilt mechanically instead of needing an LLM to re-condense the Finding.
+SUMMARY_RE = re.compile(r"^\*\*Summary\*\*:\s*(.+?)\s*$")
 WIKILINK_RE = re.compile(r"\[\[(\d{3})-[a-z]+-[^\]]+\]\]")
 CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3}-[a-z]+-[^\]]+)\]\]")
 
@@ -73,6 +90,13 @@ def parse_entry(path: Path):
             declared_type = m.group(1)
             break
 
+    summary = None
+    for _, line in nonfenced:
+        m = SUMMARY_RE.match(line)
+        if m:
+            summary = m.group(1)
+            break
+
     # Banner back-links: anchored markers ABOVE the first non-fenced `## ` header.
     first_section_idx = next((i for i, ln in nonfenced if SECTION_RE.match(ln)), None)
     banner_targets = set()
@@ -99,6 +123,7 @@ def parse_entry(path: Path):
     return {
         "nnn": ENTRY_RE.match(path.name).group(1),
         "declared_type": declared_type,
+        "summary": summary,
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
     }
@@ -133,26 +158,57 @@ def lint_knowledge(knowledge_dir) -> list:
     findings = []
 
     entry_paths = sorted(p for p in kd.glob("*.md") if ENTRY_RE.match(p.name))
-    entries = {ENTRY_RE.match(p.name).group(1): (p, parse_entry(p)) for p in entry_paths}
+
+    # Group by NNN FIRST. Keying a dict directly on NNN (as this did) makes a
+    # duplicate silently unrepresentable: the later file overwrites the earlier and
+    # the lint reports a clean bijection over a corpus that has two entries sharing
+    # an id. Downstream checks still need one entry per NNN, so they use the
+    # deterministic first-by-filename member of each group.
+    by_nnn = {}
+    for p in entry_paths:
+        by_nnn.setdefault(ENTRY_RE.match(p.name).group(1), []).append(p)
+    entries = {nnn: (group[0], parse_entry(group[0])) for nnn, group in by_nnn.items()}
     entry_nnns = set(entries)
+
+    # --- 0. duplicate NNN ----------------------------------------------------
+    for nnn, group in sorted(by_nnn.items()):
+        if len(group) > 1:
+            findings.append(Finding(
+                "duplicate", "error",
+                f"NNN {nnn} is shared by {len(group)} entries: "
+                f"{', '.join(p.name for p in group)}"))
 
     # --- 1. index drift ------------------------------------------------------
     idx = parse_index(kd / "index.md")
+    # The reconciliation floor: entries above it are pending, not drifted. Used by
+    # both the missing-catalog-line check and the missing-reciprocal check, so it is
+    # resolved before the index block rather than inside it.
+    floor = idx["watermark"] or "000"
     if not idx["exists"]:
         findings.append(Finding("index", "error", "index.md is missing"))
     else:
         max_nnn = max(entry_nnns) if entry_nnns else "000"
-        if idx["watermark"] is None:
+        watermark = idx["watermark"]
+        if watermark is None:
             findings.append(Finding(
                 "index", "error", "index.md has no `index-watermark` comment"))
-        elif idx["watermark"] != max_nnn:
+        elif watermark > max_nnn:
             findings.append(Finding(
                 "index", "error",
-                f"watermark {idx['watermark']} != max entry NNN {max_nnn}"))
+                f"watermark {watermark} is above max entry NNN {max_nnn} — the index "
+                f"claims entries that do not exist"))
+        # A watermark BELOW max NNN is not drift: it is the lag that makes add-only
+        # promotes possible. Entries above it are pending reconciliation.
         catalog = idx["catalog"]
         for nnn in sorted(entry_nnns - set(catalog)):
-            findings.append(Finding("index", "error",
-                                    f"entry {nnn} has no catalog line in index.md"))
+            if nnn > floor:
+                findings.append(Finding(
+                    "index", "warning",
+                    f"entry {nnn} has no catalog line in index.md — pending "
+                    f"reconciliation (above watermark {floor})"))
+            else:
+                findings.append(Finding("index", "error",
+                                        f"entry {nnn} has no catalog line in index.md"))
         for nnn in sorted(set(catalog) - entry_nnns):
             findings.append(Finding("index", "error",
                                     f"catalog line {nnn} has no entry file"))
@@ -181,14 +237,25 @@ def lint_knowledge(knowledge_dir) -> list:
                     f"entry {nnn} '## Related' links [[{target}-...]] which has no entry"))
 
     # --- 3. missing reciprocals ---------------------------------------------
+    # An add-only promote writes forward links in the NEW entry and leaves the reverse
+    # direction to reconciliation, so a pending entry's forward links legitimately have
+    # no back-link yet. Keyed on the SOURCE entry: above the floor it is pending, at or
+    # below it the reciprocal really is missing.
     for nnn, (path, entry) in sorted(entries.items()):
         for target in sorted(entry["related_out"]):
             if target not in entry_nnns:
                 continue  # already reported as broken-link
             if nnn not in entries[target][1]["backlinks"]:
-                findings.append(Finding(
-                    "reciprocal", "error",
-                    f"entry {nnn} links {target} but {target} has no back-link to {nnn}"))
+                if nnn > floor:
+                    findings.append(Finding(
+                        "reciprocal", "warning",
+                        f"entry {nnn} links {target} but {target} has no back-link to "
+                        f"{nnn} — pending reconciliation (above watermark {floor})"))
+                else:
+                    findings.append(Finding(
+                        "reciprocal", "error",
+                        f"entry {nnn} links {target} but {target} has no back-link "
+                        f"to {nnn}"))
     return findings
 
 

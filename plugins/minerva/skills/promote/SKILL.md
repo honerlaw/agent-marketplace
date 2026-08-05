@@ -33,13 +33,13 @@ Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) m
 
 ## Two modes
 
-The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template and the wiki-maintenance protocol (index catalog line, `## Related` cross-references, watermark bump) live in `references/wiki-maintenance.md`. **Read it before writing or editing any `.minerva/knowledge/` entry.**
+The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry numbering via `scripts/knowledge_next_nnn.py` live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.**
 
 ## Idempotency summary
 
 - Mode A re-run: scratchpad marker → stops early.
 - Mode B re-run on a marked block: existing knowledge file → stops early.
-- Knowledge files are **append-only in their body** — auto-incremented NNN guarantees each new entry is unique, and the body of an existing entry (its `# H1`/metadata block and the `## Context` / `## Finding` / `## Implications` sections) is **never rewritten**. The *only* machine-managed mutable surfaces are the delimited `## Related` block and the supersession-banner span — both edited idempotently by the [Wiki maintenance](#wiki-maintenance-index--cross-references) step. This narrowed invariant is what makes bidirectional cross-references safe: promoting a new entry can add a backlink to an older one without ever touching that older entry's recorded finding.
+- Promote is **add-only**: it writes new `.minerva/knowledge/NNN-*.md` entry files and touches no existing file in the corpus — not `index.md`, not the watermark, not a neighbor's `## Related` block, not a supersession banner. A work-unit branch's `.minerva/` footprint is therefore purely additions, which is what lets concurrent PRs merge without conflicting. The reverse direction of every cross-link, and every aggregate, is derived on the default branch by `minerva:cleanup`'s reconciliation. Entry NNN comes from `scripts/knowledge_next_nnn.py --fetch`, which sees entries on other in-flight branches; a local `max+1` does not, and its collisions merge silently because each entry is a new file. See [Wiki maintenance](#wiki-maintenance-add-only).
 
 If a user manually edits the scratchpad to remove markers, re-running `minerva:promote` could duplicate entries. This is a known footgun; not defended against.
 
