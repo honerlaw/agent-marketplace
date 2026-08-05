@@ -50,3 +50,25 @@
   and `035`). Cosmetic, pre-existing, and invisible to the lint — but it means the very
   first reconciliation run that fires for another reason will also re-sort it, which
   will look like unrelated churn in that PR.
+
+- **`synthesis_status.py` still carries the scalar floor this unit rejected for the
+  index.** `unsynthesized = [n for n in entry_nnns if int(n) > watermark]` has exactly
+  the shape `replan.md` proves unsound under out-of-order merges, and Approach step 8
+  moves synthesis into the same reconciliation pass where the index bug lived: B
+  reconciles to `synthesis-watermark: 051`, then A's 050 merges and reads as already
+  synthesized.
+
+  **Not fixed here, deliberately, and the asymmetry is the reason.** `minerva:synthesize`
+  rebuilds `overview.md` from the *entire* corpus — the watermark only gates *whether*
+  to run, never what to include. So a skipped 050 is picked up whole the next time
+  synthesis fires for any reason, and entry `024` already makes the overview advisory
+  and never CI-gated. The index case was categorically worse: the per-entry catalog
+  line was never written at all, and the missing pending-warning killed the very signal
+  that would have retried it — permanent and silent, versus temporary and self-healing.
+
+  Still worth closing, because "same shape, different blast radius" is a fragile thing
+  to leave in a codebase that just removed the shape next door. The right fix mirrors
+  the index: derive the synthesized *set* from the `[[NNN-...]]` wikilinks `overview.md`
+  actually contains, instead of a threshold. Needs a decision first on whether every
+  entry is expected to be linked — if not, unlinked entries would read as perpetually
+  unsynthesized and trigger endless resynthesis. Raised by the promote partition panel.

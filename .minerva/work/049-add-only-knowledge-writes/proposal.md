@@ -1,7 +1,7 @@
 # Proposal: add-only-knowledge-writes
 
 **Date**: 2026-08-05
-**Status**: Draft
+**Status**: Shipped (2026-08-05)
 
 ## Goal
 Make a minerva work-unit branch's `.minerva/` footprint consist **entirely of newly-added files**, so concurrent PRs cannot conflict on minerva records. Because that removes the textual conflict currently acting as an accidental guard on knowledge-ID allocation, make that allocation collision-safe and duplicate-detecting in the same unit.
@@ -21,6 +21,11 @@ The pain is felt in consumer repos, not here, so every part of the fix must be *
 
 ## Approach
 
+*(Rewritten at promote to describe what shipped. The run began with §3 as a "lagging
+floor" — a scalar `index-watermark` threshold separating pending entries from drift —
+and the Phase 3 review invalidated it. See `replan.md` for the reproduction and the
+pivot. Numbers and mechanisms below are the shipped ones.)*
+
 ### 1. Entry template gains a self-describing summary
 `skills/promote/references/wiki-maintenance.md`'s knowledge-entry template gains `**Summary**: <≤15 words>` in the metadata block beside `**Date**` / `**Type**` / `**Context**`. This is what lets the index be rebuilt mechanically instead of requiring an LLM to condense a Finding at reconciliation time.
 
@@ -35,20 +40,25 @@ Neighbor discovery still runs — it is genuine LLM judgment — but emits **for
 
 The index-line freshness pre-filter in `wiki-maintenance.md:82-88` is relaxed: "fresh" becomes *watermark ≥ max NNN among entries not written by this run*, so the pre-filter remains usable instead of always falling through to a full corpus scan (which matters at 550+ entries).
 
-### 3. `knowledge_lint.py` — lagging floor plus duplicate detection
-- `index-watermark` becomes a **lagging floor** (`watermark ≤ max NNN`). Entries above it are `pending reconciliation` **warnings**, not drift errors. This mirrors the shape `synthesis-watermark` already has, where `scripts/synthesis_status.py`'s docstring states the watermark "deliberately lags, and the lag is the signal." Exit code is unaffected: `main()` returns non-zero only on `severity == "error"` (`:212`).
-- Catalog-line-without-entry, wrong Type section, and broken `## Related` links remain **errors**.
-- **The reciprocal check becomes pending-tolerant.** This is load-bearing: with promote emitting forward-only links, the missing-reciprocal check at `:186-195` — currently an error — would fire on *every* work-unit branch, since reverse links do not exist until reconciliation. A missing reciprocal is a `pending reconciliation` **warning** when the forward-edge's source entry sits above the index watermark (not yet reconciled), and remains an **error** otherwise. Same lagging-floor framing as the watermark itself.
-- New **error**: duplicate NNN. This requires replacing the NNN-keyed dicts at `:126` and `:135` with grouping, since today the second entry sharing a number silently overwrites the first.
+### 3. `knowledge_lint.py` — pending-vs-drift, and duplicate detection
 
-Erroring (rather than warning) costs nothing today: this repo's corpus is clean at 001-051, and the consumer repo with 65 legacy groups does not run the lint at all. It stays loud for the case that matters — a fresh collision.
+**No watermark comparison anywhere.** An uncatalogued entry, and a forward `## Related` link whose reverse direction is missing, are **always** `pending reconciliation` warnings. That is sound because promote no longer writes catalog lines at all, so no promote-driven path produces genuine drift, and reconciliation repairs whatever it finds regardless of the order entries arrive in.
+
+The scalar "lagging floor" this section originally specified was reproduced broken during review: it assumes entries reconcile in NNN order, and concurrent units merge whenever their PRs land. Full reproduction and reasoning in `replan.md`; the durable form is `.minerva/knowledge/053-constraint-reconciliation-state-is-not-a-scalar.md`.
+
+- The reciprocal check is pending-tolerant for the same reason, and it is load-bearing: with promote emitting forward-only links, an error-severity reciprocal check would fire on *every* work-unit branch, for every cross-link a new entry declares.
+- Catalog-line-without-entry, wrong Type section, broken `## Related` links, and a watermark *above* max NNN remain **errors**.
+- New **error**: duplicate NNN — which required replacing the NNN-keyed dicts with grouping, plus quarantining duplicate ids from every downstream check, since the surviving group member is arbitrary and anything derived from it names the wrong file.
+- NNN patterns widened to `\d{3,}` with numeric comparison, so the corpus can pass 999 without the allocator and the duplicate detector going blind simultaneously.
+
+Erroring on duplicates (rather than warning) costs nothing today: this repo's corpus is clean at 001-051, and the consumer repo with 65 legacy groups does not run the lint at all. It stays loud for the case that matters — a fresh collision.
 
 ### 4. `knowledge_fix.py` — insert catalog lines, quarantine duplicates
 - `plan_index` gains the one operation it refuses today (`:87`, "fixer won't fabricate summaries"): adding a missing catalog line, read mechanically from the entry's `**Summary**`.
 - **Duplicate-NNN quarantine**, in both `plan_index` and `plan_reciprocals`. This is a live hazard, not a hypothetical: because `_entries()` (`:61`) is NNN-keyed, on a corpus with duplicates `plan_index` collects *both* catalog lines (both match the one surviving entry) and buckets both under the surviving entry's declared type — misfiling up to 65 lines on the first automatic run. Quarantined groups are left verbatim where they are and reported as refusals, mirroring the existing unrecognized-type handling at `:104-107` ("LEFT where it is (never dropped — that would delete its summary)"). Everything else reconciles normally, so the conflict fix works on a legacy corpus immediately without renumbering anything first.
 
 ### 5. `scripts/knowledge_next_nnn.py` (new, tested)
-Enumerates `.minerva/knowledge/` across the working tree, local branches, and remote branches via `git ls-tree`, returning max+1. `promote` wraps it via importable API per knowledge `021`, rather than embedding prose bash as `propose` does. This matters because the allocator is now the *only* backstop against silent duplicates — prose bash cannot be unit-tested and can be paraphrased by an agent (knowledge `007`).
+Unions the working tree (including uncommitted entries) with every entry ever *added* along the history of any ref — `git log --all --diff-filter=A --name-only` over the knowledge path, one path-limited command rather than a per-ref `git ls-tree`. Returns max+1, widening past 999 rather than wrapping. Git failures raise rather than degrading to the local-only scan, since a silent under-count is exactly the duplicate this exists to prevent. `promote` wraps it via importable API per knowledge `021`, rather than embedding prose bash as `propose` does. This matters because the allocator is now the *only* backstop against silent duplicates — prose bash cannot be unit-tested and can be paraphrased by an agent (knowledge `007`).
 
 ### 6. `minerva:cleanup` gains reconciliation
 Reconciliation is **decoupled from worktree removal** — cleanup evaluates the signal even when it removed nothing:
@@ -77,8 +87,8 @@ Extend `tests/test_knowledge_lint.py`, `tests/test_knowledge_fix.py`, `tests/tes
 - **A CI workflow or a git merge driver** — ruled out by the portability constraint. Minerva cannot install a workflow in every consumer repo, and custom merge drivers are per-clone local config that CI checkouts and fresh worktrees would silently lack.
 
 ## Success criteria
-- A contract test asserts `promote`'s references contain no index-write or neighbor-edit instruction, and a promote run on a work-unit branch leaves `git status` showing only additions under `.minerva/`.
-- `knowledge_lint` exits 0 on a corpus with entries above the watermark, reporting them as pending-reconciliation warnings — including a fixture where those entries carry forward `## Related` links whose reciprocals are absent.
+- A contract test asserts `promote`'s references contain no index-write or neighbour-edit instruction. *(The originally-stated second clause — that a promote run leaves `git status` showing only additions — is not assertable in CI, because `minerva:promote` is LLM-executed prose with no callable entry point. It was nonetheless **observed** on this unit's own promote: five new entry files, `index.md` unmodified, `knowledge_lint` exit 0 with five pending warnings. Recorded in `followups.md`.)*
+- `knowledge_lint` exits 0 on a corpus with uncatalogued entries, reporting them as pending-reconciliation warnings — including a fixture where those entries carry forward `## Related` links whose reciprocals are absent, and one where an entry arrives *below* an already-advanced watermark (the out-of-order merge case).
 - `knowledge_lint` exits non-zero on a corpus containing two entries that share an NNN.
 - `knowledge_next_nnn.py` returns a number above an entry existing only on an unmerged local branch, and above one existing only on a remote branch — one git-fixture test per source.
 - `knowledge_fix --dry-run` plans catalog lines for summary-bearing un-catalogued entries; entry bodies stay byte-identical outside the permitted `## Related`/banner spans; duplicate-NNN groups appear as refusals with their catalog lines unmoved.
