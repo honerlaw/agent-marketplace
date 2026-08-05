@@ -171,6 +171,13 @@ def test_absent_corpus_does_not_scan_the_ambient_repo(tmp_path, monkeypatch):
     monkeypatch.chdir(elsewhere)
     assert next_nnn(kd(repo)) == "002"  # not 778
 
+    # And with the corpus genuinely absent — the walk-up path this is named for.
+    fresh = init_repo(tmp_path / "fresh")
+    (fresh / "README.md").write_text("x\n")
+    commit(fresh)
+    assert not kd(fresh).exists()
+    assert next_nnn(kd(fresh)) == "001"  # not 778
+
 
 # --- robustness --------------------------------------------------------------
 def test_offline_fetch_failure_is_not_fatal(tmp_path):
@@ -194,7 +201,15 @@ def test_ignores_files_that_are_not_entries(tmp_path):
 
 @pytest.mark.parametrize("nnn,expected", [("009", "010"), ("099", "100"), ("999", "1000")])
 def test_padding_and_rollover(tmp_path, nnn, expected):
-    """Above 999 the width grows rather than wrapping to 000 and colliding."""
+    """Above 999 the width grows rather than wrapping to 000 and colliding.
+
+    Round-trips the allocated number back through `allocated_nnns`: asserting only the
+    format string would pass against an implementation that hands out a number it
+    cannot then see — which is exactly how a fixed-width `\\d{3}` regex fails.
+    """
     plain = tmp_path / f"p{nnn}"
     add_entry(plain, nnn)
     assert next_nnn(kd(plain)) == expected
+    add_entry(plain, expected)
+    assert expected in allocated_nnns(kd(plain))
+    assert next_nnn(kd(plain)) != expected  # never reissued

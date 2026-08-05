@@ -27,20 +27,27 @@ and expiring, which would make allocation differ between machines.
 
 Skipping a number costs nothing; reusing one is the bug this exists to prevent.
 
+Failures are LOUD. Every silent under-count here hands out a duplicate id, which is
+precisely the bug this module exists to prevent — so a git error while scanning history
+raises rather than degrading to the local directory scan. The one deliberate exception
+is `--fetch`, which is documented as best-effort: it only ever *widens* the scan, so a
+network failure leaves the result no worse than not fetching.
+
 CLI: `python3 scripts/knowledge_next_nnn.py [<knowledge-dir>] [--fetch]`
-Prints the next 3-digit NNN. `--fetch` refreshes remotes first (best-effort: a
-network failure or a repo with no remote is not an error, it just narrows source 2).
+Prints the next NNN, zero-padded to at least three digits (it widens past 999 rather
+than wrapping, which would hand out a guaranteed duplicate). Defaults to
+`<repo-root>/.minerva/knowledge` — resolved from the repo, never from the process CWD.
 """
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-ENTRY_RE = re.compile(r"^(\d{3})-[a-z]+-.+\.md$")
+ENTRY_RE = re.compile(r"^(\d{3,})-[a-z]+-.+\.md$")
 # Same shape, but matched against a repo-relative path emitted by git.
-PATH_ENTRY_RE = re.compile(r"(?:^|/)(\d{3})-[a-z]+-[^/]+\.md$")
+PATH_ENTRY_RE = re.compile(r"(?:^|/)(\d{3,})-[a-z]+-[^/]+\.md$")
 
-DEFAULT_KNOWLEDGE_DIR = ".minerva/knowledge"
+KNOWLEDGE_SUBDIR = ".minerva/knowledge"
 
 
 def _git(args, cwd, timeout=30):
@@ -85,18 +92,41 @@ def _history_nnns(root: Path, rel_knowledge: str) -> set:
     """Every entry NNN ever added under `rel_knowledge`, across all refs.
 
     Path-limited traversal, so this stays cheap even on a large history.
+
+    `-c core.quotePath=false` because git otherwise C-quotes any path with non-ASCII
+    bytes, wrapping it in double quotes; the trailing quote defeats the regex's `.md`
+    end-anchor, silently dropping entries the working-tree scan *does* count.
+
+    Raises on git failure: returning an empty set would be indistinguishable from
+    "no entries" and would quietly collapse this to the unsafe local-only scan.
     """
-    out = _git(["log", "--all", "--diff-filter=A", "--name-only", "--format=",
-                "--", rel_knowledge], root)
+    out = _git(["-c", "core.quotePath=false", "log", "--all", "--diff-filter=A",
+                "--name-only", "--format=", "--", rel_knowledge], root)
     if out is None:
-        return set()
+        raise RuntimeError(
+            f"git could not scan {rel_knowledge!r} history in {root} — refusing to "
+            f"allocate from the local directory alone, which would risk reissuing a "
+            f"number already used on another branch"
+        )
     return {m.group(1) for line in out.splitlines()
             if (m := PATH_ENTRY_RE.search(line.strip()))}
 
 
-def allocated_nnns(knowledge_dir=DEFAULT_KNOWLEDGE_DIR, fetch=False) -> set:
-    """The union of every NNN visible in the working tree and in history."""
-    kd = Path(knowledge_dir)
+def allocated_nnns(knowledge_dir=None, fetch=False) -> set:
+    """The union of every NNN visible in the working tree and in history.
+
+    `knowledge_dir=None` resolves to `<repo-root>/.minerva/knowledge`. It is NOT a
+    CWD-relative default: run from a subdirectory, that would scan a path matching
+    nothing in history and return `001` with exit 0 — a silent under-count.
+    """
+    if knowledge_dir is None:
+        root = repo_root(Path.cwd())
+        if root is None:
+            raise RuntimeError("not inside a git repository — pass the knowledge "
+                               "directory explicitly")
+        kd = root / KNOWLEDGE_SUBDIR
+    else:
+        kd = Path(knowledge_dir)
     found = _worktree_nnns(kd)
 
     root = repo_root(kd)
@@ -111,12 +141,15 @@ def allocated_nnns(knowledge_dir=DEFAULT_KNOWLEDGE_DIR, fetch=False) -> set:
     try:
         rel = str(kd.resolve().relative_to(root.resolve()))
     except ValueError:
-        rel = DEFAULT_KNOWLEDGE_DIR
+        rel = KNOWLEDGE_SUBDIR
     return found | _history_nnns(root, rel)
 
 
-def next_nnn(knowledge_dir=DEFAULT_KNOWLEDGE_DIR, fetch=False) -> str:
-    """The next free 3-digit entry number. `001` on an empty/absent corpus."""
+def next_nnn(knowledge_dir=None, fetch=False) -> str:
+    """The next free entry number, zero-padded to at least three digits.
+
+    `001` on an empty or absent corpus. Widens past 999 rather than wrapping.
+    """
     found = allocated_nnns(knowledge_dir, fetch=fetch)
     return f"{(max(int(n) for n in found) + 1) if found else 1:03d}"
 
@@ -125,7 +158,7 @@ def main(argv=None) -> int:
     argv = list(argv if argv is not None else sys.argv[1:])
     fetch = "--fetch" in argv
     argv = [a for a in argv if a != "--fetch"]
-    knowledge_dir = argv[0] if argv else DEFAULT_KNOWLEDGE_DIR
+    knowledge_dir = argv[0] if argv else None
     print(next_nnn(knowledge_dir, fetch=fetch))
     return 0
 

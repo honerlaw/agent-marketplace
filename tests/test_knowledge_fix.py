@@ -124,7 +124,7 @@ def test_missing_reciprocal_added(tmp_path):
          "002-constraint-bar.md": entry("constraint", "bar")},  # no back-link
         index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
-    assert any(f.family == "reciprocal" for f in errors(kd))
+    assert any(f.family == "reciprocal" for f in lint_knowledge(kd))  # pending, a warning
     before_body = body_complement((kd / "002-constraint-bar.md").read_text())
     fix.apply(kd, DATE)
     assert errors(kd) == []

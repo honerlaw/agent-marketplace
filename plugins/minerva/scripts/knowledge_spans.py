@@ -19,7 +19,7 @@ import re
 # A supersession banner: a marker comment sitting above the first ``## `` header.
 # Position+form anchored — never matched as a loose substring (entries may mention
 # the literal string in prose).
-BANNER_MARKER_RE = re.compile(r"^<!-- superseded-by: (\d{3}) -->$")
+BANNER_MARKER_RE = re.compile(r"^<!-- superseded-by: (\d{3,}) -->$")
 BANNER_QUOTE_RE = re.compile(r"^> \*\*Superseded by ")
 
 # The trailing, machine-managed cross-reference block. By convention it is the

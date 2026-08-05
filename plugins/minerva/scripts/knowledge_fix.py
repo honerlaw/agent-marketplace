@@ -42,6 +42,7 @@ from pathlib import Path
 
 from knowledge_lint import (
     ENTRY_RE,
+    RELATED_LINE_RE,
     SECTION_TO_TYPE,
     _strip_fences,
     lint_knowledge,
@@ -51,9 +52,11 @@ from knowledge_lint import (
 from knowledge_edits import add_related_link, add_supersede_banner, body_complement
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
-_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3})-[a-z]+-[^\]]+\]\]")
-# A forward `## Related` line, capturing target NNN + relationship label.
-_RELATED_LINE_RE = re.compile(r"^-\s+\[\[(\d{3})-[a-z]+-[^\]]+\]\]\s+—\s+(.+?)\s*$")
+_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3,})-[a-z]+-[^\]]+\]\]")
+# A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
+# grammar the detector reports edges with. A narrower one here would let the fixer
+# silently skip an edge the linter flags, producing an error nothing repairs.
+# groups: 1 = stem, 2 = NNN, 3 = label (None when the line has no separator+label).
 
 # section header -> type and back. Order is the canonical skeleton order.
 TYPE_TO_SECTION = {v: k for k, v in SECTION_TO_TYPE.items()}
@@ -113,7 +116,6 @@ def plan_index(kd: Path) -> tuple:
     old = index_path.read_text() if index_path.exists() else ""
     entries = _entries(kd)
     dups = _duplicate_nnns(kd)
-    max_nnn = max(entries) if entries else "000"
 
     # A missing/empty index can't be mechanically rebuilt (the fixer has no
     # summaries to author) — refuse rather than write a hollow skeleton.
@@ -150,9 +152,9 @@ def plan_index(kd: Path) -> tuple:
                 refusals.append((nnn, "—", f"NNN {nnn} is shared by multiple entries; "
                                            f"catalog line left under {cur}, not relocated"))
                 continue
-            return old, old, [(nnn, "—", f"NNN {nnn} is shared by multiple entries and "
-                                         f"its catalog line is in an unknown section; "
-                                         f"index left unchanged")]
+            return old, old, refusals + [(nnn, "—", f"NNN {nnn} is shared by multiple "
+                                          f"entries and its catalog line is in an unknown "
+                                          f"section; index left unchanged")]
         target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
         if target in buckets:
             buckets[target].append((nnn, line))
@@ -162,8 +164,9 @@ def plan_index(kd: Path) -> tuple:
                                        f"{cur}, not relocated"))
         else:
             # Can't place safely — refuse the whole index rewrite, leave index.md as-is.
-            return old, old, [(nnn, "—", f"entry {nnn} has an unrecognized type and is in "
-                                         f"an unknown section; index left unchanged")]
+            return old, old, refusals + [(nnn, "—", f"entry {nnn} has an unrecognized "
+                                          f"type and is in an unknown section; index "
+                                          f"left unchanged")]
 
     # ADD a line for any entry that has none. This is the operation that makes an
     # add-only promote possible: promote writes the entry file carrying its own
@@ -197,11 +200,19 @@ def plan_index(kd: Path) -> tuple:
     blocks = []
     for sec in SECTION_ORDER:
         block = [sec]
-        rows = [line for _, line in sorted(buckets[sec], key=lambda t: t[0])]
+        rows = [line for _, line in sorted(buckets[sec], key=lambda t: int(t[0]))]
         if rows:
             block.append("")
             block.extend(rows)
         blocks.append("\n".join(block))
+
+    # The watermark is the highest NNN this catalog ACTUALLY lists — not the corpus
+    # max. Advancing it past an entry we just refused (no `**Summary**`, unrecognized
+    # type, duplicate id) would assert the index reflects an entry it does not, and
+    # bury the refusal: the refusal is printed once, by the run that caused it, while
+    # the watermark is permanent.
+    catalogued = [nnn for sec in SECTION_ORDER for nnn, _ in buckets[sec]]
+    max_nnn = max(catalogued, key=int) if catalogued else "000"
     new = (
         "# Knowledge index\n"
         f"<!-- index-watermark: {max_nnn} -->\n\n"
@@ -229,9 +240,10 @@ def _forward_related(parsed_text: str) -> list:
         return []
     out = []
     for ln in nonfenced[start + 1:]:
-        m = _RELATED_LINE_RE.match(ln.strip())
+        m = RELATED_LINE_RE.match(ln.strip())
         if m:
-            out.append((m.group(1), m.group(2).strip()))
+            label = m.group(3)
+            out.append((m.group(2), label.strip() if label else None))
     return out
 
 
@@ -268,6 +280,10 @@ def plan_reciprocals(kd: Path, date: str) -> tuple:
                 continue
             # already reciprocated? (B's Related targets A, or B's banner targets A)
             if a in entries[b]["parsed"]["backlinks"]:
+                continue
+            if label is None:
+                refusals.append((a, b, "forward `## Related` line has no relationship "
+                                       "label; cannot derive the reciprocal"))
                 continue
             if label not in RECIPROCAL:
                 refusals.append((a, b, f"forward label '{label}' not in closed vocab"))
