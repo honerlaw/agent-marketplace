@@ -43,6 +43,13 @@
       ],
       "ignore_case": true,
       "file": "references/reconciliation.md"
+    },
+    {
+      "any_of": [
+        "NEVER --force",
+        "The push is the lock"
+      ],
+      "file": "references/reconciliation.md"
     }
   ],
   "cross_surface": {

@@ -54,6 +54,13 @@ and stop. **At most one outstanding at a time** — two would edit `index.md`
 concurrently and conflict with each other, recreating the exact problem this design
 removes. Anything pending is simply picked up by the next run after that PR lands.
 
+This check is an early-out, **not** the lock. It is a read followed by an act, so two
+cleanups running at once — a manual invocation racing a `propose-ship-auto` wake-up,
+say — can both pass it. The actual mutual exclusion is the remote ref update in
+Step 3.3: a non-forced push to `minerva/reconcile` is atomic, so exactly one of the
+two wins and the loser is rejected. Handle that rejection as the serialization signal
+it is, never by forcing.
+
 ## Step 3 — Reconcile in a throwaway worktree
 
 Never reconcile in the user's working tree: cleanup's pre-flight only guarantees it
@@ -94,11 +101,19 @@ the throwaway leaves no trace. Address it by prefix — every path gets
    ```bash
    git -C .minerva/worktrees/minerva-reconcile add .minerva/knowledge/
    git -C .minerva/worktrees/minerva-reconcile commit -m "chore: reconcile knowledge index"
-   git -C .minerva/worktrees/minerva-reconcile push -u origin minerva/reconcile
+   git -C .minerva/worktrees/minerva-reconcile push -u origin minerva/reconcile   # NEVER --force
    gh pr create --head minerva/reconcile --base "<default-branch>" \
      --title "chore: reconcile knowledge index" --body "<body>"
    gh pr merge --auto --squash <pr-number>
    ```
+
+   **The push is the lock.** It must be non-forced: `--force` / `--force-with-lease`
+   would let a second concurrent cleanup overwrite the first's branch out from under
+   its open PR. If the push is rejected as non-fast-forward, another reconciliation
+   won the race — report `reconciliation: another run is in flight, skipping`, clean
+   up per step 4, and exit 0. That is a correct outcome, not a failure: the winning
+   run's pass covers the same pending entries, because both computed their edits from
+   the same default-branch corpus.
 
    The body names the entries catalogued, whether `overview.md` was refreshed, and any
    refusals. Auto-merge is appropriate here **because the content is derived** —

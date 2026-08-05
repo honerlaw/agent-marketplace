@@ -40,3 +40,32 @@
   unmerged branch, and only on an unfetched remote branch (with `--fetch`), is seen.
 
 ## Panel decisions 2026-08-05
+
+- [3/3 accept] completion verification: all 9 success criteria honestly met; 410 CI-enumerated tests green, knowledge_lint clean. Panel independently reproduced the suite, the lint exit code, the byte caps and the Phase-4.5 excision rather than trusting the checklist.
+
+## Panel concerns 2026-08-05
+
+Logged despite the 3/3 accept — two were acted on in-run rather than deferred.
+
+- **[medium, FIXED IN RUN] Reconciliation's skip-if-open was a check-then-act race.**
+  `gh pr list --head minerva/reconcile` is a read followed by an act, so two concurrent
+  cleanups (a manual run racing a `propose-ship-auto` wake-up) could both pass it and
+  both push the same branch — reintroducing the conflict class this unit exists to
+  remove, just on a rarer path. Fixed by making the **non-forced push** the lock (git's
+  ref update is atomic; exactly one wins, the loser reports and exits 0) and demoting
+  the `gh pr list` check to an early-out. Guarded by a new contract anchor. The Skeptic
+  also noted this was the one piece of new coordination logic not wrapped in a tested
+  script, contra knowledge 021 — recorded in `followups.md`.
+
+- **[low-medium, MITIGATED] `using-minerva/SKILL.md` byte margin.** This unit's edit had
+  pushed it 9157 → 9209 of 9216. Reworded that row to give the bytes back (now ~60 free)
+  and recorded the compaction need in `followups.md`.
+
+- **[medium, deferred by design] Criterion 1's second clause is unverifiable.** No harness
+  in this repo executes a skill end-to-end, so "a promote run leaves only additions" can
+  only be guarded by prose inspection. Promote rewrites the criterion to what is actually
+  guaranteed; recorded in `followups.md`.
+
+- **[low, accepted] Contract JSON reflow noise.** Two `evals/*/contract.json` diffs reflow
+  every anchor to multi-line JSON for a one-token removal, inflating the diff stat.
+  Cosmetic; not churned further.
