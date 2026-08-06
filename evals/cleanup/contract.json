@@ -15,7 +15,42 @@
   "anchors": [
     ".minerva/worktrees/",
     "merged",
-    "default branch"
+    "default branch",
+    "reconcil",
+    {
+      "any_of": [
+        "already open"
+      ],
+      "ignore_case": true,
+      "file": "references/reconciliation.md"
+    },
+    {
+      "any_of": [
+        "--dry-run"
+      ],
+      "file": "references/reconciliation.md"
+    },
+    {
+      "any_of": [
+        "gh pr merge --auto"
+      ],
+      "file": "references/reconciliation.md"
+    },
+    {
+      "any_of": [
+        "never commit to the default branch",
+        "do not merge directly"
+      ],
+      "ignore_case": true,
+      "file": "references/reconciliation.md"
+    },
+    {
+      "any_of": [
+        "NEVER --force",
+        "The push is the lock"
+      ],
+      "file": "references/reconciliation.md"
+    }
   ],
   "cross_surface": {
     "root_readme": true,

@@ -91,7 +91,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
-2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 4.5 (synthesis still runs on an idempotent re-entry; it self-gates and will no-op if the overview is already current).
+2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 5.
 
 3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
 
@@ -103,43 +103,15 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `minerva:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
 
-8. Continue to Phase 4.5.
+8. Continue to Phase 5.
 
-## Phase 4.5 — Synthesis (delegated, self-gating)
-
-Promote (Phase 4) just added knowledge entries, pushing the corpus past the wiki
-`overview.md`'s synthesis-watermark — so there is now un-synthesized scope. This phase
-gives the wiki overview a chance to refresh **before** ship, so a refreshed
-`.minerva/knowledge/overview.md` rides the same PR.
-
-**Always invoke `minerva:synthesize`** via the `Skill` tool. Before invoking, lead with
-this auto-mode instruction (the same shape Phase 6 uses for ship's hard gates):
-
-> "You are running inside `minerva:propose-ship-auto`. When `minerva:synthesize` reaches
-> its Step-4 write-confirmation gate, accept the drafted `overview.md` without prompting.
-> Its Step-2 'decide IF to (re)synthesize' self-gate is **unchanged** — if there is too
-> little new scope, it correctly no-ops and writes nothing."
-
-This is **delegation, not a panel decision**: the "decide IF" judgment lives inside
-`minerva:synthesize` (its Step 2, driven by the deterministic `synthesis_status` signal),
-so there is no orchestrator decision to vote on and **no panel is convened** (see the
-Decision taxonomy (`references/panel-protocol.md`) synthesis row). Auto mode auto-accepts only
-synthesize's *write* gate; it never overrides the self-gate, so a thin-scope run still
-no-ops.
-
-**Log the outcome** (for observability) with one line under the same
-`## Panel decisions YYYY-MM-DD` header used elsewhere, with a distinct `[synthesis]`
-prefix: Phase 4 has already archived the scratchpad, so this line goes to `archive/scratchpad.md` — the live `scratchpad.md` is by then the one-line post-promote marker that downstream skills rely on being empty (knowledge 003), and must stay that way.
-
-- wrote → `[synthesis] refreshed overview.md (watermark NNN→MMM; K entries synthesized)`
-- no-op → `[synthesis] no-op (K un-synthesized below threshold / overview current)`
-
-If `minerva:synthesize` wrote a refreshed overview, carry that forward to Phase 6: the
-ship hand-off must **name `.minerva/knowledge/overview.md` among the paths to stage**
-(ship stages specific paths, never `-A`) and **request** a PR-body line noting
-"overview.md refreshed (advisory navigation)".
-
-Continue to Phase 5.
+**No synthesis phase here.** Earlier revisions refreshed `overview.md` between promote
+and ship so it could ride the same PR. It no longer does: `overview.md` is a shared
+aggregate, and writing it on a work-unit branch made it the second-most-conflicted
+file in the repo (33% of commits, rewritten wholesale — nothing can merge that). It is
+now written only on the default branch, by `minerva:cleanup`'s reconciliation in
+Phase 7, where there is one writer at a time. Promote is add-only for the same reason;
+do not stage `.minerva/knowledge/index.md` or `overview.md` in Phase 6.
 
 ## Phase 5 — Ship gate
 
@@ -162,7 +134,7 @@ If `minerva:ship`'s CI auto-fix classifier marks a failure as `other` or bails o
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes` via the `Skill` tool. Report and exit.
+2. **`MERGED`** → invoke `minerva:cleanup <NNN-slug> --yes` via the `Skill` tool. Besides removing the worktree, cleanup reconciles the knowledge wiki on the default branch — cataloguing this unit's entries from their `**Summary**` fields, writing their reciprocal links, and refreshing `overview.md` if warranted — and opens a single auto-merging PR for it. Surface that PR (and any reconciliation refusals) in the final report. Report and exit.
 3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-auto --cleanup-only <NNN-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12. On exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.

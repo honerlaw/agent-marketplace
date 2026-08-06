@@ -29,7 +29,7 @@
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`), and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
+- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates, and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
 - **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the auto skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.

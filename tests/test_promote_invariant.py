@@ -1,13 +1,20 @@
-"""Guard for the narrowed never-overwrite invariant.
+"""Guard for the narrowed never-overwrite invariant, and for promote's add-only rule.
 
-Work unit ``020-knowledge-wiki-navigability`` lets ``minerva:promote`` edit
-*existing* knowledge entries to add bidirectional ``## Related`` cross-links and
-supersession banners. To keep that safe, ``promote/SKILL.md`` narrows the
-"knowledge files are never overwritten" invariant to: the **body** of an entry
-(its ``# H1``/metadata block and the ``## Context`` / ``## Finding`` /
-``## Implications`` sections) stays append-only and is never rewritten; the *only*
-machine-managed mutable surfaces are the delimited ``## Related`` block and the
+Work unit ``020-knowledge-wiki-navigability`` introduced bidirectional ``## Related``
+cross-links and supersession banners as machine-managed edits to *existing* entries.
+To keep that safe, the "knowledge files are never overwritten" invariant was narrowed
+to: the **body** of an entry (its ``# H1``/metadata block and the ``## Context`` /
+``## Finding`` / ``## Implications`` sections) stays append-only and is never
+rewritten; the *only* mutable surfaces are the delimited ``## Related`` block and the
 supersession-banner span.
+
+Work unit ``049-add-only-knowledge-writes`` moved *who* performs those edits.
+``minerva:promote`` no longer touches any existing file: on a work-unit branch it
+writes new entry files and nothing else, so a branch's ``.minerva/`` footprint is
+purely additions and concurrent PRs cannot conflict on it. The reciprocal links and
+banners are now derived on the default branch by ``knowledge_fix.plan_reciprocals``
+during ``minerva:cleanup``'s reconciliation — using the very editors this file
+specifies. The span invariant is unchanged; only its caller moved.
 
 minerva skills are prose executed by an LLM, not Python, so this is **not** a unit
 test of a ``promote()`` function. It is the canonical *reference implementation* of
@@ -175,3 +182,59 @@ Standalone so far.
     tail = mutated.rstrip("\n").splitlines()[-2:]
     assert tail == ["## Related", "- [[001-decision-x]] — see also"], tail
     assert body_complement(mutated) == body_complement(fenced_only)
+
+
+# --- promote is add-only in-branch (prose guard) ------------------------------
+# The span editors above are still the spec of record, but promote is no longer their
+# caller. These guard the prose that says so: if someone re-adds "apply the index.md
+# line + watermark bump" to promote, every concurrent pair of work units starts
+# conflicting on index.md again — and, worse, the conflict was the only thing
+# incidentally catching duplicate entry numbers.
+from pathlib import Path  # noqa: E402
+
+PROMOTE_DIR = Path(__file__).resolve().parent.parent / "plugins/minerva/skills/promote"
+
+
+def _promote_prose() -> str:
+    return "\n".join(p.read_text() for p in sorted(PROMOTE_DIR.rglob("*.md")))
+
+
+def test_promote_prose_declares_itself_add_only():
+    assert "add-only" in _promote_prose()
+
+
+# The exact instructions promote carried before it became add-only. A keyword tripwire
+# ("watermark bump") can't work here — the prose now says "no watermark bump", which is
+# the same keyword meaning the opposite. These are the literal strings a revert would
+# reintroduce. This catches a regression, not every possible novel rephrasing of one;
+# the positive `add-only` assertion above is the other half of the guard.
+LEGACY_AGGREGATE_INSTRUCTIONS = [
+    "the `index.md` line(s) + watermark bump",
+    "index line + watermark bump",
+    "apply the approved `## Related` cross-links (bidirectional)",
+    "Edit neighbor entries only within their `## Related` block",
+]
+
+
+def test_promote_prose_carries_no_legacy_aggregate_instruction():
+    prose = _promote_prose()
+    for banned in LEGACY_AGGREGATE_INSTRUCTIONS:
+        assert banned not in prose, (
+            f"promote prose instructs an aggregate/neighbor write ({banned!r}). Promote "
+            f"must be add-only: index.md, the watermark, reciprocal links and banners "
+            f"are all written by minerva:cleanup's reconciliation on the default branch. "
+            f"Restoring this makes every concurrent pair of work units conflict again."
+        )
+
+
+def test_promote_prose_uses_the_cross_branch_allocator():
+    """A local `max+1` cannot see entries on other in-flight branches, and those
+    collisions merge cleanly because each entry is a new file — so the allocator is
+    the only remaining backstop once the textual conflict is gone."""
+    assert "knowledge_next_nnn.py" in _promote_prose()
+
+
+def test_entry_template_requires_a_summary_field():
+    """The catalog line is generated from it during reconciliation."""
+    template = (PROMOTE_DIR / "references/wiki-maintenance.md").read_text()
+    assert "**Summary**" in template

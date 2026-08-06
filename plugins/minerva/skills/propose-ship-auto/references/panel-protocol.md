@@ -66,8 +66,6 @@ Decisions resolved by the [Skip predicate](#skip-predicate-small-decisions) inst
 
 Decisions skipped on an **unsolicited** user directive log under the same header, prefixed `[user-directed]` — the directive itself is the recorded justification, never recast as predicate evidence (see [No ceremony ratification](#no-ceremony-ratification)).
 
-Phase 4.5 (`references/phases.md`) also logs under this header, with a distinct `[synthesis]` prefix. A `[synthesis]` line is an **operational observability line, NOT a vote and NOT a skip** — it records that the delegated `minerva:synthesize` ran and whether it wrote or no-op'd, so a later `minerva:review` / `minerva:promote` pass can confirm the phase fired rather than being silently absent. Like a skip line it is promote-invisible (no Skeptic).
-
 These entries are scratchpad data — `minerva:promote` treats them as routine noise unless a Skeptic concern reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition. A `[skipped — small]` line is **promote-invisible by construction** — a skip has no Skeptic, so it can never surface a durable pattern. This is intended: a decision trivial enough to skip yields no durable knowledge.
 
 ## Decision taxonomy
@@ -87,7 +85,7 @@ The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decis
 | Review | Replan-vs-FIX (only if load-bearing finding surfaces) | Strategic | 2/3 | **No** — precondition is a surfaced load-bearing finding |
 | Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | Tactical | 2/3 | Only if every entry is unambiguous (e.g., all DISCARD-noise) |
 | Promote | TODO disposition | Tactical | 2/3 | Only if a single unambiguous disposition |
-| Promote→Ship | Synthesis refresh (Phase 4.5) | Operational | No panel (`minerva:synthesize` self-gates) | n/a — delegated, self-gating |
+| Cleanup | Knowledge reconciliation (index, reciprocals, overview) | Operational | No panel (`minerva:cleanup` self-gates on a deterministic signal) | n/a — delegated, self-gating |
 | Ship | Commit message | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
 | Ship | PR title + body | Operational | No panel (main LLM accepts draft) | n/a — already main-LLM |
 | Ship | CI auto-fix classification | Tactical | No panel (`ship`'s classifier handles it) | n/a — `ship`'s classifier |

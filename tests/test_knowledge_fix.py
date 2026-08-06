@@ -15,8 +15,11 @@ DATE = "2026-01-01"
 
 
 # --- fixture builders (canonical skeleton) -----------------------------------
-def entry(typ, slug, related=None, banner=None, body_extra=""):
-    s = f"# {slug} title\n\n**Date**: {DATE}\n**Type**: {typ}\n**Context**: x\n"
+def entry(typ, slug, related=None, banner=None, body_extra="", summary=None):
+    s = f"# {slug} title\n\n**Date**: {DATE}\n**Type**: {typ}\n"
+    if summary:
+        s += f"**Summary**: {summary}\n"
+    s += "**Context**: x\n"
     if banner:  # (nnn, stem)
         s += f"\n<!-- superseded-by: {banner[0]} -->\n> **Superseded by [[{banner[1]}]]** ({DATE})\n"
     s += "\n## Context\nc\n\n## Finding\nf\n" + body_extra + "\n## Implications\ni\n"
@@ -76,7 +79,8 @@ def test_watermark_fixed(tmp_path):
         index_md("001", {"Decisions": [("001-decision-foo", "d")],  # watermark 001, max is 002
                          "Constraints": [("002-constraint-bar", "c")]}),
     )
-    assert any("watermark" in f.message for f in errors(kd))
+    # A lagging watermark is no longer an error (it's the reconciliation floor), but
+    # the fixer still brings it up to the corpus max when it rewrites the index.
     fix.apply(kd, DATE)
     assert errors(kd) == []
     assert "<!-- index-watermark: 002 -->" in (kd / "index.md").read_text()
@@ -120,7 +124,7 @@ def test_missing_reciprocal_added(tmp_path):
          "002-constraint-bar.md": entry("constraint", "bar")},  # no back-link
         index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
-    assert any(f.family == "reciprocal" for f in errors(kd))
+    assert any(f.family == "reciprocal" for f in lint_knowledge(kd))  # pending, a warning
     before_body = body_complement((kd / "002-constraint-bar.md").read_text())
     fix.apply(kd, DATE)
     assert errors(kd) == []
@@ -240,3 +244,110 @@ def test_dry_run_writes_nothing(tmp_path):
     before = {p.name: p.read_text() for p in kd.glob("*.md")}
     fix.main(["--dry-run", "--date", DATE, str(kd)])
     assert {p.name: p.read_text() for p in kd.glob("*.md")} == before  # untouched
+
+
+# --- catalog-line insertion (what makes an add-only promote possible) --------
+def test_missing_catalog_line_added_from_entry_summary(tmp_path):
+    """The entry states its own summary, so reconciliation can catalogue it with no
+    LLM in the loop — this is the operation promote stops doing in-branch."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-constraint-bar.md": entry("constraint", "bar", summary="bar is bounded")},
+        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),  # 002 uncatalogued
+    )
+    fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[002-constraint-bar]] — bar is bounded" in text
+    assert "<!-- index-watermark: 002 -->" in text
+    assert errors(kd) == []
+
+
+def test_added_catalog_line_lands_in_the_declared_type_section(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-pattern-baz.md": entry("pattern", "baz", summary="baz recurs")},
+        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),
+    )
+    fix.apply(kd, DATE)
+    body = (kd / "index.md").read_text()
+    patterns = body.split("## Patterns")[1].split("## Constraints")[0]
+    assert "002-pattern-baz" in patterns
+
+
+def test_missing_catalog_line_without_summary_is_still_refused(tmp_path):
+    """The fixer relocates a summary the entry states; it never invents one."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-constraint-bar.md": entry("constraint", "bar")},  # no **Summary**
+        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    assert any("Summary" in r[2] for r in batch["refusals"])
+    assert "002-constraint-bar" not in (kd / "index.md").read_text()
+
+
+def test_mixed_corpus_needs_no_backfill(tmp_path):
+    """An old entry with no Summary keeps its existing verbatim line while a new one
+    is catalogued from its own — the state a consumer repo lands in on day one."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-old.md": entry("decision", "old"),           # legacy, no Summary
+         "002-constraint-new.md": entry("constraint", "new", summary="new is add-only")},
+        index_md("001", {"Decisions": [("001-decision-old", "hand-written summary")]}),
+    )
+    fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[001-decision-old]] — hand-written summary" in text  # preserved verbatim
+    assert "- [[002-constraint-new]] — new is add-only" in text
+    assert errors(kd) == []
+
+
+# --- duplicate-NNN quarantine ------------------------------------------------
+def test_duplicate_nnn_catalog_lines_are_not_relocated(tmp_path):
+    """Both lines share an NNN, so the NNN-keyed lookup can't say which entry each
+    belongs to. Relocating on the arbitrary winner would misfile the other."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "001-bug-bar.md": entry("bug", "bar")},
+        index_md("001", {"Decisions": [("001-decision-foo", "d")],
+                         "Bugs": [("001-bug-bar", "b")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[001-decision-foo]] — d" in text.split("## Bugs")[0]
+    assert "- [[001-bug-bar]] — b" in text.split("## Bugs")[1]
+    assert any("shared by multiple entries" in r[2] for r in batch["refusals"])
+
+
+def test_duplicate_nnn_gets_no_catalog_line_added(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo", summary="s1"),
+         "001-bug-bar.md": entry("bug", "bar", summary="s2")},
+        index_md("000", {}),
+    )
+    batch = fix.apply(kd, DATE)
+    assert "001-" not in (kd / "index.md").read_text()
+    assert any("which entry would it name" in r[2] for r in batch["refusals"])
+
+
+def test_duplicate_nnn_blocks_reciprocal_writes(tmp_path):
+    """A back-link would land in whichever group member won the lookup."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "001-bug-bar.md": entry("bug", "bar"),
+         "002-pattern-baz.md": entry("pattern", "baz", summary="s",
+                                     related=[("001-decision-foo", "see also")])},
+        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+                         "Bugs": [("001-bug-bar", "b")],
+                         "Patterns": [("002-pattern-baz", "p")]}),
+    )
+    before = (kd / "001-decision-foo.md").read_text()
+    batch = fix.apply(kd, DATE)
+    assert (kd / "001-decision-foo.md").read_text() == before  # untouched
+    assert any("back-link not written" in r[2] for r in batch["refusals"])

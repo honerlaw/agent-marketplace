@@ -38,6 +38,7 @@ jobs:
           tests/test_promote_invariant.py
           tests/test_knowledge_lint.py
           tests/test_knowledge_fix.py
+          tests/test_knowledge_next_nnn.py
           tests/test_synthesis_status.py
           tests/test_migration_status.py
           tests/test_site_catalog.py

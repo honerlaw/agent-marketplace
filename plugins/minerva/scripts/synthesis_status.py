@@ -13,8 +13,8 @@ match `ENTRY_RE`, so the frozen detector `knowledge_lint.py` and the fixer
     <!-- synthesis-watermark: NNN -->
 
 `NNN` = the max entry NNN reflected by the last synthesis. This is a DIFFERENT marker
-from `index.md`'s `index-watermark` (which must always equal max NNN — an integrity
-invariant); the synthesis watermark deliberately *lags*, and the lag is the
+from `index.md`'s `index-watermark` (which records how far the catalog has actually
+been reconciled, and may lag the corpus); the synthesis watermark also *lags*, and its lag is the
 un-synthesized-scope signal.
 
 This module reuses the frozen detector's primitives (`_strip_fences`, `ENTRY_RE`,
@@ -45,7 +45,7 @@ from knowledge_lint import ENTRY_RE, WIKILINK_RE, _strip_fences
 
 # Distinct from knowledge_lint.WATERMARK_RE (`index-watermark`). New marker, new regex,
 # single-sourced here (it lives only in overview.md).
-SYNTH_WATERMARK_RE = re.compile(r"<!--\s*synthesis-watermark:\s*(\d{3})\s*-->")
+SYNTH_WATERMARK_RE = re.compile(r"<!--\s*synthesis-watermark:\s*(\d{3,})\s*-->")
 
 OVERVIEW_NAME = "overview.md"
 

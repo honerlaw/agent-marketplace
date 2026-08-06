@@ -33,7 +33,8 @@
         "confirm"
       ],
       "ignore_case": true
-    }
+    },
+    "Default-branch guard"
   ],
   "cross_surface": {
     "root_readme": true,

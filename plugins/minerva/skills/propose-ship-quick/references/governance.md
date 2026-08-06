@@ -7,7 +7,7 @@
 **Per-phase abort triggers.**
 - Propose phase: if the propose-phase decisions (scope, approach, whole-proposal) escalate to the point the strategic intent is too ambiguous for the main model to resolve even with the user's answers, abort the quick run. Recommend: "switch to manual `minerva:propose`," or `minerva:propose-ship-auto` if independent panel review is wanted.
 
-**Global escalation counter.** Maintain across the run; per-run, owned by the main orchestration loop (it survives the inline `Skill`-tool delegations of Phases 4.5 / 6 / 7). Increment on every user escalation. If it reaches **3**, halt before the next decision point and report status. A run that escalates this often is not a good fit for the fast path — recommend `minerva:propose-ship-auto` or `minerva:propose-ship`. Recovery: run the individual minerva skills manually from the current state.
+**Global escalation counter.** Maintain across the run; per-run, owned by the main orchestration loop (it survives the inline `Skill`-tool delegations of Phases 6 / 7). Increment on every user escalation. If it reaches **3**, halt before the next decision point and report status. A run that escalates this often is not a good fit for the fast path — recommend `minerva:propose-ship-auto` or `minerva:propose-ship`. Recovery: run the individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip the main model's judgment entirely).**
 - In-flight work collision (pre-flight).
@@ -31,7 +31,7 @@
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run — Phase 4.5 only *invokes* `minerva:synthesize` (leading with an auto-mode instruction to auto-accept its write gate, exactly as Phase 6 does for `minerva:ship`).
+- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
 - **Convening a `minerva:round-table` panel.** That is `minerva:propose-ship-auto`'s mechanism; this skill's entire identity is that the main model decides instead. If panel review is wanted, the user should run `minerva:propose-ship-auto`.
 - **Auto-cascading into new work units.** Phase 4 TODOs marked "seed new proposal" are reported as suggestions — this skill does not invoke itself recursively in the same run.
 - **Capping implementation time.** Phase 2's loop has no time or token bound; the scope-fit escape is the relief valve, not a hard cap.

@@ -17,8 +17,7 @@
     "minerva:ship",
     "minerva:cleanup",
     "minerva:review",
-    "minerva:promote",
-    "minerva:synthesize"
+    "minerva:promote"
   ],
   "cross_surface": {
     "root_readme": true,

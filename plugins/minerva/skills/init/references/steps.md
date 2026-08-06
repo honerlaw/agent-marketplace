@@ -14,8 +14,12 @@ If `.minerva/` doesn't exist, create:
 - `.minerva/reference/` — the present-tense operational-doc tier.
 - `.minerva/reference/.gitkeep` (empty file, so git tracks the empty directory)
 
-**Canonical `index.md` skeleton** — `minerva:init` and `minerva:promote` are the two
-creators of this file; both emit this **exact** content so they cannot diverge:
+**Canonical `index.md` skeleton** — `minerva:init` is the **sole** creator of this
+file. `minerva:promote` is add-only and never writes `index.md` at all; the catalog
+is maintained on the default branch by `minerva:cleanup`'s reconciliation, which
+refuses to run against a missing index rather than fabricating one. So if this file
+is absent, that is an init gap, and both `knowledge_lint` and `knowledge_fix` say so.
+Emit this **exact** content:
 
 ```markdown
 # Knowledge index

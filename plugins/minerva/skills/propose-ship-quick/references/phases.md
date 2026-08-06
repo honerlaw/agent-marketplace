@@ -60,20 +60,14 @@ Replaces the user-interactive triage in `minerva:review`.
 Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
-2. **Idempotency check.** If `scratchpad.md` is the post-promote marker, report "already promoted" and continue to Phase 4.5 (synthesis self-gates and no-ops if current).
+2. **Idempotency check.** If `scratchpad.md` is the post-promote marker, report "already promoted" and continue to Phase 5.
 3. **Partition.** The main model proposes the four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already `→ promoted to ...`. Escalate if an entry's bucket is genuinely ambiguous.
 4. **TODO disposition.** For each TODO: followups.md / seed new proposal / discard. The main model decides; escalate if unsure.
 5. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/NNN-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 6. **TODO seed gate (if any).** Do **not** auto-invoke `minerva:propose` in the same run — surface "seed new proposal" TODOs in the final report as suggested follow-ups.
-7. Continue to Phase 4.5.
+7. Continue to Phase 5.
 
-## Phase 4.5 — Synthesis (delegated, self-gating)
-
-Promote just added knowledge entries, so there is now un-synthesized scope. **Always invoke `minerva:synthesize`** via the `Skill` tool, leading with this auto-mode instruction:
-
-> "You are running inside `minerva:propose-ship-quick`. When `minerva:synthesize` reaches its Step-4 write-confirmation gate, accept the drafted `overview.md` without prompting. Its Step-2 'decide IF to (re)synthesize' self-gate is **unchanged** — if there is too little new scope, it correctly no-ops and writes nothing."
-
-This is **delegation, not a decision** — the "decide IF" judgment lives inside `minerva:synthesize`. **Log the outcome** with one line under `## Quick decisions YYYY-MM-DD`, `[synthesis]` prefix (wrote → `refreshed overview.md (watermark NNN→MMM; K entries)`; no-op → `no-op (below threshold / current)`). Phase 4 has already archived the scratchpad, so this line goes to `archive/scratchpad.md` — the live `scratchpad.md` is by then the one-line post-promote marker that downstream skills rely on being empty (knowledge 003), and must stay that way. If it wrote, Phase 6 must **name `.minerva/knowledge/overview.md` among the paths to stage** and note "overview.md refreshed (advisory navigation)" in the PR body. Continue to Phase 5.
+**No synthesis phase here.** `overview.md` is a shared aggregate rewritten wholesale, which made it the second-most-conflicted file in the repo once work-unit branches started touching it. It is now written only on the default branch, by `minerva:cleanup`'s reconciliation in Phase 7. Promote is add-only for the same reason — do not stage `.minerva/knowledge/index.md` or `overview.md` in Phase 6.
 
 ## Phase 5 — Ship gate
 

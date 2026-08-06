@@ -10,14 +10,26 @@ Two object types, two safety models:
   * ENTRY edits (missing reciprocal) — guarded by `body_complement` byte-identity
     (only the `## Related` block / banner span may change; knowledge 016). The span
     editors come from `scripts/knowledge_edits.py` (single-sourced, knowledge 019).
-  * INDEX edits (watermark / stale catalog line / wrong Type section) — `index.md`
-    has no span model; guarded instead by a skeleton-preserving canonical serializer
-    (preserve the `# Knowledge index` H1, the four Type headers incl. the empty
-    `## Patterns`, and ascending-NNN order; never touch an entry file).
+  * INDEX edits (watermark / stale catalog line / wrong Type section / MISSING catalog
+    line) — `index.md` has no span model; guarded instead by a skeleton-preserving
+    canonical serializer (preserve the `# Knowledge index` H1, the four Type headers
+    incl. the empty `## Patterns`, and ascending-NNN order; never touch an entry file).
 
-NOT auto-fixed (left to the human / advisory): missing catalog line (needs a
-summary), broken `## Related` link, and the judged dimensions (orphans /
-contradictions / staleness; advisory per knowledge 013).
+A missing catalog line is auto-fixed **iff** the entry states its own `**Summary**`.
+That is what makes `minerva:promote` add-only: promote writes entry files carrying
+their summaries and touches no aggregate, and this fixer — run on the default branch
+by `minerva:cleanup` — catalogues them. The fixer still never *fabricates* a summary;
+an entry without one is refused exactly as before.
+
+Duplicate-NNN groups are QUARANTINED throughout: their catalog lines are left where
+they sit and their links are not reciprocated. Every lookup here is NNN-keyed, so on
+a duplicate the "winning" entry is arbitrary — acting on it would misfile the other's
+line or write a back-link into the wrong file.
+
+NOT auto-fixed (left to the human / advisory): a missing catalog line for an entry
+with no `**Summary**`, anything touching a duplicate NNN, broken `## Related` links,
+and the judged dimensions (orphans / contradictions / staleness; advisory per
+knowledge 013).
 
 CLI: `python3 scripts/knowledge_fix.py [--dry-run] [knowledge-dir]`
   --dry-run prints the planned edits and writes nothing. apply (default) recomputes
@@ -30,6 +42,7 @@ from pathlib import Path
 
 from knowledge_lint import (
     ENTRY_RE,
+    RELATED_LINE_RE,
     SECTION_TO_TYPE,
     _strip_fences,
     lint_knowledge,
@@ -39,9 +52,11 @@ from knowledge_lint import (
 from knowledge_edits import add_related_link, add_supersede_banner, body_complement
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
-_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3})-[a-z]+-[^\]]+\]\]")
-# A forward `## Related` line, capturing target NNN + relationship label.
-_RELATED_LINE_RE = re.compile(r"^-\s+\[\[(\d{3})-[a-z]+-[^\]]+\]\]\s+—\s+(.+?)\s*$")
+_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3,})-[a-z]+-[^\]]+\]\]")
+# A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
+# grammar the detector reports edges with. A narrower one here would let the fixer
+# silently skip an edge the linter flags, producing an error nothing repairs.
+# groups: 1 = stem, 2 = NNN, 3 = label (None when the line has no separator+label).
 
 # section header -> type and back. Order is the canonical skeleton order.
 TYPE_TO_SECTION = {v: k for k, v in SECTION_TO_TYPE.items()}
@@ -58,27 +73,49 @@ RECIPROCAL = {
 }
 
 
-def _entries(kd: Path) -> dict:
-    """nnn -> {path, parsed}, excluding index.md."""
-    out = {}
+def _entry_groups(kd: Path) -> dict:
+    """nnn -> [path, ...] in filename order. A group with >1 member is a duplicate."""
+    groups = {}
     for p in sorted(kd.glob("*.md")):
-        if ENTRY_RE.match(p.name):
-            out[ENTRY_RE.match(p.name).group(1)] = {"path": p, "parsed": parse_entry(p)}
-    return out
+        m = ENTRY_RE.match(p.name)
+        if m:
+            groups.setdefault(m.group(1), []).append(p)
+    return groups
+
+
+def _entries(kd: Path) -> dict:
+    """nnn -> {path, parsed}, excluding index.md.
+
+    On a duplicate NNN the deterministic first-by-filename member represents the
+    group. That winner is arbitrary with respect to *intent*, so every caller must
+    consult `_duplicate_nnns()` and quarantine those ids rather than acting on it —
+    see the quarantine comments in `plan_index` / `plan_reciprocals`.
+    """
+    return {nnn: {"path": g[0], "parsed": parse_entry(g[0])}
+            for nnn, g in _entry_groups(kd).items()}
+
+
+def _duplicate_nnns(kd: Path) -> set:
+    """Ids shared by more than one entry file. Quarantined from every edit."""
+    return {nnn for nnn, g in _entry_groups(kd).items() if len(g) > 1}
 
 
 # --- INDEX fix (watermark / stale line / wrong Type section) ------------------
 def plan_index(kd: Path) -> tuple:
     """Return (new_index_text, old_index_text, refusals) — a canonical,
     skeleton-preserving serialization that fixes watermark, removes stale catalog
-    lines, and relocates wrong-Type lines. Preserves each surviving catalog line
-    verbatim (summary intact) and ascending-NNN order. Does NOT add missing catalog
-    lines (needs a summary), and never DROPS a line it can't confidently place.
+    lines, relocates wrong-Type lines, and ADDS a catalog line for any entry that
+    lacks one and carries its own `**Summary**`. Preserves each surviving catalog
+    line verbatim and ascending-NNN order; never DROPS a line it can't confidently
+    place, and never fabricates a summary for an entry that has none.
+
+    Duplicate-NNN groups are quarantined: their lines are left exactly where they
+    are and no line is added for them (see `_duplicate_nnns`).
     """
     index_path = kd / "index.md"
     old = index_path.read_text() if index_path.exists() else ""
     entries = _entries(kd)
-    max_nnn = max(entries) if entries else "000"
+    dups = _duplicate_nnns(kd)
 
     # A missing/empty index can't be mechanically rebuilt (the fixer has no
     # summaries to author) — refuse rather than write a hollow skeleton.
@@ -105,6 +142,19 @@ def plan_index(kd: Path) -> tuple:
     # is (never dropped — that would delete its summary) and recorded as a refusal.
     buckets = {sec: [] for sec in SECTION_ORDER}
     for nnn, line, cur in parsed:
+        # QUARANTINE: with two entries sharing this id, `entries[nnn]` resolved to an
+        # arbitrary one of them, so its declared type cannot be trusted to place this
+        # line — relocating on it would misfile the other entry's line. Leave it where
+        # it sits, exactly as the unrecognized-type case does below.
+        if nnn in dups:
+            if cur in buckets:
+                buckets[cur].append((nnn, line))
+                refusals.append((nnn, "—", f"NNN {nnn} is shared by multiple entries; "
+                                           f"catalog line left under {cur}, not relocated"))
+                continue
+            return old, old, refusals + [(nnn, "—", f"NNN {nnn} is shared by multiple "
+                                          f"entries and its catalog line is in an unknown "
+                                          f"section; index left unchanged")]
         target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
         if target in buckets:
             buckets[target].append((nnn, line))
@@ -114,8 +164,34 @@ def plan_index(kd: Path) -> tuple:
                                        f"{cur}, not relocated"))
         else:
             # Can't place safely — refuse the whole index rewrite, leave index.md as-is.
-            return old, old, [(nnn, "—", f"entry {nnn} has an unrecognized type and is in "
-                                         f"an unknown section; index left unchanged")]
+            return old, old, refusals + [(nnn, "—", f"entry {nnn} has an unrecognized "
+                                          f"type and is in an unknown section; index "
+                                          f"left unchanged")]
+
+    # ADD a line for any entry that has none. This is the operation that makes an
+    # add-only promote possible: promote writes the entry file carrying its own
+    # `**Summary**` and never touches index.md, so reconciliation is what catalogues
+    # it. The fixer still refuses to *fabricate* a summary — it only relocates one
+    # the entry already states about itself.
+    catalogued = {nnn for nnn, _, _ in parsed}
+    for nnn in sorted(set(entries) - catalogued):
+        if nnn in dups:
+            refusals.append((nnn, "—", f"NNN {nnn} is shared by multiple entries; no "
+                                       f"catalog line added (which entry would it name?)"))
+            continue
+        summary = entries[nnn]["parsed"]["summary"]
+        if not summary:
+            refusals.append((nnn, "—", f"entry {nnn} has no catalog line and no "
+                                       f"`**Summary**` field — author the line by hand "
+                                       f"(fixer won't fabricate summaries)"))
+            continue
+        target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
+        if target not in buckets:
+            refusals.append((nnn, "—", f"entry {nnn} has an unrecognized type; no "
+                                       f"catalog line added"))
+            continue
+        stem = entries[nnn]["path"].name[:-3]
+        buckets[target].append((nnn, f"- [[{stem}]] — {summary}"))
 
     # Canonical skeleton: each section is its header, then (blank + entries) only if
     # non-empty; sections separated by one blank line. An empty section (e.g.
@@ -124,11 +200,19 @@ def plan_index(kd: Path) -> tuple:
     blocks = []
     for sec in SECTION_ORDER:
         block = [sec]
-        rows = [line for _, line in sorted(buckets[sec], key=lambda t: t[0])]
+        rows = [line for _, line in sorted(buckets[sec], key=lambda t: int(t[0]))]
         if rows:
             block.append("")
             block.extend(rows)
         blocks.append("\n".join(block))
+
+    # The watermark is the highest NNN this catalog ACTUALLY lists — not the corpus
+    # max. Advancing it past an entry we just refused (no `**Summary**`, unrecognized
+    # type, duplicate id) would assert the index reflects an entry it does not, and
+    # bury the refusal: the refusal is printed once, by the run that caused it, while
+    # the watermark is permanent.
+    catalogued = [nnn for sec in SECTION_ORDER for nnn, _ in buckets[sec]]
+    max_nnn = max(catalogued, key=int) if catalogued else "000"
     new = (
         "# Knowledge index\n"
         f"<!-- index-watermark: {max_nnn} -->\n\n"
@@ -156,9 +240,10 @@ def _forward_related(parsed_text: str) -> list:
         return []
     out = []
     for ln in nonfenced[start + 1:]:
-        m = _RELATED_LINE_RE.match(ln.strip())
+        m = RELATED_LINE_RE.match(ln.strip())
         if m:
-            out.append((m.group(1), m.group(2).strip()))
+            label = m.group(3)
+            out.append((m.group(2), label.strip() if label else None))
     return out
 
 
@@ -172,16 +257,33 @@ def plan_reciprocals(kd: Path, date: str) -> tuple:
     `superseded by` line (knowledge 015/016).
     """
     entries = _entries(kd)
+    dups = _duplicate_nnns(kd)
     texts = {nnn: e["path"].read_text() for nnn, e in entries.items()}
     edits = {}  # nnn -> new text (accumulated)
     refusals = []
     for a, e in entries.items():
+        # QUARANTINE (source side): `entries[a]` is an arbitrary member of the group,
+        # so its forward edges cannot be attributed to a specific entry.
+        if a in dups:
+            refusals.append((a, "—", f"NNN {a} is shared by multiple entries; its "
+                                     f"forward links are not reciprocated"))
+            continue
         a_stem = e["path"].name[:-3]
         for b, label in _forward_related(texts[a]):
             if b not in entries:
                 continue  # broken link — not auto-fixed
+            # QUARANTINE (target side): writing the back-link would land it in
+            # whichever member of the group won the lookup — possibly the wrong entry.
+            if b in dups:
+                refusals.append((a, b, f"NNN {b} is shared by multiple entries; "
+                                       f"back-link not written"))
+                continue
             # already reciprocated? (B's Related targets A, or B's banner targets A)
             if a in entries[b]["parsed"]["backlinks"]:
+                continue
+            if label is None:
+                refusals.append((a, b, "forward `## Related` line has no relationship "
+                                       "label; cannot derive the reciprocal"))
                 continue
             if label not in RECIPROCAL:
                 refusals.append((a, b, f"forward label '{label}' not in closed vocab"))

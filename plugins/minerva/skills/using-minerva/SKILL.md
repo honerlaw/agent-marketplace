@@ -42,7 +42,7 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | Something is broken — investigate a live incident or a dev bug end-to-end | `minerva:debug` |
 | Health-check the `.minerva/knowledge/` wiki (index drift, broken links, orphans, contradictions, stale claims) | `minerva:lint` (read-only — reports; repairs by hand or the gated path) |
 | Apply the mechanical wiki fixes `minerva:lint` reported (watermark, stale/misfiled catalog lines, missing reciprocals) | `minerva:lint-fix` (mutating — gated; deterministic fixes only) |
-| After promoting several entries — build a theme-grouped overview of the knowledge corpus, or check whether enough un-synthesized scope has accumulated to warrant (re)synthesis | `minerva:synthesize` (read-mostly — reports the un-synthesized-scope signal, then gated write of `overview.md`) |
+| On the **default branch**, build a theme-grouped overview of the knowledge corpus | `minerva:synthesize` (read-mostly; `minerva:cleanup` runs it during reconciliation) |
 | A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are judgment calls done by hand) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
