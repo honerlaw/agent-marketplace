@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 051 -->
+<!-- synthesis-watermark: 056 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -15,8 +15,11 @@ a maintained `index.md` plus corpus-scan discovery, chosen over a heavier scheme
 ([[017-decision-knowledge-wiki-navigability-layer]]). Entries connect through a
 `## Related` block of wiki-links drawn from a **closed relationship vocabulary**
 ([[015-constraint-knowledge-cross-reference-convention]]), and the machinery that edits
-those connections is tightly bounded: promote may touch only the `## Related` / banner
-span, leaving bodies append-only ([[016-constraint-promote-narrowed-never-overwrite]]).
+those connections is tightly bounded: only the `## Related` / banner span is machine-
+mutable, leaving bodies append-only ([[016-constraint-promote-narrowed-never-overwrite]]).
+That span invariant still holds exactly, but *who* applies it moved — promote no longer
+edits any existing entry at all, and the reciprocal writes happen during default-branch
+reconciliation ([[052-decision-promote-add-only-reconcile-on-default]]).
 
 The span model that defines those editable regions is **single-sourced** in
 `scripts/knowledge_spans.py` so no tool re-derives it
@@ -38,10 +41,13 @@ The wiki's final layer is **synthesis** (Phase C): this very `overview.md` is a 
 LLM-owned file carrying a new-scope-only `synthesis-watermark`, deliberately distinct from
 `index.md` and invisible to the frozen detector/fixer — its content is advisory, never
 CI-gated ([[024-decision-synthesis-layer-separate-file-advisory]]). The `minerva:synthesize`
-skill that maintains it is wired into **both lifecycle orchestrators** as a self-gating
-post-promote / pre-ship step — delegation, not a panel decision — so the overview refreshes
-as part of the same PR that lands new entries
-([[025-decision-synthesize-wired-post-promote-self-gating]]). The wiki also has a
+skill that maintains it was originally wired into the lifecycle orchestrators as a
+self-gating post-promote / **pre-ship** step, so the overview rode the same PR that landed
+new entries ([[025-decision-synthesize-wired-post-promote-self-gating]]) — a position it no
+longer holds. `overview.md` is a shared aggregate rewritten wholesale, which made it the
+second-most-conflicted file in the repo once concurrent branches touched it; synthesis moved
+out of the PR path entirely and now runs on the default branch as part of reconciliation
+([[052-decision-promote-add-only-reconcile-on-default]]). The wiki also has a
 **consumer-facing API**: the agent-file Routing section *teaches the reading protocol*
 (overview → index → entries on demand, with the reference and work tiers for operational
 docs and historical reasoning), and stale sections get a gated refresh whose staleness
@@ -186,6 +192,60 @@ edge case that the primitive simply does not have
 ([[051-pattern-wait-shape-matches-what-is-awaited]]). Both entries share the older lesson's
 grain: a convention that lives only in prose gets re-improvised at runtime.
 
+## Concurrency: what shared state costs, and what hides in it
+
+The newest arc runs orthogonally to the others. Everything above assumes one work unit at
+a time; running several concurrently exposed a class of defect the earlier themes never
+had to face, and the whole cluster came out of a single unit.
+
+The precipitating observation was economic rather than theoretical. `index.md` appeared in
+**78%** of recent commits on a heavy consumer repo, and its conflicts were *guaranteed*
+rather than probable — every promote bumped a watermark on line 2, a same-line edit that
+collides even when the two catalog lines land in different sections. The fix is structural:
+a work-unit branch's `.minerva/` footprint must consist **entirely of newly-added files**,
+because new files merge cleanly however many PRs are open. Promote became add-only, and
+every aggregate and cross-entry write — catalog lines, watermark, reciprocal links,
+banners, the overview — moved to a reconciliation pass that runs on the default branch
+where there is exactly one writer ([[052-decision-promote-add-only-reconcile-on-default]]).
+
+Removing those conflicts removed something load-bearing that nobody had designed: the
+textual collision was the *only* thing incidentally catching duplicate entry ids. A
+knowledge entry is a **new file**, so two units picking the same number merge cleanly with
+no conflict to notice — a near-miss on number 546 was caught purely because two appends
+happened to land on adjacent lines. So allocation had to become a real backstop in the
+same change, scanning across branches and treating "allocated" as *ever-added on any
+reachable ref* rather than "present on some tip"
+([[055-constraint-knowledge-allocation-scans-across-branches]]).
+
+Two more defects were hiding underneath, both of the same species: a data structure that
+made a bad state *unrepresentable rather than detectable*. The wiki tooling keyed its
+lookups `{nnn: entry}`, so on a duplicate the second file silently overwrote the first and
+the linter reported a clean bijection over a corpus containing duplicates — invisible by
+construction, in the one tool whose job was to see it. A consumer repo carries 65 such
+groups. The rule is to group first and then **quarantine** duplicate ids from every
+derived check and edit, because the surviving member is arbitrary and anything computed
+from it names the wrong file ([[054-constraint-nnn-keyed-lookups-hide-duplicates]]).
+
+The sharpest lesson came from the fix that *didn't* work. Distinguishing "not catalogued
+yet" from "genuinely drifted" was first modelled as a scalar watermark floor — which
+quietly assumes records reconcile in id order. They do not: units merge whenever their PRs
+land. Unit A takes 050, B takes 051, B merges and reconciles first, and A's entry then
+falls *below* the floor — reddening an innocent branch and, worse, emitting no pending
+signal, which is precisely what gates reconciliation, so the entry would never be
+catalogued at all. Silent and permanent. The replacement reads state per-record instead of
+from a threshold ([[053-constraint-reconciliation-state-is-not-a-scalar]]). Two things
+about how it was found are worth keeping: it had already passed 413 green tests **and** a
+3/3 completion-verification panel, because the tests encoded the same wrong assumption the
+design did — and the same shape recurred one file over in the reconciliation guard, where
+a `gh pr list` check preceding a branch create is a check-then-act race rather than a lock.
+That one is fixed by letting git's atomic ref update *be* the lock: a non-forced push, where
+exactly one of two concurrent runs wins and the loser exits cleanly
+([[056-pattern-read-then-act-is-not-a-lock]]).
+
+Read together, this cluster is one lesson in four shapes: **shared mutable state is where
+concurrency bugs go to hide**, and the ones that survive testing are the ones where the
+test and the design share an assumption.
+
 ## Git worktrees and promote/scratchpad mechanics
 
 The smallest theme is hard-won operational lore about git and the lifecycle's bookkeeping.
@@ -203,7 +263,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`049`) is a **new-scope-only floor**:
+synthesis watermark (`056`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -213,9 +273,15 @@ synthesis watermark (`049`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `046-skill-best-practices-audit` work unit,
-reflecting the corpus through entry `049`. The refresh was invoked on four
-un-synthesized entries (`046`–`049`). Prior refreshes:
+This overview was refreshed in the `049-add-only-knowledge-writes` work unit, reflecting
+the corpus through entry `056`, on five un-synthesized entries (`052`–`056`). That refresh
+also **corrected two narratives the new entries falsified** — the claim that promote edits
+neighbour entries' `## Related` spans, and the claim that synthesis runs pre-ship so the
+overview rides the same PR. Both were true when written and are not now; neither is the
+kind of drift the watermark can detect, which is the third bullet above demonstrating
+itself. It was the first refresh to run on the **default branch** as part of
+reconciliation rather than inside a work-unit PR. Prior refreshes:
+`046-skill-best-practices-audit` (through `049`, on entries `046`–`049`);
 `045-add-propose-ship-balanced` (through `045`, on entries `043`/`044`/`045`);
 `042-add-propose-ship-quick` (through `042`, on
 entries `037`/`038`/`042`); `035-skill-progressive-disclosure` (through `036`);

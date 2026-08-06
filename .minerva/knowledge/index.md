@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 051 -->
+<!-- index-watermark: 056 -->
 
 ## Decisions
 
@@ -24,6 +24,7 @@
 - [[043-decision-site-gitbook-theme-overrides]] — gitbook-theme site chrome is customized via `theme.custom_dir → overrides/`, never the installed theme; the dead search-results block is CSS-hidden
 - [[044-decision-worktree-addressing-no-enterworktree]] — minerva dropped `EnterWorktree`; worktrees are addressed by `.minerva/worktrees/<NNN-slug>/`-prefixed paths + `git -C` (it only natively enters `.claude/worktrees/`)
 - [[045-decision-propose-ship-balanced-single-reviewer]] — a fourth orchestrator (propose-ship-balanced) runs one advisory reviewer at the telemetry-selected high-signal gates, arbitrated inline — between quick (solo) and auto (panels), not a round-table panel
+- [[052-decision-promote-add-only-reconcile-on-default]] — promote writes only new entry files; index, watermark, reciprocals and overview reconcile on the default branch
 
 ## Bugs
 
@@ -37,6 +38,7 @@
 - [[032-pattern-plugin-discovery-mostly-auto-crawl]] — plugin discoverability is mostly auto-crawl once public + licensed + topic-tagged; manual directories are web-form submissions, not source-vendor lists
 - [[048-pattern-catalog-semantic-drift-recurs]] — catalog surfaces drift semantically even during active scrubbing; sweep all four
 - [[051-pattern-wait-shape-matches-what-is-awaited]] — size a wait to what's awaited (CI-shaped vs queue-shaped); prefer the CLI's own blocking primitive over a poll loop
+- [[056-pattern-read-then-act-is-not-a-lock]] — gate concurrency on an atomic operation's own success, not on a preceding "is it taken?" read
 
 ## Constraints
 
@@ -53,10 +55,13 @@
 - [[021-constraint-skill-wraps-script-via-importable-api]] — a prose skill wraps a sibling Python tool via its importable API, anchored to the working-tree root; not the CLI, not CWD-relative
 - [[023-constraint-wiki-edge-derivation-fence-aware]] — any tool deriving wiki cross-ref edges must be fence-aware (a fenced `## Related` example is not a real edge)
 - [[034-constraint-site-fourth-catalog-surface]] — the static site’s skills catalog is a fourth, test-enforced catalog surface (bidirectional, site-only), extending 010’s three
-- [[038-constraint-site-catalog-source-is-pages-index]] — site catalog surface is now pages/index.md (MkDocs source); site/ is gitignored build output; test reads source directly
 - [[035-constraint-ci-test-enumeration-explicit]] — new test modules are invisible to CI until appended to the enumerated pytest list
 - [[036-constraint-skill-progressive-disclosure]] — skills keep ≤9KB SKILL.md cores with detail in on-demand references/; contract anchors follow via the `file` field
 - [[037-constraint-fence-scans-import-fence-re]] — fence-aware scans import the single-sourced FENCE_RE grammar (or a parser built on it), whatever the corpus
+- [[038-constraint-site-catalog-source-is-pages-index]] — site catalog surface is now pages/index.md (MkDocs source); site/ is gitignored build output; test reads source directly
 - [[047-constraint-skill-description-house-style]] — descriptions lead with ambient triggers, invocation clause last, ≤1024 chars
 - [[049-constraint-handoffs-name-skill-tool]] — handoffs invoke the target via the Skill tool with argument, never bare prose
 - [[050-constraint-agent-dispatch-pins-execution-mode]] — dispatch instructions pin `run_in_background: false`; the Agent tool backgrounds by default and strands the run
+- [[053-constraint-reconciliation-state-is-not-a-scalar]] — a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
+- [[054-constraint-nnn-keyed-lookups-hide-duplicates]] — `{id: record}` silently drops duplicates; build `{id: [records]}` and exclude dupes from every derived edit
+- [[055-constraint-knowledge-allocation-scans-across-branches]] — new-file id collisions merge cleanly with no conflict, so the allocator is the only backstop
