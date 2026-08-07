@@ -50,3 +50,4 @@ pointless work in the common case, explicitly documented as *not* the lock.
 
 ## Related
 - [[052-decision-promote-add-only-reconcile-on-default]] — builds on
+- [[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the sibling hazard: that one is two runs racing, this one is no second run existing
