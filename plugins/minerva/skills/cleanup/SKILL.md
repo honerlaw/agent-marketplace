@@ -94,7 +94,7 @@ Because `minerva:promote` is add-only — it writes new knowledge entries on a w
 
 **Run it on every invocation**, decoupled from worktree removal: a merge done through the GitHub UI leaves pending entries with no worktree to remove. It is cheap and silent when nothing is pending.
 
-The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Two rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR), and if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way.
+The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Three rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR); if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way; and **never end a run leaving entries uncatalogued without naming them** — if a reconciliation PR is already open, wait for it and reconcile what remains, and if it never merges, list every still-pending NNN under `Pending, NOT catalogued`. A run that leaves entries invisible must not report itself clean.
 
 ## Idempotency
 

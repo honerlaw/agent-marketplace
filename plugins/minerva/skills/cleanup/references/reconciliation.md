@@ -43,16 +43,35 @@ Pending work exists if `knowledge_lint` reports any `pending reconciliation` war
 `reconciliation: nothing pending` and skip to the final report — this is the common
 case and must stay silent and cheap.
 
-## Step 2 — Skip if one is already open
+## Step 2 — One at a time, but never abandon the pending set
 
 ```bash
 gh pr list --head minerva/reconcile --state open --json number,url --limit 1
 ```
 
-If a reconciliation PR is open, report `reconciliation: PR #N already open, skipping`
-and stop. **At most one outstanding at a time** — two would edit `index.md`
-concurrently and conflict with each other, recreating the exact problem this design
-removes. Anything pending is simply picked up by the next run after that PR lands.
+**At most one outstanding at a time** — two would edit `index.md` concurrently and
+conflict with each other, recreating the exact problem this design removes.
+
+If one is open, **wait for it to merge and then continue from Step 3** — do not stop.
+Poll `gh pr view <N> --json state` until `MERGED`, then **re-run Step 1's signal**
+against the updated default branch and reconcile whatever is still pending. Re-running
+the signal is not optional: the PR you waited on may have catalogued some of it, and the
+second pass has to ask rather than assume.
+
+**Why waiting, and not "the next run will pick it up".** That was this step's original
+instruction and it is false in the common case. Cleanup runs once per work unit, so "the
+next run" is whenever someone next finishes a unit — days away, or never. A reconciliation
+PR opened minutes before another unit merges cannot contain that unit's entries: it read
+the default branch at open time and never revisits. Those entries then sit on the default
+branch **present but uncatalogued** — absent from `index.md`, invisible to anyone reading
+the wiki, which is most of what an entry is for. The run that skipped reports itself
+successful, so nothing surfaces it. Observed six times in two days on one project before
+it was diagnosed, every occurrence found by accident.
+
+If the open PR does **not** merge — CI red, auto-merge declined, human review pending —
+do not wait indefinitely and do not open a second concurrent PR. Fall through to the
+final report and name every still-pending entry under `Pending, NOT catalogued`. "The
+next run picks them up" becomes a true statement only once the report has told someone.
 
 This check is an early-out, **not** the lock. It is a read followed by an act, so two
 cleanups running at once — a manual invocation racing a `propose-ship-auto` wake-up,
@@ -145,8 +164,14 @@ reconciliation PR is already open — and stop. Create no branch, no worktree, n
 Add to cleanup's existing report:
 
 ```
-Reconciliation:        <nothing pending | PR #N already open | PR #N opened, auto-merge enabled>
-  Entries catalogued:  N (<list>)
-  Overview refreshed:  <yes (watermark NNN→MMM) | no (self-gate declined) | not run>
-  Refusals:            N (<list — needs manual attention>)
+Reconciliation:          <nothing pending | PR #N opened, auto-merge enabled | waited on PR #N>
+  Entries catalogued:    N (<list>)
+  Overview refreshed:    <yes (watermark NNN→MMM) | no (self-gate declined) | not run>
+  Refusals:              N (<list — needs manual attention>)
+  Pending, NOT catalogued: N (<list of NNNs — why>)
 ```
+
+`Pending, NOT catalogued` is the line that makes a strand impossible to miss. It is
+non-empty whenever entries exist in the corpus with no catalog line and this run did not
+add one — an open reconciliation PR that never merged, a `REFUSED` item, anything. A run
+that leaves entries invisible must not describe itself as clean.
