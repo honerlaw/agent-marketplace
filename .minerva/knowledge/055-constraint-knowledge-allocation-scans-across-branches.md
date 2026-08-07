@@ -63,3 +63,4 @@ worse than not fetching.
 ## Related
 - [[052-decision-promote-add-only-reconcile-on-default]] — builds on
 - [[054-constraint-nnn-keyed-lookups-hide-duplicates]] — see also
+- [[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the cataloguing half of the same concurrency story

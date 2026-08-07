@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 056 -->
+<!-- index-watermark: 057 -->
 
 ## Decisions
 
@@ -39,6 +39,7 @@
 - [[048-pattern-catalog-semantic-drift-recurs]] — catalog surfaces drift semantically even during active scrubbing; sweep all four
 - [[051-pattern-wait-shape-matches-what-is-awaited]] — size a wait to what's awaited (CI-shaped vs queue-shaped); prefer the CLI's own blocking primitive over a poll loop
 - [[056-pattern-read-then-act-is-not-a-lock]] — gate concurrency on an atomic operation's own success, not on a preceding "is it taken?" read
+- [[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — "the next run will pick it up" is only true if something SCHEDULES a next run. `minerva:cleanup`'s reconciliation skipped when another reconcile PR was open and deferred to a next run that fires only when someone next finishes a work unit — days away, or never — so entries sat on the default branch present but UNCATALOGUED (in the corpus, absent from the index, invisible to a reader), while the skipping run reported itself successful. Six occurrences in two days on one project, every one found by accident. TWO failures that compound: the deferral had no trigger, and it was silent — either alone is survivable, together they are undetectable. Rules: prefer WAITING over deferring when the blocker is short-lived and observable; if you must defer, name each deferred item in the step's own output, because a report that omits skipped work lies by omission; and RE-DERIVE after waiting, since the thing you waited on may have done part of the job. The tell: a doc saying "the next run", "picked up later" or "eventually" without naming what causes it. Unit 050
 
 ## Constraints
 

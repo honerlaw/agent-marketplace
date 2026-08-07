@@ -65,3 +65,4 @@ local config that CI checkouts silently lack.
 - [[054-constraint-nnn-keyed-lookups-hide-duplicates]] — see also
 - [[055-constraint-knowledge-allocation-scans-across-branches]] — see also
 - [[056-pattern-read-then-act-is-not-a-lock]] — see also
+- [[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the one gap in this design, and how it was closed
