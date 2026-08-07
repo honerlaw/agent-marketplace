@@ -1,7 +1,7 @@
 # Proposal: reconcile-never-strands-entries
 
 **Date**: 2026-08-07
-**Status**: Draft
+**Status**: Shipped (2026-08-07)
 **Base**: `origin/main` @ `0a87d13`
 
 ## Goal
