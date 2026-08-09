@@ -28,3 +28,4 @@ Phase B was **decomposed along the deterministic-vs-LLM-judged fault line**:
 - [[017-decision-knowledge-wiki-navigability-layer]] — builds on
 - [[019-constraint-knowledge-span-model-single-sourced]] — see also
 - [[020-decision-minerva-lint-read-only]] — see also
+- [[058-pattern-read-authored-metadata-from-where-it-is]] — see also

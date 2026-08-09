@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 057 -->
+<!-- index-watermark: 058 -->
 
 ## Decisions
 
@@ -40,6 +40,7 @@
 - [[051-pattern-wait-shape-matches-what-is-awaited]] — size a wait to what's awaited (CI-shaped vs queue-shaped); prefer the CLI's own blocking primitive over a poll loop
 - [[056-pattern-read-then-act-is-not-a-lock]] — gate concurrency on an atomic operation's own success, not on a preceding "is it taken?" read
 - [[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — "the next run will pick it up" is only true if something SCHEDULES a next run. `minerva:cleanup`'s reconciliation skipped when another reconcile PR was open and deferred to a next run that fires only when someone next finishes a work unit — days away, or never — so entries sat on the default branch present but UNCATALOGUED (in the corpus, absent from the index, invisible to a reader), while the skipping run reported itself successful. Six occurrences in two days on one project, every one found by accident. TWO failures that compound: the deferral had no trigger, and it was silent — either alone is survivable, together they are undetectable. Rules: prefer WAITING over deferring when the blocker is short-lived and observable; if you must defer, name each deferred item in the step's own output, because a report that omits skipped work lies by omission; and RE-DERIVE after waiting, since the thing you waited on may have done part of the job. The tell: a doc saying "the next run", "picked up later" or "eventually" without naming what causes it. Unit 050
+- [[058-pattern-read-authored-metadata-from-where-it-is]] — `parse_entry` read an entry's type from one anchored spelling, `**Type**: x`. Across a 629-entry corpus 42 entries declared it somewhere else — `Type: x` plain (16), `**Type:** x` with the colon inside the bold (13), a prose H1 or nothing (10), frontmatter only (3) — and every one resolved to `None`, which `plan_index` cannot place and the linter reported as `type 'None' but catalogued under a 'constraint' section`: an error naming a mismatch the entry does not have. Fix by resolving through a fallback chain ordered most-deliberate-first (body field in any spelling → frontmatter → filename segment), which makes a fallback able only to fill a gap, never override an author. Before trusting the last resort, MEASURE its concordance: filename type matched declared type 642/642 across two corpora.
 
 ## Constraints
 

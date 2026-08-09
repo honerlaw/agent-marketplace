@@ -60,3 +60,4 @@ become a new false-clean.
 - [[020-decision-minerva-lint-read-only]] — builds on
 - [[017-decision-knowledge-wiki-navigability-layer]] — see also
 - [[027-decision-related-backfill-hand-authored-rename-redeferred]] — see also
+- [[058-pattern-read-authored-metadata-from-where-it-is]] — see also
