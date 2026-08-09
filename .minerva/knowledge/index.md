@@ -1,5 +1,5 @@
 # Knowledge index
-<!-- index-watermark: 058 -->
+<!-- index-watermark: 059 -->
 
 ## Decisions
 
@@ -25,6 +25,7 @@
 - [[044-decision-worktree-addressing-no-enterworktree]] — minerva dropped `EnterWorktree`; worktrees are addressed by `.minerva/worktrees/<NNN-slug>/`-prefixed paths + `git -C` (it only natively enters `.claude/worktrees/`)
 - [[045-decision-propose-ship-balanced-single-reviewer]] — a fourth orchestrator (propose-ship-balanced) runs one advisory reviewer at the telemetry-selected high-signal gates, arbitrated inline — between quick (solo) and auto (panels), not a round-table panel
 - [[052-decision-promote-add-only-reconcile-on-default]] — promote writes only new entry files; index, watermark, reciprocals and overview reconcile on the default branch
+- [[059-decision-reference-is-a-fifth-entry-type]] — The entry-type vocabulary was four values — `decision` / `bug` / `pattern` / `constraint` — hardcoded in `SECTION_TO_TYPE`, `SECTION_ORDER` and four skill docs. Authors wrote `reference` entries anyway (four of them in one corpus), and the tooling had nowhere to put them: `plan_index` cannot place a line whose declared type has no section, so they were refused indefinitely. Adding `## References` as a fifth section ratifies what authors already do. Two rules fall out: **append a new section, never interleave it** (appending is the only position that leaves every existing index's line order byte-identical), and an empty section renders as its header alone, so the change is inert for every corpus that does not use it.
 
 ## Bugs
 
@@ -67,3 +68,5 @@
 - [[053-constraint-reconciliation-state-is-not-a-scalar]] — a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
 - [[054-constraint-nnn-keyed-lookups-hide-duplicates]] — `{id: record}` silently drops duplicates; build `{id: [records]}` and exclude dupes from every derived edit
 - [[055-constraint-knowledge-allocation-scans-across-branches]] — new-file id collisions merge cleanly with no conflict, so the allocator is the only backstop
+
+## References

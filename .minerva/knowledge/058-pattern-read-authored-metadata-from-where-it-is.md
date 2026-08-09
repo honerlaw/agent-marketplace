@@ -43,3 +43,4 @@ The unit began from a stated belief that "46 entries are typed `reference`". The
 
 - [[026-decision-migration-check-read-only-entry-re-blindspot]] — the same blind spot one level up: there a corpus predating the FILENAME convention is invisible to every wiki tool, here one predating the type-FIELD convention is misread by it. Both are false-cleans, and both are why a shape check has to be tolerant of what corpora actually contain
 - [[018-decision-phase-b-deterministic-lint-detector]] — the detector `parse_entry` belongs to; this widens what it can read without changing what it reports
+- [[059-decision-reference-is-a-fifth-entry-type]] — see also
