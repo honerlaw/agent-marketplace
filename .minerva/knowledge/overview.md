@@ -1,5 +1,5 @@
 # Knowledge overview
-<!-- synthesis-watermark: 056 -->
+<!-- synthesis-watermark: 058 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
@@ -13,9 +13,14 @@ The largest arc in the corpus is minerva teaching itself to keep a *wiki*, not j
 pile of notes. The foundational decision is that knowledge is a **navigable wiki** —
 a maintained `index.md` plus corpus-scan discovery, chosen over a heavier scheme
 ([[017-decision-knowledge-wiki-navigability-layer]]). Entries connect through a
-`## Related` block of wiki-links drawn from a **closed relationship vocabulary**
-([[015-constraint-knowledge-cross-reference-convention]]), and the machinery that edits
-those connections is tightly bounded: only the `## Related` / banner span is machine-
+`## Related` block of wiki-links ([[015-constraint-knowledge-cross-reference-convention]]).
+That vocabulary began closed and no longer is: four terms stay reserved and exact —
+`supersedes` / `superseded by` / `contradicts` / `builds on` — because their reciprocal is
+a *claim* rather than a pointer, while every other label is a descriptive sentence and
+reciprocates as `see also`. The closed set was the convention as designed; a sentence
+saying what the edge *is* turned out to be the convention as practiced, in every corpus,
+and refusing those had left roughly half of all cross-references one-way. The machinery
+that edits these connections is tightly bounded: only the `## Related` / banner span is machine-
 mutable, leaving bodies append-only ([[016-constraint-promote-narrowed-never-overwrite]]).
 That span invariant still holds exactly, but *who* applies it moved — promote no longer
 edits any existing entry at all, and the reciprocal writes happen during default-branch
@@ -62,6 +67,15 @@ The initial cross-reference **backfill** for the pre-convention entries was hand
 as a one-time unit (a per-edge disposition table, editor-routed writes, fixer-owned
 reciprocals, and an honest standalone residual), with file-rename automation re-deferred
 at zero live instances ([[027-decision-related-backfill-hand-authored-rename-redeferred]]).
+The same blind spot has a second face, one level in from the filename: an entry whose
+type field is spelled `**Type:** x` or plain `Type: x` reads as having *no* type at all,
+which cannot be placed in the index and surfaces as an error naming a mismatch the entry
+does not have. The fix is to resolve authored metadata through a fallback chain ordered
+most-deliberate-first — body field in any spelling, then frontmatter, then the filename —
+so a fallback can only fill a gap and never override an author, with the last resort's
+concordance *measured* (642 entries, two corpora, zero disagreements) before it is trusted
+([[058-pattern-read-authored-metadata-from-where-it-is]]).
+
 That backfill also flushed out the **third instance of the fence trap**: the span editors
 read entry 015's fenced `## Related` example as structure, crashing on (and silently
 de-duping against) any edge into it — fixed with fence-aware header *location* that never
@@ -192,6 +206,13 @@ edge case that the primitive simply does not have
 ([[051-pattern-wait-shape-matches-what-is-awaited]]). Both entries share the older lesson's
 grain: a convention that lives only in prose gets re-improvised at runtime.
 
+Deferral has the same failure mode as prose. Reconciliation used to skip when another run
+held the branch, on the reasoning that "the next run will pick it up" — but cleanup runs
+once per work unit, so "the next run" is days away or never, and entries sat on the default
+branch present but uncatalogued while the run that skipped them reported success. **Deferred
+work needs a trigger, not an assumption**: name the thing that will actually pick it up, or
+report it as outstanding so a person can ([[057-pattern-deferred-work-needs-a-trigger-not-an-assumption]]).
+
 ## Concurrency: what shared state costs, and what hides in it
 
 The newest arc runs orthogonally to the others. Everything above assumes one work unit at
@@ -263,7 +284,7 @@ skills expect ([[003-constraint-post-promote-scratchpad-canonical-empty]]).
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`056`) is a **new-scope-only floor**:
+synthesis watermark (`058`) is a **new-scope-only floor**:
 
 - it attests which entries had been *added* at synthesis time (max NNN reflected), and
   the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
@@ -273,14 +294,24 @@ synthesis watermark (`056`) is a **new-scope-only floor**:
 - it attests synthesis **intent, not body content** — a watermark at the corpus max with
   a stale narrative below it is not mechanically detectable.
 
-This overview was refreshed in the `049-add-only-knowledge-writes` work unit, reflecting
-the corpus through entry `056`, on five un-synthesized entries (`052`–`056`). That refresh
+This overview was refreshed during `051-resolve-entry-type-tolerantly`'s reconciliation,
+reflecting the corpus through entry `058`, on two un-synthesized entries (`057`, `058`).
+The count was small; the reason to refresh was not. It **corrected a claim the corpus had
+falsified without any entry recording it**: the `## Related` relationship vocabulary is no
+longer closed. That change shipped as a direct PR with no work unit behind it, so no entry
+asserts it and the watermark could never have flagged it — the third bullet above, in a
+form worse than in-place drift, because there is nothing to read. Entry `058` is adjacent
+(it fixes the sibling defect in the same parser) but does not state it. If a behavioural
+change to the wiki model ships again without a work unit, the overview is the only place
+it can be recorded, and only if someone remembers.
+
+The prior refresh ran in the `049-add-only-knowledge-writes` work unit, reflecting the
+corpus through entry `056`, on five un-synthesized entries (`052`–`056`). That refresh
 also **corrected two narratives the new entries falsified** — the claim that promote edits
 neighbour entries' `## Related` spans, and the claim that synthesis runs pre-ship so the
 overview rides the same PR. Both were true when written and are not now; neither is the
-kind of drift the watermark can detect, which is the third bullet above demonstrating
-itself. It was the first refresh to run on the **default branch** as part of
-reconciliation rather than inside a work-unit PR. Prior refreshes:
+kind of drift the watermark can detect. It was the first refresh to run on the **default
+branch** as part of reconciliation rather than inside a work-unit PR. Earlier refreshes:
 `046-skill-best-practices-audit` (through `049`, on entries `046`–`049`);
 `045-add-propose-ship-balanced` (through `045`, on entries `043`/`044`/`045`);
 `042-add-propose-ship-quick` (through `042`, on
