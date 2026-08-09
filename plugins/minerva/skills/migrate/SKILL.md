@@ -72,7 +72,7 @@ Translate the signal into a checklist. For each gap, **name** the existing skill
 closes it and a one-line effect — do **not** run it, and do not reproduce its findings:
 
 - **`non_conforming_files` non-empty** → these files must be **renamed** to
-  `NNN-type-slug.md` (e.g. `decision` / `bug` / `pattern` / `constraint`) so the tooling
+  `NNN-type-slug.md` (e.g. `decision` / `bug` / `pattern` / `constraint` / `reference`) so the tooling
   can see them. ⚠️ **Not automated** — rename by hand (renames must update every `[[…]]` wikilink +
   the index catalog — deliberate mutation this read-only check never performs).
 - **`index_present` false** → run `minerva:init` (it scaffolds / backfills `index.md` from

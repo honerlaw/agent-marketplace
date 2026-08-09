@@ -1,7 +1,7 @@
 # Proposal: reference-is-a-fifth-entry-type
 
 **Date**: 2026-08-09
-**Status**: Draft
+**Status**: Shipped (2026-08-09)
 **Base**: `origin/main`
 
 ## Goal

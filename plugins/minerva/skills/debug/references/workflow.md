@@ -10,7 +10,7 @@ Collect evidence before forming any diagnosis. This phase produces an evidence l
 
 2. **Identify the candidate failing layer.** Which subsystem owns the symptom? Which call site does the evidence point at? If you're not sure, plan to pull evidence from multiple plausible layers and let the data pick.
 
-3. **Load relevant project references.** Use the discovery mechanism below to read `.minerva/reference/` files that describe how the failing layer works in this project. Also skim `.minerva/knowledge/` for past learnings — decisions, bugs, patterns, constraints — that match the symptom.
+3. **Load relevant project references.** Use the discovery mechanism below to read `.minerva/reference/` files that describe how the failing layer works in this project. Also skim `.minerva/knowledge/` for past learnings — decisions, bugs, patterns, constraints, and standing references — that match the symptom.
 
 4. **Pull evidence.** Gather concrete artifacts from multiple sources:
    - *Live incidents*: logs, metrics, dashboard panels, runtime state via read-only CLI access, read-only queries against operational stores.
@@ -121,7 +121,7 @@ Two sub-sections:
 
 The `.minerva/` directory has two read tiers, and this skill uses both differently:
 
-- **`.minerva/knowledge/`** — atomic, past-tense, durable learnings. Files named `NNN-<type>-<slug>.md` where type is `decision`, `bug`, `constraint`, or `pattern`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
+- **`.minerva/knowledge/`** — atomic, past-tense, durable learnings. Files named `NNN-<type>-<slug>.md` where type is `decision`, `bug`, `constraint`, `pattern`, or `reference`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
 
 - **`.minerva/reference/`** — thematic, present-tense, operational facts about how the system is configured *right now*. Files named by topic (`topology.md`, `observability.md`, `database.md`, etc.). Replace-on-change. Debug uses it for "how does this layer work in this project?" — the operational map.
 

@@ -60,7 +60,11 @@ _CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
 
 # section header -> type and back. Order is the canonical skeleton order.
 TYPE_TO_SECTION = {v: k for k, v in SECTION_TO_TYPE.items()}
-SECTION_ORDER = ["## Decisions", "## Bugs", "## Patterns", "## Constraints"]
+# Canonical skeleton order. `## References` is APPENDED, never interleaved: every index
+# in every consumer repo already renders the first four in this order, and appending is
+# the only position that leaves their existing line order byte-identical.
+SECTION_ORDER = ["## Decisions", "## Bugs", "## Patterns", "## Constraints",
+                 "## References"]
 
 # Reciprocal-label table (knowledge 015). `builds on` has no inverse term — its
 # reciprocal is rendered `see also`.

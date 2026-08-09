@@ -26,3 +26,18 @@
   Appending is the only position that leaves every existing index's line order untouched.
 - [decided] whole-proposal soundness: additive. A corpus with no `reference` entries gains one
   inert header at its next reconcile and nothing else.
+- [decided] completion verification (never elided): all 6 criteria met. Against the live
+  629-entry corpus: `type 'reference'` errors 2 -> 0, all four entries catalogued under
+  `## References`, total errors 84 -> 63 (the remainder is exactly the deferred shared-NNN
+  set), second fixer run a byte-level no-op. 75 tests pass, including a pinned test that a
+  corpus with no reference entries gains only the empty header.
+- [decided] review triage (solo): swept for any other place the four-type vocabulary is
+  enumerated after the six edits — none left. No findings.
+- [decided] promote partition (solo): PROMOTE 059 (the decision, plus the two mechanics that
+  made it safe: append-never-interleave, and an empty section is inert). MERGE: proposal
+  Approach matches what shipped. TODO -> followups.md x3, including followup 1 re-scoped with
+  the evidence that reverses its ordering. DISCARD: routine decision lines.
+
+## Promote 2026-08-09
+Promoted. Knowledge: 059-decision-reference-is-a-fifth-entry-type.
+Follow-ups: followups.md (3). Escalations this run: 1.

@@ -25,10 +25,11 @@ def entry(typ, slug, related=None, banner=None, extra_body=""):
     return s
 
 
-def index(watermark, decisions=(), bugs=(), patterns=(), constraints=()):
+def index(watermark, decisions=(), bugs=(), patterns=(), constraints=(), references=()):
     s = f"# Knowledge index\n<!-- index-watermark: {watermark} -->\n"
     for header, items in [("## Decisions", decisions), ("## Bugs", bugs),
-                          ("## Patterns", patterns), ("## Constraints", constraints)]:
+                          ("## Patterns", patterns), ("## Constraints", constraints),
+                          ("## References", references)]:
         s += f"\n{header}\n" + "".join(f"- [[{stem}]] — summary\n" for stem in items)
     return s
 
