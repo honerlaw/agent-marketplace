@@ -20,3 +20,24 @@
   sits oddly now the fixer keys on stems. Left OUT — whether that becomes a warning is a policy
   call with a real argument each way (harmless now vs. still a convention worth enforcing), and
   it is not blocking. Recorded as a follow-up instead of quietly bundled in.
+- [decided] completion verification (never elided): all 7 criteria met against the diff.
+  Unresolvable types 42 -> 0 on the 629-entry corpus; `type 'None'` lint errors -> 0; errors
+  91 -> 84 from the parser alone and -> 65 once the fixer can finally relocate those lines;
+  71 knowledge tests pass. The 4 failures in tests/test_pull.py are a different plugin and
+  fail identically on main.
+- [decided] review triage (solo): two findings, both my own, both FIXED rather than noted.
+  (1) The frontmatter regex used a lazy `.*?` under DOTALL, so it could reach past the closing
+  `---` and read a `type:` line out of the body or a fenced example — split into an explicit
+  block match plus a search inside it, with a test. (2) A comment said "29 entries" where the
+  proposal says 42; 29 is the count for that regex line specifically, so the comment now says
+  both numbers. Also caught at promote: the drafted `## Related` cited
+  `057-constraint-a-corpus-outlives-...`, an entry that does not exist — repointed at 026 and
+  018, which do.
+- [decided] promote partition (solo): PROMOTE 058 (read authored metadata from where it is —
+  the fallback-chain ordering as the safety property, and measure the last resort's concordance
+  before trusting it). MERGE: proposal Approach matches what shipped. TODO -> followups.md x3.
+  DISCARD: routine decision lines.
+
+## Promote 2026-08-09
+Promoted. Knowledge: 058-pattern-read-authored-metadata-from-where-it-is.
+Follow-ups: followups.md (3). Escalations this run: 0.

@@ -8,7 +8,7 @@ CLI uses against the real `.minerva/knowledge/`.
 """
 from pathlib import Path
 
-from knowledge_lint import lint_knowledge, main
+from knowledge_lint import lint_knowledge, main, parse_entry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LIVE_KNOWLEDGE = REPO_ROOT / ".minerva" / "knowledge"
@@ -383,3 +383,72 @@ def test_corruption_below_the_watermark_is_self_healed_not_errored(tmp_path):
     assert errors(f) == []
     assert any("001 has no catalog line" in x.message and x.severity == "warning"
                for x in f)
+
+
+# --- type resolution (unit 051) ----------------------------------------------
+# `declared_type` used to come from one spelling of one body line. Real corpora carry
+# it in four places, and an entry the parser could not read was reported as a mismatch
+# it did not have and could never be relocated. Each case below is a shape that exists
+# in a live corpus.
+def _write(tmp_path, name, text):
+    p = tmp_path / name
+    p.write_text(text)
+    return p
+
+
+def test_type_field_canonical_spelling(tmp_path):
+    p = _write(tmp_path, "001-pattern-foo.md", "# t\n\n**Type**: pattern\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "pattern"
+
+
+def test_type_field_colon_inside_the_bold_markers(tmp_path):
+    p = _write(tmp_path, "001-constraint-foo.md", "# t\n\n**Type:** constraint\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "constraint"
+
+
+def test_type_field_plain_no_bold(tmp_path):
+    p = _write(tmp_path, "001-pattern-foo.md", "# t\n\nType: pattern\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "pattern"
+
+
+def test_type_falls_back_to_frontmatter(tmp_path):
+    p = _write(tmp_path, "001-bug-foo.md",
+               "---\nname: foo\nmetadata:\n  type: bug\n---\n\n# t\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "bug"
+
+
+def test_type_falls_back_to_the_filename(tmp_path):
+    """The last resort, and the only source that always exists. Entries whose type
+    lives solely in a prose H1 (`# 426 — bug: …`) land here."""
+    p = _write(tmp_path, "426-bug-foo.md", "# 426 — bug: something broke\n\nprose\n")
+    assert parse_entry(p)["declared_type"] == "bug"
+
+
+def test_body_field_beats_frontmatter_and_filename(tmp_path):
+    """Ordering is the safety property: a fallback may only ever fill a gap. An entry
+    misnamed against its own stated type keeps the type it states."""
+    p = _write(tmp_path, "001-pattern-foo.md",
+               "---\nmetadata:\n  type: bug\n---\n\n# t\n\n**Type**: constraint\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "constraint"
+
+
+def test_frontmatter_beats_the_filename(tmp_path):
+    p = _write(tmp_path, "001-pattern-foo.md",
+               "---\nmetadata:\n  type: decision\n---\n\n# t\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "decision"
+
+
+def test_a_fenced_type_line_is_not_read_as_the_field(tmp_path):
+    """`parse_entry` scans non-fenced lines; a documentation example inside a fence
+    must not become the entry's own type."""
+    p = _write(tmp_path, "001-pattern-foo.md",
+               "# t\n\n```\n**Type**: bug\n```\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "pattern"  # from the filename, not the fence
+
+
+def test_a_body_type_line_is_not_mistaken_for_frontmatter(tmp_path):
+    """The frontmatter scan must stop at the closing `---`. A single span-both pattern
+    reaches past it and reads the body."""
+    p = _write(tmp_path, "001-pattern-foo.md",
+               "---\nname: foo\n---\n\n# t\n\n```yaml\ntype: bug\n```\n\n## Context\nc\n")
+    assert parse_entry(p)["declared_type"] == "pattern"  # filename, not the fenced body line

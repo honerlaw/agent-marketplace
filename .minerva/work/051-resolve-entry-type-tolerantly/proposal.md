@@ -1,7 +1,7 @@
 # Proposal: resolve-entry-type-tolerantly
 
 **Date**: 2026-08-09
-**Status**: Draft
+**Status**: Shipped (2026-08-09)
 **Base**: `origin/main`
 
 ## Goal
