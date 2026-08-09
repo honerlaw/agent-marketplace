@@ -10,7 +10,7 @@ The `**Summary**` field is **required**. It is the entry's own catalog line — 
 # <Short, declarative title — what was decided, fixed, or discovered>
 
 **Date**: YYYY-MM-DD
-**Type**: decision | bug | pattern | constraint
+**Type**: decision | bug | pattern | constraint | reference
 **Summary**: <≤15-word condensation of the Finding — becomes the index catalog line>
 **Context**: .minerva/work/NNN-<slug> (see git history if the worktree has been cleaned up)
 

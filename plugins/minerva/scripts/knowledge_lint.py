@@ -120,6 +120,12 @@ SECTION_TO_TYPE = {
     "## Bugs": "bug",
     "## Patterns": "pattern",
     "## Constraints": "constraint",
+    # `reference` is a fifth type, added once authors had written four of them without
+    # one existing (unit 052). It is the standing-fact register — what a subsystem IS
+    # and how it is operated — where the other four are things LEARNED. Distinct from a
+    # `.minerva/reference/` doc in the way every entry is: atomic, numbered,
+    # cross-linked and catalogued, rather than a maintained operational page.
+    "## References": "reference",
 }
 
 

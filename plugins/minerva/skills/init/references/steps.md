@@ -32,6 +32,8 @@ Emit this **exact** content:
 ## Patterns
 
 ## Constraints
+
+## References
 ```
 
 The `index-watermark` is the highest knowledge-entry NNN the catalog reflects

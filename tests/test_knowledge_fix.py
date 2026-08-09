@@ -30,7 +30,7 @@ def entry(typ, slug, related=None, banner=None, body_extra="", summary=None):
 
 def index_md(watermark, sections):  # sections: {"Decisions":[(stem,summary)], ...}
     blocks = []
-    for name in ["Decisions", "Bugs", "Patterns", "Constraints"]:
+    for name in ["Decisions", "Bugs", "Patterns", "Constraints", "References"]:
         rows = sections.get(name, [])
         block = [f"## {name}"]
         if rows:
@@ -441,3 +441,63 @@ def test_shared_nnn_still_blocks_the_supersession_banner(tmp_path):
     assert "- [[001-decision-foo]] — superseded by" in old_text   # link written
     assert "<!-- superseded-by:" not in old_text                  # banner withheld
     assert any("supersession banner not stamped" in r[2] for r in batch["refusals"])
+
+
+# --- the fifth type (unit 052) -----------------------------------------------
+def test_reference_entry_is_catalogued_under_references(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-reference-how-the-thing-runs.md": entry("reference", "how-the-thing-runs",
+                                                      summary="how it is operated")},
+        index_md("000", {}),
+    )
+    batch = fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[001-reference-how-the-thing-runs]] — how it is operated" in text.split("## References")[1]
+    assert batch["refusals"] == []
+
+
+def test_reference_line_filed_elsewhere_is_relocated(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-reference-how-the-thing-runs.md": entry("reference", "how-the-thing-runs")},
+        index_md("001", {"Constraints": [("001-reference-how-the-thing-runs", "r")]}),
+    )
+    fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[001-reference-how-the-thing-runs]] — r" in text.split("## References")[1]
+    assert "001-reference" not in text.split("## References")[0]
+
+
+def test_a_corpus_with_no_reference_entries_gains_only_the_header(tmp_path):
+    """The fifth section must be inert for every corpus that does not use it: one empty
+    header, and not a single existing line moved."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-pattern-bar.md": entry("pattern", "bar")},
+        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+                         "Patterns": [("002-pattern-bar", "p")]}),
+    )
+    fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert text.rstrip().endswith("## References")
+    assert "- [[001-decision-foo]] — d" in text.split("## Bugs")[0]
+    assert "- [[002-pattern-bar]] — p" in text.split("## Patterns")[1].split("## Constraints")[0]
+
+
+def test_the_four_original_types_keep_their_order(tmp_path):
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-a.md": entry("decision", "a"), "002-bug-b.md": entry("bug", "b"),
+         "003-pattern-c.md": entry("pattern", "c"), "004-constraint-d.md": entry("constraint", "d"),
+         "005-reference-e.md": entry("reference", "e")},
+        index_md("005", {"Decisions": [("001-decision-a", "a")], "Bugs": [("002-bug-b", "b")],
+                         "Patterns": [("003-pattern-c", "c")],
+                         "Constraints": [("004-constraint-d", "d")],
+                         "References": [("005-reference-e", "e")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    headers = [ln for ln in (kd / "index.md").read_text().splitlines() if ln.startswith("## ")]
+    assert headers == ["## Decisions", "## Bugs", "## Patterns", "## Constraints", "## References"]
+    assert batch["index"] is None  # already canonical -> byte-level no-op
