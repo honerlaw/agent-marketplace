@@ -56,7 +56,8 @@ It re-derives every edit from the detector's structured output (`parse_index` /
 `parse_entry`), never from message text. The plan lists, per item: an `index.md`
 rewrite (watermark / stale-line / Type-section / NNN-order) and/or per-entry
 reciprocal-link additions, plus any `REFUSED` items (e.g. a forward `## Related`
-label outside the closed vocabulary).
+line with no label at all, or one whose label reads as a supersession claim without
+being the exact term).
 
 ## Step 2 — Gate
 
@@ -84,7 +85,9 @@ corpus is clean. Report the result.
   verbatim, summary preserved, NNN-sorted).
 - **Missing reciprocal** — a one-way `## Related` link; the reciprocal label is
   derived from the forward label (`builds on`→`see also`; `supersedes`↔`superseded
-  by`; `contradicts`/`see also` symmetric). A supersession also writes the banner.
+  by`; `contradicts`/`see also` symmetric; any other label →`see also`). A
+  supersession also writes the banner, unless the superseding entry's NNN is shared
+  by several entries — the banner marker names an NNN, so it cannot say which.
 
 **Safety:** entry edits change only the `## Related` block / banner span (a
 `body_complement` byte-identity guard aborts the run otherwise — knowledge 016);

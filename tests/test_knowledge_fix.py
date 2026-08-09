@@ -147,16 +147,39 @@ def test_supersession_writes_banner_and_related_line(tmp_path):
     assert "[[002-constraint-bar]] — superseded by" in a  # AND the Related line
 
 
-def test_invalid_label_refused_atomically(tmp_path):
+def test_prose_label_reciprocates_as_see_also(tmp_path):
+    """The practiced convention is a descriptive sentence, not a five-term vocabulary.
+    A prose label cannot be inverted mechanically, so the BACK-link gets the neutral
+    term — strictly better than the missing link it replaces."""
     kd = make_dir(
         tmp_path,
-        {"001-decision-foo.md": entry("decision", "foo", related=[("002-constraint-bar", "frobnicates")]),
+        {"001-decision-foo.md": entry(
+            "decision", "foo",
+            related=[("002-constraint-bar", "the sibling failure on the other write path")]),
+         "002-constraint-bar.md": entry("constraint", "bar")},
+        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    assert batch["refusals"] == []
+    assert "- [[001-decision-foo]] — see also" in (kd / "002-constraint-bar.md").read_text()
+    # The forward line keeps its prose — only the reciprocal is neutral.
+    assert "the sibling failure on the other write path" in (kd / "001-decision-foo.md").read_text()
+
+
+def test_directional_prose_label_refused_atomically(tmp_path):
+    """A label that READS like a retirement claim is refused, not softened: guessing
+    the direction of a supersession from prose is the edit a human must make."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry(
+            "decision", "foo",
+            related=[("002-constraint-bar", "supersedes the old approach entirely")]),
          "002-constraint-bar.md": entry("constraint", "bar")},
         index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     before = (kd / "002-constraint-bar.md").read_text()
     batch = fix.apply(kd, DATE)
-    assert any("not in closed vocab" in r[2] for r in batch["refusals"])
+    assert any("write the reciprocal by hand" in r[2] for r in batch["refusals"])
     assert (kd / "002-constraint-bar.md").read_text() == before  # no partial write
 
 
@@ -305,49 +328,116 @@ def test_mixed_corpus_needs_no_backfill(tmp_path):
     assert errors(kd) == []
 
 
-# --- duplicate-NNN quarantine ------------------------------------------------
-def test_duplicate_nnn_catalog_lines_are_not_relocated(tmp_path):
-    """Both lines share an NNN, so the NNN-keyed lookup can't say which entry each
-    belongs to. Relocating on the arbitrary winner would misfile the other."""
+# --- shared NNNs are addressed by STEM ---------------------------------------
+def test_shared_nnn_lines_are_relocated_by_stem(tmp_path):
+    """Two entries share an NNN but not a stem, so each catalog line is placed under
+    its OWN declared type. Under NNN keying both collapsed onto an arbitrary winner
+    and neither could be moved."""
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "001-bug-bar.md": entry("bug", "bar")},
-        index_md("001", {"Decisions": [("001-decision-foo", "d")],
-                         "Bugs": [("001-bug-bar", "b")]}),
+        index_md("001", {"Bugs": [("001-decision-foo", "d")],       # both misfiled,
+                         "Decisions": [("001-bug-bar", "b")]}),      # each under the other's
     )
     batch = fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
-    assert "- [[001-decision-foo]] — d" in text.split("## Bugs")[0]
-    assert "- [[001-bug-bar]] — b" in text.split("## Bugs")[1]
-    assert any("shared by multiple entries" in r[2] for r in batch["refusals"])
+    assert "- [[001-decision-foo]] — d" in text.split("## Bugs")[0]   # now under Decisions
+    assert "- [[001-bug-bar]] — b" in text.split("## Bugs")[1]        # now under Bugs
+    assert not any("shared by multiple entries" in r[2] for r in batch["refusals"])
 
 
-def test_duplicate_nnn_gets_no_catalog_line_added(tmp_path):
+def test_shared_nnn_both_get_catalog_lines(tmp_path):
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", summary="s1"),
          "001-bug-bar.md": entry("bug", "bar", summary="s2")},
         index_md("000", {}),
     )
-    batch = fix.apply(kd, DATE)
-    assert "001-" not in (kd / "index.md").read_text()
-    assert any("which entry would it name" in r[2] for r in batch["refusals"])
+    fix.apply(kd, DATE)
+    text = (kd / "index.md").read_text()
+    assert "- [[001-decision-foo]] — s1" in text
+    assert "- [[001-bug-bar]] — s2" in text
 
 
-def test_duplicate_nnn_blocks_reciprocal_writes(tmp_path):
-    """A back-link would land in whichever group member won the lookup."""
+def test_shared_nnn_reciprocal_lands_on_the_named_stem(tmp_path):
+    """The back-link goes to the entry the wikilink NAMES, not to whichever member of
+    the group a bare-NNN lookup happened to win."""
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "001-bug-bar.md": entry("bug", "bar"),
          "002-pattern-baz.md": entry("pattern", "baz", summary="s",
-                                     related=[("001-decision-foo", "see also")])},
+                                     related=[("001-bug-bar", "see also")])},
         index_md("002", {"Decisions": [("001-decision-foo", "d")],
                          "Bugs": [("001-bug-bar", "b")],
                          "Patterns": [("002-pattern-baz", "p")]}),
     )
-    before = (kd / "001-decision-foo.md").read_text()
+    untouched = (kd / "001-decision-foo.md").read_text()
     batch = fix.apply(kd, DATE)
-    assert (kd / "001-decision-foo.md").read_text() == before  # untouched
-    assert any("back-link not written" in r[2] for r in batch["refusals"])
+    assert "- [[002-pattern-baz]] — see also" in (kd / "001-bug-bar.md").read_text()
+    assert (kd / "001-decision-foo.md").read_text() == untouched  # the twin is not written to
+    assert batch["refusals"] == []
+
+
+def test_second_link_on_a_related_line_counts_as_a_back_link(tmp_path):
+    """A back-link already present as the SECOND target on a shared line must be
+    detected. The editor scans the whole span, so a line-anchored detector disagreed
+    with it: it re-planned the entry as changed on every run while the editor kept
+    no-opping, so `apply` never converged."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo",
+                                      related=[("002-constraint-bar", "see also")]),
+         "002-constraint-bar.md": entry("constraint", "bar")},
+        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+                         "Constraints": [("002-constraint-bar", "c")]}),
+    )
+    # 002 links back to 001, but as the second target of a two-link line.
+    bar = kd / "002-constraint-bar.md"
+    bar.write_text(bar.read_text().rstrip("\n") +
+                   "\n\n## Related\n- [[003-pattern-other]] / [[001-decision-foo]] — both unchanged\n")
+    batch = fix.plan(kd, DATE)
+    assert "002-constraint-bar" not in batch["entries"]  # nothing to add
+
+
+def test_related_before_another_section_is_refused_not_fatal(tmp_path):
+    """One malformed entry must not abort the batch: its own back-link is refused and
+    every unrelated edit still lands."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo",
+                                      related=[("002-constraint-bar", "see also"),
+                                               ("003-pattern-baz", "see also")]),
+         "002-constraint-bar.md": entry("constraint", "bar").replace(
+             "## Implications\ni\n", "## Related\n- [[009-pattern-nope]] — x\n\n## Implications\ni\n"),
+         "003-pattern-baz.md": entry("pattern", "baz")},
+        index_md("003", {"Decisions": [("001-decision-foo", "d")],
+                         "Constraints": [("002-constraint-bar", "c")],
+                         "Patterns": [("003-pattern-baz", "p")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    assert any("cannot be located" in r[2] for r in batch["refusals"])
+    # the healthy sibling still got its back-link
+    assert "- [[001-decision-foo]] — see also" in (kd / "003-pattern-baz.md").read_text()
+
+
+def test_shared_nnn_still_blocks_the_supersession_banner(tmp_path):
+    """The banner marker is `<!-- superseded-by: NNN -->`, which cannot say WHICH
+    member of a shared group retired the entry. The Related back-link is stem-addressed
+    and still written; only the banner is held."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo",
+                                      related=[("003-pattern-old", "supersedes")]),
+         "001-bug-bar.md": entry("bug", "bar"),
+         "003-pattern-old.md": entry("pattern", "old")},
+        index_md("003", {"Decisions": [("001-decision-foo", "d")],
+                         "Bugs": [("001-bug-bar", "b")],
+                         "Patterns": [("003-pattern-old", "o")]}),
+    )
+    batch = fix.apply(kd, DATE)
+    old_text = (kd / "003-pattern-old.md").read_text()
+    assert "- [[001-decision-foo]] — superseded by" in old_text   # link written
+    assert "<!-- superseded-by:" not in old_text                  # banner withheld
+    assert any("supersession banner not stamped" in r[2] for r in batch["refusals"])

@@ -84,10 +84,16 @@ For **each** newly-written knowledge entry, before the gate:
    lags the corpus now, so comparing it against the raw max would reject a perfectly
    usable index on every run.) A stale or absent index never blocks discovery — fall
    back to the full scan. Dedup candidate hits by target NNN.
-2. **Write forward links only.** Classify each relationship with the closed
-   vocabulary `builds on` / `supersedes` / `superseded by` / `contradicts` /
-   `see also`, and record it as a `## Related` line **in the new entry**:
-   `- [[NNN-type-slug]] — <relationship>`.
+2. **Write forward links only.** Record each relationship as a `## Related` line
+   **in the new entry**: `- [[NNN-type-slug]] — <relationship>`.
+
+   The label is normally a short sentence saying what the edge *is* — that is what
+   makes the wiki navigable, and it is what the corpora actually contain. Four labels
+   are reserved and matched exactly, because their reciprocal is a claim rather than a
+   pointer: `supersedes` / `superseded by` / `contradicts` / `builds on`. Any other
+   label reciprocates as `see also`. A label that merely *mentions* superseding or
+   contradicting without being the exact term is refused — write that reciprocal by
+   hand rather than letting the fixer guess the direction of a retirement.
 
    Do **not** write the reciprocal line into the neighbor, and do **not** write a
    supersession banner. Both are derived on the default branch by

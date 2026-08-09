@@ -79,6 +79,19 @@ SUMMARY_RE = re.compile(r"^\*\*Summary\*\*:\s*(.+?)\s*$")
 WIKILINK_RE = re.compile(r"\[\[(\d{3,})-[a-z]+-[^\]]+\]\]")
 # group(1) = the full stem, group(2) = its NNN.
 CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
+# The VISIBLE half of a supersession banner. The `<!-- superseded-by: NNN -->` marker
+# above it identifies the superseding entry by NNN, which is ambiguous when an NNN is
+# shared; this line carries the full stem, so a stem-keyed reader can resolve it.
+BANNER_TARGET_STEM_RE = re.compile(
+    r"^>\s+\*\*Superseded by \[\[((\d{3,})-[a-z]+-[^\]]+)\]\]\*\*")
+# EVERY wikilink in a line, not just a line-initial one. `CATALOG_LINE_RE` anchors at
+# `- [[…]]`, so it sees only the first target of a line like
+# `- [[a]] / [[b]] — both unchanged` and nothing on a wrapped continuation line. The
+# EDITOR (`add_related_link._related_has_target`) scans the whole span, so anchoring
+# the detector made the two disagree: the detector reported a back-link missing, the
+# editor found it present and no-opped, and the entry was re-planned as "changed"
+# forever. Used for back-link DETECTION only, where matching the editor is the point.
+WIKILINK_STEM_RE = re.compile(r"\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
 # A `## Related` line, with its relationship label: group(3), or None when the line
 # carries no separator+label. Single-sourced so `knowledge_fix` cannot recognise a
 # narrower set of edges than this linter reports on — a line the linter counts as an
@@ -130,12 +143,16 @@ def parse_entry(path: Path):
     # Banner back-links: anchored markers ABOVE the first non-fenced `## ` header.
     first_section_idx = next((i for i, ln in nonfenced if SECTION_RE.match(ln)), None)
     banner_targets = set()
+    banner_target_stems = set()
     for i, line in nonfenced:
         if first_section_idx is not None and i >= first_section_idx:
             break
         m = BANNER_MARKER_RE.match(line)
         if m:
             banner_targets.add(m.group(1))
+        m = BANNER_TARGET_STEM_RE.match(line)
+        if m:
+            banner_target_stems.add(m.group(1))
 
     # The ## Related block = the LAST non-fenced `## Related` header, span to EOF.
     related_header_idx = None
@@ -143,6 +160,8 @@ def parse_entry(path: Path):
         if line.strip() == RELATED_HEADER:
             related_header_idx = i
     related_out = set()
+    related_out_stems = set()
+    related_mention_stems = set()
     if related_header_idx is not None:
         for i, line in nonfenced:
             if i <= related_header_idx:
@@ -150,12 +169,21 @@ def parse_entry(path: Path):
             m = CATALOG_LINE_RE.match(line.strip())
             if m:
                 related_out.add(m.group(2))
+                related_out_stems.add(m.group(1))
+            related_mention_stems.update(m.group(1) for m in WIKILINK_STEM_RE.finditer(line))
     return {
         "nnn": ENTRY_RE.match(path.name).group(1),
+        "stem": path.name[:-3],
         "declared_type": declared_type,
         "summary": summary,
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
+        # STEM-keyed twins of the two sets above. An NNN shared by several entries
+        # cannot say WHICH entry an edge points at; a stem always can. Kept alongside
+        # rather than replacing them so this linter's own NNN-shaped checks are
+        # untouched by the fixer's move to stems.
+        "related_out_stems": related_out_stems,
+        "backlink_stems": related_mention_stems | banner_target_stems,
     }
 
 
