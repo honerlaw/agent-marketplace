@@ -52,7 +52,7 @@ from knowledge_lint import (
 from knowledge_edits import add_related_link, add_supersede_banner, body_complement
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
-_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[(\d{3,})-[a-z]+-[^\]]+\]\]")
+_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
 # A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
 # grammar the detector reports edges with. A narrower one here would let the fixer
 # silently skip an edge the linter flags, producing an error nothing repairs.
@@ -63,7 +63,7 @@ TYPE_TO_SECTION = {v: k for k, v in SECTION_TO_TYPE.items()}
 SECTION_ORDER = ["## Decisions", "## Bugs", "## Patterns", "## Constraints"]
 
 # Reciprocal-label table (knowledge 015). `builds on` has no inverse term — its
-# reciprocal is rendered `see also`. Anything outside this table → refuse.
+# reciprocal is rendered `see also`.
 RECIPROCAL = {
     "supersedes": "superseded by",
     "superseded by": "supersedes",
@@ -71,6 +71,26 @@ RECIPROCAL = {
     "see also": "see also",
     "builds on": "see also",
 }
+
+# Terms whose reciprocal is a CLAIM, not a pointer: `supersedes` retires the other
+# entry and stamps a banner on it, `contradicts` asserts the two disagree. A prose
+# label that mentions one of these is refused rather than softened — guessing the
+# direction of a retirement from prose is exactly the edit a human must make.
+DIRECTIONAL_TERMS = ("supersede", "contradict")
+
+# What a label that is not in RECIPROCAL reciprocates as.
+#
+# The closed table above assumed `## Related` labels come from a five-term vocabulary.
+# They do not: the practiced convention across the corpora this runs on — including
+# every recently authored entry — is a descriptive sentence explaining the edge, which
+# is far more useful to a reader than `see also`. Refusing those meant ~400 back-links
+# were never written, so half of every cross-reference in the wiki was missing.
+#
+# A prose label cannot be mechanically inverted (the sentence describes the edge from
+# ONE side), so the back-link gets the neutral term. That is strictly better than the
+# no-link-at-all it replaces, and a human is free to write a better sentence over it —
+# `add_related_link` dedupes on the target stem, so an enriched label survives re-runs.
+DEFAULT_RECIPROCAL = "see also"
 
 
 def _entry_groups(kd: Path) -> dict:
@@ -84,19 +104,30 @@ def _entry_groups(kd: Path) -> dict:
 
 
 def _entries(kd: Path) -> dict:
-    """nnn -> {path, parsed}, excluding index.md.
+    """stem -> {path, parsed, nnn}, excluding index.md.
 
-    On a duplicate NNN the deterministic first-by-filename member represents the
-    group. That winner is arbitrary with respect to *intent*, so every caller must
-    consult `_duplicate_nnns()` and quarantine those ids rather than acting on it —
-    see the quarantine comments in `plan_index` / `plan_reciprocals`.
+    Keyed on the full `NNN-type-slug` STEM, which is the identity every wikilink
+    already writes (`[[NNN-type-slug]]`) and the identity `add_related_link` already
+    dedupes on. NNN alone is not an identity: it is assigned per work unit, so one
+    unit promoting several entries and two units racing for the next free number both
+    mint collisions — 63 of them across 629 entries in the corpus this was found in.
+    Keying on NNN collapsed those groups onto an arbitrary first-by-filename member,
+    which is why every caller used to have to quarantine them.
+
+    NNN survives as a SORT KEY and as the watermark, which is all it was ever fit for.
     """
-    return {nnn: {"path": g[0], "parsed": parse_entry(g[0])}
-            for nnn, g in _entry_groups(kd).items()}
+    return {p.name[:-3]: {"path": p, "parsed": parse_entry(p), "nnn": nnn}
+            for nnn, g in _entry_groups(kd).items() for p in g}
 
 
 def _duplicate_nnns(kd: Path) -> set:
-    """Ids shared by more than one entry file. Quarantined from every edit."""
+    """Ids shared by more than one entry file.
+
+    No longer a blanket quarantine — stem keying makes catalog lines and reciprocal
+    links unambiguous. It survives for the ONE edit that is genuinely NNN-shaped: a
+    supersession banner's `<!-- superseded-by: NNN -->` marker, which cannot name
+    which member of a shared group superseded the entry.
+    """
     return {nnn for nnn, g in _entry_groups(kd).items() if len(g) > 1}
 
 
@@ -109,8 +140,8 @@ def plan_index(kd: Path) -> tuple:
     line verbatim and ascending-NNN order; never DROPS a line it can't confidently
     place, and never fabricates a summary for an entry that has none.
 
-    Duplicate-NNN groups are quarantined: their lines are left exactly where they
-    are and no line is added for them (see `_duplicate_nnns`).
+    Entries are identified by STEM, so several entries sharing an NNN each get their
+    own catalog line, placed under their own declared type (see `_entries`).
     """
     index_path = kd / "index.md"
     old = index_path.read_text() if index_path.exists() else ""
@@ -126,7 +157,7 @@ def plan_index(kd: Path) -> tuple:
     refusals = []
     # Collect surviving catalog lines verbatim, with the section they're under, from
     # the existing index. Stale lines (NNN with no entry file) are dropped.
-    parsed = []  # (nnn, verbatim_line, current_section)
+    parsed = []  # (stem, verbatim_line, current_section)
     cur_sec = None
     for ln in old.splitlines():
         s = ln.strip()
@@ -141,30 +172,18 @@ def plan_index(kd: Path) -> tuple:
     # An entry whose declared type isn't one of the four known types is LEFT where it
     # is (never dropped — that would delete its summary) and recorded as a refusal.
     buckets = {sec: [] for sec in SECTION_ORDER}
-    for nnn, line, cur in parsed:
-        # QUARANTINE: with two entries sharing this id, `entries[nnn]` resolved to an
-        # arbitrary one of them, so its declared type cannot be trusted to place this
-        # line — relocating on it would misfile the other entry's line. Leave it where
-        # it sits, exactly as the unrecognized-type case does below.
-        if nnn in dups:
-            if cur in buckets:
-                buckets[cur].append((nnn, line))
-                refusals.append((nnn, "—", f"NNN {nnn} is shared by multiple entries; "
-                                           f"catalog line left under {cur}, not relocated"))
-                continue
-            return old, old, refusals + [(nnn, "—", f"NNN {nnn} is shared by multiple "
-                                          f"entries and its catalog line is in an unknown "
-                                          f"section; index left unchanged")]
-        target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
+    for stem, line, cur in parsed:
+        nnn = entries[stem]["nnn"]
+        target = TYPE_TO_SECTION.get(entries[stem]["parsed"]["declared_type"])
         if target in buckets:
-            buckets[target].append((nnn, line))
+            buckets[target].append((nnn, stem, line))
         elif cur in buckets:
-            buckets[cur].append((nnn, line))
-            refusals.append((nnn, "—", f"entry {nnn} has an unrecognized type; left under "
-                                       f"{cur}, not relocated"))
+            buckets[cur].append((nnn, stem, line))
+            refusals.append((stem, "—", f"entry {stem} has an unrecognized type; left "
+                                        f"under {cur}, not relocated"))
         else:
             # Can't place safely — refuse the whole index rewrite, leave index.md as-is.
-            return old, old, refusals + [(nnn, "—", f"entry {nnn} has an unrecognized "
+            return old, old, refusals + [(stem, "—", f"entry {stem} has an unrecognized "
                                           f"type and is in an unknown section; index "
                                           f"left unchanged")]
 
@@ -173,25 +192,21 @@ def plan_index(kd: Path) -> tuple:
     # `**Summary**` and never touches index.md, so reconciliation is what catalogues
     # it. The fixer still refuses to *fabricate* a summary — it only relocates one
     # the entry already states about itself.
-    catalogued = {nnn for nnn, _, _ in parsed}
-    for nnn in sorted(set(entries) - catalogued):
-        if nnn in dups:
-            refusals.append((nnn, "—", f"NNN {nnn} is shared by multiple entries; no "
-                                       f"catalog line added (which entry would it name?)"))
-            continue
-        summary = entries[nnn]["parsed"]["summary"]
+    catalogued = {stem for stem, _, _ in parsed}
+    for stem in sorted(set(entries) - catalogued):
+        nnn = entries[stem]["nnn"]
+        summary = entries[stem]["parsed"]["summary"]
         if not summary:
-            refusals.append((nnn, "—", f"entry {nnn} has no catalog line and no "
-                                       f"`**Summary**` field — author the line by hand "
-                                       f"(fixer won't fabricate summaries)"))
+            refusals.append((stem, "—", f"entry {stem} has no catalog line and no "
+                                        f"`**Summary**` field — author the line by hand "
+                                        f"(fixer won't fabricate summaries)"))
             continue
-        target = TYPE_TO_SECTION.get(entries[nnn]["parsed"]["declared_type"])
+        target = TYPE_TO_SECTION.get(entries[stem]["parsed"]["declared_type"])
         if target not in buckets:
-            refusals.append((nnn, "—", f"entry {nnn} has an unrecognized type; no "
-                                       f"catalog line added"))
+            refusals.append((stem, "—", f"entry {stem} has an unrecognized type; no "
+                                        f"catalog line added"))
             continue
-        stem = entries[nnn]["path"].name[:-3]
-        buckets[target].append((nnn, f"- [[{stem}]] — {summary}"))
+        buckets[target].append((nnn, stem, f"- [[{stem}]] — {summary}"))
 
     # Canonical skeleton: each section is its header, then (blank + entries) only if
     # non-empty; sections separated by one blank line. An empty section (e.g.
@@ -200,7 +215,7 @@ def plan_index(kd: Path) -> tuple:
     blocks = []
     for sec in SECTION_ORDER:
         block = [sec]
-        rows = [line for _, line in sorted(buckets[sec], key=lambda t: int(t[0]))]
+        rows = [line for _, _, line in sorted(buckets[sec], key=lambda t: (int(t[0]), t[1]))]
         if rows:
             block.append("")
             block.extend(rows)
@@ -211,7 +226,7 @@ def plan_index(kd: Path) -> tuple:
     # type, duplicate id) would assert the index reflects an entry it does not, and
     # bury the refusal: the refusal is printed once, by the run that caused it, while
     # the watermark is permanent.
-    catalogued = [nnn for sec in SECTION_ORDER for nnn, _ in buckets[sec]]
+    catalogued = [nnn for sec in SECTION_ORDER for nnn, _, _ in buckets[sec]]
     max_nnn = max(catalogued, key=int) if catalogued else "000"
     new = (
         "# Knowledge index\n"
@@ -243,7 +258,7 @@ def _forward_related(parsed_text: str) -> list:
         m = RELATED_LINE_RE.match(ln.strip())
         if m:
             label = m.group(3)
-            out.append((m.group(2), label.strip() if label else None))
+            out.append((m.group(1), label.strip() if label else None))
     return out
 
 
@@ -258,43 +273,69 @@ def plan_reciprocals(kd: Path, date: str) -> tuple:
     """
     entries = _entries(kd)
     dups = _duplicate_nnns(kd)
-    texts = {nnn: e["path"].read_text() for nnn, e in entries.items()}
-    edits = {}  # nnn -> new text (accumulated)
+    texts = {stem: e["path"].read_text() for stem, e in entries.items()}
+    edits = {}  # stem -> new text (accumulated)
     refusals = []
-    for a, e in entries.items():
-        # QUARANTINE (source side): `entries[a]` is an arbitrary member of the group,
-        # so its forward edges cannot be attributed to a specific entry.
-        if a in dups:
-            refusals.append((a, "—", f"NNN {a} is shared by multiple entries; its "
-                                     f"forward links are not reciprocated"))
-            continue
-        a_stem = e["path"].name[:-3]
-        for b, label in _forward_related(texts[a]):
-            if b not in entries:
+    for a_stem, e in entries.items():
+        for b_stem, label in _forward_related(texts[a_stem]):
+            if b_stem not in entries:
                 continue  # broken link — not auto-fixed
-            # QUARANTINE (target side): writing the back-link would land it in
-            # whichever member of the group won the lookup — possibly the wrong entry.
-            if b in dups:
-                refusals.append((a, b, f"NNN {b} is shared by multiple entries; "
-                                       f"back-link not written"))
-                continue
             # already reciprocated? (B's Related targets A, or B's banner targets A)
-            if a in entries[b]["parsed"]["backlinks"]:
+            if a_stem in entries[b_stem]["parsed"]["backlink_stems"]:
+                continue
+            if not _editable(texts[b_stem]):
+                refusals.append((a_stem, b_stem, f"entry {b_stem} has `## Related` "
+                                                 f"before another section, so its "
+                                                 f"cross-ref span cannot be located; "
+                                                 f"back-link not written"))
                 continue
             if label is None:
-                refusals.append((a, b, "forward `## Related` line has no relationship "
-                                       "label; cannot derive the reciprocal"))
+                refusals.append((a_stem, b_stem, "forward `## Related` line has no "
+                                                 "relationship label; cannot derive the "
+                                                 "reciprocal"))
                 continue
-            if label not in RECIPROCAL:
-                refusals.append((a, b, f"forward label '{label}' not in closed vocab"))
+            if label in RECIPROCAL:
+                recip = RECIPROCAL[label]
+            elif any(t in label.lower() for t in DIRECTIONAL_TERMS):
+                refusals.append((a_stem, b_stem, f"forward label '{label}' reads as a "
+                                                 f"supersession/contradiction claim but is "
+                                                 f"not the exact term; write the reciprocal "
+                                                 f"by hand"))
                 continue
-            recip = RECIPROCAL[label]
-            cur = edits.get(b, texts[b])
+            else:
+                recip = DEFAULT_RECIPROCAL
+            cur = edits.get(b_stem, texts[b_stem])
             new = add_related_link(cur, a_stem, recip)
             if label == "supersedes":  # B is superseded by A -> banner too (015/016)
-                new = add_supersede_banner(new, a, a_stem, date)
-            edits[b] = new
+                # The banner marker is `<!-- superseded-by: NNN -->`, so it cannot name
+                # WHICH member of a shared NNN retired B. The `## Related` back-link
+                # above is stem-addressed and already written; only the banner is held.
+                a_nnn = entries[a_stem]["nnn"]
+                if a_nnn in dups:
+                    refusals.append((a_stem, b_stem, f"NNN {a_nnn} is shared by multiple "
+                                                     f"entries; supersession banner not "
+                                                     f"stamped (the marker names an NNN)"))
+                else:
+                    new = add_supersede_banner(new, a_nnn, a_stem, date)
+            edits[b_stem] = new
     return edits, refusals
+
+
+def _editable(text: str) -> bool:
+    """Whether the machine-managed spans can be located in this entry at all.
+
+    `body_complement` asserts the entry's shape (notably that `## Related` is the last
+    section, since the cross-ref span runs to EOF). An entry that violates it cannot be
+    edited safely — but that is a property of the TARGET, not of the edit, so it is a
+    per-entry refusal like every other one here. Letting it reach the batch validation
+    instead would abort the whole run: two malformed entries out of 632 blocked 342
+    unrelated back-links in the corpus this was found in.
+    """
+    try:
+        body_complement(text)
+        return True
+    except AssertionError:
+        return False
 
 
 def _assert_body_preserved(before: str, after: str):
@@ -327,13 +368,13 @@ def apply(kd: Path, date: str) -> dict:
     batch = plan(kd, date)
     entries = _entries(kd)
     # Validate every entry edit preserves the body BEFORE writing anything.
-    for nnn, new_text in batch["entries"].items():
-        _assert_body_preserved(entries[nnn]["path"].read_text(), new_text)
+    for stem, new_text in batch["entries"].items():
+        _assert_body_preserved(entries[stem]["path"].read_text(), new_text)
     # Apply.
     if batch["index"] is not None:
         (kd / "index.md").write_text(batch["index"])
-    for nnn, new_text in batch["entries"].items():
-        entries[nnn]["path"].write_text(new_text)
+    for stem, new_text in batch["entries"].items():
+        entries[stem]["path"].write_text(new_text)
     return batch
 
 
