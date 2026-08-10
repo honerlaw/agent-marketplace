@@ -20,3 +20,69 @@ Logged from dissenting Skeptics, for `minerva:review` to scrutinise:
 - **`propose`'s steps 3–8 are a procedure, not a glob.** Risk of "just fix the regex" when the whole allocate-then-name flow must be rewritten.
 
 ## Notes
+
+## Progress 2026-08-09
+
+### Landed (2 commits, verified)
+
+- `knowledge_lint.py` — dual-accepting `ID_RE_SRC` grammar; `is_date_id` /
+  `is_conforming_id` (calendar validation, so `2026-13-45` is rejected);
+  `id_sort_key` / `corpus_id_width` composite ordering; all 6 id-position regexes
+  re-anchored. `parse_index` and `lint_knowledge` re-keyed NNN → full stem;
+  duplicate-id check, the blanket quarantine, and both watermark reads deleted.
+- `knowledge_spans.py` — `BANNER_MARKER_RE` carries the full stem.
+- `knowledge_edits.py` — `add_supersede_banner` writes the stem marker and its
+  idempotency guard compares stems (was `endswith(f"{nnn} -->")`).
+- `knowledge_fix.py` — `_CATALOG_LINE_RE` alternation; `plan_index` no longer
+  emits the `index-watermark` line.
+
+**Verified:** live 56-entry all-`NNN` corpus lints 0 errors / 3 pre-existing
+warnings — dual-acceptance holds, criterion 3 satisfied at the script layer.
+Sort order `054 < 999 < 1000 < 2026-08-09` confirmed.
+
+### Test state
+
+18 failures caused by this change, all in deliberately-changed categories; they
+need updating to the new intended behaviour, not reverting:
+
+- `test_knowledge_lint.py` — `test_duplicate_nnn_is_detected`,
+  `test_duplicate_nnn_does_not_indict_the_wrong_file` (both retired by design);
+  `test_corruption_below_the_watermark_is_self_healed_not_errored`,
+  `test_watermark_above_max_is_an_error`, `test_out_of_order_merge_stays_green`
+  (watermark retired); `test_entry_missing_catalog_line`,
+  `test_catalog_line_with_no_file`, `test_one_way_reciprocal_missing_back_nnn`
+  (messages now name stems); `test_slug_mismatch_is_warning_not_error` — NOTE a
+  real behaviour change: a catalog/filename slug mismatch was one cosmetic
+  warning, and under stem keying it surfaces as an error + a pending warning.
+  Decide deliberately whether to restore a softer signal.
+- `test_knowledge_fix.py::test_index_skeleton_and_order_preserved` — asserts the
+  watermark.
+- `test_promote_invariant.py::test_banner_preserves_body`,
+  `test_banner_and_related_together_preserve_body` — marker format.
+
+`test_pull.py`'s 4 failures pre-exist on `main` (ModuleNotFoundError), unrelated.
+
+### Not started
+
+1. `synthesis_status.py:102` — still `int(n) > watermark`; must become per-record
+   (un-synthesized iff stem not wikilinked from `overview.md`) and drop
+   `SYNTH_WATERMARK_RE`. **This is the one place the old scalar floor is still
+   live**, and it will crash on a date id.
+2. `migration_status.py` — inherits `ENTRY_RE`; needs the calendar check wired in.
+3. Delete `knowledge_next_nnn.py` + `test_knowledge_next_nnn.py`, and rewrite the
+   FOUR promote references (`promote/SKILL.md:36,42`,
+   `references/wiki-maintenance.md:66`, `references/modes.md:24,43`). Invert
+   `test_promote_invariant.py:234` — it is a bare string-presence assertion that
+   stays GREEN while promote points at a deleted script.
+4. `propose/references/on-approval.md` steps 3–8 — a procedural rewrite, not a
+   glob edit.
+5. New `scripts/knowledge_rename.py` + `minerva:migrate-fix` skill: stem map,
+   up-front batch collision refusal before any `git mv`, git date derivation
+   (`git log --follow --diff-filter=A --reverse --format=%cs | head -1`,
+   work dirs anchored on `<dir>/proposal.md`), fence-aware wikilink rewrite
+   importing `knowledge_spans.py`.
+6. Prose globs: `cleanup/SKILL.md:19`, `ship/references/protocol.md:9`.
+7. Run the migration: 56 entries, ~52 work dirs, 532 wikilinks, 56 Context fields.
+8. Prose sweep (root `CLAUDE.md`, init template, README, ~30+ skill files);
+   register `migrate-fix` on 4 catalog surfaces incl. `pages/index.md` (038).
+9. Knowledge: supersede `026`, `027`, `055`; amend `054`.

@@ -52,7 +52,7 @@ from knowledge_lint import (
 from knowledge_edits import add_related_link, add_supersede_banner, body_complement
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
-_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
+_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((?:\d{4}-\d{2}-\d{2}|\d{3,})-[a-z]+-[^\]]+)\]\]")
 # A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
 # grammar the detector reports edges with. A narrower one here would let the fixer
 # silently skip an edge the linter flags, producing an error nothing repairs.
@@ -230,11 +230,12 @@ def plan_index(kd: Path) -> tuple:
     # type, duplicate id) would assert the index reflects an entry it does not, and
     # bury the refusal: the refusal is printed once, by the run that caused it, while
     # the watermark is permanent.
-    catalogued = [nnn for sec in SECTION_ORDER for nnn, _, _ in buckets[sec]]
-    max_nnn = max(catalogued, key=int) if catalogued else "000"
+    # No watermark line. A scalar floor cannot express which records are reconciled —
+    # they merge out of order (knowledge 053) — and a date id is not even totally
+    # ordered, since same-day ties are ordinary. Pending state is per-record: an entry
+    # is uncatalogued iff it has no catalog line here.
     new = (
-        "# Knowledge index\n"
-        f"<!-- index-watermark: {max_nnn} -->\n\n"
+        "# Knowledge index\n\n"
         + "\n\n".join(blocks)
         + "\n"
     )

@@ -74,12 +74,16 @@ def add_supersede_banner(text: str, nnn: str, target: str, date: str) -> str:
     case (banner appended directly after metadata) is out of scope — the template
     guarantees the sections exist.
     """
-    if any(BANNER_MARKER_RE.match(ln) and ln.endswith(f"{nnn} -->") for ln in text.splitlines()):
-        return text  # banner for this NNN already present -> no-op
+    # Idempotent on the superseding STEM, not its id. `endswith(f"{nnn} -->")` matched
+    # any banner whose id agreed, so two same-day entries superseding this one would
+    # collapse to whichever landed first — and under date ids same-day is ordinary.
+    if any((m := BANNER_MARKER_RE.match(ln)) and m.group(1) == target
+           for ln in text.splitlines()):
+        return text  # banner naming this exact entry already present -> no-op
     lines = text.splitlines()
     insert_at = next((i for i, ln in enumerate(lines) if SECTION_RE.match(ln)), len(lines))
     banner = [
-        f"<!-- superseded-by: {nnn} -->",
+        f"<!-- superseded-by: {target} -->",
         f"> **Superseded by [[{target}]]** ({date})",
         "",
     ]
