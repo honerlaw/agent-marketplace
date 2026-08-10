@@ -51,6 +51,7 @@ CLI: `python3 scripts/knowledge_lint.py <knowledge-dir>` — prints findings gro
 by family and exits non-zero iff any error-severity finding is present.
 """
 import re
+from datetime import date as _date
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -64,13 +65,55 @@ from knowledge_spans import (
 
 Finding = namedtuple("Finding", ["family", "severity", "message"])  # severity: error|warning
 
-# NNN is `\d{3,}`, not `\d{3}`: the allocator pads to three digits but widens rather
-# than wrapping past 999 (wrapping would hand out a guaranteed duplicate). A fixed
-# `\d{3}` silently fails to match a 4-digit stem, which would make the 1000th entry
-# invisible to BOTH the allocator and the duplicate detector at once. Every NNN is
-# captured as its own group — never sliced off a stem with `[:3]`, which breaks at the
-# same boundary — and compared with `int()`, since `"1000" < "999"` lexically.
-ENTRY_RE = re.compile(r"^(\d{3,})-([a-z]+)-.+\.md$")
+# The entry-id prefix has TWO accepted forms, and both must stay matchable forever.
+#
+#   date   `YYYY-MM-DD` — the current convention. Not allocated: it is read off the
+#          clock, so concurrent branches never negotiate for it.
+#   legacy `\d{3,}` — the retired sequential NNN. Still accepted because a consumer
+#          corpus migrates on its own schedule, and a prefix form that stops matching
+#          `ENTRY_RE` goes invisible to EVERY wiki tool at once (knowledge 026) — a
+#          false clean, which is the exact failure `minerva:migrate` exists to catch.
+#          Legacy is `\d{3,}` not `\d{3}`: the old allocator widened past 999.
+#
+# Shape alone is not conformance: `2026-13-45` matches the date arm. `is_conforming_id`
+# validates the date arm against the calendar; callers deciding "is this a real entry"
+# must use it rather than trusting the regex.
+ID_RE_SRC = r"(?:\d{4}-\d{2}-\d{2}|\d{3,})"
+ENTRY_RE = re.compile(rf"^({ID_RE_SRC})-([a-z]+)-.+\.md$")
+DATE_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def is_date_id(token: str) -> bool:
+    """True iff `token` is a calendar-valid `YYYY-MM-DD`."""
+    if not DATE_ID_RE.match(token):
+        return False
+    try:
+        _date.fromisoformat(token)
+    except ValueError:
+        return False
+    return True
+
+
+def is_conforming_id(token: str) -> bool:
+    """True iff `token` is a real entry id — a valid date, or a legacy NNN."""
+    return is_date_id(token) or bool(re.fullmatch(r"\d{3,}", token))
+
+
+def id_sort_key(token: str, width: int = 12):
+    """Order ids deterministically across BOTH forms.
+
+    Legacy first (chronologically right — every NNN predates the switch), then dates.
+    Legacy is zero-padded rather than `int()`-cast so the two forms share one key type;
+    `width` must exceed the longest legacy token in the corpus, because `"1000" < "999"`
+    lexically and a too-narrow pad reintroduces exactly the bug `int()` was guarding.
+    """
+    return (1, token) if is_date_id(token) else (0, token.zfill(width))
+
+
+def corpus_id_width(tokens) -> int:
+    """The pad width for `id_sort_key` over a specific corpus: never hardcode 3."""
+    legacy = [t for t in tokens if not is_date_id(t)]
+    return max((len(t) for t in legacy), default=3)
 WATERMARK_RE = re.compile(r"^<!--\s*index-watermark:\s*(\d{3,})\s*-->")
 # The entry's own type field. Three spellings, because all three appear in real
 # corpora and all three are the author stating the field — only the punctuation
@@ -90,14 +133,14 @@ FRONTMATTER_TYPE_RE = re.compile(r"^\s*type:\s*([a-z]+)\s*$", re.MULTILINE)
 # The entry's own one-line catalog summary. Its presence is what lets the index be
 # rebuilt mechanically instead of needing an LLM to re-condense the Finding.
 SUMMARY_RE = re.compile(r"^\*\*Summary\*\*:\s*(.+?)\s*$")
-WIKILINK_RE = re.compile(r"\[\[(\d{3,})-[a-z]+-[^\]]+\]\]")
+WIKILINK_RE = re.compile(rf"\[\[({ID_RE_SRC})-[a-z]+-[^\]]+\]\]")
 # group(1) = the full stem, group(2) = its NNN.
-CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
+CATALOG_LINE_RE = re.compile(rf"^-\s+\[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\]")
 # The VISIBLE half of a supersession banner. The `<!-- superseded-by: NNN -->` marker
 # above it identifies the superseding entry by NNN, which is ambiguous when an NNN is
 # shared; this line carries the full stem, so a stem-keyed reader can resolve it.
 BANNER_TARGET_STEM_RE = re.compile(
-    r"^>\s+\*\*Superseded by \[\[((\d{3,})-[a-z]+-[^\]]+)\]\]\*\*")
+    rf"^>\s+\*\*Superseded by \[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\]\*\*")
 # EVERY wikilink in a line, not just a line-initial one. `CATALOG_LINE_RE` anchors at
 # `- [[…]]`, so it sees only the first target of a line like
 # `- [[a]] / [[b]] — both unchanged` and nothing on a wrapped continuation line. The
@@ -105,14 +148,14 @@ BANNER_TARGET_STEM_RE = re.compile(
 # the detector made the two disagree: the detector reported a back-link missing, the
 # editor found it present and no-opped, and the entry was re-planned as "changed"
 # forever. Used for back-link DETECTION only, where matching the editor is the point.
-WIKILINK_STEM_RE = re.compile(r"\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
+WIKILINK_STEM_RE = re.compile(rf"\[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\]")
 # A `## Related` line, with its relationship label: group(3), or None when the line
 # carries no separator+label. Single-sourced so `knowledge_fix` cannot recognise a
 # narrower set of edges than this linter reports on — a line the linter counts as an
 # edge but the fixer skips is a permanent error nothing repairs and nothing refuses.
 # The separator is an em dash by convention, matched permissively for the same reason.
 RELATED_LINE_RE = re.compile(
-    r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\](?:\s*[—–-]\s*(.+?))?\s*$")
+    rf"^-\s+\[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\](?:\s*[—–-]\s*(.+?))?\s*$")
 
 # index.md section header -> singular Type token
 SECTION_TO_TYPE = {
@@ -222,26 +265,31 @@ def parse_entry(path: Path):
 
 
 def parse_index(path: Path):
-    """Parse index.md -> {watermark, catalog: {nnn: {'section_type','stem'}}}."""
-    watermark = None
+    """Parse index.md -> {catalog: {stem: {'section_type','id'}}, exists}.
+
+    Keyed on the full STEM, not the id. Two entries can legitimately share a date —
+    dates are read off the clock, never allocated — so an id-keyed catalog would make
+    one of them unrepresentable, the exact defect knowledge 054 documents.
+
+    The `index-watermark` comment is no longer read. Reconciliation state is per-record
+    (an entry is pending iff it has no catalog line) because records merge out of order
+    and a scalar floor misclassifies them; knowledge 053 established that for the index,
+    and a date id — which is not even totally ordered, since ties are ordinary — cannot
+    support a floor at all.
+    """
     catalog = {}
     current_type = None
     if not path.exists():
-        return {"watermark": None, "catalog": {}, "exists": False}
+        return {"catalog": {}, "exists": False}
     for _, line in _strip_fences(path.read_text().splitlines()):
-        m = WATERMARK_RE.match(line.strip())
-        if m:
-            watermark = m.group(1)
-            continue
         header = line.strip()
         if header in SECTION_TO_TYPE:
             current_type = SECTION_TO_TYPE[header]
             continue
         cm = CATALOG_LINE_RE.match(line.strip())
         if cm:
-            stem, nnn = cm.group(1), cm.group(2)
-            catalog[nnn] = {"section_type": current_type, "stem": stem}
-    return {"watermark": watermark, "catalog": catalog, "exists": True}
+            catalog[cm.group(1)] = {"section_type": current_type, "id": cm.group(2)}
+    return {"catalog": catalog, "exists": True}
 
 
 def lint_knowledge(knowledge_dir) -> list:
@@ -251,112 +299,80 @@ def lint_knowledge(knowledge_dir) -> list:
 
     entry_paths = sorted(p for p in kd.glob("*.md") if ENTRY_RE.match(p.name))
 
-    # Group by NNN FIRST. Keying a dict directly on NNN (as this did) makes a
-    # duplicate silently unrepresentable: the later file overwrites the earlier and
-    # the lint reports a clean bijection over a corpus that has two entries sharing
-    # an id. Downstream checks still need one entry per NNN, so they use the
-    # deterministic first-by-filename member of each group.
-    by_nnn = {}
-    for p in entry_paths:
-        by_nnn.setdefault(ENTRY_RE.match(p.name).group(1), []).append(p)
-    entries = {nnn: (group[0], parse_entry(group[0])) for nnn, group in by_nnn.items()}
-    entry_nnns = set(entries)
+    # Keyed on the full STEM — the identity every wikilink already writes, and the one
+    # the filesystem itself enforces. The previous id-keyed dict could not represent two
+    # entries sharing an id (knowledge 054), which is why a duplicate check and a blanket
+    # quarantine had to exist beside it. Under date ids that pairing would be actively
+    # WRONG: same-day entries are ordinary and independent, so grouping them would report
+    # each as a duplicate AND exclude it from every per-entry check below. Stem identity
+    # removes the failure mode instead of policing it — a duplicate stem cannot exist,
+    # because it would be the same path, which git refuses to merge.
+    entries = {p.name[:-3]: (p, parse_entry(p)) for p in entry_paths}
+    entry_stems = set(entries)
+    width = corpus_id_width(e[1]["nnn"] for e in entries.values())
 
-    # --- 0. duplicate NNN ----------------------------------------------------
-    # Also quarantines those ids from the per-entry checks below: `entries[nnn]` is an
-    # arbitrary member of the group, so a type/slug/link finding derived from it names
-    # the wrong file and points the reader at the wrong problem.
-    duplicate_nnns = {nnn for nnn, g in by_nnn.items() if len(g) > 1}
-    for nnn, group in sorted(by_nnn.items(), key=lambda kv: int(kv[0])):
-        if len(group) > 1:
+    def by_id(stem):
+        return id_sort_key(entries[stem][1]["nnn"], width)
+
+    # --- 0. non-conforming id -------------------------------------------------
+    # `ENTRY_RE` is shape-only: `2026-13-45-pattern-x.md` matches it. Reporting the
+    # impossible date here is what keeps migrate's shape check honest rather than
+    # letting a typo pass as a valid entry forever.
+    for stem in sorted(entry_stems, key=by_id):
+        entry_id = entries[stem][1]["nnn"]
+        if not is_conforming_id(entry_id):
             findings.append(Finding(
-                "duplicate", "error",
-                f"NNN {nnn} is shared by {len(group)} entries: "
-                f"{', '.join(p.name for p in group)}"))
+                "id", "error",
+                f"entry '{stem}' has a date-shaped but invalid id '{entry_id}'"))
 
     # --- 1. index drift ------------------------------------------------------
     idx = parse_index(kd / "index.md")
     if not idx["exists"]:
         findings.append(Finding("index", "error", "index.md is missing"))
     else:
-        max_nnn = max(entry_nnns, key=int) if entry_nnns else "000"
-        watermark = idx["watermark"]
-        if watermark is None:
-            findings.append(Finding(
-                "index", "error", "index.md has no `index-watermark` comment"))
-        elif int(watermark) > int(max_nnn):
-            findings.append(Finding(
-                "index", "error",
-                f"watermark {watermark} is above max entry NNN {max_nnn} — the index "
-                f"claims entries that do not exist"))
         catalog = idx["catalog"]
-        # An uncatalogued entry is ALWAYS pending. No promote-driven path can drift
-        # (promote never writes catalog lines), and reconciliation repairs whatever it
-        # finds — including a line lost to a hand-edit or a bad merge, which is
-        # therefore self-healed silently rather than reported. See the module
-        # docstring: that cost is deliberate and pinned by a test.
-        #
-        # This deliberately does NOT compare against the watermark. A scalar floor
-        # assumes entries reconcile in NNN order, and they do not: units merge in
-        # whatever order their PRs land. Unit A takes 050, unit B takes 051, B merges
-        # and reconciles to watermark 051 — then A merges and its 050 is *below* the
-        # floor, so a floor-based rule calls it drift, reddens A's branch, and (worse)
-        # emits no pending warning, which is the very signal cleanup gates
-        # reconciliation on. The entry would then never be catalogued at all.
-        for nnn in sorted(entry_nnns - set(catalog), key=int):
+        # An uncatalogued entry is ALWAYS pending, never drift. No promote-driven path
+        # can drift (promote never writes catalog lines), and reconciliation repairs
+        # whatever it finds — including a line lost to a hand-edit or a bad merge, which
+        # is therefore self-healed silently rather than reported.
+        for stem in sorted(entry_stems - set(catalog), key=by_id):
             findings.append(Finding(
                 "index", "warning",
-                f"entry {nnn} has no catalog line in index.md — pending reconciliation"))
-        for nnn in sorted(set(catalog) - entry_nnns, key=int):
+                f"entry {stem} has no catalog line in index.md — pending reconciliation"))
+        for stem in sorted(set(catalog) - entry_stems):
             findings.append(Finding("index", "error",
-                                    f"catalog line {nnn} has no entry file"))
-        for nnn in sorted(set(catalog) & entry_nnns, key=int):
-            if nnn in duplicate_nnns:
-                continue  # quarantined: `entries[nnn]` is an arbitrary group member,
-                          # so its type/stem would indict the wrong file
-            entry = entries[nnn][1]
-            sect_type = catalog[nnn]["section_type"]
+                                    f"catalog line {stem} has no entry file"))
+        for stem in sorted(set(catalog) & entry_stems, key=by_id):
+            entry = entries[stem][1]
+            sect_type = catalog[stem]["section_type"]
             if sect_type != entry["declared_type"]:
                 findings.append(Finding(
                     "index", "error",
-                    f"entry {nnn} is type '{entry['declared_type']}' but catalogued "
+                    f"entry {stem} is type '{entry['declared_type']}' but catalogued "
                     f"under a '{sect_type}' section"))
-            # slug cosmetic: NNN matches but stem differs -> warning, not error
-            cat_stem = catalog[nnn]["stem"]
-            file_stem = entries[nnn][0].name[:-3]
-            if cat_stem != file_stem:
-                findings.append(Finding(
-                    "index", "warning",
-                    f"entry {nnn} catalog slug '{cat_stem}' != filename '{file_stem}'"))
 
     # --- 2. broken ## Related links -----------------------------------------
-    for nnn, (path, entry) in sorted(entries.items(), key=lambda kv: int(kv[0])):
-        if nnn in duplicate_nnns:
-            continue  # quarantined — only one group member's block was even read
-        for target in sorted(entry["related_out"], key=int):
-            if target not in entry_nnns:
+    for stem in sorted(entry_stems, key=by_id):
+        for target in sorted(entries[stem][1]["related_out_stems"]):
+            if target not in entry_stems:
                 findings.append(Finding(
                     "broken-link", "error",
-                    f"entry {nnn} '## Related' links [[{target}-...]] which has no entry"))
+                    f"entry {stem} '## Related' links [[{target}]] which has no entry"))
 
     # --- 3. missing reciprocals ---------------------------------------------
     # Always pending, never drift — same reasoning as the uncatalogued-entry check.
-    # An add-only promote writes forward links in the NEW entry only; reconciliation
-    # derives every reverse link and banner. So a missing back-link means "not
-    # reconciled yet", which reconciliation itself repairs, and gating it on a scalar
-    # watermark would misclassify out-of-order merges exactly as described above.
-    for nnn, (path, entry) in sorted(entries.items(), key=lambda kv: int(kv[0])):
-        if nnn in duplicate_nnns:
-            continue  # quarantined
-        for target in sorted(entry["related_out"], key=int):
-            if target not in entry_nnns or target in duplicate_nnns:
-                continue  # broken link (already reported), or quarantined target
-            if nnn not in entries[target][1]["backlinks"]:
+    for stem in sorted(entry_stems, key=by_id):
+        for target in sorted(entries[stem][1]["related_out_stems"]):
+            if target not in entry_stems:
+                continue  # broken link, already reported above
+            if stem not in entries[target][1]["backlink_stems"]:
                 findings.append(Finding(
                     "reciprocal", "warning",
-                    f"entry {nnn} links {target} but {target} has no back-link to "
-                    f"{nnn} — pending reconciliation"))
+                    f"entry {stem} links {target} but {target} has no back-link to "
+                    f"{stem} — pending reconciliation"))
     return findings
+
+
 
 
 def main(argv=None) -> int:
