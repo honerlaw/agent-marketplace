@@ -10,22 +10,11 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
 2. **Duplicate slug check** — look for `.minerva/work/NNN-<slug>/`, `.minerva/worktrees/NNN-<slug>/`, and any branch named `*-<slug>` (`git branch --list "*-<slug>"`, `git branch -r --list "*-<slug>"`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
 
-3. **Compute the next NNN** by scanning **all three** sources so parallel work in worktrees and remotes doesn't collide:
+3. **Take today's date as the unit's id** — `date +%F`, giving `YYYY-MM-DD`. The unit is `<YYYY-MM-DD>-<slug>`.
 
-   ```
-   # local work directory
-   ls -1 .minerva/work/ | grep -E '^[0-9]{3}-'
+   No scan, no max+1, no cross-branch comparison: a date is read off the clock, so two units started in parallel never negotiate for an id. **Several units sharing a date is expected**, because a unit is identified by its whole `<date>-<slug>`, not by the date alone. The duplicate-**slug** check in step 2 is what prevents a genuine collision, and it already runs against every source.
 
-   # local branches (catches in-flight worktrees whose docs left .minerva/work/)
-   git branch --list '[0-9][0-9][0-9]-*' --format '%(refname:short)'
-   git branch --list 'minerva/[0-9][0-9][0-9]-*' --format '%(refname:short)'
-
-   # remote branches (catches work shipped from elsewhere)
-   git ls-remote --heads origin '[0-9][0-9][0-9]-*' 2>/dev/null
-   git ls-remote --heads origin 'minerva/[0-9][0-9][0-9]-*' 2>/dev/null
-   ```
-
-   Parse the 3-digit prefix from each, take the max across all sources, add 1, pad to 3 digits. If none exist, start at `001`. Skip the git steps cleanly in a non-git repo or when offline (treat the source as empty).
+   This replaced a three-source NNN scan. That scan existed because a number is scarce — two units picking the same one collided invisibly. It is not needed for a date, and keeping it would reintroduce the coordination it was written to fix.
 
 4. **Resolve the default branch.** Same logic used by `ship` and `cleanup`, executed once and reused:
    - `git symbolic-ref refs/remotes/origin/HEAD` → parse `refs/remotes/origin/<name>` and take `<name>`.

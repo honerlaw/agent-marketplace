@@ -41,72 +41,62 @@ import re
 import sys
 from pathlib import Path
 
-from knowledge_lint import ENTRY_RE, WIKILINK_RE, _strip_fences
+from knowledge_lint import ENTRY_RE, WIKILINK_STEM_RE, _strip_fences
 
-# Distinct from knowledge_lint.WATERMARK_RE (`index-watermark`). New marker, new regex,
-# single-sourced here (it lives only in overview.md).
-SYNTH_WATERMARK_RE = re.compile(r"<!--\s*synthesis-watermark:\s*(\d{3,})\s*-->")
+# There is no synthesis watermark any more. It was a scalar floor — an entry counted as
+# synthesized iff its id exceeded the mark — which knowledge 053 established cannot
+# express reconciliation state, because records merge out of order: unit A takes 050 and
+# B takes 051, B merges and advances the mark, then A merges and sits BELOW it, silently
+# counting as done. 053 fixed that for the index and left this copy live.
+#
+# A date id cannot support a floor even in principle: same-day ties are ordinary, so the
+# ids are not totally ordered. The signal is now per-record and derived from the artifact
+# itself — an entry is synthesized iff the overview actually links it, which is both
+# stronger than the floor (it survives an overview rewrite that drops an entry) and
+# self-healing.
 
 OVERVIEW_NAME = "overview.md"
 
 
-def _entry_nnns(kd: Path) -> set:
-    """The set of live entry NNNs (3-digit strings), via the ENTRY_RE glob."""
-    return {ENTRY_RE.match(p.name).group(1) for p in kd.glob("*.md")
-            if ENTRY_RE.match(p.name)}
+def _entry_stems(kd: Path) -> set:
+    """The set of live entry stems, via the ENTRY_RE glob."""
+    return {p.name[:-3] for p in kd.glob("*.md") if ENTRY_RE.match(p.name)}
 
 
 def synthesis_status(knowledge_dir) -> dict:
     """Return the deterministic synthesis-status signal for `knowledge_dir`.
 
     Keys:
-      overview_exists      bool
-      synthesis_watermark  int  (-1 if no overview / no watermark comment)
-      corpus_max_nnn       int  (-1 if the corpus has no entries)
-      unsynthesized        sorted list[str] of entry NNNs with NNN > watermark
-      link_rot             sorted list[str] of [[NNN-type-slug]] stems in the overview
-                           whose NNN matches no live entry (resolution is by NNN only)
+      overview_exists  bool
+      unsynthesized    sorted list[str] of entry stems the overview does not link
+      link_rot         sorted list[str] of stems the overview links that have no entry
+
+    Both signals resolve on the full STEM. Resolving on the leading id alone would let a
+    link to one same-day entry read as satisfied by its sibling.
     """
     kd = Path(knowledge_dir)
-    entry_nnns = _entry_nnns(kd)
-    corpus_max = max((int(n) for n in entry_nnns), default=-1)
+    entry_stems = _entry_stems(kd)
 
     overview = kd / OVERVIEW_NAME
     if not overview.exists():
         return {
             "overview_exists": False,
-            "synthesis_watermark": -1,
-            "corpus_max_nnn": corpus_max,
-            "unsynthesized": sorted(entry_nnns),
+            "unsynthesized": sorted(entry_stems),
             "link_rot": [],
         }
 
     lines = overview.read_text().splitlines()
     nonfenced = list(_strip_fences(lines))
 
-    watermark = -1
-    for _, line in nonfenced:
-        m = SYNTH_WATERMARK_RE.search(line)
-        if m:
-            watermark = int(m.group(1))
-            break
-
     # Fence-aware wikilink scan (knowledge entry 023): only links OUTSIDE code fences.
-    link_rot = set()
+    linked = set()
     for _, line in nonfenced:
-        for m in WIKILINK_RE.finditer(line):
-            stem = m.group(0)[2:-2]  # strip the surrounding [[ ]]
-            if m.group(1) not in entry_nnns:
-                link_rot.add(stem)
-
-    unsynthesized = sorted(n for n in entry_nnns if int(n) > watermark)
+        linked.update(m.group(1) for m in WIKILINK_STEM_RE.finditer(line))
 
     return {
         "overview_exists": True,
-        "synthesis_watermark": watermark,
-        "corpus_max_nnn": corpus_max,
-        "unsynthesized": unsynthesized,
-        "link_rot": sorted(link_rot),
+        "unsynthesized": sorted(entry_stems - linked),
+        "link_rot": sorted(linked - entry_stems),
     }
 
 

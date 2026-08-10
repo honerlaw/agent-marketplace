@@ -312,16 +312,13 @@ def plan_reciprocals(kd: Path, date: str) -> tuple:
             cur = edits.get(b_stem, texts[b_stem])
             new = add_related_link(cur, a_stem, recip)
             if label == "supersedes":  # B is superseded by A -> banner too (015/016)
-                # The banner marker is `<!-- superseded-by: NNN -->`, so it cannot name
-                # WHICH member of a shared NNN retired B. The `## Related` back-link
-                # above is stem-addressed and already written; only the banner is held.
-                a_nnn = entries[a_stem]["nnn"]
-                if a_nnn in dups:
-                    refusals.append((a_stem, b_stem, f"NNN {a_nnn} is shared by multiple "
-                                                     f"entries; supersession banner not "
-                                                     f"stamped (the marker names an NNN)"))
-                else:
-                    new = add_supersede_banner(new, a_nnn, a_stem, date)
+                # The banner marker now carries A's full STEM, so it can always name
+                # which entry retired B. This used to be refused whenever A's id was
+                # shared, because a marker holding a bare id could not say which of the
+                # sharers was meant — the one place a shared id genuinely degraded the
+                # output. Stem identity removes the ambiguity, so the banner is always
+                # stamped and the refusal is gone.
+                new = add_supersede_banner(new, entries[a_stem]["nnn"], a_stem, date)
             edits[b_stem] = new
     return edits, refusals
 

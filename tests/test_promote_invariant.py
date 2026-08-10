@@ -82,7 +82,7 @@ def test_already_linked_pair_zero_diff():
 
 def test_banner_preserves_body():
     mutated = add_supersede_banner(ENTRY, "021", "021-decision-some-newer-call", "2026-07-01")
-    assert "<!-- superseded-by: 021 -->" in mutated
+    assert "<!-- superseded-by: 021-decision-some-newer-call -->" in mutated
     assert body_complement(mutated) == body_complement(ENTRY)
 
 
@@ -107,7 +107,8 @@ def test_banner_and_related_together_preserve_body():
     step2 = add_related_link(step1, "021-decision-some-newer-call", "superseded by")
     assert body_complement(step2) == body_complement(ENTRY)
     # both spans present, body untouched
-    assert "<!-- superseded-by: 021 -->" in step2 and "## Related" in step2
+    assert ("<!-- superseded-by: 021-decision-some-newer-call -->" in step2
+            and "## Related" in step2)
 
 
 # --- fence-aware header location (knowledge 023; bug found in unit 027) -------
@@ -227,11 +228,24 @@ def test_promote_prose_carries_no_legacy_aggregate_instruction():
         )
 
 
-def test_promote_prose_uses_the_cross_branch_allocator():
-    """A local `max+1` cannot see entries on other in-flight branches, and those
-    collisions merge cleanly because each entry is a new file — so the allocator is
-    the only remaining backstop once the textual conflict is gone."""
-    assert "knowledge_next_nnn.py" in _promote_prose()
+def test_promote_prose_has_no_allocator():
+    """The cross-branch allocator is gone, and promote must not still point at it.
+
+    This assertion is deliberately INVERTED from the one it replaces. The old form was
+    `assert "knowledge_next_nnn.py" in _promote_prose()` — a bare string-presence check,
+    which would have stayed GREEN after the script was deleted while promote went on
+    instructing a call to a file that no longer exists. A passing test attesting to a
+    broken instruction is worse than no test, so the invariant now pins the absence.
+    """
+    prose = _promote_prose()
+    assert "knowledge_next_nnn" not in prose
+
+
+def test_promote_prose_names_the_date_id():
+    """Absence alone would also pass if promote simply stopped saying how to name an
+    entry. Pin the replacement too, so the pair brackets the real behaviour."""
+    prose = _promote_prose()
+    assert "date +%F" in prose
 
 
 def test_entry_template_requires_a_summary_field():

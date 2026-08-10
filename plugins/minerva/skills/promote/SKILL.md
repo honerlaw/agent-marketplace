@@ -33,13 +33,13 @@ Knowledge files written by promote (`.minerva/knowledge/NNN-<type>-<slug>.md`) m
 
 ## Two modes
 
-The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry numbering via `scripts/knowledge_next_nnn.py` live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.**
+The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.**
 
 ## Idempotency summary
 
 - Mode A re-run: scratchpad marker → stops early.
 - Mode B re-run on a marked block: existing knowledge file → stops early.
-- Promote is **add-only**: it writes new `.minerva/knowledge/NNN-*.md` entry files and touches no existing file in the corpus — not `index.md`, not the watermark, not a neighbor's `## Related` block, not a supersession banner. A work-unit branch's `.minerva/` footprint is therefore purely additions, which is what lets concurrent PRs merge without conflicting. The reverse direction of every cross-link, and every aggregate, is derived on the default branch by `minerva:cleanup`'s reconciliation. Entry NNN comes from `scripts/knowledge_next_nnn.py --fetch`, which sees entries on other in-flight branches; a local `max+1` does not, and its collisions merge silently because each entry is a new file. See [Wiki maintenance](#wiki-maintenance-add-only).
+- Promote is **add-only**: it writes new `.minerva/knowledge/` entry files and touches no existing file in the corpus — not `index.md`, not the watermark, not a neighbor's `## Related` block, not a supersession banner. A work-unit branch's `.minerva/` footprint is therefore purely additions, which is what lets concurrent PRs merge without conflicting. The reverse direction of every cross-link, and every aggregate, is derived on the default branch by `minerva:cleanup`'s reconciliation. An entry's id is today's date (`date +%F`) — nothing is allocated, and a shared date is normal because identity is the full stem. A duplicate stem is the same path, so git conflicts on it rather than merging it silently. See [Wiki maintenance](#wiki-maintenance-add-only).
 
 If a user manually edits the scratchpad to remove markers, re-running `minerva:promote` could duplicate entries. This is a known footgun; not defended against.
 

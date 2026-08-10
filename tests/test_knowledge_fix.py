@@ -21,14 +21,14 @@ def entry(typ, slug, related=None, banner=None, body_extra="", summary=None):
         s += f"**Summary**: {summary}\n"
     s += "**Context**: x\n"
     if banner:  # (nnn, stem)
-        s += f"\n<!-- superseded-by: {banner[0]} -->\n> **Superseded by [[{banner[1]}]]** ({DATE})\n"
+        s += f"\n<!-- superseded-by: {banner[1]} -->\n> **Superseded by [[{banner[1]}]]** ({DATE})\n"
     s += "\n## Context\nc\n\n## Finding\nf\n" + body_extra + "\n## Implications\ni\n"
     if related:  # [(stem, label)]
         s += "\n## Related\n" + "".join(f"- [[{st}]] — {lab}\n" for st, lab in related)
     return s
 
 
-def index_md(watermark, sections):  # sections: {"Decisions":[(stem,summary)], ...}
+def index_md(sections):  # sections: {"Decisions":[(stem,summary)], ...}
     blocks = []
     for name in ["Decisions", "Bugs", "Patterns", "Constraints", "References"]:
         rows = sections.get(name, [])
@@ -37,7 +37,7 @@ def index_md(watermark, sections):  # sections: {"Decisions":[(stem,summary)], .
             block.append("")
             block += [f"- [[{st}]] — {summ}" for st, summ in rows]
         blocks.append("\n".join(block))
-    return f"# Knowledge index\n<!-- index-watermark: {watermark} -->\n\n" + "\n\n".join(blocks) + "\n"
+    return "# Knowledge index\n\n" + "\n\n".join(blocks) + "\n"
 
 
 def make_dir(tmp_path, files, index_text):
@@ -59,7 +59,7 @@ def clean(tmp_path):
             "001-decision-foo.md": entry("decision", "foo", related=[("002-constraint-bar", "see also")]),
             "002-constraint-bar.md": entry("constraint", "bar", related=[("001-decision-foo", "see also")]),
         },
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
 
 
@@ -71,26 +71,30 @@ def test_clean_corpus_is_noop(tmp_path):
     assert {p.name: p.read_text() for p in kd.glob("*.md")} == before  # byte-identical
 
 
-def test_watermark_fixed(tmp_path):
+def test_stale_watermark_comment_is_stripped(tmp_path):
+    """A consumer index still carries the comment until it migrates. The fixer must
+    drop it when it rewrites, and never write a new one — there is no scalar state."""
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("001", {"Decisions": [("001-decision-foo", "d")],  # watermark 001, max is 002
-                         "Constraints": [("002-constraint-bar", "c")]}),
+        "# Knowledge index\n<!-- index-watermark: 001 -->\n\n"
+        "## Decisions\n\n- [[001-decision-foo]] — d\n\n"
+        "## Constraints\n\n- [[002-constraint-bar]] — c\n",
     )
-    # A lagging watermark is no longer an error (it's the reconciliation floor), but
-    # the fixer still brings it up to the corpus max when it rewrites the index.
     fix.apply(kd, DATE)
     assert errors(kd) == []
-    assert "<!-- index-watermark: 002 -->" in (kd / "index.md").read_text()
+    text = (kd / "index.md").read_text()
+    assert "index-watermark" not in text          # stripped on rewrite
+    assert "- [[001-decision-foo]]" in text        # catalog itself preserved
+    assert "- [[002-constraint-bar]]" in text
 
 
 def test_stale_catalog_line_removed(tmp_path):
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
-        index_md("001", {"Decisions": [("001-decision-foo", "d"), ("009-decision-ghost", "gone")]}),
+        index_md({"Decisions": [("001-decision-foo", "d"), ("009-decision-ghost", "gone")]}),
     )
     assert any("009" in f.message for f in errors(kd))
     fix.apply(kd, DATE)
@@ -104,7 +108,7 @@ def test_wrong_type_section_relocated_preserving_summary(tmp_path):
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-constraint-bar.md": entry("constraint", "bar")},
         # 002 (constraint) wrongly listed under Decisions, with a distinctive summary
-        index_md("002", {"Decisions": [("001-decision-foo", "d"),
+        index_md({"Decisions": [("001-decision-foo", "d"),
                                        ("002-constraint-bar", "DISTINCTIVE SUMMARY")]}),
     )
     assert any("002" in f.message and "section" in f.message for f in errors(kd))
@@ -122,7 +126,7 @@ def test_missing_reciprocal_added(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", related=[("002-constraint-bar", "builds on")]),
          "002-constraint-bar.md": entry("constraint", "bar")},  # no back-link
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     assert any(f.family == "reciprocal" for f in lint_knowledge(kd))  # pending, a warning
     before_body = body_complement((kd / "002-constraint-bar.md").read_text())
@@ -138,12 +142,12 @@ def test_supersession_writes_banner_and_related_line(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),  # will be superseded by 002
          "002-constraint-bar.md": entry("constraint", "bar", related=[("001-decision-foo", "supersedes")])},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     fix.apply(kd, DATE)
     assert errors(kd) == []
     a = (kd / "001-decision-foo.md").read_text()
-    assert "<!-- superseded-by: 002 -->" in a       # banner
+    assert "<!-- superseded-by: 002-constraint-bar -->" in a       # banner
     assert "[[002-constraint-bar]] — superseded by" in a  # AND the Related line
 
 
@@ -157,7 +161,7 @@ def test_prose_label_reciprocates_as_see_also(tmp_path):
             "decision", "foo",
             related=[("002-constraint-bar", "the sibling failure on the other write path")]),
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     batch = fix.apply(kd, DATE)
     assert batch["refusals"] == []
@@ -175,7 +179,7 @@ def test_directional_prose_label_refused_atomically(tmp_path):
             "decision", "foo",
             related=[("002-constraint-bar", "supersedes the old approach entirely")]),
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     before = (kd / "002-constraint-bar.md").read_text()
     batch = fix.apply(kd, DATE)
@@ -188,7 +192,7 @@ def test_idempotent(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", related=[("002-constraint-bar", "builds on")]),
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("009", {"Decisions": [("001-decision-foo", "d")],  # watermark wrong too
+        index_md({"Decisions": [("001-decision-foo", "d")],  # watermark wrong too
                          "Constraints": [("002-constraint-bar", "c")]}),
     )
     fix.apply(kd, DATE)
@@ -206,7 +210,7 @@ def test_index_skeleton_and_order_preserved(tmp_path):
          "001-decision-a.md": entry("decision", "a"),
          "002-bug-b.md": entry("bug", "b")},
         # watermark wrong + Decisions out of NNN order
-        index_md("001", {"Decisions": [("003-decision-c", "c"), ("001-decision-a", "a")],
+        index_md({"Decisions": [("003-decision-c", "c"), ("001-decision-a", "a")],
                          "Bugs": [("002-bug-b", "b")]}),
     )
     fix.apply(kd, DATE)
@@ -216,7 +220,7 @@ def test_index_skeleton_and_order_preserved(tmp_path):
         assert h in text  # all four headers incl. empty Patterns + Constraints
     # ascending NNN order within Decisions
     assert text.index("001-decision-a") < text.index("003-decision-c")
-    assert parse_index(kd / "index.md")["watermark"] == "003"
+    assert "watermark" not in parse_index(kd / "index.md")
 
 
 def test_fenced_related_example_not_treated_as_edge(tmp_path):
@@ -228,7 +232,7 @@ def test_fenced_related_example_not_treated_as_edge(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", body_extra=fenced),  # no REAL ## Related
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")], "Constraints": [("002-constraint-bar", "c")]}),
     )
     assert errors(kd) == []  # detector (fence-aware) sees a clean corpus
     before = {p.name: p.read_text() for p in kd.glob("*.md")}
@@ -241,7 +245,7 @@ def test_unknown_type_line_refused_not_dropped(tmp_path):
     kd = make_dir(
         tmp_path,
         {"001-weird-x.md": entry("weird", "x")},  # declared type not one of the 4
-        index_md("001", {"Decisions": [("001-weird-x", "keep me")]}),
+        index_md({"Decisions": [("001-weird-x", "keep me")]}),
     )
     batch = fix.apply(kd, DATE)
     assert any("001" in r[0] or "001" in r[2] for r in batch["refusals"])
@@ -262,7 +266,7 @@ def test_dry_run_writes_nothing(tmp_path):
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
-        index_md("000", {"Decisions": [("001-decision-foo", "d")]}),  # watermark wrong
+        index_md({"Decisions": [("001-decision-foo", "d")]}),  # watermark wrong
     )
     before = {p.name: p.read_text() for p in kd.glob("*.md")}
     fix.main(["--dry-run", "--date", DATE, str(kd)])
@@ -277,12 +281,12 @@ def test_missing_catalog_line_added_from_entry_summary(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-constraint-bar.md": entry("constraint", "bar", summary="bar is bounded")},
-        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),  # 002 uncatalogued
+        index_md({"Decisions": [("001-decision-foo", "d")]}),  # 002 uncatalogued
     )
     fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
     assert "- [[002-constraint-bar]] — bar is bounded" in text
-    assert "<!-- index-watermark: 002 -->" in text
+    assert "index-watermark" not in text
     assert errors(kd) == []
 
 
@@ -291,7 +295,7 @@ def test_added_catalog_line_lands_in_the_declared_type_section(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-pattern-baz.md": entry("pattern", "baz", summary="baz recurs")},
-        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")]}),
     )
     fix.apply(kd, DATE)
     body = (kd / "index.md").read_text()
@@ -305,7 +309,7 @@ def test_missing_catalog_line_without_summary_is_still_refused(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-constraint-bar.md": entry("constraint", "bar")},  # no **Summary**
-        index_md("001", {"Decisions": [("001-decision-foo", "d")]}),
+        index_md({"Decisions": [("001-decision-foo", "d")]}),
     )
     batch = fix.apply(kd, DATE)
     assert any("Summary" in r[2] for r in batch["refusals"])
@@ -319,7 +323,7 @@ def test_mixed_corpus_needs_no_backfill(tmp_path):
         tmp_path,
         {"001-decision-old.md": entry("decision", "old"),           # legacy, no Summary
          "002-constraint-new.md": entry("constraint", "new", summary="new is add-only")},
-        index_md("001", {"Decisions": [("001-decision-old", "hand-written summary")]}),
+        index_md({"Decisions": [("001-decision-old", "hand-written summary")]}),
     )
     fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
@@ -337,7 +341,7 @@ def test_shared_nnn_lines_are_relocated_by_stem(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "001-bug-bar.md": entry("bug", "bar")},
-        index_md("001", {"Bugs": [("001-decision-foo", "d")],       # both misfiled,
+        index_md({"Bugs": [("001-decision-foo", "d")],       # both misfiled,
                          "Decisions": [("001-bug-bar", "b")]}),      # each under the other's
     )
     batch = fix.apply(kd, DATE)
@@ -352,7 +356,7 @@ def test_shared_nnn_both_get_catalog_lines(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", summary="s1"),
          "001-bug-bar.md": entry("bug", "bar", summary="s2")},
-        index_md("000", {}),
+        index_md({}),
     )
     fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
@@ -369,7 +373,7 @@ def test_shared_nnn_reciprocal_lands_on_the_named_stem(tmp_path):
          "001-bug-bar.md": entry("bug", "bar"),
          "002-pattern-baz.md": entry("pattern", "baz", summary="s",
                                      related=[("001-bug-bar", "see also")])},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+        index_md({"Decisions": [("001-decision-foo", "d")],
                          "Bugs": [("001-bug-bar", "b")],
                          "Patterns": [("002-pattern-baz", "p")]}),
     )
@@ -390,7 +394,7 @@ def test_second_link_on_a_related_line_counts_as_a_back_link(tmp_path):
         {"001-decision-foo.md": entry("decision", "foo",
                                       related=[("002-constraint-bar", "see also")]),
          "002-constraint-bar.md": entry("constraint", "bar")},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+        index_md({"Decisions": [("001-decision-foo", "d")],
                          "Constraints": [("002-constraint-bar", "c")]}),
     )
     # 002 links back to 001, but as the second target of a two-link line.
@@ -412,7 +416,7 @@ def test_related_before_another_section_is_refused_not_fatal(tmp_path):
          "002-constraint-bar.md": entry("constraint", "bar").replace(
              "## Implications\ni\n", "## Related\n- [[009-pattern-nope]] — x\n\n## Implications\ni\n"),
          "003-pattern-baz.md": entry("pattern", "baz")},
-        index_md("003", {"Decisions": [("001-decision-foo", "d")],
+        index_md({"Decisions": [("001-decision-foo", "d")],
                          "Constraints": [("002-constraint-bar", "c")],
                          "Patterns": [("003-pattern-baz", "p")]}),
     )
@@ -422,25 +426,28 @@ def test_related_before_another_section_is_refused_not_fatal(tmp_path):
     assert "- [[001-decision-foo]] — see also" in (kd / "003-pattern-baz.md").read_text()
 
 
-def test_shared_nnn_still_blocks_the_supersession_banner(tmp_path):
-    """The banner marker is `<!-- superseded-by: NNN -->`, which cannot say WHICH
-    member of a shared group retired the entry. The Related back-link is stem-addressed
-    and still written; only the banner is held."""
+def test_shared_id_no_longer_blocks_the_supersession_banner(tmp_path):
+    """The last place a shared id genuinely degraded output, now closed.
+
+    The marker used to hold a bare id, so it could not say WHICH sharer retired the
+    entry and the banner was withheld. It carries the full stem now, so the banner is
+    always stamped — which matters because under date ids a shared id is ordinary.
+    """
     kd = make_dir(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo",
                                       related=[("003-pattern-old", "supersedes")]),
          "001-bug-bar.md": entry("bug", "bar"),
          "003-pattern-old.md": entry("pattern", "old")},
-        index_md("003", {"Decisions": [("001-decision-foo", "d")],
+        index_md({"Decisions": [("001-decision-foo", "d")],
                          "Bugs": [("001-bug-bar", "b")],
                          "Patterns": [("003-pattern-old", "o")]}),
     )
     batch = fix.apply(kd, DATE)
     old_text = (kd / "003-pattern-old.md").read_text()
     assert "- [[001-decision-foo]] — superseded by" in old_text   # link written
-    assert "<!-- superseded-by:" not in old_text                  # banner withheld
-    assert any("supersession banner not stamped" in r[2] for r in batch["refusals"])
+    assert "<!-- superseded-by: 001-decision-foo -->" in old_text  # banner STAMPED
+    assert not any("supersession banner not stamped" in r[2] for r in batch["refusals"])
 
 
 # --- the fifth type (unit 052) -----------------------------------------------
@@ -449,7 +456,7 @@ def test_reference_entry_is_catalogued_under_references(tmp_path):
         tmp_path,
         {"001-reference-how-the-thing-runs.md": entry("reference", "how-the-thing-runs",
                                                       summary="how it is operated")},
-        index_md("000", {}),
+        index_md({}),
     )
     batch = fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
@@ -461,7 +468,7 @@ def test_reference_line_filed_elsewhere_is_relocated(tmp_path):
     kd = make_dir(
         tmp_path,
         {"001-reference-how-the-thing-runs.md": entry("reference", "how-the-thing-runs")},
-        index_md("001", {"Constraints": [("001-reference-how-the-thing-runs", "r")]}),
+        index_md({"Constraints": [("001-reference-how-the-thing-runs", "r")]}),
     )
     fix.apply(kd, DATE)
     text = (kd / "index.md").read_text()
@@ -476,7 +483,7 @@ def test_a_corpus_with_no_reference_entries_gains_only_the_header(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo"),
          "002-pattern-bar.md": entry("pattern", "bar")},
-        index_md("002", {"Decisions": [("001-decision-foo", "d")],
+        index_md({"Decisions": [("001-decision-foo", "d")],
                          "Patterns": [("002-pattern-bar", "p")]}),
     )
     fix.apply(kd, DATE)
@@ -492,7 +499,7 @@ def test_the_four_original_types_keep_their_order(tmp_path):
         {"001-decision-a.md": entry("decision", "a"), "002-bug-b.md": entry("bug", "b"),
          "003-pattern-c.md": entry("pattern", "c"), "004-constraint-d.md": entry("constraint", "d"),
          "005-reference-e.md": entry("reference", "e")},
-        index_md("005", {"Decisions": [("001-decision-a", "a")], "Bugs": [("002-bug-b", "b")],
+        index_md({"Decisions": [("001-decision-a", "a")], "Bugs": [("002-bug-b", "b")],
                          "Patterns": [("003-pattern-c", "c")],
                          "Constraints": [("004-constraint-d", "d")],
                          "References": [("005-reference-e", "e")]}),

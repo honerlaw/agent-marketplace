@@ -6,7 +6,7 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 
 1. **Explicit argument** — slug or path. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`.
 2. **Current-session context** — explicit mention in this session.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/` by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` by directory mtime. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`; a digit-anchored glob misses date-named units entirely.
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → run in **bare mode**: ship from git state alone, no proposal-derived PR title/body. Bare mode is a first-class fallback, not an error path.
 

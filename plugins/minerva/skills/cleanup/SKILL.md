@@ -16,7 +16,7 @@ Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories
 Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:ship`. **Keep all six blocks in sync if you edit one.** For `minerva:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
 1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
-2. **No argument** → scan all `.minerva/worktrees/NNN-*/` directories and check each branch's merge state.
+2. **No argument** → scan all `.minerva/worktrees/*/` directories and check each branch's merge state. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
 ## Pre-flight checks
