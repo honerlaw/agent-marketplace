@@ -32,3 +32,4 @@
 - [[2026-05-19-decision-init-routing-detection-accepts-old-and-new-names]] — see also
 - [[2026-06-03-decision-routing-section-is-the-wiki-reading-protocol]] — see also
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — see also
+- [[2026-08-09-decision-reference-is-a-fifth-entry-type]] — see also

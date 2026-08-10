@@ -80,6 +80,7 @@ from knowledge_spans import FENCE_RE  # noqa: E402
 
 WORK_DIR_RE = re.compile(r"^(\d{3,})-(.+)$")
 CONTEXT_PATH_RE = re.compile(r"(\.minerva/work/)([^\s/`)\]]+)")
+WATERMARK_LINE_RE = re.compile(r"^\s*<!--\s*(?:index|synthesis)-watermark:[^>]*-->\s*$")
 
 
 class CollisionError(Exception):
@@ -183,6 +184,12 @@ def rewrite_links(text, stem_map, dir_map=None):
             continue
         if fenced:
             out.append(line)
+            continue
+        # Drop the retired scalar watermarks. They are inert once nothing reads them,
+        # but leaving them invites the next reader to restore the floor they encoded —
+        # and a floor cannot work over date ids at all, since same-day ties mean the
+        # ids are not totally ordered.
+        if WATERMARK_LINE_RE.match(line):
             continue
         line = WIKILINK_STEM_RE.sub(
             lambda m: f"[[{stem_map.get(m.group(1), m.group(1))}]]", line)

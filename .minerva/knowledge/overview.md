@@ -1,5 +1,4 @@
 # Knowledge overview
-<!-- synthesis-watermark: 058 -->
 
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
