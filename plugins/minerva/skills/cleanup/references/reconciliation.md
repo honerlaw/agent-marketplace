@@ -1,7 +1,7 @@
 # cleanup — knowledge reconciliation on the default branch
 
 `minerva:promote` is **add-only**: on a work-unit branch it writes new
-`.minerva/knowledge/NNN-*.md` entry files and touches nothing else. That is what
+`.minerva/knowledge/<YYYY-MM-DD>-*.md` entry files and touches nothing else. That is what
 keeps concurrent PRs from conflicting — a branch's `.minerva/` footprint is purely
 additions, and new files always merge cleanly.
 
@@ -107,7 +107,7 @@ the throwaway leaves no trace. Address it by prefix — every path gets
    writes missing reciprocals and banners, and relocates wrong-Type lines. Surface any
    `REFUSED` items in the final report rather than working around them — the two that
    matter are an entry with no `**Summary**` (author its catalog line by hand) and a
-   duplicate NNN (quarantined; nothing is written for it).
+   an unresolvable target (nothing is written for it).
 
 2. **Refresh the overview, if warranted.** When `synthesis_status` reported
    un-synthesized entries, invoke the `minerva:synthesize` skill via the `Skill` tool,
@@ -166,9 +166,9 @@ Add to cleanup's existing report:
 ```
 Reconciliation:          <nothing pending | PR #N opened, auto-merge enabled | waited on PR #N>
   Entries catalogued:    N (<list>)
-  Overview refreshed:    <yes (watermark NNN→MMM) | no (self-gate declined) | not run>
+  Overview refreshed:    <yes (N entries newly linked) | no (self-gate declined) | not run>
   Refusals:              N (<list — needs manual attention>)
-  Pending, NOT catalogued: N (<list of NNNs — why>)
+  Pending, NOT catalogued: N (<list of stems — why>)
 ```
 
 `Pending, NOT catalogued` is the line that makes a strand impossible to miss. It is

@@ -1,6 +1,6 @@
 ---
 name: lint-fix
-description: Applies the deterministically-repairable subset of `minerva:lint` findings — MUTATES the `.minerva/knowledge/` wiki behind a confirmation gate (index watermark, stale catalog lines, wrong Type-section placement, missing reciprocal `## Related` links) via the tested `scripts/knowledge_fix.py`. Never touches entry bodies and never auto-fixes judgment calls (missing catalog summaries, broken links, contradictions/staleness) — those it surfaces to handle by hand. Use after a lint run when the user asks to apply the safe/reported fixes or auto-repair the wiki, or when they invoke `minerva:lint-fix`. The read-only companion is `minerva:lint`.
+description: Applies the deterministically-repairable subset of `minerva:lint` findings — MUTATES the `.minerva/knowledge/` wiki behind a confirmation gate (stale catalog lines, wrong Type-section placement, missing reciprocal `## Related` links) via the tested `scripts/knowledge_fix.py`. Never touches entry bodies and never auto-fixes judgment calls (missing catalog summaries, broken links, contradictions/staleness) — those it surfaces to handle by hand. Use after a lint run when the user asks to apply the safe/reported fixes or auto-repair the wiki, or when they invoke `minerva:lint-fix`. The read-only companion is `minerva:lint`.
 allowed-tools:
   - Bash
   - Read
@@ -36,8 +36,8 @@ fall back to `main`, then `master`); if the current branch differs, report and s
 > edits on a work-unit branch, which is exactly the conflict that add-only promotes
 > exist to avoid. Run `minerva:lint` for a read-only report instead."
 
-This is not a style preference. `plan_index` rewrites `index.md` wholesale and bumps
-the watermark to the branch's max NNN, and `plan_reciprocals` edits neighbor entries —
+This is not a style preference. `plan_index` rewrites `index.md` wholesale and
+`plan_reciprocals` edits neighbor entries —
 the two highest-frequency merge-conflict surfaces in the repo. Doing that on a
 work-unit branch silently reintroduces both.
 
@@ -54,7 +54,7 @@ ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.clau
 
 It re-derives every edit from the detector's structured output (`parse_index` /
 `parse_entry`), never from message text. The plan lists, per item: an `index.md`
-rewrite (watermark / stale-line / Type-section / NNN-order) and/or per-entry
+rewrite (stale-line / Type-section / ordering) and/or per-entry
 reciprocal-link additions, plus any `REFUSED` items (e.g. a forward `## Related`
 line with no label at all, or one whose label reads as a supersession claim without
 being the exact term).
@@ -79,20 +79,20 @@ corpus is clean. Report the result.
 ## What it fixes vs. surfaces
 
 **Auto-fixed (deterministic, gated):**
-- **Index watermark** out of sync with the max entry NNN.
-- **Stale catalog line** — an `index.md` entry whose NNN has no file.
+- **Stale catalog line** — an `index.md` entry whose stem has no file.
 - **Wrong Type section** — a catalog line under the wrong `## Type` header (relocated
-  verbatim, summary preserved, NNN-sorted).
+  verbatim, summary preserved, id-sorted).
 - **Missing reciprocal** — a one-way `## Related` link; the reciprocal label is
   derived from the forward label (`builds on`→`see also`; `supersedes`↔`superseded
   by`; `contradicts`/`see also` symmetric; any other label →`see also`). A
-  supersession also writes the banner, unless the superseding entry's NNN is shared
-  by several entries — the banner marker names an NNN, so it cannot say which.
+  supersession also writes the banner, always: the marker carries the superseding
+  entry's full stem, so it can name which entry retired this one even when several
+  entries share a date.
 
 **Safety:** entry edits change only the `## Related` block / banner span (a
 `body_complement` byte-identity guard aborts the run otherwise — knowledge 016);
 `index.md` edits preserve the canonical skeleton (H1 + the four headers incl. the
-empty `## Patterns`) and ascending-NNN order.
+empty `## Patterns`) and ascending-id order.
 
 **NOT auto-fixed — surfaced for you to handle by hand:**
 - **Missing catalog line** — needs a one-line summary (a judgment call).

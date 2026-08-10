@@ -1,12 +1,12 @@
 {
-  "skill": "lint-fix",
+  "skill": "migrate-fix",
   "frontmatter": {
     "required_keys": [
       "name",
       "description"
     ],
     "values": {
-      "name": "lint-fix"
+      "name": "migrate-fix"
     },
     "non_empty": [
       "description"
@@ -16,16 +16,16 @@
     ]
   },
   "anchors": [
-    "knowledge_fix",
-    "--dry-run",
+    "knowledge_rename",
+    "--apply",
     "## Related",
     "git rev-parse --show-toplevel",
+    "minerva:migrate",
     {
       "any_of": [
-        "stale catalog line",
-        "reciprocal"
-      ],
-      "ignore_case": true
+        "COLLISION",
+        "collision"
+      ]
     },
     {
       "any_of": [
@@ -34,7 +34,12 @@
       ],
       "ignore_case": true
     },
-    "Default-branch guard"
+    {
+      "any_of": [
+        "branch",
+        "Out of scope"
+      ]
+    }
   ],
   "cross_surface": {
     "root_readme": true,

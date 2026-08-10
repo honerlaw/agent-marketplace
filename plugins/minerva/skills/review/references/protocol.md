@@ -4,9 +4,9 @@
 
 Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — slug or path. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`.
+1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — explicit mention in this session.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/` by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` (both id forms) by directory mtime.
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → **no minerva context**. Skip to [Code review invocation](#code-review-invocation) — do not stop.
 
@@ -15,11 +15,11 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 After resolving the target and before reading docs or running git commands:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, address the worktree explicitly: prefix every file path this skill reads with `.minerva/worktrees/<NNN-slug>/`, and run every git command as `git -C .minerva/worktrees/<NNN-slug> …` (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …` (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being reviewed retrospectively), operate on the parent repo directly.
 - If target resolution returned no minerva context, skip this step — the code review pass runs in whatever working tree the user invoked the skill from.
 
-Diff resolution, file reads, and `code-review:code-review` all run against the resolved working tree (the worktree via its `.minerva/worktrees/<NNN-slug>/` prefix, or the parent repo).
+Diff resolution, file reads, and `code-review:code-review` all run against the resolved working tree (the worktree via its `.minerva/worktrees/<date-slug>/` prefix, or the parent repo).
 
 ## Diff resolution
 

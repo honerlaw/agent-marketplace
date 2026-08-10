@@ -9,7 +9,7 @@ Turn a fuzzy idea into clarity through open-ended, collaborative dialogue — **
 
 ## What makes explore different from propose
 
-`explore` is **commitment-free by construction.** It **writes no file**, allocates no work unit (no slug, no NNN), and creates no branch or worktree. Everything it produces lives in the conversation. That is the whole point: exploration should cost nothing to abandon.
+`explore` is **commitment-free by construction.** It **writes no file**, allocates no work unit (no slug, no date id), and creates no branch or worktree. Everything it produces lives in the conversation. That is the whole point: exploration should cost nothing to abandon.
 
 `minerva:propose`, by contrast, is *convergent* — its job is to produce the `proposal.md` artifact (plus the branch and worktree). Reach for `minerva:propose` directly when you already know what you want to build. Reach for `explore` when you don't yet.
 
@@ -24,7 +24,7 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 ## The process
 
-1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog), and a couple of recent `.minerva/work/NNN-*/proposal.md` files. Understand what already exists before exploring what might.
+1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog), and a couple of recent `.minerva/work/*/proposal.md` files. Understand what already exists before exploring what might.
 
 2. **Ask questions one at a time.** Prefer multiple-choice, but open-ended is fine. Only one question per message — if a topic needs more exploration, break it into several questions across several messages. Focus on understanding the *problem*: who has it, why it matters, what constrains it, what "better" would look like. Resist jumping to solutions.
 

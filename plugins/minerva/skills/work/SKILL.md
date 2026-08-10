@@ -14,51 +14,51 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 
 Same pattern used by `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — if the user passed a slug or path (`minerva:work 005-foo` or a full `.minerva/work/...` path), resolve it directly. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/` — whichever exists wins.
+1. **Explicit argument** — if the user passed a slug or path (`minerva:work 005-foo` or a full `.minerva/work/...` path), resolve it directly. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/` — whichever exists wins.
 2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
-3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`, take the most-recently-modified by directory mtime. Active work units (created by `minerva:propose`) live in worktrees; shipped + merged units live in `.minerva/work/` on the default branch — both locations must be scanned every time.
+3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` (both id forms), take the most-recently-modified by directory mtime. Active work units (created by `minerva:propose`) live in worktrees; shipped + merged units live in `.minerva/work/` on the default branch — both locations must be scanned every time.
 4. **Ambiguity** — if multiple recent candidates exist and context can't pick, list them and ask the user.
 5. **None found** — report "no work units found — run `minerva:propose` first" and stop.
 
 ## Worktree addressing (run before Setup)
 
-Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs. **minerva never calls `EnterWorktree`** — it only reliably enters worktrees under `.claude/worktrees/`, and minerva's live under `.minerva/worktrees/`. The session's working directory stays the parent repo; you address the worktree by writing every file path with the `.minerva/worktrees/NNN-slug/` prefix and running every git command as `git -C .minerva/worktrees/NNN-slug …`.
+Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs. **minerva never calls `EnterWorktree`** — it only reliably enters worktrees under `.claude/worktrees/`, and minerva's live under `.minerva/worktrees/`. The session's working directory stays the parent repo; you address the worktree by writing every file path with the `.minerva/worktrees/<date-slug>/` prefix and running every git command as `git -C .minerva/worktrees/<date-slug> …`.
 
-1. **Determine NNN-slug** from the resolved target (e.g. `005-add-payments`).
+1. **Determine <date-slug>** from the resolved target (e.g. `005-add-payments`).
 
 2. **Decide the entry path** based on where the work unit's docs live:
 
    ### Primary path — worktree exists
 
-   `.minerva/worktrees/NNN-slug/` exists. This is the common case after `minerva:propose`.
+   `.minerva/worktrees/<date-slug>/` exists. This is the common case after `minerva:propose`.
 
-   - Address it by prefix (no `EnterWorktree`): every file path gets the `.minerva/worktrees/NNN-slug/` prefix; git runs as `git -C .minerva/worktrees/NNN-slug …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+   - Address it by prefix (no `EnterWorktree`): every file path gets the `.minerva/worktrees/<date-slug>/` prefix; git runs as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
    - Continue to Setup.
 
    ### Exceptional path — worktree missing, docs only on default branch
 
-   `.minerva/worktrees/NNN-slug/` does **not** exist, but `.minerva/work/NNN-slug/` exists on the default branch. This is the resurrection case: the unit was previously shipped and `minerva:cleanup` removed its worktree, but the user wants to re-open it. Surface a one-line note before proceeding: "no worktree found for `NNN-slug` — re-creating from the shipped docs on `<default-branch>`."
+   `.minerva/worktrees/<date-slug>/` does **not** exist, but `.minerva/work/<date-slug>/` exists on the default branch. This is the resurrection case: the unit was previously shipped and `minerva:cleanup` removed its worktree, but the user wants to re-open it. Surface a one-line note before proceeding: "no worktree found for `<date-slug>` — re-creating from the shipped docs on `<default-branch>`."
 
    1. Resolve the default branch the same way `ship` and `cleanup` do:
       - `git symbolic-ref refs/remotes/origin/HEAD` → parse `refs/remotes/origin/<name>`.
       - Fall back to `main`, then `master`.
    2. Confirm `.minerva/worktrees/` is gitignored on `<default-branch>` (`git show <default-branch>:.gitignore | grep -q '\.minerva/worktrees/'`). If missing, bail with "run `minerva:init` first to install the gitignore entry, then retry."
-   3. `git worktree add -b NNN-slug .minerva/worktrees/NNN-slug <default-branch>` — branches from the merged default, picking up the shipped docs automatically.
-   4. Address it by prefix (no `EnterWorktree`): prefix file paths with `.minerva/worktrees/NNN-slug/` and run git as `git -C .minerva/worktrees/NNN-slug …`.
+   3. `git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>` — branches from the merged default, picking up the shipped docs automatically.
+   4. Address it by prefix (no `EnterWorktree`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
    5. Continue to Setup. (No file move or commit needed — the docs are already on the branch.)
 
    ### Neither location has the unit
 
-   Report "no such work unit `NNN-slug` — run `minerva:propose` first" and stop.
+   Report "no such work unit `<date-slug>` — run `minerva:propose` first" and stop.
 
 ## Setup (run at the start of every `minerva:work` invocation)
 
-All paths below are **prefixed with** the worktree root (`.minerva/worktrees/NNN-slug/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .minerva/worktrees/NNN-slug …`.
+All paths below are **prefixed with** the worktree root (`.minerva/worktrees/<date-slug>/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .minerva/worktrees/<date-slug> …`.
 
-1. Read `.minerva/work/NNN-slug/proposal.md`.
-2. Read **all** `.minerva/work/NNN-slug/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
-3. Read `.minerva/work/NNN-slug/scratchpad.md` to figure out where work left off.
-4. Glance at `git status` and the last 3 commits (run via `git -C .minerva/worktrees/NNN-slug`) to corroborate.
+1. Read `.minerva/work/<date-slug>/proposal.md`.
+2. Read **all** `.minerva/work/<date-slug>/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
+3. Read `.minerva/work/<date-slug>/scratchpad.md` to figure out where work left off.
+4. Glance at `git status` and the last 3 commits (run via `git -C .minerva/worktrees/<date-slug>`) to corroborate.
 5. **Resolve open questions.** If `## Open Questions` in `proposal.md` has unresolved items, surface them to the user before implementation begins:
    > "The proposal lists these open questions — let's settle them before implementing: [list]. Once answered, I'll edit the proposal to record the resolutions."
    When the user answers, edit `proposal.md` to either remove resolved items from `## Open Questions` or move them into `## Approach` as decisions.

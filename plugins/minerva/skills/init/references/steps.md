@@ -36,7 +36,7 @@ Emit this **exact** content:
 ## References
 ```
 
-The `index-watermark` is the highest knowledge-entry NNN the catalog reflects
+The catalog carries no watermark: an entry is pending iff it has no catalog line.
 (`000` for a fresh scaffold); it is a content freshness signal preferred over file
 mtime (mtime is unreliable across git checkouts and worktrees).
 
@@ -45,16 +45,16 @@ overwrite an existing `index.md`, `.gitkeep`, or `.minerva/reference/`.
 
 ### Step 1b — index backfill offer (idempotent mode)
 
-If `.minerva/knowledge/` already holds entries (`NNN-<type>-<slug>.md` files) but
+If `.minerva/knowledge/` already holds entries (`<YYYY-MM-DD>-<type>-<slug>.md` files) but
 `index.md` is missing or empty, **offer** to backfill it:
 
 > "`.minerva/knowledge/` has N entries but no populated `index.md`. Generate the
 > catalog from the existing entries now?"
 
 On acceptance, write `index.md` from the canonical skeleton, add one
-`- [[NNN-type-slug]] — <≤15-word summary>` line per entry under its Type section
+`- [[YYYY-MM-DD-type-slug]] — <≤15-word summary>` line per entry under its Type section
 (title from the entry H1, summary condensed from its Finding), and set the watermark
-to the max NNN on disk. **Cross-reference backfill** (adding `## Related` blocks
+from the entries on disk. **Cross-reference backfill** (adding `## Related` blocks
 across existing entries) is a separate, judgment-heavy pass — offer it only if the
 user asks; it is not part of the index backfill.
 
@@ -96,11 +96,11 @@ Use this exact template (verbatim, with the appended blank line at the end for r
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
 - `.minerva/knowledge/overview.md` — theme-grouped synthesis of everything known. Read first to orient (absent until `minerva:synthesize` first runs — fall back to the index).
-- `.minerva/knowledge/index.md` — the catalog, one line per entry. Look up specifics here; drill into entries via their `[[NNN-type-slug]]` links only when a theme bears on your task.
+- `.minerva/knowledge/index.md` — the catalog, one line per entry. Look up specifics here; drill into entries via their `[[YYYY-MM-DD-type-slug]]` links only when a theme bears on your task.
 - `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
-Active work units live at `.minerva/work/NNN-<slug>/`. Invoke the `minerva:using-minerva` skill (via the `Skill` tool) for the full methodology.
+Active work units live at `.minerva/work/<date-slug>/`. Invoke the `minerva:using-minerva` skill (via the `Skill` tool) for the full methodology.
 ```
 
 Append the Routing section at the end of the file (don't try to find a "right" spot — end is fine and is easy to detect on re-runs).

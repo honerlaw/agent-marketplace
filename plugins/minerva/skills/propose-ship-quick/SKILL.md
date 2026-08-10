@@ -13,13 +13,13 @@ The mechanism: at each strategic or tactical decision point, the main model **de
 
 - `minerva:propose-ship-quick "fix the off-by-one in the date picker"` — start a new quick run with the inline description as the seed.
 - `minerva:propose-ship-quick` — start with current-session chat context as the seed (only sensible if the chat already discussed what to build).
-- `minerva:propose-ship-quick --cleanup-only <NNN-slug> --retry=N` — internal re-entry from the cleanup-gate wake-up loop. Skips phases 1–6 and re-runs Phase 7.
+- `minerva:propose-ship-quick --cleanup-only <date-slug> --retry=N` — internal re-entry from the cleanup-gate wake-up loop. Skips phases 1–6 and re-runs Phase 7.
 
 ## Pre-flight: in-flight work collision
 
 Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-model-decided — a wrong call here destroys real work, so escalation to the user is hardcoded:
 
-1. List `.minerva/work/NNN-*/` plus `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`.
+1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
 2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad is **not** the post-promote marker, treat it as in-flight.
 3. If the seed overlaps a slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
@@ -49,7 +49,7 @@ Execute the phases in order. The full inline protocols live in `references/phase
 4. **Promote (inline)** — the main model partitions PROMOTE/MERGE/DISCARD/TODO and disposes TODOs; apply writes per `minerva:promote` Mode A; archive scratchpad.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
 6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never silently decided.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <NNN-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<date-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

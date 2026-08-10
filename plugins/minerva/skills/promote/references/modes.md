@@ -41,8 +41,8 @@
 4. Confirm with the user that you've identified the right block and show the proposed knowledge entry as a concrete diff — including its `**Summary**` and its forward `## Related` lines. As in Mode A there are no neighbor or `index.md` diffs: promote is add-only (see [Wiki maintenance](#wiki-maintenance-add-only)). Wait for approval.
 5. On approval:
    - Determine the type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and name the file `<YYYY-MM-DD>-<type>-<slug>.md` with today's date — see [Entry naming](#entry-naming). Nothing is allocated; a shared date is normal, and a duplicate stem conflicts in git rather than merging silently.
-   - Write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template.
+   - Write `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template.
    - **Run [Wiki maintenance](#wiki-maintenance-add-only)** scoped to this single entry: forward `## Related` lines in the new entry only. No index line, no watermark bump, no neighbor edit, no banner. (Idempotency makes a later Mode A full pass a no-op over this entry.)
-   - In `scratchpad.md`, append `→ promoted to .minerva/knowledge/NNN-<type>-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
+   - In `scratchpad.md`, append `→ promoted to .minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
 6. Report the knowledge file path.
 

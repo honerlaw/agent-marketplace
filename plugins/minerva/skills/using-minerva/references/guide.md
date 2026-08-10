@@ -6,12 +6,12 @@
 |---|---|---|
 | Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog) | Every conversation in this project — decisions, bugs, patterns |
 | Reference (read on demand) | `.minerva/reference/<topic>.md` | Present-tense operational docs — architecture, glossary, conventions: how the system works now |
-| Searchable-on-demand | `.minerva/work/NNN-<slug>/proposal.md`, `.minerva/work/NNN-<slug>/replan.md`, `followups.md` if present | Grep when relevant |
-| Ephemeral | `.minerva/work/NNN-<slug>/scratchpad.md` | Live during `minerva:work`, archived by `minerva:promote` |
+| Searchable-on-demand | `.minerva/work/<date-slug>/proposal.md`, `.minerva/work/<date-slug>/replan.md`, `followups.md` if present | Grep when relevant |
+| Ephemeral | `.minerva/work/<date-slug>/scratchpad.md` | Live during `minerva:work`, archived by `minerva:promote` |
 
 The two LLM-owned wiki tiers differ in **time-shape**: `.minerva/knowledge/` is atomic, past-tense, append-only "what we learned"; `.minerva/reference/` is thematic, present-tense, replace-on-change "how the system works now."
 
-**The knowledge wiki is navigable, not a flat pile.** `.minerva/knowledge/index.md` is the maintained catalog — one line per entry (link + one-line summary), grouped by type, carrying an `index-watermark` of the highest entry it reflects. Entries cross-reference each other in a trailing `## Related` block using `[[NNN-type-slug]]` wiki-links keyed on the stable NNN, with a closed relationship vocabulary (`builds on` / `supersedes` / `superseded by` / `contradicts` / `see also`); superseded entries keep a `<!-- superseded-by: NNN -->` banner rather than being deleted. `minerva:promote` maintains the index and these cross-references (including the reciprocal links on neighbor entries) through its existing confirmation gate. Inline `[[…]]` mentions in entry prose remain valid and are not migrated — the `## Related` block is the structured, machine-maintained surface; inline mentions are free prose.
+**The knowledge wiki is navigable, not a flat pile.** `.minerva/knowledge/index.md` is the maintained catalog — one line per entry (link + one-line summary), grouped by type. Entries cross-reference each other in a trailing `## Related` block using `[[YYYY-MM-DD-type-slug]]` wiki-links keyed on the full stem, with a closed relationship vocabulary (`builds on` / `supersedes` / `superseded by` / `contradicts` / `see also`); superseded entries keep a `<!-- superseded-by: <stem> -->` banner rather than being deleted. `minerva:promote` maintains the index and these cross-references (including the reciprocal links on neighbor entries) through its existing confirmation gate. Inline `[[…]]` mentions in entry prose remain valid and are not migrated — the `## Related` block is the structured, machine-maintained surface; inline mentions are free prose.
 
 When in doubt about whether something belongs in a knowledge file vs. a scratchpad note, apply the new-engineer-in-a-year heuristic: would a new engineer or agent joining in a year benefit from reading it?
 
@@ -24,7 +24,7 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → `minerva:explore`. Divergent, commitment-free brainstorming: it asks questions one at a time, weighs a few high-level directions, and writes nothing — no proposal, no work unit, no branch/worktree. It may legitimately end in "let's not", a reframed problem, or a chosen direction. If you converge on something, it hands off to `minerva:propose` (passing the direction inline) to design it. Reach for `minerva:propose` directly when you already know what you want to build.
 
 **"Let's add a payments flow."**
-→ `minerva:propose "add payments flow"` (or just `minerva:propose` — the skill infers your intent from context). Brainstorm the design through the skill's flow. After you approve every section, propose creates the `NNN-add-payments` branch and worktree at `.minerva/worktrees/NNN-add-payments/`, enters the worktree, writes `proposal.md` + `scratchpad.md` inside it, and commits the initial docs. Don't start coding until the proposal is written, self-reviewed, and you've approved the file directly.
+→ `minerva:propose "add payments flow"` (or just `minerva:propose` — the skill infers your intent from context). Brainstorm the design through the skill's flow. After you approve every section, propose creates the `2026-08-09-add-payments` branch and worktree at `.minerva/worktrees/2026-08-09-add-payments/`, enters the worktree, writes `proposal.md` + `scratchpad.md` inside it, and commits the initial docs. Don't start coding until the proposal is written, self-reviewed, and you've approved the file directly.
 
 **"Where were we on the payments thing?"**
 → `minerva:work` (or `minerva:work 005-add-payments` to be explicit). The skill enters the existing worktree at `.minerva/worktrees/005-add-payments/`, reads `proposal.md`, the latest `replan.md`, surfaces any unresolved Open Questions, and skims `scratchpad.md` to figure out where to pick up.
@@ -55,6 +55,6 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 Even when you don't run a `minerva:` skill this session, respect the hierarchy:
 
 - Treat `CLAUDE.md` / `AGENTS.md` and `.minerva/knowledge/` as authoritative — read them when starting work in the project. These contain decisions, fixed bugs, and discovered patterns, not just architecture.
-- Grep `.minerva/work/` when you need historical context for a feature. Active work lives at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`; shipped work lives at `.minerva/work/<NNN-slug>/` on the default branch.
+- Grep `.minerva/work/` when you need historical context for a feature. Active work lives at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`; shipped work lives at `.minerva/work/<date-slug>/` on the default branch.
 - Don't create `scratchpad.md` files directly outside of `minerva:work`. If you need scratch space, use a TodoWrite or notes in conversation instead.
 - If a project has a leftover `.minerva/decisions/` directory, that's the legacy location — `minerva:init` will report it; either migrate to `.minerva/knowledge/` or treat both as authoritative until you do.

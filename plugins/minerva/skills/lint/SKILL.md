@@ -84,7 +84,7 @@ attention, so a clean result is not a guarantee).
   or supersession between them. Report the pair and the apparent conflict.
 
 - **Stale / superseded claims.** An entry whose finding a newer entry supersedes,
-  with no `<!-- superseded-by: NNN -->` banner. Report the older/newer pair.
+  with no `<!-- superseded-by: <stem> -->` banner. Report the older/newer pair.
 
 ## Step 3 — Present (read-only)
 
@@ -96,14 +96,14 @@ here). Two grouped sections:
 
 ```
 ## Mechanical findings (deterministic — these fail the CI drift gate)
-1. [error] index — <message>  (entry NNN)
-2. [warning] index — <message>  (entry NNN)
+1. [error] index — <message>  (entry stem)
+2. [warning] index — <message>  (entry stem)
 ...
 
 ## Advisory findings (LLM-judged — spot-checked, not exhaustive; never CI-gated)
-1. [orphan] NNN — no inbound/outbound `## Related`; candidate for cross-linking
-2. [contradiction] NNN ↔ MMM — <apparent conflict>
-3. [stale] NNN superseded by MMM — no supersession banner
+1. [orphan] <stem> — no inbound/outbound `## Related`; candidate for cross-linking
+2. [contradiction] <stem> ↔ <stem> — <apparent conflict>
+3. [stale] <stem> superseded by <stem> — no supersession banner
 ...
 ```
 

@@ -29,7 +29,7 @@ what needs migrating and names the skill that closes each gap, then stops.
 The detector (`scripts/knowledge_lint.py`), the fixer (`scripts/knowledge_fix.py`), and
 `scripts/synthesis_status.py` all enumerate the corpus through the `ENTRY_RE` glob
 (`^\d{3}-[a-z]+-.+\.md$`) **only**. A file that doesn't match — a legacy entry named
-before the `NNN-type-slug` convention — is **invisible** to every one of them, so a
+before the `YYYY-MM-DD-type-slug` convention — is **invisible** to every one of them, so a
 pre-conventions corpus reads as a *false clean* across the whole toolchain.
 `minerva:migrate` is the one surface that globs the **complement** of `ENTRY_RE` and
 inventories those invisible files, turning a false-clean legacy corpus into an actionable
@@ -72,9 +72,10 @@ Translate the signal into a checklist. For each gap, **name** the existing skill
 closes it and a one-line effect — do **not** run it, and do not reproduce its findings:
 
 - **`non_conforming_files` non-empty** → these files must be **renamed** to
-  `NNN-type-slug.md` (e.g. `decision` / `bug` / `pattern` / `constraint` / `reference`) so the tooling
-  can see them. ⚠️ **Not automated** — rename by hand (renames must update every `[[…]]` wikilink +
-  the index catalog — deliberate mutation this read-only check never performs).
+  `<YYYY-MM-DD>-<type>-<slug>.md` (type is `decision` / `bug` / `pattern` / `constraint` / `reference`) so the tooling
+  can see them. This rename is automated by **`minerva:migrate-fix`**, which derives each date from git
+  and retargets every `[[…]]` wikilink and catalog line — deliberate mutation this
+  read-only check never performs itself.
 - **`index_present` false** → run `minerva:init` (it scaffolds / backfills `index.md` from
   the existing entries).
 - **`overview_present` false** → run `minerva:synthesize` (it creates the theme-grouped
