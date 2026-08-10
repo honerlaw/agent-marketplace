@@ -212,7 +212,13 @@ def apply(repo_root, plan_result, knowledge_dir=None, work_dir=None):
     # Rewrite references BEFORE moving, so every path in the map still resolves.
     touched = 0
     for p in sorted(root.rglob("*.md")):
-        if ".git" in p.parts or ".minerva/worktrees" in str(p):
+        # Test the path RELATIVE to the repo root, never the absolute one. minerva runs
+        # its own work inside `.minerva/worktrees/<unit>/`, so when this executes in a
+        # worktree the absolute path of EVERY file contains that segment — an absolute
+        # test silently skips the entire corpus and reports "0 files rewritten" while
+        # the renames succeed, leaving every link dangling.
+        rel = p.relative_to(root)
+        if ".git" in rel.parts or rel.parts[:2] == (".minerva", "worktrees"):
             continue
         try:
             text = p.read_text()
