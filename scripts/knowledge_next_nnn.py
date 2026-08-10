@@ -1,1 +1,0 @@
-../plugins/minerva/scripts/knowledge_next_nnn.py
