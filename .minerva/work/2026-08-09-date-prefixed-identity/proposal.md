@@ -1,6 +1,6 @@
 # Proposal: date-prefixed identity for knowledge entries and work units
 
-**Status**: Approved
+**Status**: Shipped (2026-08-10)
 **Date**: 2026-08-09
 
 ## Goal

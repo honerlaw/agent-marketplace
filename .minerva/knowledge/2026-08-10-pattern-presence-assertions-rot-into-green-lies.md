@@ -1,0 +1,54 @@
+# A presence assertion stays green after you delete the thing it pins
+
+**Date**: 2026-08-10
+**Type**: pattern
+**Summary**: `assert "x" in prose` cannot fail when x is removed from the codebase; invert it, don't delete it
+**Context**: .minerva/work/2026-08-09-date-prefixed-identity
+
+## Context
+`minerva:promote` allocated entry ids by calling `scripts/knowledge_next_nnn.py`. That
+mattered enough to pin with a test:
+
+```python
+def test_promote_prose_uses_the_cross_branch_allocator():
+    assert "knowledge_next_nnn.py" in _promote_prose()
+```
+
+When the allocator was deleted, this test **kept passing**. It only ever asserted that
+promote's prose mentions a filename — and promote's prose still did, because nobody had
+edited it. The test attested that promote was correctly configured while promote was
+instructing a call to a file that no longer existed.
+
+## Finding
+**An invariant written as "X is mentioned" degrades into a lie the moment X is removed,
+because deleting X does not touch the text that mentions it.** The assertion and the
+subject are coupled only through a human remembering they are related.
+
+CI cannot catch this. A grep-shaped test over prose has no reference to the artifact, so
+nothing breaks when the artifact goes. It is strictly worse than having no test: the green
+check is positive evidence for a false claim.
+
+The fix on removal is to **invert the assertion, not delete it** — pin the absence — and
+pair it with one pinning the replacement:
+
+```python
+assert "knowledge_next_nnn" not in prose   # the retired thing stays retired
+assert "date +%F" in prose                 # ...and the replacement is actually there
+```
+
+Absence alone is insufficient: it also passes if the prose stops explaining how to name an
+entry at all. The pair brackets the real behaviour.
+
+## Implications
+- Deleting a module means grepping the test suite for its **name as a string**, not just
+  for imports. An import breaks loudly; a string does not.
+- Prefer an assertion that dereferences the subject — import the module, resolve the path,
+  call the function — so removal breaks collection rather than passing silently.
+- When a contract or eval pins a retired behaviour, re-point it at the replacement.
+  Deleting it leaves nothing asserting the new state, which is how a rejected alternative
+  gets reinvented ([[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]]).
+- The tell is any test whose body is a substring check against documentation.
+
+## Related
+- [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — builds on
+- [[2026-08-10-decision-date-ids-make-identity-the-path]] — see also
