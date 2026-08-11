@@ -45,3 +45,4 @@ The unit began from a stated belief that "46 entries are typed `reference`". The
 - [[2026-06-02-decision-phase-b-deterministic-lint-detector]] — the detector `parse_entry` belongs to; this widens what it can read without changing what it reports
 - [[2026-08-09-decision-reference-is-a-fifth-entry-type]] — see also
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
+- [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also

@@ -397,6 +397,25 @@ meaning, paired with one assertion that queries the real corpus** — that pairi
 eighth marker spelling immediately, after eight had been enumerated by eye. Fixtures record
 the shapes you know about; only the corpus test finds the ones you do not.
 
+That rule has a counterweight, learned immediately afterwards by getting it wrong twice in
+one module. **Tolerance and scope are separate dials, and widening the first without setting
+the second turns a gap-filler into a false reading.** A `## Status` fallback that took "the
+next non-blank line" walked past the empty section into the following `## Goal` and returned
+its prose, so a live draft read as finished; and neither that reader nor its sibling was
+fence-aware, so a fenced *example* of a status field or a promote marker — which every skill
+documenting the convention contains — shadowed the real declaration below it. Both failures
+point the dangerous way for their consumer, and both were found by reviewers rather than by
+rereading. So a fallback chain needs a **scope per link**, not just an order: a section ends
+at the next heading, a declaration is not inside a fence, and an empty section means the
+author said nothing rather than "keep looking"
+([[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]]).
+
+Which direction to be generous in is likewise not a style choice but a consequence of what
+breaks. `is_post_promote` reads permissively because a false negative re-runs a mutating
+pass; `read_status` feeds the in-flight collision check, where the costly error is the
+opposite — calling live work finished — so its fallback is deliberately the narrower of the
+two. Same module, same author, opposite calls.
+
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer

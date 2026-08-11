@@ -85,3 +85,4 @@ because it does not hold a list of phrasings.
 - [[2026-08-09-pattern-read-authored-metadata-from-where-it-is]] — builds on
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — see also
+- [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
