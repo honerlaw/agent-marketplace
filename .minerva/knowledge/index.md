@@ -49,6 +49,7 @@
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — two derivations plus a comment asserting they match will drift; share one implementation, or the invariant is only a wish
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — lint read clean before AND after 182 references broke, because its model of "a reference" was the writer's model; a clean gate is evidence only over what the gate can see
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — permissiveness and scope are separate dials; widening what a parser accepts without bounding where it looks turns a gap-filler into a false reading
+- [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a knowledge entry stating a rule enforces nothing — this one was violated three times in two months and the first enforcing test caught a live defect immediately
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
 
 ## Constraints
