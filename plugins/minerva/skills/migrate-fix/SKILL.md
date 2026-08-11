@@ -65,9 +65,12 @@ output actually reaches.
 **Offer shorthand resolution here**, since a flag nobody knows about is not a feature.
 If bare `[[NNN]]` references were counted, re-run the plan with `--resolve-shorthand` and
 report how many are resolvable and how many are refused, with the refusal reasons, then
-let the user choose. Resolution is opt-in and refuses anything not provably unambiguous —
-including refusing *everything* on a partially-migrated corpus, where the entry-vs-work-unit
-collision it guards against has already become undetectable.
+let the user choose. **Pair the refusals with the `UNDATED` list**: an entry git cannot
+date has no target stem, so every `[[NNN]]` pointing at it refuses for that one reason, and
+dating it converts a block of refusals into resolutions at once. Printed apart, they read as
+two unrelated warnings. Resolution is opt-in and refuses anything not provably unambiguous, including
+*everything* on a partially-migrated corpus, where the collision it guards against has
+already become undetectable.
 
 ## Step 3 — Apply
 

@@ -20,7 +20,15 @@ The mechanism: at each strategic or tactical decision point, the main model **de
 Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-model-decided — a wrong call here destroys real work, so escalation to the user is hardcoded:
 
 1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
-2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad `work_status.is_post_promote` reports as **not** promoted (that predicate, never a match against the canonical marker string — the marker has nine spellings in one 51-unit corpus), treat it as in-flight.
+2. If any unit has a `proposal.md` that `work_status` reports as in-flight, treat it as in-flight:
+
+   ```bash
+   python3 -c "import sys; sys.path.insert(0, '<scripts>'); from work_status import unit_state; print(unit_state('.minerva/work/<date-slug>')['in_flight'])"
+   ```
+
+   `in_flight` is `Status is Draft` **or** not promoted. Call it — do not restate it as a
+   string comparison: the promote marker has eight spellings in this corpus and `Status`
+   has two, and matching one spelling of either reads a finished unit as live work.
 3. If the seed overlaps a slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
 

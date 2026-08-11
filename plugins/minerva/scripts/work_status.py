@@ -68,27 +68,72 @@ def is_post_promote(text: str) -> bool:
     return any(_PROMOTED_LINE_RE.match(line) for line in text.splitlines())
 
 
+# The canonical Status field, used by 52 of 53 units. Written by `minerva:promote`.
+_STATUS_FIELD_RE = re.compile(r"^\*\*Status\*\*:\s*(.+?)\s*$", re.M)
+# A `## Status` heading — one unit predates the inline field. Matched with its section
+# BOUNDARY, not "the next non-blank line": an empty `## Status` followed by
+# `## Goal\nShipped code already exists…` would otherwise yield "Shipped code already
+# exists…", classifying a live draft as done. That is a false negative on the one check
+# that stops two agents colliding on a unit, so the parse stops at the next `#` line.
+_STATUS_HEADING_RE = re.compile(r"^##\s+Status\s*$", re.M)
+
+
+def read_status(proposal_text: str):
+    """The unit's declared Status, from the inline field or an anchored `## Status`.
+
+    Inline first: it is what `minerva:promote` writes and what 52 of 53 units carry, so
+    the heading fallback can only ever fill a gap, never override the canonical field
+    (the ordering rule from knowledge `2026-08-09-pattern-read-authored-metadata-from-where-it-is`).
+
+    Deliberately narrower than `is_post_promote`'s tolerance. That marker has eight
+    actively-recurring spellings and nothing preventing a ninth; `## Status` has exactly
+    one instance and the prose that produced it has been corrected, so a permissive
+    walker would exist forever to serve one frozen file while adding misread risk.
+    """
+    m = _STATUS_FIELD_RE.search(proposal_text)
+    if m:
+        return m.group(1)
+    h = _STATUS_HEADING_RE.search(proposal_text)
+    if not h:
+        return None
+    for line in proposal_text[h.end():].splitlines():
+        if line.startswith("#"):
+            return None          # section ended before any value: Status is absent
+        if line.strip():
+            return line.strip()  # the single value line inside the section
+    return None
+
+
 def unit_state(unit_dir) -> dict:
     """Classify one `.minerva/work/<date-slug>/` directory.
 
-    Returns `{promoted, status, scratchpad_exists, archived}`. `promoted` is true if the
-    scratchpad declares it OR the scratchpad is gone but an `archive/` remains — the
-    latter is a real shape in the corpus (a unit whose live scratchpad was removed rather
-    than replaced), and it is unambiguously post-promote.
+    Returns `{promoted, status, scratchpad_exists, archived, in_flight}`. `promoted` is
+    true if the scratchpad declares it OR the scratchpad is gone but an `archive/`
+    remains — the latter is a real shape in the corpus (a unit whose live scratchpad was
+    removed rather than replaced), and it is unambiguously post-promote.
+
+    **`in_flight` is a POLICY predicate, not raw state.** It is the orchestrators'
+    pre-flight collision rule — `Status is Draft` **OR** not promoted — living here so
+    four SKILL.md files stop restating it in prose. A skill wanting a different notion of
+    "in progress" should fork it deliberately rather than quietly widen this one.
+
+    The `OR` is what makes the rule safe across its own writer's non-atomic steps.
+    `minerva:promote` rewrites Status and archives the scratchpad separately, so an
+    interrupted run leaves one of two partial states — `Shipped` with an unarchived
+    scratchpad, or `Draft` with a marker written. Each trips the opposite limb, so both
+    read as in-flight: an extra confirmation, never silent adoption of half-promoted work.
     """
     d = Path(unit_dir)
     sp = d / "scratchpad.md"
     archived = (d / "archive").is_dir()
     text = sp.read_text() if sp.is_file() else None
-    status = None
     proposal = d / "proposal.md"
-    if proposal.is_file():
-        m = re.search(r"^\*\*Status\*\*:\s*(.+?)\s*$", proposal.read_text(), re.M)
-        if m:
-            status = m.group(1)
+    status = read_status(proposal.read_text()) if proposal.is_file() else None
+    promoted = is_post_promote(text) if text is not None else archived
     return {
-        "promoted": (is_post_promote(text) if text is not None else archived),
+        "promoted": promoted,
         "status": status,
         "scratchpad_exists": text is not None,
         "archived": archived,
+        "in_flight": (status or "").startswith("Draft") or not promoted,
     }
