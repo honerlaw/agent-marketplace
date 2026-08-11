@@ -22,7 +22,7 @@
     "git rev-parse --show-toplevel",
     {
       "any_of": [
-        "watermark",
+        "stale catalog line",
         "reciprocal"
       ],
       "ignore_case": true

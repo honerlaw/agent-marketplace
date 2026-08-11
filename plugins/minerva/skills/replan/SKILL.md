@@ -1,6 +1,6 @@
 ---
 name: replan
-description: Records a course-correction for the current minerva work unit — drafts Original plan / What changed / New plan, stress-tests it via `minerva:grill-plan`, then appends a dated divergence entry to `.minerva/work/NNN-slug/replan.md`. Use when work has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting — or to amend an approved proposal before `minerva:work` starts (pre-work tweaks), or when the user invokes `minerva:replan`.
+description: Records a course-correction for the current minerva work unit — drafts Original plan / What changed / New plan, stress-tests it via `minerva:grill-plan`, then appends a dated divergence entry to `.minerva/work/<date-slug>/replan.md`. Use when work has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting — or to amend an approved proposal before `minerva:work` starts (pre-work tweaks), or when the user invokes `minerva:replan`.
 ---
 
 Append a dated replan entry to the current work unit when reality has diverged from the proposal, OR amend an approved proposal pre-work.
@@ -19,9 +19,9 @@ Append a dated replan entry to the current work unit when reality has diverged f
 
 Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — if the user passed a slug or path, resolve it. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`.
+1. **Explicit argument** — if the user passed a slug or path, resolve it. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/`, pick by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` (both id forms), pick by directory mtime.
 4. **Ambiguity** — list candidates, ask the user.
 5. **None found** — "no work units found — run `minerva:propose` first" and stop.
 
@@ -30,7 +30,7 @@ Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `miner
 After resolving the target and before reading or writing any files:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.minerva/worktrees/<NNN-slug>/`, and run every git command as `git -C .minerva/worktrees/<NNN-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo directly.
 
 This keeps the skill correct regardless of where it's invoked from — every file path it touches names the right working tree explicitly.

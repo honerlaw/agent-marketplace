@@ -1,9 +1,9 @@
 ---
 name: cleanup
-description: Removes `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
+description: Removes `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
 ---
 
-Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
+Tidy up after shipped work — remove `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
 
 ## Usage
 
@@ -15,8 +15,8 @@ Tidy up after shipped work — remove `.minerva/worktrees/NNN-slug/` directories
 
 Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:ship`. **Keep all six blocks in sync if you edit one.** For `minerva:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
-1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
-2. **No argument** → scan all `.minerva/worktrees/NNN-*/` directories and check each branch's merge state.
+1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
+2. **No argument** → scan all `.minerva/worktrees/*/` directories and check each branch's merge state. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
 ## Pre-flight checks
@@ -25,7 +25,7 @@ Bail with a clear message on any failure:
 
 1. **Git repo.** `git rev-parse --is-inside-work-tree` returns true.
 2. **`gh` CLI available** (optional but preferred). Falls back to local-only merge detection if `gh` is missing or unauthenticated.
-3. **Not currently inside a worktree being cleaned.** If invoked from inside `.minerva/worktrees/NNN-slug/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run. Cleanup always operates from the parent repo — its job is to remove worktrees, so it must never be running inside one. (No lifecycle skill makes a worktree its working directory: the others address worktrees by `.minerva/worktrees/NNN-slug/`-prefixed paths, while cleanup removes them outright.)
+3. **Not currently inside a worktree being cleaned.** If invoked from inside `.minerva/worktrees/<date-slug>/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run. Cleanup always operates from the parent repo — its job is to remove worktrees, so it must never be running inside one. (No lifecycle skill makes a worktree its working directory: the others address worktrees by `.minerva/worktrees/<date-slug>/`-prefixed paths, while cleanup removes them outright.)
 
 ## Default-branch detection
 
@@ -38,11 +38,11 @@ Use the resolved value for all merge checks.
 
 ## Merge detection per worktree
 
-For each `.minerva/worktrees/NNN-slug/` candidate, determine if its branch (`NNN-slug` by convention) has been merged into the default branch:
+For each `.minerva/worktrees/<date-slug>/` candidate, determine if its branch (`<date-slug>` by convention) has been merged into the default branch:
 
-1. **Branch exists?** `git rev-parse --verify NNN-slug` — if the branch is already gone (was deleted upstream and locally), the worktree is orphaned and can be removed.
-2. **Merged via PR (preferred)** — `gh pr list --head NNN-slug --state merged --json number,mergedAt --limit 1`. If a merged PR exists, the work is shipped.
-3. **Merged locally** — `git branch --merged <default> | grep -q "^[* ] NNN-slug$"`. Catches the case where the branch was merged locally or where `gh` isn't available.
+1. **Branch exists?** `git rev-parse --verify <date-slug>` — if the branch is already gone (was deleted upstream and locally), the worktree is orphaned and can be removed.
+2. **Merged via PR (preferred)** — `gh pr list --head <date-slug> --state merged --json number,mergedAt --limit 1`. If a merged PR exists, the work is shipped.
+3. **Merged locally** — `git branch --merged <default> | grep -q "^[* ] <date-slug>$"`. Catches the case where the branch was merged locally or where `gh` isn't available.
 4. **Neither** — branch is **not** merged. Skip. Do not remove an unmerged worktree (the user's in-progress work would be lost).
 
 Report each candidate's state. For `--dry-run`, stop here.
@@ -70,8 +70,8 @@ Skip this gate when `--dry-run` is set (nothing destructive happens) or when the
 
 For each confirmed worktree:
 
-1. `git worktree remove .minerva/worktrees/<NNN-slug>` — if this fails because the worktree has uncommitted changes, surface the error and skip (do not force-remove without explicit user direction; uncommitted changes in a "merged" worktree are a red flag worth surfacing).
-2. `git branch -d <NNN-slug>` — uses `-d` (safe delete), not `-D` (force). If `-d` refuses because git thinks the branch isn't merged (rare after PR merge — usually a squash-merge artifact), fall back to `git branch -D <NNN-slug>` **only** if the merged-PR check in step 2 of Merge detection passed. Squash-merges leave a different commit hash on default, so local `git branch -d` is conservative and needs an override.
+1. `git worktree remove .minerva/worktrees/<date-slug>` — if this fails because the worktree has uncommitted changes, surface the error and skip (do not force-remove without explicit user direction; uncommitted changes in a "merged" worktree are a red flag worth surfacing).
+2. `git branch -d <date-slug>` — uses `-d` (safe delete), not `-D` (force). If `-d` refuses because git thinks the branch isn't merged (rare after PR merge — usually a squash-merge artifact), fall back to `git branch -D <date-slug>` **only** if the merged-PR check in step 2 of Merge detection passed. Squash-merges leave a different commit hash on default, so local `git branch -d` is conservative and needs an override.
 3. `git worktree prune` — cleans up any stale worktree metadata.
 
 After all removals: `git worktree list` to show the final state.
@@ -94,7 +94,7 @@ Because `minerva:promote` is add-only — it writes new knowledge entries on a w
 
 **Run it on every invocation**, decoupled from worktree removal: a merge done through the GitHub UI leaves pending entries with no worktree to remove. It is cheap and silent when nothing is pending.
 
-The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Three rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR); if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way; and **never end a run leaving entries uncatalogued without naming them** — if a reconciliation PR is already open, wait for it and reconcile what remains, and if it never merges, list every still-pending NNN under `Pending, NOT catalogued`. A run that leaves entries invisible must not report itself clean.
+The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Three rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR); if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way; and **never end a run leaving entries uncatalogued without naming them** — if a reconciliation PR is already open, wait for it and reconcile what remains, and if it never merges, list every still-pending entry stem under `Pending, NOT catalogued`. A run that leaves entries invisible must not report itself clean.
 
 ## Idempotency
 
@@ -104,7 +104,7 @@ If a user manually removed a worktree directory without running `git worktree re
 
 ## Out of scope
 
-- **Removing the work-unit's `.minerva/work/NNN-slug/` directory from `main`.** The docs already moved into the worktree at `minerva:work` time and were merged into `main` via the PR; the canonical record lives at `.minerva/work/NNN-slug/` post-merge. `cleanup` only removes the worktree, not the merged docs.
+- **Removing the work-unit's `.minerva/work/<date-slug>/` directory from `main`.** The docs already moved into the worktree at `minerva:work` time and were merged into `main` via the PR; the canonical record lives at `.minerva/work/<date-slug>/` post-merge. `cleanup` only removes the worktree, not the merged docs.
 - **Removing knowledge files.** `.minerva/knowledge/` entries are permanent by design.
 - **Force-removing unmerged work.** Always requires explicit user override; cleanup is conservative by default.
 - **Pruning remote branches.** GitHub usually auto-deletes the source branch after merge if the repo is configured for it. Local prune handles the local side; remote prune is `git fetch --prune` and not part of this skill.

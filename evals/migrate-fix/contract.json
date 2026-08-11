@@ -1,0 +1,49 @@
+{
+  "skill": "migrate-fix",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "migrate-fix"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "knowledge_rename",
+    "--apply",
+    "## Related",
+    "git rev-parse --show-toplevel",
+    "minerva:migrate",
+    {
+      "any_of": [
+        "COLLISION",
+        "collision"
+      ]
+    },
+    {
+      "any_of": [
+        "gate",
+        "confirm"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "branch",
+        "Out of scope"
+      ]
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}

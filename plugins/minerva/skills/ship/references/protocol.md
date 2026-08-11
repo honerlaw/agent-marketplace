@@ -4,9 +4,9 @@
 
 Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — slug or path. Look in both `.minerva/work/<NNN-slug>/` and `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`.
+1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — explicit mention in this session.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/NNN-*/` AND `.minerva/worktrees/NNN-*/.minerva/work/NNN-*/` by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` by directory mtime. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`; a digit-anchored glob misses date-named units entirely.
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → run in **bare mode**: ship from git state alone, no proposal-derived PR title/body. Bare mode is a first-class fallback, not an error path.
 
@@ -15,7 +15,7 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 After resolving the target and before running any git commands:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
-- If the resolved target's docs live at `.minerva/worktrees/<NNN-slug>/.minerva/work/<NNN-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<NNN-slug> …` and prefix any file path with `.minerva/worktrees/<NNN-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
+- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<date-slug> …` and prefix any file path with `.minerva/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
 ## Default-branch detection
@@ -33,7 +33,7 @@ Use the same resolved value in pre-flight, branch creation, and the branch-vs-de
 Only if currently on the default branch:
 
 1. Derive the branch name:
-   - Work-unit mode: `<NNN>-<slug>` (e.g. `006-add-ship-skill`).
+   - Work-unit mode: `<YYYY-MM-DD>-<slug>` (e.g. `006-add-ship-skill`).
    - Bare mode: `<git-user>/<slug-from-recent-commit-or-timestamp>`, where `<git-user>` is taken from `git config user.email` (local part before `@`) or `git config user.name` lowercased; fall back to `work` if neither is set. Avoids hardcoding any single agent identity into branch names.
 2. `git checkout -b <branch>`.
 
@@ -75,7 +75,7 @@ If nothing is uncommitted, skip this step entirely.
     otherwise a generic checklist of "run tests / manually verify X / etc.">
 
    ---
-   Tracked in `.minerva/work/NNN-<slug>/proposal.md`
+   Tracked in `.minerva/work/<date-slug>/proposal.md`
    ```
 
    Bare-mode body is built from `git log` of branch-vs-default (no footer).
@@ -109,7 +109,7 @@ Steps 3 and 4 are **complements, not alternatives** — arm both.
 4. **Durable fallback (always armed).** Also schedule one `ScheduleWakeup` at **1800s** with the prompt pinned as:
 
    ```
-   minerva:ship <NNN-slug> --watch-iteration=<N>
+   minerva:ship <date-slug> --watch-iteration=<N>
    ```
 
    Carrying `--watch-iteration` is what keeps the 3-iteration bound below intact across a resume; a prose "re-invoke ship" loses it. The interval is deliberately long and **not** tuned to CI duration: step 3 already handles the normal case, so this exists only for a watcher that died, a check wedged in `pending`, or a session that ended — the "can end and be re-entered" property this section's opening sentence promises.

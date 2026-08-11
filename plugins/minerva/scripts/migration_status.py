@@ -29,7 +29,7 @@ import json
 import sys
 from pathlib import Path
 
-from knowledge_lint import ENTRY_RE, parse_entry
+from knowledge_lint import ENTRY_RE, is_conforming_id, parse_entry
 
 # Reserved non-entry files that legitimately live in the knowledge dir and must NOT be
 # flagged as non-conforming. Extensible: the planned Phase-C `log.md` increment would be
@@ -52,12 +52,21 @@ def migration_status(knowledge_dir) -> dict:
     """
     kd = Path(knowledge_dir)
 
+    # Conformance is BOTH conditions: the stem shape AND a real id. `ENTRY_RE` is
+    # shape-only, so `2026-13-45-pattern-x.md` matches it — and a file that matches the
+    # glob is treated as a live entry by every wiki tool, which would let an impossible
+    # date pass as conforming forever. Checking the calendar here is what keeps this a
+    # genuine shape audit rather than a regex that agrees with itself.
+    def _conforms(path) -> bool:
+        m = ENTRY_RE.match(path.name)
+        return bool(m) and is_conforming_id(m.group(1))
+
     md_files = sorted(p for p in kd.glob("*.md"))
-    entry_paths = [p for p in md_files if ENTRY_RE.match(p.name)]
+    entry_paths = [p for p in md_files if _conforms(p)]
 
     non_conforming = sorted(
         p.name for p in md_files
-        if not ENTRY_RE.match(p.name) and p.name not in RESERVED_NONENTRY
+        if not _conforms(p) and p.name not in RESERVED_NONENTRY
     )
 
     # entries_without_related: reuse the frozen, fence-aware parser. `related_out` is the

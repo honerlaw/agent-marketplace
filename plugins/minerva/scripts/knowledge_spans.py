@@ -19,7 +19,10 @@ import re
 # A supersession banner: a marker comment sitting above the first ``## `` header.
 # Position+form anchored — never matched as a loose substring (entries may mention
 # the literal string in prose).
-BANNER_MARKER_RE = re.compile(r"^<!-- superseded-by: (\d{3,}) -->$")
+# The marker names the superseding entry by FULL STEM. It used to carry the bare id,
+# which could not say WHICH entry superseded this one whenever an id was shared — and
+# under date ids, sharing is ordinary rather than a defect.
+BANNER_MARKER_RE = re.compile(r"^<!-- superseded-by: ((?:\d{4}-\d{2}-\d{2}|\d{3,})-[a-z]+-[^ ]+) -->$")
 BANNER_QUOTE_RE = re.compile(r"^> \*\*Superseded by ")
 
 # The trailing, machine-managed cross-reference block. By convention it is the

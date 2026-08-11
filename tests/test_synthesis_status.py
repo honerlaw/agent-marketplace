@@ -26,9 +26,10 @@ def entry(typ, slug):
             "**Context**: .minerva/work/x\n\n## Context\nc\n\n## Finding\nf\n")
 
 
-def overview(watermark, body=""):
-    return (f"# Knowledge overview\n<!-- synthesis-watermark: {watermark} -->\n\n"
-            f"{body}")
+def overview(body=""):
+    """No watermark line — synthesis state is per-record now (an entry is synthesized
+    iff the overview links it), so there is no scalar to write."""
+    return f"# Knowledge overview\n\n{body}"
 
 
 def make_corpus(tmp_path, entries: dict, overview_text=None):
@@ -47,15 +48,12 @@ def test_no_overview_bootstrap(tmp_path):
     })  # no overview.md
     st = synthesis_status(tmp_path)
     assert st["overview_exists"] is False
-    assert st["synthesis_watermark"] == -1
-    assert st["corpus_max_nnn"] == 2
-    assert st["unsynthesized"] == ["001", "002"]  # everything is un-synthesized
+    assert st["unsynthesized"] == ["001-decision-foo", "002-pattern-bar"]
     assert st["link_rot"] == []  # no overview → nothing to rot
 
 
 def test_empty_corpus_no_crash(tmp_path):
     st = synthesis_status(tmp_path)
-    assert st["corpus_max_nnn"] == -1
     assert st["unsynthesized"] == []
     assert st["overview_exists"] is False
 
@@ -69,13 +67,12 @@ def test_populated_lagging_overview(tmp_path):
             "002-pattern-bar.md": entry("pattern", "bar"),
             "003-constraint-baz.md": entry("constraint", "baz"),
         },
-        overview_text=overview("001", "A theme referencing [[001-decision-foo]].\n"),
+        overview_text=overview("A theme referencing [[001-decision-foo]].\n"),
     )
     st = synthesis_status(tmp_path)
     assert st["overview_exists"] is True
-    assert st["synthesis_watermark"] == 1
-    assert st["corpus_max_nnn"] == 3
-    assert st["unsynthesized"] == ["002", "003"]  # NNN > watermark
+    # Per-record: unlinked, not "id above a floor".
+    assert st["unsynthesized"] == ["002-pattern-bar", "003-constraint-baz"]
     assert st["link_rot"] == []  # [[001-...]] resolves
 
 
@@ -83,7 +80,7 @@ def test_fully_synthesized_no_unsynthesized(tmp_path):
     make_corpus(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
-        overview_text=overview("001", "All caught up: [[001-decision-foo]].\n"),
+        overview_text=overview("All caught up: [[001-decision-foo]].\n"),
     )
     st = synthesis_status(tmp_path)
     assert st["unsynthesized"] == []
@@ -95,8 +92,7 @@ def test_link_rot_unresolved_link(tmp_path):
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
         overview_text=overview(
-            "001",
-            "Live: [[001-decision-foo]]. Dead: [[099-decision-ghost]].\n",
+            "Live: [[001-decision-foo]]. Dead: [[099-decision-ghost]].\n"
         ),
     )
     st = synthesis_status(tmp_path)
@@ -113,22 +109,37 @@ def test_fenced_example_link_not_flagged(tmp_path):
     make_corpus(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
-        overview_text=overview("001", body),
+        overview_text=overview(body),
     )
     st = synthesis_status(tmp_path)
     assert st["link_rot"] == []  # the fenced [[099-...]] is NOT link-rot (entry 023)
 
 
-def test_overview_without_watermark_comment(tmp_path):
+def test_overview_that_links_nothing(tmp_path):
     make_corpus(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo")},
-        overview_text="# Knowledge overview\n\nNo watermark comment here.\n",
+        overview_text="# Knowledge overview\n\nProse, but no wikilinks.\n",
     )
     st = synthesis_status(tmp_path)
     assert st["overview_exists"] is True
-    assert st["synthesis_watermark"] == -1  # missing comment → -1
-    assert st["unsynthesized"] == ["001"]
+    assert st["unsynthesized"] == ["001-decision-foo"]
+
+
+def test_same_day_entries_resolve_independently(tmp_path):
+    """Two entries sharing a date are ordinary. Linking one must not mark the other
+    synthesized — which is why resolution is on the stem, not the leading id."""
+    make_corpus(
+        tmp_path,
+        {
+            "2026-08-09-decision-foo.md": entry("decision", "foo"),
+            "2026-08-09-pattern-bar.md": entry("pattern", "bar"),
+        },
+        overview_text=overview("Only one: [[2026-08-09-decision-foo]].\n"),
+    )
+    st = synthesis_status(tmp_path)
+    assert st["unsynthesized"] == ["2026-08-09-pattern-bar"]
+    assert st["link_rot"] == []
 
 
 # --- live corpus -------------------------------------------------------------

@@ -71,7 +71,7 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 : A divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch or worktree. Asks questions one at a time; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `minerva:propose` to design it.
 
 **`minerva:propose`**
-: Runs a brainstorm-style intake flow, asks clarifying questions one at a time, proposes 2–3 approaches, drafts the design and stress-tests it via `minerva:grill-plan` before approval, creates the work unit's branch and worktree, and writes the approved design to `.minerva/work/NNN-<slug>/proposal.md`.
+: Runs a brainstorm-style intake flow, asks clarifying questions one at a time, proposes 2–3 approaches, drafts the design and stress-tests it via `minerva:grill-plan` before approval, creates the work unit's branch and worktree, and writes the approved design to `.minerva/work/<date-slug>/proposal.md`.
 
 **`minerva:grill-plan`**
 : Interviews the user relentlessly about a drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached.
@@ -127,6 +127,9 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 
 **`minerva:migrate`**
 : Read-only migration check for a pre-conventions knowledge corpus — inventories the non-conforming files invisible to the wiki tooling and emits a checklist naming the existing skills that close each gap.
+
+**`minerva:migrate-fix`**
+: The mutating companion to `minerva:migrate` — behind a confirmation gate, renames legacy `NNN-`prefixed entries and work units to date ids, deriving each date from git and retargeting every reference. Refuses the whole batch before moving anything if two entries would collide.
 
 **`minerva:init`**
 : One-time scaffolding of the `.minerva/` directory layout. Idempotent — re-runs report per-piece status without rewriting anything in place.

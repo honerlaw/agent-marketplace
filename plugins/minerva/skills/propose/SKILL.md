@@ -1,6 +1,6 @@
 ---
 name: propose
-description: Starts a new minerva work unit — brainstorm-style intake with one-question-at-a-time clarification, 2-3 candidate approaches, a `minerva:grill-plan` stress-test before approval, then creates the unit's branch + worktree and writes the approved design to `.minerva/work/NNN-<slug>/proposal.md`, with a self-review and a post-write user gate. Use when the user wants to plan or design a new feature, refactor, or investigation in a minerva-tracked project, says things like "let's build X", "let's plan Y", or "start a new unit of work", when `minerva:explore` hands off a converged direction, or when the user invokes `minerva:propose`.
+description: Starts a new minerva work unit — brainstorm-style intake with one-question-at-a-time clarification, 2-3 candidate approaches, a `minerva:grill-plan` stress-test before approval, then creates the unit's branch + worktree and writes the approved design to `.minerva/work/<date-slug>/proposal.md`, with a self-review and a post-write user gate. Use when the user wants to plan or design a new feature, refactor, or investigation in a minerva-tracked project, says things like "let's build X", "let's plan Y", or "start a new unit of work", when `minerva:explore` hands off a converged direction, or when the user invokes `minerva:propose`.
 ---
 
 Start a new work unit by brainstorming, creating its branch + worktree, and writing its proposal inside the worktree.
@@ -16,7 +16,7 @@ If `.minerva/` doesn't exist yet at the project root, suggest the user run `mine
 
 ## Protocol
 
-This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/work/NNN-<slug>/proposal.md` instead of a generic spec path.
+This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/work/<date-slug>/proposal.md` instead of a generic spec path.
 
 **Convergent step — relationship to `minerva:explore`.** `minerva:propose` is the *convergent* step of the lifecycle: its job is to produce the `proposal.md` artifact (plus the branch and worktree). Its optional upstream counterpart is `minerva:explore` — the *divergent*, commitment-free phase for exploring a fuzzy idea before any work unit exists. The two diverge on different axes and compose: `minerva:explore` diverges on the **problem / direction** axis (*what* or *whether* to build), while `propose` diverges on the **implementation-approach** axis (*how* to build the chosen direction). When you arrive here from a `minerva:explore` handoff, the converged direction is passed as the inline description (see step 1) — the problem-space exploration is already done, so do **not** re-litigate *whether* or *what* to build; confirm the chosen direction and proceed to designing *how* (the approach work in steps 5–6). This boundary rides propose's existing inline-argument intake; there is no separate "did exploration happen?" detection to perform.
 
@@ -27,7 +27,7 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
 2. **Scope check.** Before asking clarifying questions, decide whether the request fits a single work unit. If it spans multiple independent subsystems ("build a platform with chat, billing, analytics", "rewrite the entire data layer"), surface this immediately and help the user decompose into smaller work units. Each sub-unit gets its own `minerva:propose` run. Do not produce a 500-line proposal for work that should be three separate units.
 
-3. **Explore project context.** Read `CLAUDE.md` / `AGENTS.md` if present, skim `.minerva/knowledge/` (and `.minerva/decisions/` if it still exists — legacy directory), glance at recent `.minerva/work/NNN-*/proposal.md` files for tone and conventions. This informs the questions you'll ask.
+3. **Explore project context.** Read `CLAUDE.md` / `AGENTS.md` if present, skim `.minerva/knowledge/` (and `.minerva/decisions/` if it still exists — legacy directory), glance at recent `.minerva/work/*/proposal.md` files for tone and conventions. This informs the questions you'll ask.
 
 4. **Ask clarifying questions one at a time.** Cover purpose, constraints, and success criteria. Prefer multiple-choice. Don't batch.
 
@@ -41,9 +41,9 @@ This skill mirrors the `superpowers:brainstorming` flow but writes to `.minerva/
 
 ## On approval — worktree setup + file writes
 
-The full on-approval sequence — slug derivation, duplicate check, NNN computation across all three sources, default-branch resolution, gitignore pre-flight, `git worktree add`, worktree-prefixed addressing (no `EnterWorktree`), the `proposal.md` + `scratchpad.md` templates, self-review, initial commit, and the post-write user gate — lives verbatim in `references/on-approval.md`. **Read it in full the moment every section is approved, before writing anything.**
+The full on-approval sequence — slug derivation, duplicate check, date id, default-branch resolution, gitignore pre-flight, `git worktree add`, worktree-prefixed addressing (no `EnterWorktree`), the `proposal.md` + `scratchpad.md` templates, self-review, initial commit, and the post-write user gate — lives verbatim in `references/on-approval.md`. **Read it in full the moment every section is approved, before writing anything.**
 
 ## Out of scope
 
 - **Implementation.** This skill stops at writing and confirming the files. `minerva:work` is the next phase.
-- **Worktree abandonment.** If the user rejects at the post-write gate and wants to abandon the work unit, they run `git worktree remove .minerva/worktrees/<NNN-slug>` plus `git branch -D <NNN-slug>` manually. Propose does not offer an `--abandon` flow; cleanup is reserved for shipped work.
+- **Worktree abandonment.** If the user rejects at the post-write gate and wants to abandon the work unit, they run `git worktree remove .minerva/worktrees/<date-slug>` plus `git branch -D <date-slug>` manually. Propose does not offer an `--abandon` flow; cleanup is reserved for shipped work.

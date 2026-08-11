@@ -21,7 +21,7 @@
    - **Discard** → drop, no record.
 6. **Hard gate:** do not write files until the user — or, when invoked by an autonomous orchestrator, its adjudication mechanism — has confirmed the partition, the TODO dispositions, **and the new entry files** (each shown as a concrete diff, including its `**Summary**` and its forward `## Related` lines). There are no neighbor or `index.md` diffs to confirm — promote is add-only (see [Wiki maintenance](#wiki-maintenance-add-only)).
 7. On confirmation:
-   - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template below. Allocate NNN with `scripts/knowledge_next_nnn.py --fetch`, never a local `max+1` — see [Entry numbering](#entry-numbering). If `.minerva/knowledge/` doesn't exist, create it. Each entry must stand alone.
+   - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and write `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template below, where the date is today (`date +%F`) — see [Entry naming](#entry-naming). If `.minerva/knowledge/` doesn't exist, create it. Each entry must stand alone.
    - **Run [Wiki maintenance](#wiki-maintenance-add-only) for each PROMOTE item:** write the forward `## Related` lines **into the new entry only**. Do not touch `index.md`, the watermark, any neighbor entry, or any supersession banner — the main-side reconciliation in `minerva:cleanup` derives all of those.
    - **Rewrite `proposal.md`:** the `## Approach` section (and any other section that's out of date) describes reality, not the original plan. Don't preserve obsolete planning prose just because it was there. Update `## Status` to `Shipped (YYYY-MM-DD)`.
    - **Apply TODO dispositions** per step 5.
@@ -40,9 +40,9 @@
 3. **Idempotency check:** if the matched block already has a `→ promoted to .minerva/knowledge/...` trailing line, report the existing file path and stop.
 4. Confirm with the user that you've identified the right block and show the proposed knowledge entry as a concrete diff — including its `**Summary**` and its forward `## Related` lines. As in Mode A there are no neighbor or `index.md` diffs: promote is add-only (see [Wiki maintenance](#wiki-maintenance-add-only)). Wait for approval.
 5. On approval:
-   - Determine the type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and allocate NNN with `scripts/knowledge_next_nnn.py --fetch` — see [Entry numbering](#entry-numbering). A local `max+1` is unsafe: it cannot see entries on other in-flight branches, and duplicates merge cleanly because each entry is a new file.
-   - Write `.minerva/knowledge/NNN-<type>-<slug>.md` using the knowledge entry template.
+   - Determine the type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and name the file `<YYYY-MM-DD>-<type>-<slug>.md` with today's date — see [Entry naming](#entry-naming). Nothing is allocated; a shared date is normal, and a duplicate stem conflicts in git rather than merging silently.
+   - Write `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template.
    - **Run [Wiki maintenance](#wiki-maintenance-add-only)** scoped to this single entry: forward `## Related` lines in the new entry only. No index line, no watermark bump, no neighbor edit, no banner. (Idempotency makes a later Mode A full pass a no-op over this entry.)
-   - In `scratchpad.md`, append `→ promoted to .minerva/knowledge/NNN-<type>-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
+   - In `scratchpad.md`, append `→ promoted to .minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` to the matched block so the end-of-work pass won't re-promote it.
 6. Report the knowledge file path.
 

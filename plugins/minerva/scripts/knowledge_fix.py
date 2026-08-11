@@ -52,7 +52,7 @@ from knowledge_lint import (
 from knowledge_edits import add_related_link, add_supersede_banner, body_complement
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
-_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((\d{3,})-[a-z]+-[^\]]+)\]\]")
+_CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((?:\d{4}-\d{2}-\d{2}|\d{3,})-[a-z]+-[^\]]+)\]\]")
 # A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
 # grammar the detector reports edges with. A narrower one here would let the fixer
 # silently skip an edge the linter flags, producing an error nothing repairs.
@@ -230,11 +230,12 @@ def plan_index(kd: Path) -> tuple:
     # type, duplicate id) would assert the index reflects an entry it does not, and
     # bury the refusal: the refusal is printed once, by the run that caused it, while
     # the watermark is permanent.
-    catalogued = [nnn for sec in SECTION_ORDER for nnn, _, _ in buckets[sec]]
-    max_nnn = max(catalogued, key=int) if catalogued else "000"
+    # No watermark line. A scalar floor cannot express which records are reconciled —
+    # they merge out of order (knowledge 053) — and a date id is not even totally
+    # ordered, since same-day ties are ordinary. Pending state is per-record: an entry
+    # is uncatalogued iff it has no catalog line here.
     new = (
-        "# Knowledge index\n"
-        f"<!-- index-watermark: {max_nnn} -->\n\n"
+        "# Knowledge index\n\n"
         + "\n\n".join(blocks)
         + "\n"
     )
@@ -311,16 +312,13 @@ def plan_reciprocals(kd: Path, date: str) -> tuple:
             cur = edits.get(b_stem, texts[b_stem])
             new = add_related_link(cur, a_stem, recip)
             if label == "supersedes":  # B is superseded by A -> banner too (015/016)
-                # The banner marker is `<!-- superseded-by: NNN -->`, so it cannot name
-                # WHICH member of a shared NNN retired B. The `## Related` back-link
-                # above is stem-addressed and already written; only the banner is held.
-                a_nnn = entries[a_stem]["nnn"]
-                if a_nnn in dups:
-                    refusals.append((a_stem, b_stem, f"NNN {a_nnn} is shared by multiple "
-                                                     f"entries; supersession banner not "
-                                                     f"stamped (the marker names an NNN)"))
-                else:
-                    new = add_supersede_banner(new, a_nnn, a_stem, date)
+                # The banner marker now carries A's full STEM, so it can always name
+                # which entry retired B. This used to be refused whenever A's id was
+                # shared, because a marker holding a bare id could not say which of the
+                # sharers was meant — the one place a shared id genuinely degraded the
+                # output. Stem identity removes the ambiguity, so the banner is always
+                # stamped and the refusal is gone.
+                new = add_supersede_banner(new, entries[a_stem]["nnn"], a_stem, date)
             edits[b_stem] = new
     return edits, refusals
 

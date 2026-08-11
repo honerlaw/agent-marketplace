@@ -8,13 +8,13 @@ Each reviewer gate dispatches with a gate-specific **ARTIFACT + CONTEXT** (below
 
 Replaces the user-interactive intake in `minerva:propose`.
 
-1. **Assemble context.** Read: the inline seed, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/NNN-*/proposal.md` files for tone/conventions, and any adjacent `followups.md`.
+1. **Assemble context.** Read: the inline seed, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone/conventions, and any adjacent `followups.md`.
 2. **Design synthesis.** The main model drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) plus the 2-3 candidate approaches it considered. Context-grounded inference, not user Q&A. Keep it in conversation; write no file yet.
 3. **Scope check — reviewer gate.** The main model decides: single unit, or decompose? Then dispatch a Skeptic. ARTIFACT = the framed scope decision + recommended pick; CONTEXT = the seed + the draft proposal. Arbitrate per verify-protocol. If the decision is "decompose", abort the run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 4. **Approach selection — reviewer gate.** The main model picks among its candidates. Then dispatch a Skeptic. ARTIFACT = the 2-3 candidate approaches + the recommended pick + the stated criteria; CONTEXT = the draft proposal's `## Goal`/`## Approach`. The chosen (possibly folded) approach replaces the draft's `## Approach`. Escalate if no option is dominant or a critique can't be confidently adjudicated.
 5. **Whole-proposal soundness — solo.** The main model reviews the full draft for internal consistency and soundness. Escalate (no reviewer) if a public-interface or cross-cutting-contract aspect is one it cannot confidently get right alone.
-6. **Worktree + branch creation.** Per `minerva:propose`'s "On approval — worktree setup" steps 1–7: derive slug, check duplicates, compute NNN across local work / local branches / remote branches; resolve default branch; pre-flight gitignore check on `.minerva/worktrees/` (abort to user if missing); `git worktree add -b <NNN-slug> .minerva/worktrees/<NNN-slug> <default-branch>`; then address the worktree by prefix (**no `EnterWorktree`**): prefix file paths with `.minerva/worktrees/<NNN-slug>/` and run git as `git -C .minerva/worktrees/<NNN-slug> …`.
-7. **File writes (inside the worktree).** Per `minerva:propose` steps 8–9, 11: create `.minerva/work/<NNN-slug>/`; write `proposal.md` and the header-only `scratchpad.md`; append the initial `## Balanced decisions YYYY-MM-DD` block with the decisions from steps 3–5; `git add` + commit `chore: initialize <NNN-slug> work unit`.
+6. **Worktree + branch creation.** Per `minerva:propose`'s "On approval — worktree setup" steps 1–7: derive slug, check duplicates, check for a duplicate slug across local work / local branches / remote branches; take today's date as the id; resolve default branch; pre-flight gitignore check on `.minerva/worktrees/` (abort to user if missing); `git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>`; then address the worktree by prefix (**no `EnterWorktree`**): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
+7. **File writes (inside the worktree).** Per `minerva:propose` steps 8–9, 11: create `.minerva/work/<date-slug>/`; write `proposal.md` and the header-only `scratchpad.md`; append the initial `## Balanced decisions YYYY-MM-DD` block with the decisions from steps 3–5; `git add` + commit `chore: initialize <date-slug> work unit`.
 8. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose` step 10 (placeholders, internal consistency, ambiguity, scope). Fix inline.
 9. Continue to Phase 2.
 
@@ -57,7 +57,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A. All gates h
 2. **Idempotency check.** If `scratchpad.md` is the post-promote marker, report "already promoted" and continue to Phase 5.
 3. **Partition — solo.** The main model proposes the four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already `→ promoted to ...`. Escalate if an entry's bucket is genuinely ambiguous.
 4. **TODO disposition — solo.** For each TODO: followups.md / seed new proposal / discard. The main model decides; escalate if unsure.
-5. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/NNN-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
+5. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 6. **TODO seed gate (if any).** Do **not** auto-invoke `minerva:propose` in the same run — surface "seed new proposal" TODOs in the final report as suggested follow-ups.
 7. Continue to Phase 5.
 
@@ -80,8 +80,8 @@ These two gates are operational tier — the main model's draft from `proposal.m
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup` via the `Skill` tool with args `<NNN-slug> --yes`. Report and exit.
-3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-balanced --cleanup-only <NNN-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12; on exhaustion, surface manual instructions.
+2. **`MERGED`** → invoke `minerva:cleanup` via the `Skill` tool with args `<date-slug> --yes`. Report and exit.
+3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-balanced --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12; on exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule.
 5. **`CLOSED` (not merged)** → leave the worktree; surface manual instructions.
 6. **No PR found** → exit silently (ship bailed before opening one — already reported).

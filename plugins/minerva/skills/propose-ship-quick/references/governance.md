@@ -20,8 +20,8 @@
 **Final report on bail.**
 - Phase reached.
 - Reason for bail (escalation count / hard trigger / scope-fit / CI failure).
-- Current state of `.minerva/work/<NNN-slug>/` (proposal status, scratchpad summary, committed state).
-- Exact next manual command (e.g., `minerva:work <NNN-slug>`, `minerva:ship <NNN-slug>`).
+- Current state of `.minerva/work/<date-slug>/` (proposal status, scratchpad summary, committed state).
+- Exact next manual command (e.g., `minerva:work <date-slug>`, `minerva:ship <date-slug>`).
 
 ## Observability
 

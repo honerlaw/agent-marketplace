@@ -86,7 +86,7 @@ After every panel call (regardless of outcome), record a one-line entry under a 
 - [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
 ```
 
-**Where the line goes rides an observable signal, not a judgment call.** If an in-flight work unit is in context — the working tree contains a `.minerva/work/NNN-*/scratchpad.md` that is not the post-promote marker, or the session has already named the unit — append the entry (and any `## Panel concerns` block) to that unit's `scratchpad.md`. If no work unit is in context, the verdict and its log line live in the conversation only — there is nothing durable to write, which matches ad-hoc use being commitment-free. If multiple in-flight units exist and none is named in session context, ask which one (if any) should carry the log.
+**Where the line goes rides an observable signal, not a judgment call.** If an in-flight work unit is in context — the working tree contains a `.minerva/work/*/scratchpad.md` that is not the post-promote marker, or the session has already named the unit — append the entry (and any `## Panel concerns` block) to that unit's `scratchpad.md`. If no work unit is in context, the verdict and its log line live in the conversation only — there is nothing durable to write, which matches ad-hoc use being commitment-free. If multiple in-flight units exist and none is named in session context, ask which one (if any) should carry the log.
 
 Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto`'s `[skipped — small]`, `[user-directed]`, and `[synthesis]` prefixes) — those are caller policy, not part of this protocol.
 

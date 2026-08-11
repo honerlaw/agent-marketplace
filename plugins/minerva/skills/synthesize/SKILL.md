@@ -1,6 +1,6 @@
 ---
 name: synthesize
-description: Refreshes the knowledge-wiki overview — first reports the deterministic un-synthesized-scope signal (entries added since the last synthesis, plus broken overview wikilinks) so the caller decides IF resynthesis is warranted; if so, drafts a theme-grouped `overview.md` (narratives + `[[NNN-type-slug]]` wikilinks) and, behind a confirmation gate, writes it and bumps the synthesis watermark. Use after `minerva:promote` adds knowledge entries and `overview.md` hasn't been refreshed, when the overview is missing or has broken wikilinks, when the user wants a theme-grouped summary across `.minerva/knowledge/`, or when they invoke `minerva:synthesize`. The overview is advisory (never CI-gated); only the mechanical link-rot signal is deterministic.
+description: Refreshes the knowledge-wiki overview — first reports the deterministic un-synthesized-scope signal (entries the overview does not link, plus broken overview wikilinks) so the caller decides IF resynthesis is warranted; if so, drafts a theme-grouped `overview.md` (narratives + `[[YYYY-MM-DD-type-slug]]` wikilinks) and, behind a confirmation gate, writes it. Use after `minerva:promote` adds knowledge entries and `overview.md` hasn't been refreshed, when the overview is missing or has broken wikilinks, when the user wants a theme-grouped summary across `.minerva/knowledge/`, or when they invoke `minerva:synthesize`. The overview is advisory (never CI-gated); only the mechanical link-rot signal is deterministic.
 allowed-tools:
   - Bash
   - Read
@@ -45,11 +45,13 @@ Step 2 with "no-op: signal unavailable." Do not retry; do not stall.
 
 The JSON reports:
 
-- `synthesis_watermark` — the max entry NNN the current `overview.md` reflects (`-1` if
-  there is no overview yet, or it carries no `synthesis-watermark` comment);
-- `corpus_max_nnn` — the highest entry NNN in the corpus;
-- `unsynthesized` — entry NNNs added since the last synthesis (`NNN > watermark`);
-- `link_rot` — any `[[NNN-type-slug]]` wikilink in the existing `overview.md` that no
+- `unsynthesized` — the stems of entries the current `overview.md` does **not** link.
+  This is a per-record signal, not a watermark: an entry counts as synthesized iff the
+  overview actually mentions it. The old scalar floor (`id > watermark`) could not
+  express this, because entries merge out of order — one landing below the mark read as
+  done without ever being written about (knowledge 053) — and date ids are not totally
+  ordered anyway, since same-day ties are ordinary;
+- `link_rot` — any `[[YYYY-MM-DD-type-slug]]` wikilink in the existing `overview.md` that no
   longer resolves to a live entry (a fence-aware scan — fenced example links are not
   flagged, knowledge 023).
 
@@ -57,7 +59,7 @@ The JSON reports:
 
 Present the signal to the user, then **judge whether synthesis is warranted**:
 
-- **No overview yet** (`synthesis_watermark == -1`, `overview_exists` false) and the
+- **No overview yet** (`overview_exists` false) and the
   corpus has a meaningful number of entries → synthesizing the first overview is
   warranted.
 - **Several un-synthesized entries** accumulated (`unsynthesized` is non-trivial) → a
@@ -67,8 +69,8 @@ Present the signal to the user, then **judge whether synthesis is warranted**:
 - **`link_rot` present** → a refresh is warranted *regardless* of the count, to repair
   the dead links.
 
-The watermark is a **new-scope-only floor**: it counts *added* entries, not in-place
-`## Related` / banner / body edits to already-synthesized entries. If you know the
+`unsynthesized` counts entries the overview never links — not in-place `## Related` /
+banner / body edits to entries it already links. If you know the
 corpus was substantially re-shaped in place since the last synthesis (e.g. a
 supersession rewired several `## Related` blocks), weigh that by judgment too — the
 signal will not show it.
@@ -80,20 +82,21 @@ If you decide **not** to synthesize, report the signal and the reason, and stop 
 If you decide to synthesize, read the entries (`unsynthesized` first, plus the existing
 overview for continuity) and draft `overview.md`:
 
-- a `# Knowledge overview` H1 and the `<!-- synthesis-watermark: NNN -->` comment, where
-  `NNN` is `corpus_max_nnn` (zero-padded to 3 digits) at synthesis time;
+- a `# Knowledge overview` H1. There is **no watermark comment** — do not write one;
+  coverage is derived from the links themselves;
 - one `## <Theme>` section per cross-cutting theme, each a short narrative that links
-  the relevant entries as `[[NNN-type-slug]]` **full-stem** wikilinks (there is no bare
-  `[[NNN]]` form). Author links **outside** code fences so they count as real edges
+  the relevant entries as `[[YYYY-MM-DD-type-slug]]` **full-stem** wikilinks (there is no bare
+  `[[<date>]]` form — a date does not identify an entry). Author links **outside** code fences so they count as real edges
   (knowledge 023);
-- a `## Limitations` section stating that the watermark is a new-scope-only floor
-  (it attests synthesis **intent**, not body **content** — a watermark at corpus-max
-  with a stale body is not detectable), and that new entries promoted after this
-  synthesis will show as `unsynthesized` until the next refresh.
+- a `## Limitations` section stating that a link attests synthesis **intent**, not body
+  **content** — an entry can be linked from a narrative that no longer describes it, and
+  nothing detects that — and that entries promoted after this synthesis show as
+  `unsynthesized` until the next refresh.
 
-Every `[[NNN-type-slug]]` you write must resolve to a live entry. Confirm **by
-inspection** that each link's NNN (and ideally its full stem, to keep navigation honest)
-matches a real entry filename in `.minerva/knowledge/` before you gate — the Step-1
+Every `[[YYYY-MM-DD-type-slug]]` you write must resolve to a live entry. Confirm **by
+inspection** that each link's **full stem** matches a real entry filename in
+`.minerva/knowledge/` before you gate — the date alone is not enough to identify an
+entry, since several entries can share one — the Step-1
 helper reads the *committed* `overview.md`, so it can only confirm `link_rot` is empty
 *after* the write, not validate an un-written draft.
 
@@ -102,7 +105,7 @@ helper reads the *committed* `overview.md`, so it can only confirm `link_rot` is
 Show the drafted `overview.md` to the user and **wait for explicit confirmation** before
 writing. (When invoked by an autonomous orchestrator, its adjudication mechanism
 provides this confirmation.) On confirmation, `Write` the file to `$ROOT/.minerva/knowledge/overview.md` and
-report the new watermark and the themes.
+report the themes and how many entries moved out of `unsynthesized`.
 
 ## Advisory, not gated
 

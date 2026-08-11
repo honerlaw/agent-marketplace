@@ -121,7 +121,7 @@ Two sub-sections:
 
 The `.minerva/` directory has two read tiers, and this skill uses both differently:
 
-- **`.minerva/knowledge/`** — atomic, past-tense, durable learnings. Files named `NNN-<type>-<slug>.md` where type is `decision`, `bug`, `constraint`, `pattern`, or `reference`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
+- **`.minerva/knowledge/`** — atomic, past-tense, durable learnings. Files named `<YYYY-MM-DD>-<type>-<slug>.md` where type is `decision`, `bug`, `constraint`, `pattern`, or `reference`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
 
 - **`.minerva/reference/`** — thematic, present-tense, operational facts about how the system is configured *right now*. Files named by topic (`topology.md`, `observability.md`, `database.md`, etc.). Replace-on-change. Debug uses it for "how does this layer work in this project?" — the operational map.
 

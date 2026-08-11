@@ -77,7 +77,7 @@
     },
     {
       "any_of": [
-        "index-watermark"
+        "no watermark"
       ],
       "file": "references/steps.md"
     },

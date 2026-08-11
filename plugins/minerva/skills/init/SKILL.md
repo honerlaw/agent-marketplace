@@ -28,7 +28,7 @@ Before changing anything, inspect the project:
    No skill reads .minerva/decisions/ anymore. To migrate:
      mv .minerva/decisions/* .minerva/knowledge/  # then renumber if needed
      rmdir .minerva/decisions
-   Review for NNN collisions across the two directories before merging.
+   Review for duplicate stems across the two directories before merging.
    ```
    Continue with the rest of `minerva:init`. This warning is informational.
 5. **Git repo?** If `.git/` is absent, skip the gitignore check entirely and silently. Still scaffold the folder and update the agent file.
