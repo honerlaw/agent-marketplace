@@ -62,3 +62,4 @@ project has deferred).
 ## Related
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — see also
 - [[2026-08-05-constraint-knowledge-allocation-scans-across-branches]] — see also
+- [[2026-08-10-decision-date-ids-make-identity-the-path]] — see also

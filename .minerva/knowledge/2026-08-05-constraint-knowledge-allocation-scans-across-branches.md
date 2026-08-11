@@ -5,6 +5,9 @@
 **Summary**: new-file id collisions merge cleanly with no conflict, so the allocator is the only backstop
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 
+<!-- superseded-by: 2026-08-10-decision-date-ids-make-identity-the-path -->
+> **Superseded by [[2026-08-10-decision-date-ids-make-identity-the-path]]** (2026-08-10)
+
 ## Context
 `minerva:promote` allocated knowledge NNNs as `max+1` over the local
 `.minerva/knowledge/` directory — one directory, in one worktree. Entries sitting on
@@ -64,3 +67,4 @@ worse than not fetching.
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — builds on
 - [[2026-08-05-constraint-nnn-keyed-lookups-hide-duplicates]] — see also
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the cataloguing half of the same concurrency story
+- [[2026-08-10-decision-date-ids-make-identity-the-path]] — superseded by

@@ -71,3 +71,4 @@ the floor into the same silent-permanent state. The watermark now records only
 ## Related
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — see also
 - [[2026-06-03-decision-synthesis-layer-separate-file-advisory]] — see also
+- [[2026-08-10-decision-date-ids-make-identity-the-path]] — see also
