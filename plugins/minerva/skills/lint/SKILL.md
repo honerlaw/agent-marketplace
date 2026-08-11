@@ -62,6 +62,13 @@ framed **"spot-checked, not exhaustive"** (a single-context read; reliable up to
 roughly low-hundreds of entries — contradiction detection is inherently O(n²) in
 attention, so a clean result is not a guarantee).
 
+> **After upgrading minerva, expect a higher count.** The `## Related` edge model was
+> unified so this linter and `knowledge_fix` read one edge set; the old detector saw only
+> a line's first wikilink, so extra targets on a shared line were invisible. One corpus
+> went 41 → 59 findings on the upgrade. The delta is previously-unreportable findings, not
+> new damage — but re-baseline any pending finding-count comparison, because a
+> "finding-neutral" claim measured under the old detector will not hold.
+
 - **Orphans.** Derive the link graph from the detector's **own** parser so the edge
   model can't drift from the gated one:
 

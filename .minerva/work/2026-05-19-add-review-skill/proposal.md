@@ -1,7 +1,7 @@
 # Proposal: add-review-skill
 
 **Date**: 2026-05-19
-**Status**: Draft
+**Status**: Shipped (2026-05-19) — record closed retroactively 2026-08-11
 
 ## Goal
 

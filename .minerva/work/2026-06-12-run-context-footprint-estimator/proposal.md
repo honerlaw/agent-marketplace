@@ -1,7 +1,7 @@
 # Proposal: run-context-footprint-estimator
 
 **Date**: 2026-06-12
-**Status**: Draft
+**Status**: Shipped (2026-06-12) — record closed retroactively 2026-08-11
 
 ## Goal
 

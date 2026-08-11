@@ -53,6 +53,22 @@ Show the counts (`N entries, M work dirs`), the collision and undated lists if a
 ask before proceeding. Never apply on the strength of a clean plan alone — the plan is
 also what tells the user whether the dates look right, and only they can judge that.
 
+**Surface the exception lines, not just the totals.** `plan` reports
+`ALREADY MIGRATED (skipped) N path(s)`, `INVALID DATE ID (re-dated) <path>` for a
+date-shaped id that is not a real date, and the `SHORTHAND` block. Put these in front of
+the user at the gate rather than leaving them to be read out of a long plan: on one real
+637-entry migration, three corrupted rows sat among 552 correct ones in the dry-run
+output and were missed, because `2026-08-10-x -> 2026-08-10-08-10-x` reads as noise at
+that length. A plan is a control only when its anomalies are separable at the size the
+output actually reaches.
+
+**Offer shorthand resolution here**, since a flag nobody knows about is not a feature.
+If bare `[[NNN]]` references were counted, re-run the plan with `--resolve-shorthand` and
+report how many are resolvable and how many are refused, with the refusal reasons, then
+let the user choose. Resolution is opt-in and refuses anything not provably unambiguous —
+including refusing *everything* on a partially-migrated corpus, where the entry-vs-work-unit
+collision it guards against has already become undetectable.
+
 ## Step 3 — Apply
 
 ```bash
@@ -82,6 +98,16 @@ width (`ID_RE_SRC`), and loosening it to `+` would start reporting any bracketed
 
 Remaining hits should only ever be inside fenced examples, or prose in an entry recounting
 an old number. Both are correct: the migration is fence-aware by design.
+
+## After upgrading: expect the finding count to RISE
+
+The first `minerva:lint` run after upgrading usually reports **more** findings on an
+unchanged corpus, because the `## Related` edge model was unified and the old detector
+could not see extra targets on a shared line. The delta is previously-unreportable
+findings, not new damage — but any pending finding-count comparison must be re-baselined.
+**Read `references/upgrading.md`** before comparing any finding count across the upgrade —
+it covers why the old number was wrong rather than the new one, what to do on the first
+run, and the post-merge surprise this cost a real team.
 
 ## What the date means
 

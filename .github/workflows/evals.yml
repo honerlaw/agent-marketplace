@@ -4,12 +4,13 @@ name: evals
 # Covers the structural contract floor, the behavioral runner's stubbed unit
 # tests, and a no-API --dry-run of the behavioral runner. No secrets, no API.
 #
-# Scope note: the suite is scoped to the minerva/eval tests on purpose. A bare
-# `pytest` currently aborts during collection on the unrelated financials tests
-# (`No module named 'lib'` in tests/test_browser.py and tests/test_storage.py;
-# tests/test_pull.py collects but fails at runtime on the deleted `pull` module),
-# which pre-exist on main. Fixing that import is a separate follow-up; until
-# then this job runs exactly the tests these eval mechanisms own.
+# The whole suite runs, deliberately: `pytest tests/` rather than an enumerated
+# module list. The list existed only because a bare `pytest` aborted during
+# collection on tests for the `financials` plugin, deleted in 20d32e0 — those
+# tests are now gone too. An enumerated list makes a new test module invisible to
+# CI until someone remembers to append it, and the failure is silent: the module
+# simply never runs and nothing goes red. That cost us once already (the snippet
+# tests shipped dark). Collection is now the enumeration.
 
 on:
   pull_request:
@@ -30,23 +31,7 @@ jobs:
         run: pip install pytest pyyaml
 
       - name: Structural contract floor + runner unit tests (deterministic, no API)
-        run: >
-          python -m pytest
-          tests/test_skill_contracts.py
-          tests/test_minerva.py
-          tests/test_skill_evals.py
-          tests/test_promote_invariant.py
-          tests/test_knowledge_lint.py
-          tests/test_knowledge_fix.py
-          tests/test_knowledge_rename.py
-          tests/test_synthesis_status.py
-          tests/test_migration_status.py
-          tests/test_site_catalog.py
-          tests/test_skill_budget.py
-          tests/test_skill_dispatch.py
-          tests/test_run_analyzer.py
-          tests/test_skill_snippets.py
-          -q
+        run: python -m pytest tests/ -q
 
       - name: Behavioral runner --dry-run (parse + plan, zero API)
         run: python scripts/run_skill_evals.py --dry-run

@@ -1,0 +1,1 @@
+../plugins/minerva/scripts/work_status.py

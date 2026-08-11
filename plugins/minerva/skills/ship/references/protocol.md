@@ -49,7 +49,7 @@ Only if `git status --porcelain` is non-empty:
    - List of filenames changed.
    In bare mode, use the diff and recent commit messages as the source.
 
-   If `scratchpad.md` is the post-promote one-line marker (`Summarized at minerva:promote on YYYY-MM-DD — see archive/.`), that's the canonical post-`minerva:promote` state and means there's nothing to skim. Fall back to `## Goal` + filenames only.
+   If `work_status.is_post_promote(scratchpad_text)` is true, the unit is in its post-`minerva:promote` state and there is nothing to skim — fall back to `## Goal` + filenames only. Use that predicate rather than comparing against the canonical marker string: the marker has had at least nine spellings, and a string match reads a validly-promoted unit as un-promoted.
 2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept. (When an invoking skill or the user has pre-authorized non-interactive shipping, accept the draft without prompting — this applies to gate #2 as well.)
 3. `git add` with **specific file paths** (never `-A` or `.`) for tracked changes and untracked files the user wants included.
 4. `git commit -m "$(cat <<'EOF' ... EOF)"` using a HEREDOC for clean formatting. Honor the project's git footer conventions if any are visible in recent commits.
