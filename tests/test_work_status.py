@@ -78,3 +78,111 @@ def test_prose_opening_with_promoted_is_not_a_marker(prose):
     """A false positive makes `minerva:promote` skip real work silently, so the
     `promoted` arm requires a date right after the word — every real marker has one."""
     assert not is_post_promote(prose)
+
+
+# --- Status resolution: inline field first, `## Status` section as an anchored fallback ---
+from work_status import read_status  # noqa: E402
+
+
+def test_inline_status_field_is_read():
+    assert read_status("# P\n\n**Status**: Shipped (2026-08-11)\n") == "Shipped (2026-08-11)"
+
+
+def test_status_heading_is_read_when_there_is_no_inline_field():
+    """One unit predates the inline field (`2026-05-21-sync-skill-catalogs`)."""
+    assert read_status("# P\n\n## Status\nShipped (2026-05-21)\n\n## Goal\nx\n") \
+        == "Shipped (2026-05-21)"
+
+
+def test_inline_field_wins_over_a_heading():
+    """The fallback may only fill a gap, never override the canonical field."""
+    t = "# P\n\n**Status**: Draft\n\n## Status\nShipped (2026-01-01)\n"
+    assert read_status(t) == "Draft"
+
+
+def test_an_empty_status_section_does_not_leak_the_next_section():
+    """The constructed false negative that a naive "next non-blank line" parse produces:
+    an unfilled `## Status` followed by prose beginning "Shipped ..." would classify a
+    LIVE DRAFT as done, and `in_flight` would stop protecting it."""
+    t = "# P\n\n## Status\n\n## Goal\nShipped code already exists for the export path.\n"
+    assert read_status(t) is None
+
+
+def test_a_near_miss_heading_is_not_a_status_section():
+    assert read_status("# P\n\n## Status quo\nShipped (2026-01-01)\n") is None
+    assert read_status("# P\n\n### Status\nShipped (2026-01-01)\n") is None
+
+
+def test_no_status_anywhere_reads_as_absent():
+    assert read_status("# P\n\n## Goal\nbuild a thing\n") is None
+
+
+# --- in_flight: the orchestrators' pre-flight predicate, single-sourced ---
+def _unit(tmp_path, status_line, scratchpad):
+    (tmp_path / "proposal.md").write_text(f"# P\n\n{status_line}\n")
+    (tmp_path / "scratchpad.md").write_text(scratchpad)
+    return unit_state(tmp_path)
+
+
+def test_in_flight_true_while_draft_and_unpromoted(tmp_path):
+    assert _unit(tmp_path, "**Status**: Draft", "# Scratchpad\n\nworking\n")["in_flight"]
+
+
+def test_in_flight_false_once_shipped_and_promoted(tmp_path):
+    st = _unit(tmp_path, "**Status**: Shipped (2026-08-11)",
+               "Summarized at minerva:promote on 2026-08-11 — see archive/.\n")
+    assert not st["in_flight"]
+
+
+@pytest.mark.parametrize("status_line,scratchpad", [
+    # promote rewrites Status and archives the scratchpad as SEPARATE steps, so an
+    # interrupted run leaves one of these. Each trips the opposite limb of the OR.
+    ("**Status**: Shipped (2026-08-11)", "# Scratchpad\n\nstill working\n"),
+    ("**Status**: Draft", "Summarized at minerva:promote on 2026-08-11 — see archive/.\n"),
+])
+def test_both_partial_promote_states_read_as_in_flight(tmp_path, status_line, scratchpad):
+    """The OR is why the predicate is safe across its own writer's non-atomic steps:
+    a half-promoted unit is never silently adopted as finished."""
+    assert _unit(tmp_path, status_line, scratchpad)["in_flight"]
+
+
+def test_no_promoted_unit_in_the_live_corpus_reads_as_in_flight():
+    """The invariant that catches the stale-record class, stated so it survives live work.
+
+    A unit that is genuinely unfinished SHOULD read as in-flight — including whichever
+    unit is being worked when this runs. What must never happen is a unit that has been
+    promoted still tripping the collision check, which is what made the check noisy
+    enough for `2026-07-29-right-size-lifecycle-waits` to log it weeks ago.
+    """
+    flagged = [d.name for d in sorted(WORK.iterdir())
+               if d.is_dir() and unit_state(d)["promoted"] and unit_state(d)["in_flight"]]
+    assert flagged == [], f"promoted units still reading as in-flight: {flagged}"
+
+
+# --- fence-awareness: a fenced example is documentation, not a declaration ---
+def test_a_fenced_status_field_does_not_shadow_the_real_one():
+    """The dangerous direction. A convention doc or template showing
+    `**Status**: Shipped` ahead of the unit's real `**Status**: Draft` would otherwise
+    read a LIVE unit as finished, and `in_flight` would stop protecting it."""
+    t = ("# P\n\n```\n**Status**: Shipped (2020-01-01)\n```\n\n**Status**: Draft\n")
+    assert read_status(t) == "Draft"
+
+
+def test_a_fenced_status_heading_is_not_a_status_section():
+    t = "# P\n\n```\n## Status\nShipped (2020-01-01)\n```\n\n## Goal\nx\n"
+    assert read_status(t) is None
+
+
+def test_a_fenced_promote_marker_does_not_read_as_promoted():
+    """Symmetric hole in the marker reader: every skill documenting the convention
+    contains a fenced example of the marker."""
+    t = ("# Scratchpad: x\n\nHere is what promote writes:\n\n```\n"
+         "Summarized at minerva:promote on 2026-08-11 — see archive/.\n```\n\n"
+         "## Notes\nstill working\n")
+    assert not is_post_promote(t)
+
+
+def test_a_real_marker_outside_a_fence_still_reads_as_promoted():
+    t = ("# Scratchpad: x\n\n```\nexample: <!-- post-promote -->\n```\n\n"
+         "Summarized at minerva:promote on 2026-08-11 — see archive/.\n")
+    assert is_post_promote(t)

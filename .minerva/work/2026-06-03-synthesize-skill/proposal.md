@@ -1,7 +1,7 @@
 # Proposal: synthesize-skill
 
 **Date**: 2026-06-03
-**Status**: Draft
+**Status**: Shipped (2026-06-03) — record closed retroactively 2026-08-11
 
 > **Phase C** of the LLM-wiki effort — the synthesis layer. Phases 1 / B.1 / B.2 / B.3
 > gave the corpus navigability (index + cross-refs), a deterministic detector, a
