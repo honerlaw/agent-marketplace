@@ -90,6 +90,32 @@ def test_stale_watermark_comment_is_stripped(tmp_path):
     assert "- [[002-constraint-bar]]" in text
 
 
+def test_index_sorts_a_date_id_corpus(tmp_path):
+    """Regression: `plan_index` sorted catalog rows with `int(t[0])`, which raises on a
+    date id. It survived the whole migration because every other fixture in this file
+    uses legacy ids, so nothing here ever fed `plan_index` a date — the first thing to
+    do so was a live reconciliation, after the ids had already shipped.
+
+    Mixed on purpose: legacy ids must still sort ahead of dates, and `"1000" < "999"`
+    must not resurface.
+    """
+    kd = make_dir(
+        tmp_path,
+        {"999-decision-legacy-late.md": entry("decision", "legacy-late", summary="a"),
+         "1000-decision-legacy-wide.md": entry("decision", "legacy-wide", summary="b"),
+         "2026-05-19-decision-early.md": entry("decision", "early", summary="c"),
+         "2026-08-10-decision-later.md": entry("decision", "later", summary="d")},
+        index_md({"Decisions": [("999-decision-legacy-late", "a")]}),
+    )
+    fix.apply(kd, DATE)
+    assert errors(kd) == []
+    text = (kd / "index.md").read_text()
+    order = [text.index(s) for s in
+             ["999-decision-legacy-late", "1000-decision-legacy-wide",
+              "2026-05-19-decision-early", "2026-08-10-decision-later"]]
+    assert order == sorted(order), "legacy ids sort first and numerically; dates follow"
+
+
 def test_stale_catalog_line_removed(tmp_path):
     kd = make_dir(
         tmp_path,

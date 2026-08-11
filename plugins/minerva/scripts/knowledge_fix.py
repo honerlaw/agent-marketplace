@@ -41,6 +41,8 @@ import sys
 from pathlib import Path
 
 from knowledge_lint import (
+    corpus_id_width,
+    id_sort_key,
     ENTRY_RE,
     RELATED_LINE_RE,
     SECTION_TO_TYPE,
@@ -216,10 +218,15 @@ def plan_index(kd: Path) -> tuple:
     # non-empty; sections separated by one blank line. An empty section (e.g.
     # `## Patterns`) is just its header — no trailing blank — so it renders as
     # `## Patterns\n\n## Constraints`, matching the init/promote skeleton.
+    width = corpus_id_width(nnn for rows in buckets.values() for nnn, _, _ in rows)
     blocks = []
     for sec in SECTION_ORDER:
         block = [sec]
-        rows = [line for _, _, line in sorted(buckets[sec], key=lambda t: (int(t[0]), t[1]))]
+        # Composite key, never int(): ids are dates now, and int("2026-05-19")
+        # raises. Legacy ids still sort first and numerically-correctly via the
+        # shared helper, which zero-pads to the corpus's own widest token.
+        rows = [line for _, _, line in
+                sorted(buckets[sec], key=lambda t: (id_sort_key(t[0], width), t[1]))]
         if rows:
             block.append("")
             block.extend(rows)
