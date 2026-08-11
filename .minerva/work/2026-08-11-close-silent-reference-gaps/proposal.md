@@ -1,7 +1,7 @@
 # Proposal: close-silent-reference-gaps
 
 **Date**: 2026-08-11
-**Status**: Draft
+**Status**: Shipped (2026-08-11)
 **Base**: `origin/main`
 
 ## Goal
@@ -134,6 +134,16 @@ and must match `[[015-decision-legacy]]`; the orphan one-liner must find a plant
 orphan in a date-id corpus. A snippet that regresses then fails CI instead of passing a
 substring check.
 
+### 7. Make the work-dir migration idempotent (added mid-work — see `replan.md`)
+
+Found by running the CLI to check defect 4's new count: `WORK_DIR_RE` was a bare
+`^(\d{3,})-(.+)$`, so an already-migrated `2026-08-07-foo` read as id `2026` plus slug
+`08-07-foo` and got re-dated. On this repo a second run wanted to rename all 50-odd
+migrated work units. Pre-existing on `main`; the entry branch never had it because
+`ENTRY_RE` embeds the shared `ID_RE_SRC`. Fixed by using that same grammar plus the
+`is_date_id` guard the entry branch already has, and by correcting the idempotency
+guarantee `migrate-fix/SKILL.md` stated as fact.
+
 ### Rejected
 
 - **Fix each defect at its own site (no extraction).** Re-establishes agreement between
@@ -163,6 +173,13 @@ substring check.
    stays clean, and any new test module is appended to the enumerated list in
    `.github/workflows/evals.yml` per
    [[2026-06-11-constraint-ci-test-enumeration-explicit]].
+9. (added mid-work) The migration is idempotent for work directories as it already was
+   for entries: a second run against a fully migrated corpus plans zero renames.
+
+**All nine met.** Suite 459 passed (from a 437 baseline), `knowledge_lint` clean, and
+`knowledge_rename` on this repo reports `plan: 0 entries, 0 work dirs` where before it
+wanted to rename 50-odd already-migrated units. Every fixture was verified to fail against
+pre-fix sources.
 
 ## Open questions
 
