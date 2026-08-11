@@ -416,6 +416,23 @@ pass; `read_status` feeds the in-flight collision check, where the costly error 
 opposite — calling live work finished — so its fallback is deliberately the narrower of the
 two. Same module, same author, opposite calls.
 
+The cluster closes on the question it had been avoiding: **why did the same mistake keep
+landing when the rule was already written down?** Fence-awareness has been a documented
+constraint since June, cited approvingly in later work, and was violated three times in two
+months — twice in `work_status.py`, once in `knowledge_fix.plan_index`, every instance found
+by review or by accident and none by tooling. Writing the rule down had been mistaken for
+addressing it. The first test that actually enforced it failed **on its first run**, on a
+live defect: `plan_index` rewrites `index.md` from a fence-blind parse, so a fenced catalog
+line naming a real entry became a real catalogued line, duplicating the entry with the
+example's fake summary while the fence-aware linter reported clean
+([[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]]).
+
+That yields the cluster's governing test. For any rule this corpus records, ask **what fails
+if it is violated**; if the answer is "a reviewer might notice", it is a wish, not a
+constraint. And when the enforcement is finally written, expect it to find something —
+a gate that passes on its first run has not yet been shown capable of failing, which is why
+the fixture proving it *fires* matters more than the one proving it passes.
+
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer

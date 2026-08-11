@@ -81,3 +81,4 @@ consumer already has a safe path for the widened case before designing one.**
 - [[2026-06-11-constraint-fence-scans-import-fence-re]] — see also
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
+- [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also
