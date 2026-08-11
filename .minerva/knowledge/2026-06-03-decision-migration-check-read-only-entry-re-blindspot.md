@@ -61,3 +61,4 @@ become a new false-clean.
 - [[2026-06-02-decision-knowledge-wiki-navigability-layer]] — see also
 - [[2026-06-03-decision-related-backfill-hand-authored-rename-redeferred]] — see also
 - [[2026-08-09-pattern-read-authored-metadata-from-where-it-is]] — see also
+- [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also

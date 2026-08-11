@@ -334,6 +334,38 @@ survived a multi-agent design review, which is the sharpest point: review reads 
 and these failures are invisible in intent. They surface only when the thing is run and
 its output is read sceptically.
 
+A second pass over the same tooling found a harder variant, where the thing reporting
+success is the **verifier itself**:
+
+- `knowledge_rename` could not see an entry referenced by *path* rather than by wikilink,
+  so 182 references broke in one migration — and `knowledge_lint` reported the corpus
+  clean on **both** sides, because the linter's edge model has the same blind spot as the
+  writer's. Two checks whose job was to confirm a migration had worked were likewise
+  wrong: a verification grep for `[[0-9]{3,}-` matched the `2026` of every correctly
+  migrated link (6,005 hits against 26 real leftovers), and an orphan query keyed on an id
+  prefix that under date ids *is the date* collapsed 642 entries into ~85 buckets and
+  reported 0 orphans against 14 ([[2026-08-11-pattern-a-gate-blind-to-what-it-checks]]).
+- The linter and the fixer derived `## Related` edges from **two different regexes**,
+  above a comment asserting they were single-sourced. Every line with trailing content
+  diverged, so 18 of 41 findings were neither planned nor refused, and the convergence
+  loop ran forever while the fixer printed "corpus clean". The same shape, independently:
+  one bare `\d{3,}` id pattern among many sharing a grammar made the migration
+  non-idempotent for work directories
+  ([[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]]).
+
+This sharpens the cluster's thesis. A zero result is suspect; **a green gate is suspect in
+exactly the same way**, and worse, because a green check ends the investigation where an
+absent one prompts a manual look. A gate is evidence only over the forms it models, so
+when its model is inherited from — or merely coincides with — the model of the thing it
+validates, a clean run carries no information about the shared blind spot. Every instance
+above was found by running the tool on a real corpus and reading the output, never by the
+gate. Two practical rules follow: an invariant between two pieces of code is enforced by a
+shared *implementation* or not at all (a comment describing it is documentation
+substituting for verification), and when a change adds a form the gate cannot see, the
+coverage has to come from a fixture that **fails before the fix** — on the repo where these
+were fixed, 0 of 62 entries exhibited the divergent shape, so a clean lint run proved
+precisely nothing.
+
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer

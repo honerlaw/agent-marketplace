@@ -43,3 +43,4 @@ that promote only ever edits within those spans.
 - [[2026-06-02-constraint-promote-narrowed-never-overwrite]] — builds on
 - [[2026-06-02-decision-phase-b-deterministic-lint-detector]] — see also
 - [[2026-06-11-constraint-fence-scans-import-fence-re]] — see also
+- [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also

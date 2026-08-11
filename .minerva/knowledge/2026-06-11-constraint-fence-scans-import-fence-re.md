@@ -22,3 +22,4 @@ Any fence-aware scan in this repo — over **any** corpus: wiki entries, skill p
 - [[2026-06-03-constraint-wiki-edge-derivation-fence-aware]] — see also
 - [[2026-06-03-bug-knowledge-edits-not-fence-aware]] — see also
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
+- [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also
