@@ -109,8 +109,12 @@ Two consequences worth stating so nobody later "fixes" them:
   touched. Findings, summaries and `**Date**` fields are left exactly as written.
 - **Deciding whether a corpus needs migrating.** That is `minerva:migrate`, which is
   read-only and reports the shape. This skill assumes the decision is already made.
-- **Re-running against a migrated corpus.** Already-dated entries are skipped, so a second
-  run is a no-op rather than a double-rename.
+- **Re-running against a migrated corpus.** Already-dated entries AND work directories
+  are skipped, so a second run is a no-op rather than a double-rename. Work directories
+  were the exception until this was fixed: their pattern matched a bare `NNN` only, so an
+  already-migrated `2026-08-07-foo/` read as id `2026` plus slug `08-07-foo` and got
+  re-dated to `2026-08-10-08-07-foo/`, with every `**Context**` path retargeted to the
+  corrupted name.
 
 ## Related
 

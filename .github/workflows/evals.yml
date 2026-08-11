@@ -45,6 +45,7 @@ jobs:
           tests/test_skill_budget.py
           tests/test_skill_dispatch.py
           tests/test_run_analyzer.py
+          tests/test_skill_snippets.py
           -q
 
       - name: Behavioral runner --dry-run (parse + plan, zero API)

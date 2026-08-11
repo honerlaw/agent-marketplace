@@ -75,10 +75,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from knowledge_lint import ENTRY_RE, WIKILINK_STEM_RE, is_date_id  # noqa: E402
+from knowledge_lint import (ENTRY_RE, ID_RE_SRC, WIKILINK_STEM_RE,  # noqa: E402
+                            is_date_id)
 from knowledge_spans import FENCE_RE  # noqa: E402
 
-WORK_DIR_RE = re.compile(r"^(\d{3,})-(.+)$")
+# The SHARED id grammar, date arm first — not a bare `\d{3,}`. Against an already
+# migrated `2026-08-07-foo` a bare-NNN pattern captures `2026` as the id and
+# `08-07-foo` as the slug, so the tool re-dates a directory it already dated and
+# yields `2026-08-10-08-07-foo`. The entry branch never had this bug because
+# `ENTRY_RE` embeds the same alternation; this pattern was the codebase's one
+# outlier, which is what made the migration non-idempotent for work dirs.
+WORK_DIR_RE = re.compile(rf"^({ID_RE_SRC})-(.+)$")
 # What terminates a path reference written in prose. `,.;:` are excluded alongside
 # whitespace and the bracket/backtick delimiters, because a trailing separator used to
 # be captured INTO the lookup key: `**Context**: .minerva/work/111-foo, .minerva/work/…`
@@ -195,8 +202,8 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
     if wd.is_dir():
         for p in sorted(x for x in wd.iterdir() if x.is_dir()):
             m = WORK_DIR_RE.match(p.name)
-            if not m:
-                continue
+            if not m or is_date_id(m.group(1)):
+                continue  # not a work unit, or already migrated
             anchor = p / "proposal.md"
             d = landing_date(root, (anchor if anchor.exists() else p).relative_to(root))
             if not d:

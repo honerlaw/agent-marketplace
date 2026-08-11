@@ -215,3 +215,26 @@ def test_plan_counts_bare_shorthand_without_rewriting_it(tmp_path):
     assert result["shorthand_refs"] == {"139": 2, "204": 1}
     # and the rewriter leaves them exactly as they were
     assert ren.rewrite_links("see [[139]]\n", result["entries"]) == "see [[139]]\n"
+
+
+def test_an_already_migrated_work_dir_is_not_re_migrated(tmp_path):
+    """The migration must be idempotent for work dirs as it already was for entries.
+
+    `WORK_DIR_RE` matched a bare `NNN` only, so `2026-08-07-foo/` read as id `2026` plus
+    slug `08-07-foo` and was re-dated to `2026-<today>-08-07-foo/` — with every
+    `**Context**` path retargeted to the corrupted name. On this repo a second run wanted
+    to rename all 50-odd already-migrated work dirs. The entry branch never had the bug
+    because `ENTRY_RE` embeds the shared id grammar, date arm first.
+    """
+    wd = tmp_path / ".minerva" / "work"
+    (wd / "2026-08-07-already-migrated").mkdir(parents=True)
+    (wd / "111-legacy-unit").mkdir()
+    git(tmp_path, "init", "-q")
+    for name in ("2026-08-07-already-migrated", "111-legacy-unit"):
+        (wd / name / "proposal.md").write_text("# p\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    work = ren.plan(tmp_path)["work"]
+    assert "2026-08-07-already-migrated" not in work
+    assert "111-legacy-unit" in work  # the genuine legacy unit still migrates
