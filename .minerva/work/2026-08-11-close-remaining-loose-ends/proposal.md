@@ -1,7 +1,7 @@
 # Proposal: close-remaining-loose-ends
 
 **Date**: 2026-08-11
-**Status**: Draft
+**Status**: Shipped (2026-08-11)
 **Base**: `origin/main`
 
 ## Goal
@@ -184,6 +184,12 @@ re-baselined.
 9. `migrate-fix` and `lint` document the finding-count rise after upgrade.
 10. Regression fixtures for each behavioural change, each verified to fail before its fix;
     `knowledge_lint .minerva/knowledge` stays clean.
+11. (added mid-work) Every post-promote marker spelling present in the corpus reads as
+    promoted, a working scratchpad does not, and no unit whose proposal says `Shipped`
+    reads as unpromoted — asserted against the **live corpus**, not only fixtures.
+
+**All eleven met**, criterion 3 by superseding the entry rather than amending it. Suite
+486 passed on a bare `pytest` (from 459 enumerated); `knowledge_lint` reports 0 errors.
 
 ## Open questions
 

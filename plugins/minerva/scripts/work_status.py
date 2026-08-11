@@ -3,28 +3,29 @@
 
 `minerva:promote` archives a unit's scratchpad and replaces it with a one-line marker.
 Its idempotency check then reads that marker to decide "already promoted, stop". The
-check matched **one exact string** — the current spelling — and one 50-unit corpus
-contains nine. So on a unit written by any older promote, the check fails open: the pass
+check matched **one exact string** — the current spelling — and one 51-unit corpus
+contains eight, across 16 of its units. So on a unit written by any older promote, the check fails open: the pass
 re-runs and can duplicate `.minerva/knowledge/` entries.
 
 This was reported in May 2026 (knowledge `2026-05-19-bug-promote-idempotency-check-misses-old-marker`),
 which recommended "accept either marker string (preferred — forward-compatible)". That
-was never applied, and the affected set grew from 3 units to 15 of 50 while the marker
+was never applied, and the affected set grew from 3 units to 16 of 51 while the marker
 kept being reworded. Enumerating spellings in prose is what failed; a predicate that
 reads the declaration wherever and however it was written is the fix, mirroring how
 `knowledge_lint.parse_entry` resolves an entry's type across three spellings plus two
 fallbacks (knowledge `2026-08-09-pattern-read-authored-metadata-from-where-it-is`).
 
-The nine shapes present in that corpus, all of which must read as promoted. The last
-was found by this module's own live-corpus test after the first eight were enumerated,
-which is the argument for the tolerant predicate in miniature:
+The eight shapes present in that corpus, all of which must read as promoted. Counting them
+took three attempts, two of them wrong — one produced a spelling that exists NOWHERE, an
+artifact of `head -1` over a file with no trailing newline splicing two units' markers into
+one phantom line. Enumerating by eye is the thing that keeps failing here; the live-corpus
+test is what actually holds:
 
     Summarized at minerva:promote on 2026-08-09 — see archive/.     (35 — canonical)
     Summarized at /promote on 2026-05-19 — see archive/.            (2 — pre-rename)
     promoted 2026-07-28 — durable knowledge in .minerva/knowledge/051; see archive/…
     promoted 2026-08-10 — durable knowledge in .minerva/knowledge/ (4 entries…)
     Promoted 2026-06-13. Scratchpad archived.
-    promoted 2026-06-13<!-- post-promote -->
     promoted 2026-05-27
     <!-- post-promote -->
     ## Promote 2026-08-09          (a section appended to a still-live scratchpad)

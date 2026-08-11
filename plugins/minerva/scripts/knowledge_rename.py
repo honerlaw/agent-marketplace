@@ -195,6 +195,9 @@ def _resolve_shorthand(ids, by_entry_id, by_work_id, entries, already_migrated):
         elif len(by_entry_id[i]) > 1:
             refusals.append((i, f"{len(by_entry_id[i])} entries share id {i}: "
                                 f"{', '.join(by_entry_id[i])}"))
+        elif by_entry_id[i][0] not in entries:
+            refusals.append((i, f"entry '{by_entry_id[i][0]}' has id {i} but git could not "
+                                f"date it, so there is no target stem to resolve to"))
         else:
             resolved[i] = entries[by_entry_id[i][0]]
     return resolved, refusals
@@ -249,13 +252,17 @@ def plan(repo_root, knowledge_dir=None, work_dir=None, resolve_shorthand=False):
                 # Date-SHAPED but not a real date (`2026-13-45`). It is re-dated like a
                 # legacy id, which is defensible; doing it without saying so is not.
                 invalid_date_ids.append(str(p.relative_to(root)))
+            # Record the id BEFORE the date lookup. The grouping exists to detect
+            # collisions, and an entry git cannot date still HOLDS that id — recording it
+            # only on the dated path makes a real collision invisible, and resolution
+            # then picks the surviving entry with false confidence.
+            by_entry_id.setdefault(m.group(1), []).append(p.name[:-3])
             d = landing_date(root, p.relative_to(root))
             if not d:
                 undated.append(str(p.relative_to(root)))
                 continue
             rest = p.name[len(m.group(1)) + 1:-3]  # strip "<id>-" and ".md"
             entries[p.name[:-3]] = f"{d}-{rest}"
-            by_entry_id.setdefault(m.group(1), []).append(p.name[:-3])
 
     if wd.is_dir():
         for p in sorted(x for x in wd.iterdir() if x.is_dir()):
@@ -267,13 +274,13 @@ def plan(repo_root, knowledge_dir=None, work_dir=None, resolve_shorthand=False):
                 continue
             if DATE_ID_RE.match(m.group(1)):
                 invalid_date_ids.append(str(p.relative_to(root)))
+            by_work_id.setdefault(m.group(1), []).append(p.name)  # before dating: see above
             anchor = p / "proposal.md"
             d = landing_date(root, (anchor if anchor.exists() else p).relative_to(root))
             if not d:
                 undated.append(str(p.relative_to(root)))
                 continue
             work[p.name] = f"{d}-{m.group(2)}"
-            by_work_id.setdefault(m.group(1), []).append(p.name)
 
     collisions = []
     for mapping in (entries, work):

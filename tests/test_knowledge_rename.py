@@ -356,3 +356,30 @@ def test_shorthand_sites_carry_file_and_line(tmp_path):
                           text="line one\nsee [[139]]\n")
     sites = ren.plan(root)["shorthand_sites"]
     assert ("notes.md", 2, "139") in sites
+
+
+def test_an_undated_colliding_entry_still_blocks_resolution(tmp_path, monkeypatch):
+    """The collision guard must see every entry holding the id, not just the datable ones.
+
+    `by_entry_id` used to be populated only on the path that succeeds at `landing_date`,
+    so an entry git could not date (uncommitted, or no history — a state `migrate-fix`
+    documents as ordinary) dropped out of the grouping. The collision then vanished and
+    resolution picked the surviving entry with false confidence.
+    """
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo", "139-decision-bar"],
+                          text="see [[139]]\n")
+    real = ren.landing_date
+    monkeypatch.setattr(ren, "landing_date",
+                        lambda r, p: None if "bar" in str(p) else real(r, p))
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}, "an undated collision must not resolve"
+    assert "2 entries share id 139" in dict(r["shorthand_refusals"])["139"]
+
+
+def test_a_lone_undated_entry_refuses_rather_than_resolving(tmp_path, monkeypatch):
+    """No collision, but nothing to resolve TO — the entry has no target stem."""
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"], text="see [[139]]\n")
+    monkeypatch.setattr(ren, "landing_date", lambda r, p: None)
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}
+    assert "could not date it" in dict(r["shorthand_refusals"])["139"]

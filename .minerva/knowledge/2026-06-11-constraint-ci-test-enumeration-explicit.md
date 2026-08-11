@@ -4,6 +4,12 @@
 **Type**: constraint
 **Context**: .minerva/work/2026-06-11-skill-progressive-disclosure
 
+
+<!-- superseded-by: 2026-08-11-decision-ci-runs-the-whole-suite -->
+> **Superseded by [[2026-08-11-decision-ci-runs-the-whole-suite]]** (2026-08-11) — CI now runs `pytest tests/`; the enumerated list is gone, so a new module
+> cannot be dark to CI. The three files that forced the list tested a plugin
+> deleted in `20d32e0` and were removed.
+
 ## Context
 Work unit 035 added `tests/test_skill_budget.py` and claimed its success criterion "enforced in CI" once the test passed locally. The completion-verification panel failed the unit on its first vote (1/3 accept) because the test was not running in CI at all, forcing a replan.
 
