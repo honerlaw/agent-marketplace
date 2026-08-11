@@ -75,11 +75,35 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from knowledge_lint import ENTRY_RE, WIKILINK_STEM_RE, is_date_id  # noqa: E402
+from knowledge_lint import (ENTRY_RE, ID_RE_SRC, WIKILINK_STEM_RE,  # noqa: E402
+                            _strip_fences, is_date_id)
 from knowledge_spans import FENCE_RE  # noqa: E402
 
-WORK_DIR_RE = re.compile(r"^(\d{3,})-(.+)$")
-CONTEXT_PATH_RE = re.compile(r"(\.minerva/work/)([^\s/`)\]]+)")
+# The SHARED id grammar, date arm first — not a bare `\d{3,}`. Against an already
+# migrated `2026-08-07-foo` a bare-NNN pattern captures `2026` as the id and
+# `08-07-foo` as the slug, so the tool re-dates a directory it already dated and
+# yields `2026-08-10-08-07-foo`. The entry branch never had this bug because
+# `ENTRY_RE` embeds the same alternation; this pattern was the codebase's one
+# outlier, which is what made the migration non-idempotent for work dirs.
+WORK_DIR_RE = re.compile(rf"^({ID_RE_SRC})-(.+)$")
+# What terminates a path reference written in prose. `,.;:` are excluded alongside
+# whitespace and the bracket/backtick delimiters, because a trailing separator used to
+# be captured INTO the lookup key: `**Context**: .minerva/work/111-foo, .minerva/work/…`
+# yielded the key `111-foo,`, which missed the map, so that path was silently left
+# behind while its neighbour on the same line was rewritten.
+_PATH_CHARS = r"[^\s/`)\],.;:]+"
+CONTEXT_PATH_RE = re.compile(rf"(\.minerva/work/)({_PATH_CHARS})")
+# An entry referenced by PATH rather than by wikilink — in prose, in backticks, or as
+# the target of a markdown link. Renaming the file without retargeting these leaves a
+# dead path that no tool here reports: the linter's edge model only knows `[[wikilinks]]`,
+# so a corpus can lose every one of these and still lint clean, before AND after.
+KNOWLEDGE_PATH_RE = re.compile(rf"(\.minerva/knowledge/)({_PATH_CHARS})\.md")
+# A markdown link to a sibling entry: `[text](stem.md)` or `[text](./stem.md)`. The
+# `.minerva/knowledge/`-prefixed form is already covered by KNOWLEDGE_PATH_RE above.
+MD_LINK_RE = re.compile(rf"(\]\((?:\./)?)({_PATH_CHARS})\.md\)")
+# `[[139]]` — an entry named by bare id, with no slug. Counted, never rewritten: see
+# `plan`'s docstring for why resolving it is unsafe.
+BARE_SHORTHAND_RE = re.compile(r"\[\[(\d{3,})\]\]")
 WATERMARK_LINE_RE = re.compile(r"^\s*<!--\s*(?:index|synthesis)-watermark:[^>]*-->\s*$")
 
 
@@ -114,15 +138,48 @@ def landing_date(repo_root, rel_path):
     return None
 
 
+def _corpus_md(root: Path):
+    """Yield `(path, text)` for every readable markdown file in the corpus.
+
+    Shared by `plan` (which only reads) and `apply` (which rewrites), so the set of
+    files scanned for references is by construction the set of files rewritten.
+
+    Paths are tested RELATIVE to the repo root, never absolutely. minerva runs its own
+    work inside `.minerva/worktrees/<unit>/`, so when this executes in a worktree the
+    absolute path of EVERY file contains that segment — an absolute test silently skips
+    the entire corpus and reports "0 files rewritten" while the renames succeed, leaving
+    every link dangling.
+    """
+    for p in sorted(root.rglob("*.md")):
+        rel = p.relative_to(root)
+        if ".git" in rel.parts or rel.parts[:2] == (".minerva", "worktrees"):
+            continue
+        try:
+            yield p, p.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+
+
 def plan(repo_root, knowledge_dir=None, work_dir=None):
     """Compute the full rename plan without touching anything.
 
     Returns {entries: {old_stem: new_stem}, work: {old_name: new_name},
-             undated: [...], collisions: [(target, [sources])]}.
+             undated: [...], collisions: [(target, [sources])],
+             shorthand_refs: {id: count}}.
 
     `undated` holds paths git could not date — an uncommitted file, or a corpus with no
     history. They are reported and SKIPPED rather than guessed at: inventing a date would
     silently mint an id that does not correspond to anything.
+
+    `shorthand_refs` counts `[[139]]`-style references — an entry named by bare id, with
+    no slug. They are COUNTED and never rewritten. Not rewriting is defensible: there is
+    no slug to match on, and resolving by number alone is wrong often enough to refuse.
+    In one 637-entry corpus, of 23 cases where a number named exactly one entry, ~6
+    meant something else — usually the same-numbered WORK UNIT, one of them literally
+    annotated "(work unit)" in the prose. Doing it SILENTLY is what is not defensible:
+    before the rename a reader could resolve `[[139]]` with `ls .minerva/knowledge/139-*`,
+    and after it the number appears in no filename at all, so an unreported one is a
+    reference that quietly stops resolving.
     """
     root = Path(repo_root)
     kd = Path(knowledge_dir) if knowledge_dir else root / ".minerva" / "knowledge"
@@ -145,8 +202,8 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
     if wd.is_dir():
         for p in sorted(x for x in wd.iterdir() if x.is_dir()):
             m = WORK_DIR_RE.match(p.name)
-            if not m:
-                continue
+            if not m or is_date_id(m.group(1)):
+                continue  # not a work unit, or already migrated
             anchor = p / "proposal.md"
             d = landing_date(root, (anchor if anchor.exists() else p).relative_to(root))
             if not d:
@@ -161,8 +218,19 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
             seen.setdefault(new, []).append(old)
         collisions.extend((t, s) for t, s in sorted(seen.items()) if len(s) > 1)
 
+    # Fence-aware, like every other scan in this plugin: a `[[139]]` inside a fenced
+    # block is documentation showing what the old syntax looked like, not a live
+    # reference, and counting it would report work that does not exist. Same rule as
+    # `rewrite_links` below and `knowledge_lint.related_edges`.
+    shorthand_refs = {}
+    for _, text in _corpus_md(root):
+        for _, line in _strip_fences(text.splitlines()):
+            for m in BARE_SHORTHAND_RE.finditer(line):
+                shorthand_refs[m.group(1)] = shorthand_refs.get(m.group(1), 0) + 1
+
     return {"entries": entries, "work": work,
-            "undated": undated, "collisions": collisions}
+            "undated": undated, "collisions": collisions,
+            "shorthand_refs": shorthand_refs}
 
 
 def rewrite_links(text, stem_map, dir_map=None):
@@ -197,6 +265,13 @@ def rewrite_links(text, stem_map, dir_map=None):
             r"(<!-- superseded-by: )([^\s]+)( -->)",
             lambda m: m.group(1) + stem_map.get(m.group(2), m.group(2)) + m.group(3),
             line)
+        # Entries referenced by PATH, not by wikilink. Map-lookup-only, exactly like
+        # every other form here: a stem absent from the map is left byte-identical, so
+        # these patterns can only retarget a file this migration is already moving.
+        line = KNOWLEDGE_PATH_RE.sub(
+            lambda m: m.group(1) + stem_map.get(m.group(2), m.group(2)) + ".md", line)
+        line = MD_LINK_RE.sub(
+            lambda m: m.group(1) + stem_map.get(m.group(2), m.group(2)) + ".md)", line)
         if dir_map:
             line = CONTEXT_PATH_RE.sub(
                 lambda m: m.group(1) + dir_map.get(m.group(2), m.group(2)), line)
@@ -218,19 +293,7 @@ def apply(repo_root, plan_result, knowledge_dir=None, work_dir=None):
 
     # Rewrite references BEFORE moving, so every path in the map still resolves.
     touched = 0
-    for p in sorted(root.rglob("*.md")):
-        # Test the path RELATIVE to the repo root, never the absolute one. minerva runs
-        # its own work inside `.minerva/worktrees/<unit>/`, so when this executes in a
-        # worktree the absolute path of EVERY file contains that segment — an absolute
-        # test silently skips the entire corpus and reports "0 files rewritten" while
-        # the renames succeed, leaving every link dangling.
-        rel = p.relative_to(root)
-        if ".git" in rel.parts or rel.parts[:2] == (".minerva", "worktrees"):
-            continue
-        try:
-            text = p.read_text()
-        except (OSError, UnicodeDecodeError):
-            continue
+    for p, text in _corpus_md(root):
         new = rewrite_links(text, stem_map, dir_map)
         if new != text:
             p.write_text(new)
@@ -244,7 +307,8 @@ def apply(repo_root, plan_result, knowledge_dir=None, work_dir=None):
               str((wd / new).relative_to(root))], root)
 
     return {"entries_renamed": len(stem_map), "work_renamed": len(dir_map),
-            "files_rewritten": touched, "undated": plan_result["undated"]}
+            "files_rewritten": touched, "undated": plan_result["undated"],
+            "shorthand_refs": plan_result.get("shorthand_refs", {})}
 
 
 def main(argv=None) -> int:
@@ -257,6 +321,13 @@ def main(argv=None) -> int:
         return 1
     for path in result["undated"]:
         print(f"UNDATED (skipped) {path}", file=sys.stderr)
+    shorthand = result.get("shorthand_refs", {})
+    if shorthand:
+        total = sum(shorthand.values())
+        print(f"SHORTHAND (not rewritten) {total} bare [[NNN]] reference(s) across "
+              f"{len(shorthand)} id(s): "
+              + ", ".join(f"[[{k}]]x{v}" for k, v in sorted(shorthand.items())),
+              file=sys.stderr)
     if "--apply" not in argv:
         print(f"plan: {len(result['entries'])} entries, {len(result['work'])} work dirs")
         for old, new in sorted(result["entries"].items()):

@@ -534,3 +534,44 @@ def test_the_four_original_types_keep_their_order(tmp_path):
     headers = [ln for ln in (kd / "index.md").read_text().splitlines() if ln.startswith("## ")]
     assert headers == ["## Decisions", "## Bugs", "## Patterns", "## Constraints", "## References"]
     assert batch["index"] is None  # already canonical -> byte-level no-op
+
+
+# --- the fixer and the linter share ONE edge model ----------------------------
+def test_fixer_and_linter_derive_the_same_edges():
+    """The invariant `RELATED_LINE_RE`'s comment asserted and the code did not hold: the
+    linter derived edges from the start-anchored CATALOG_LINE_RE, the fixer from the
+    also-end-anchored RELATED_LINE_RE. Any line with trailing content that is not
+    `— label` diverged, and an edge the linter counts but the fixer skips is a finding
+    nothing repairs and nothing refuses — a convergence loop that never terminates while
+    the fixer prints "corpus clean". Asserted over the shapes that used to diverge."""
+    from knowledge_lint import related_edges
+    for tail in ["— supersedes", "/ [[2026-01-02-pattern-b]] — both", "/", "",
+                 "— refines  ", "/ [[2026-01-02-pattern-b]]"]:
+        text = f"# t\n\n## Related\n- [[2026-01-01-decision-a]] {tail}\n"
+        assert {t for t, _ in fix._forward_related(text)} == \
+               {t for t, _ in related_edges(text)}, tail
+
+
+def test_multi_target_line_produces_a_refusal_not_silence(tmp_path):
+    """The reported failure mode: 18 of 41 findings were neither planned nor refused.
+    A two-target line has no single label to reciprocate, so the edge must surface as a
+    REFUSAL — visible, and never a fabricated label written into a neighbour."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo"),
+         "002-constraint-bar.md": entry("constraint", "bar"),
+         "003-pattern-other.md": entry("pattern", "other")},
+        index_md({"Decisions": [("001-decision-foo", "d")],
+                  "Constraints": [("002-constraint-bar", "c")],
+                  "Patterns": [("003-pattern-other", "p")]}),
+    )
+    foo = kd / "001-decision-foo.md"
+    foo.write_text(foo.read_text().rstrip("\n") +
+                   "\n\n## Related\n- [[002-constraint-bar]] / [[003-pattern-other]] — both\n")
+    batch = fix.plan(kd, DATE)
+    reasons = " ".join(r[2] for r in batch["refusals"])
+    assert batch["refusals"], "the edge must not vanish silently"
+    assert "relationship label" in reasons
+    # and nothing was auto-written from a label the line does not carry
+    assert "002-constraint-bar" not in batch["entries"]
+    assert "003-pattern-other" not in batch["entries"]

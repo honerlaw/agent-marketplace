@@ -69,8 +69,16 @@ warnings are normal and are `minerva:cleanup`'s job. Then confirm no live legacy
 survived:
 
 ```bash
-grep -rE '\[\[[0-9]{3,}-' --include='*.md' . | grep -v '.minerva/worktrees'
+grep -rE '\[\[[0-9]{3,}-' --include='*.md' . \
+  | grep -vE '\[\[[0-9]{4}-[0-9]{2}-[0-9]{2}-' | grep -v '.minerva/worktrees'
 ```
+
+The second `grep -v` is what makes this check mean anything. A bare `[[0-9]{3,}-` also
+matches the `2026` of every correctly-migrated `[[2026-05-19-…]]` link, so the pattern
+that looks like it finds leftovers actually matches the whole corpus — 6,005 hits against
+26 real ones, on the corpus where this was caught. Excluding the date shape is what
+leaves only genuine legacy ids. The `{3,}` stays as it was: that is the legacy id's own
+width (`ID_RE_SRC`), and loosening it to `+` would start reporting any bracketed number.
 
 Remaining hits should only ever be inside fenced examples, or prose in an entry recounting
 an old number. Both are correct: the migration is fence-aware by design.
@@ -102,8 +110,12 @@ Two consequences worth stating so nobody later "fixes" them:
   touched. Findings, summaries and `**Date**` fields are left exactly as written.
 - **Deciding whether a corpus needs migrating.** That is `minerva:migrate`, which is
   read-only and reports the shape. This skill assumes the decision is already made.
-- **Re-running against a migrated corpus.** Already-dated entries are skipped, so a second
-  run is a no-op rather than a double-rename.
+- **Re-running against a migrated corpus.** Already-dated entries AND work directories
+  are skipped, so a second run is a no-op rather than a double-rename. Work directories
+  were the exception until this was fixed: their pattern matched a bare `NNN` only, so an
+  already-migrated `2026-08-07-foo/` read as id `2026` plus slug `08-07-foo` and got
+  re-dated to `2026-08-10-08-07-foo/`, with every `**Context**` path retargeted to the
+  corrupted name.
 
 ## Related
 

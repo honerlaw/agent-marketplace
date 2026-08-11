@@ -149,6 +149,8 @@ BANNER_TARGET_STEM_RE = re.compile(
 # editor found it present and no-opped, and the entry was re-planned as "changed"
 # forever. Used for back-link DETECTION only, where matching the editor is the point.
 WIKILINK_STEM_RE = re.compile(rf"\[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\]")
+# A stem's own leading id, for callers holding a stem and needing the id half of it.
+ID_PREFIX_RE = re.compile(rf"^({ID_RE_SRC})-")
 # A `## Related` line, with its relationship label: group(3), or None when the line
 # carries no separator+label. Single-sourced so `knowledge_fix` cannot recognise a
 # narrower set of edges than this linter reports on — a line the linter counts as an
@@ -181,6 +183,59 @@ def _strip_fences(lines):
             continue
         if not in_fence:
             yield i, line
+
+
+def related_edges(text: str) -> list:
+    """Every `## Related` edge in `text`, as `[(target_stem, label_or_None)]`.
+
+    THE edge model. Both the detector (`parse_entry`) and the editor
+    (`knowledge_fix._forward_related`) call this, so neither can recognise a set of
+    edges the other does not. That is a correctness property, not tidiness: an edge the
+    linter counts but the fixer skips is a permanent finding nothing repairs and nothing
+    refuses, so a convergence loop runs forever while the fixer reports the corpus
+    clean. It was previously asserted by a comment on `RELATED_LINE_RE` and violated by
+    the code — `parse_entry` derived its own edges from the start-anchored
+    `CATALOG_LINE_RE`, which sees `- [[a]] / [[b]] — label` and `- [[a]] /` where the
+    end-anchored `RELATED_LINE_RE` sees nothing at all.
+
+    EVERY wikilink in the block is an edge, matching the editor's own whole-line scan
+    (`add_related_link._related_has_target`) and the back-link detector. A label is
+    carried only when the line is unambiguously one target and one label; otherwise it
+    is None, which `knowledge_fix.plan_reciprocals` already handles by REFUSING the
+    reciprocal. Refusing is the point: a multi-target line has no single label to
+    reciprocate, and the alternative — inventing one from the line's tail — would write
+    a wrong edge into a neighbouring entry.
+
+    Block selection is the LAST non-fenced `## Related` header, span to EOF. Fenced
+    blocks are excluded: a `[[...]]` inside a fence is documentation showing what a link
+    looks like, not an edge (knowledge 2026-06-03).
+    """
+    nonfenced = list(_strip_fences(text.splitlines()))
+    start = None
+    for i, line in nonfenced:
+        if line.strip() == RELATED_HEADER:
+            start = i  # keep the last one
+    if start is None:
+        return []
+    edges = {}
+    for i, line in nonfenced:
+        if i <= start:
+            continue
+        targets = [m.group(1) for m in WIKILINK_STEM_RE.finditer(line)]
+        if not targets:
+            continue
+        label = None
+        if len(targets) == 1:
+            m = RELATED_LINE_RE.match(line.strip())
+            if m and m.group(3):
+                label = m.group(3).strip()
+        for target in targets:
+            # First occurrence wins, except that a labelled edge upgrades an unlabelled
+            # one — otherwise a stray earlier mention would refuse a reciprocal the
+            # entry does state properly further down.
+            if target not in edges or (edges[target] is None and label is not None):
+                edges[target] = label
+    return list(edges.items())
 
 
 def parse_entry(path: Path):
@@ -231,23 +286,12 @@ def parse_entry(path: Path):
         if m:
             banner_target_stems.add(m.group(1))
 
-    # The ## Related block = the LAST non-fenced `## Related` header, span to EOF.
-    related_header_idx = None
-    for i, line in nonfenced:
-        if line.strip() == RELATED_HEADER:
-            related_header_idx = i
-    related_out = set()
-    related_out_stems = set()
-    related_mention_stems = set()
-    if related_header_idx is not None:
-        for i, line in nonfenced:
-            if i <= related_header_idx:
-                continue
-            m = CATALOG_LINE_RE.match(line.strip())
-            if m:
-                related_out.add(m.group(2))
-                related_out_stems.add(m.group(1))
-            related_mention_stems.update(m.group(1) for m in WIKILINK_STEM_RE.finditer(line))
+    # Forward edges come from the SHARED model, so this detector and `knowledge_fix`'s
+    # editor read the same block the same way. `related_mention_stems` is the same set
+    # of targets — the whole-line scan that used to be kept separately for back-link
+    # detection is now what `related_edges` itself does.
+    edge_stems = {target for target, _ in related_edges(text)}
+    related_out = {ID_PREFIX_RE.match(s).group(1) for s in edge_stems}
     return {
         "nnn": ENTRY_RE.match(path.name).group(1),
         "stem": path.name[:-3],
@@ -255,12 +299,17 @@ def parse_entry(path: Path):
         "summary": summary,
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
-        # STEM-keyed twins of the two sets above. An NNN shared by several entries
+        # STEM-keyed twin of `related_out` above. An NNN shared by several entries
         # cannot say WHICH entry an edge points at; a stem always can. Kept alongside
-        # rather than replacing them so this linter's own NNN-shaped checks are
-        # untouched by the fixer's move to stems.
-        "related_out_stems": related_out_stems,
-        "backlink_stems": related_mention_stems | banner_target_stems,
+        # rather than replacing it so this linter's own NNN-shaped checks are untouched
+        # by the fixer's move to stems.
+        #
+        # Outbound and inbound now derive from ONE set. They used to differ — outbound
+        # read only a line's first wikilink while inbound scanned the whole line — and
+        # that asymmetry is precisely the defect `related_edges` closes: a target could
+        # be counted as linked-to without being counted as linked-from.
+        "related_out_stems": edge_stems,
+        "backlink_stems": edge_stems | banner_target_stems,
     }
 
 

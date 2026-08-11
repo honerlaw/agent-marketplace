@@ -44,9 +44,8 @@ from knowledge_lint import (
     corpus_id_width,
     id_sort_key,
     ENTRY_RE,
-    RELATED_LINE_RE,
     SECTION_TO_TYPE,
-    _strip_fences,
+    related_edges,
     lint_knowledge,
     parse_entry,
     parse_index,
@@ -55,10 +54,6 @@ from knowledge_edits import add_related_link, add_supersede_banner, body_complem
 
 # index.md catalog line: `- [[NNN-type-slug]] — summary`
 _CATALOG_LINE_RE = re.compile(r"^-\s+\[\[((?:\d{4}-\d{2}-\d{2}|\d{3,})-[a-z]+-[^\]]+)\]\]")
-# A forward `## Related` line comes from knowledge_lint.RELATED_LINE_RE — the same
-# grammar the detector reports edges with. A narrower one here would let the fixer
-# silently skip an edge the linter flags, producing an error nothing repairs.
-# groups: 1 = stem, 2 = NNN, 3 = label (None when the line has no separator+label).
 
 # section header -> type and back. Order is the canonical skeleton order.
 TYPE_TO_SECTION = {v: k for k, v in SECTION_TO_TYPE.items()}
@@ -251,27 +246,15 @@ def plan_index(kd: Path) -> tuple:
 
 # --- ENTRY fix (missing reciprocal) ------------------------------------------
 def _forward_related(parsed_text: str) -> list:
-    """Parse an entry's `## Related` block -> [(target_nnn, label)].
+    """An entry's `## Related` edges -> `[(target_stem, label_or_None)]`.
 
-    Fence-aware, matching the detector's edge model (knowledge_lint is fence-aware
-    and a fenced `## Related` example — e.g. in a convention doc — must NOT be read
-    as a real edge). Uses the LAST non-fenced `## Related` header (the canonical
-    terminal block), per the detector's own block-selection rule.
+    A thin alias for `knowledge_lint.related_edges` — the SINGLE edge model this fixer
+    and the detector share. It is kept as a name because the surrounding code and its
+    tests read in terms of "forward related", but it must never grow a second
+    implementation: a fixer that recognises fewer edges than the linter reports leaves
+    findings nothing repairs and nothing refuses.
     """
-    nonfenced = [ln for _, ln in _strip_fences(parsed_text.splitlines())]
-    start = None
-    for i, ln in enumerate(nonfenced):
-        if ln.strip() == "## Related":
-            start = i  # keep the last one
-    if start is None:
-        return []
-    out = []
-    for ln in nonfenced[start + 1:]:
-        m = RELATED_LINE_RE.match(ln.strip())
-        if m:
-            label = m.group(3)
-            out.append((m.group(1), label.strip() if label else None))
-    return out
+    return related_edges(parsed_text)
 
 
 def plan_reciprocals(kd: Path, date: str) -> tuple:

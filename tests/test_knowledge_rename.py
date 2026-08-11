@@ -154,3 +154,112 @@ def test_follow_without_diff_filter_dates_a_renamed_path(repo):
     got = ren.landing_date(repo, ".minerva/knowledge/001-decision-foo.md")
     assert got is not None, "a renamed path must still resolve to a date"
     assert len(got) == 10 and got[4] == "-"
+
+
+# --- reference forms the rewriter used to miss --------------------------------
+MAP = {"015-decision-foo": "2026-05-19-decision-foo"}
+
+
+def test_rewrites_a_knowledge_path_reference():
+    """An entry referenced by PATH rather than by wikilink. The linter's edge model only
+    knows `[[wikilinks]]`, so a corpus can lose every one of these and still lint clean
+    both before and after — 182 of them broke in one real migration, undetected."""
+    src = "See `.minerva/knowledge/015-decision-foo.md` for detail.\n"
+    assert ren.rewrite_links(src, MAP) == \
+        "See `.minerva/knowledge/2026-05-19-decision-foo.md` for detail.\n"
+
+
+def test_rewrites_a_relative_markdown_link():
+    assert ren.rewrite_links("[e](015-decision-foo.md)\n", MAP) == \
+        "[e](2026-05-19-decision-foo.md)\n"
+    assert ren.rewrite_links("[e](./015-decision-foo.md)\n", MAP) == \
+        "[e](./2026-05-19-decision-foo.md)\n"
+
+
+def test_leaves_an_unmapped_path_byte_identical():
+    """Map-lookup-only is what bounds the blast radius: these patterns can only retarget
+    a file the migration is already moving, never invent a target."""
+    src = "See `.minerva/knowledge/099-bug-other.md` and [x](other.md).\n"
+    assert ren.rewrite_links(src, MAP) == src
+
+
+def test_leaves_a_fenced_path_reference_alone():
+    src = "```\n`.minerva/knowledge/015-decision-foo.md`\n```\n"
+    assert ren.rewrite_links(src, MAP) == src
+
+
+def test_context_path_with_trailing_punctuation_resolves():
+    """`,` used to be captured INTO the lookup key, so `111-terms,` missed the map and
+    the path was left behind while its neighbour on the same line was rewritten."""
+    dmap = {"111-terms": "2026-06-05-terms"}
+    out = ren.rewrite_links(
+        "**Context**: .minerva/work/111-terms, .minerva/work/111-terms\n", {}, dmap)
+    assert "111-terms" not in out
+    assert out.count("2026-06-05-terms") == 2
+
+
+def test_plan_counts_bare_shorthand_without_rewriting_it(tmp_path):
+    """`[[139]]` names an entry with no slug. Before a rename a reader can resolve it
+    with `ls .minerva/knowledge/139-*`; after one the number is in no filename at all.
+    Counted so the migration reports it — never resolved, because resolving by number
+    alone is wrong often enough to refuse."""
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    git(tmp_path, "init", "-q")
+    (kd / "015-decision-foo.md").write_text("body\n")
+    (tmp_path / "notes.md").write_text("see [[139]] and [[139]] and [[204]]\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    result = ren.plan(tmp_path)
+    assert result["shorthand_refs"] == {"139": 2, "204": 1}
+    # and the rewriter leaves them exactly as they were
+    assert ren.rewrite_links("see [[139]]\n", result["entries"]) == "see [[139]]\n"
+
+
+def test_an_already_migrated_work_dir_is_not_re_migrated(tmp_path):
+    """The migration must be idempotent for work dirs as it already was for entries.
+
+    `WORK_DIR_RE` matched a bare `NNN` only, so `2026-08-07-foo/` read as id `2026` plus
+    slug `08-07-foo` and was re-dated to `2026-<today>-08-07-foo/` — with every
+    `**Context**` path retargeted to the corrupted name. On this repo a second run wanted
+    to rename all 50-odd already-migrated work dirs. The entry branch never had the bug
+    because `ENTRY_RE` embeds the shared id grammar, date arm first.
+    """
+    wd = tmp_path / ".minerva" / "work"
+    (wd / "2026-08-07-already-migrated").mkdir(parents=True)
+    (wd / "111-legacy-unit").mkdir()
+    git(tmp_path, "init", "-q")
+    for name in ("2026-08-07-already-migrated", "111-legacy-unit"):
+        (wd / name / "proposal.md").write_text("# p\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    work = ren.plan(tmp_path)["work"]
+    assert "2026-08-07-already-migrated" not in work
+    assert "111-legacy-unit" in work  # the genuine legacy unit still migrates
+
+
+def test_shorthand_count_ignores_fenced_examples(tmp_path):
+    """A `[[139]]` inside a fence is documentation showing the old syntax, not a live
+    reference. Counting it would report migration work that does not exist — the same
+    fence-blindness the plugin has had to re-fix twice before."""
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    git(tmp_path, "init", "-q")
+    (tmp_path / "doc.md").write_text(
+        "live [[139]] here\n\n```\nexample: see [[204]] for the old style\n```\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    assert ren.plan(tmp_path)["shorthand_refs"] == {"139": 1}
+
+
+def test_a_markdown_link_outside_the_knowledge_dir_is_still_map_bound():
+    """`MD_LINK_RE` is not directory-anchored, unlike `KNOWLEDGE_PATH_RE` — deliberately,
+    matching `WIKILINK_STEM_RE`'s existing whole-repo reach. What bounds it is the map:
+    a stem the migration is not moving is left byte-identical wherever it appears."""
+    assert ren.rewrite_links("[x](README.md) and [y](099-bug-other.md)\n", MAP) == \
+        "[x](README.md) and [y](099-bug-other.md)\n"
+    assert ren.rewrite_links("[x](015-decision-foo.md)\n", MAP) == \
+        "[x](2026-05-19-decision-foo.md)\n"

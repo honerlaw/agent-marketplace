@@ -484,3 +484,55 @@ def test_a_body_type_line_is_not_mistaken_for_frontmatter(tmp_path):
     p = _write(tmp_path, "001-pattern-foo.md",
                "---\nname: foo\n---\n\n# t\n\n```yaml\ntype: bug\n```\n\n## Context\nc\n")
     assert parse_entry(p)["declared_type"] == "pattern"  # filename, not the fenced body line
+
+
+# --- the shared edge model (defect: lint and fix disagreed on what an edge is) ---
+def test_every_wikilink_in_the_related_block_is_an_edge():
+    """`- [[a]] / [[b]] — label` states two edges, and the editor already treats the
+    second as a real back-link. The detector read only the first, because it derived
+    edges from the start-anchored CATALOG_LINE_RE."""
+    from knowledge_lint import related_edges
+    text = "# t\n\n## Related\n- [[2026-01-01-decision-a]] / [[2026-01-02-pattern-b]] — both\n"
+    assert {t for t, _ in related_edges(text)} == {
+        "2026-01-01-decision-a", "2026-01-02-pattern-b"}
+
+
+def test_a_multi_target_line_carries_no_label():
+    """There is no single label to reciprocate from a two-target line, so the label is
+    None and `knowledge_fix` refuses it rather than inventing one from the line's tail."""
+    from knowledge_lint import related_edges
+    text = "# t\n\n## Related\n- [[2026-01-01-decision-a]] / [[2026-01-02-pattern-b]] — both\n"
+    assert {lab for _, lab in related_edges(text)} == {None}
+
+
+def test_a_single_target_line_still_carries_its_label():
+    from knowledge_lint import related_edges
+    text = "# t\n\n## Related\n- [[2026-01-01-decision-a]] — supersedes\n"
+    assert related_edges(text) == [("2026-01-01-decision-a", "supersedes")]
+
+
+def test_a_labelled_edge_upgrades_an_earlier_unlabelled_mention():
+    """A stray mention must not suppress the properly-labelled line further down, or the
+    fixer would refuse a reciprocal the entry does state correctly."""
+    from knowledge_lint import related_edges
+    text = ("# t\n\n## Related\n"
+            "- [[2026-01-01-decision-a]] / [[2026-01-02-pattern-b]] — both\n"
+            "- [[2026-01-01-decision-a]] — supersedes\n")
+    assert dict(related_edges(text))["2026-01-01-decision-a"] == "supersedes"
+
+
+def test_a_fenced_related_block_states_no_edges():
+    from knowledge_lint import related_edges
+    text = "# t\n\n## Related\n```\n- [[2026-01-01-decision-a]] — supersedes\n```\n"
+    assert related_edges(text) == []
+
+
+def test_lint_reports_a_broken_link_on_a_multi_target_line(tmp_path):
+    """The end-to-end consequence: the second target of a shared line is a real edge,
+    so a dangling one is a real broken link."""
+    (tmp_path / "001-decision-foo.md").write_text(
+        entry("decision", "foo") + "\n## Related\n- [[001-decision-foo]] / [[999-bug-gone]] — x\n")
+    (tmp_path / "index.md").write_text(
+        "# Knowledge index\n\n## Decisions\n\n- [[001-decision-foo]] — d\n")
+    msgs = [f.message for f in lint_knowledge(tmp_path)]
+    assert any("999-bug-gone" in m for m in msgs)
