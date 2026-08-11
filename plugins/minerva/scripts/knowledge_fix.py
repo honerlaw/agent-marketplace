@@ -45,6 +45,7 @@ from knowledge_lint import (
     id_sort_key,
     ENTRY_RE,
     SECTION_TO_TYPE,
+    _strip_fences,
     related_edges,
     lint_knowledge,
     parse_entry,
@@ -160,7 +161,13 @@ def plan_index(kd: Path) -> tuple:
     # the existing index. Stale lines (NNN with no entry file) are dropped.
     parsed = []  # (stem, verbatim_line, current_section)
     cur_sec = None
-    for ln in old.splitlines():
+    # Fence-aware, matching `knowledge_lint.parse_index`, which reads this same file
+    # through the same helper. Fence-blind here meant a fenced catalog line naming a real
+    # entry was invisible to the detector but a LIVE line to this rewriter, so the entry
+    # came out catalogued twice — once carrying the example's summary — with no refusal
+    # and a clean lint run. Detector and editor must read one file one way
+    # (knowledge 2026-08-11 on shared invariants).
+    for _, ln in _strip_fences(old.splitlines()):
         s = ln.strip()
         if s in SECTION_TO_TYPE:  # a `## Type` header
             cur_sec = s

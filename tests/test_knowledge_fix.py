@@ -575,3 +575,38 @@ def test_multi_target_line_produces_a_refusal_not_silence(tmp_path):
     # and nothing was auto-written from a label the line does not carry
     assert "002-constraint-bar" not in batch["entries"]
     assert "003-pattern-other" not in batch["entries"]
+
+
+def test_a_fenced_catalog_line_does_not_become_a_live_entry(tmp_path):
+    """`plan_index` REWRITES index.md from what it parses, so a fence-blind scan promoted
+    a documented example into the catalog. The detector never saw it — `parse_index` is
+    fence-aware — so the entry came out catalogued twice, once carrying the example's fake
+    summary, with no refusal and a clean lint run."""
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo", summary="the real one")},
+        "# Knowledge index\n\n## Decisions\n\n"
+        "```\n- [[001-decision-foo]] — QUOTED IN A FENCE, not the real summary\n```\n\n"
+        "- [[001-decision-foo]] — the real one\n\n"
+        "## Bugs\n\n## Patterns\n\n## Constraints\n\n## References\n",
+    )
+    new, _old, refusals = fix.plan_index(kd)
+    assert new.count("001-decision-foo") == 1, "the fenced example must not be catalogued"
+    assert "QUOTED IN A FENCE" not in new
+    assert refusals == []
+
+
+def test_the_fixer_and_the_linter_read_index_md_the_same_way(tmp_path):
+    """The invariant behind the fix: one file, one parse."""
+    from knowledge_lint import parse_index
+    kd = make_dir(
+        tmp_path,
+        {"001-decision-foo.md": entry("decision", "foo", summary="the real one")},
+        "# Knowledge index\n\n## Decisions\n\n"
+        "```\n- [[002-bug-fenced]] — an example line\n```\n\n"
+        "- [[001-decision-foo]] — the real one\n\n"
+        "## Bugs\n\n## Patterns\n\n## Constraints\n\n## References\n",
+    )
+    new, _old, _r = fix.plan_index(kd)
+    assert "002-bug-fenced" not in new
+    assert "002-bug-fenced" not in parse_index(kd / "index.md")["catalog"]
