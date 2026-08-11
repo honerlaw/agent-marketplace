@@ -1,7 +1,7 @@
 # Proposal: close-the-followups
 
 **Date**: 2026-08-11
-**Status**: Draft
+**Status**: Shipped (2026-08-11)
 **Base**: `origin/main`
 
 ## Goal
@@ -100,12 +100,14 @@ defect". After item 1, no unit trips it spuriously. But the honest statement is 
 instances, not cannot recur*: `promote` writes Status and archives the scratchpad as two
 separate steps, so an interrupted run reproduces the shape.
 
-That is survivable **because of the `OR`**, and the review's own worry resolves once the
-orderings are checked. Interrupted after the Status rewrite: `Shipped` + unarchived
-scratchpad → the scratchpad limb still flags it. Interrupted after archiving: `Draft` +
-marker → the Status limb flags it. **Both partial states read as in-flight**, which is the
-safe direction — an extra confirmation, never silent adoption of half-promoted work. A
-predicate that fails safe on every partial state of its own writer is not the defect.
+That is survivable **because of the `OR`**, and the property is order-independent, which
+is the part worth stating precisely. `modes.md` rewrites Status before archiving, so an
+interruption leaves `Shipped` + an unarchived scratchpad → the scratchpad limb flags it.
+Were the order reversed it would leave `Draft` + a marker → the Status limb flags it.
+Whichever write lands first, **the other one being incomplete is what trips the OR**, so
+every partial state reads as in-flight — an extra confirmation, never silent adoption of
+half-promoted work. A predicate that fails safe on each partial state of its own writer,
+under either ordering, is not the defect.
 
 Recorded with the irony named: this closes "the predicate may be wrong" by enumerating
 today's instances rather than proving a property, which is structurally the move
@@ -129,6 +131,11 @@ question — and the `OR` argument above is a property, not a snapshot.
 7. Regression fixtures for every behavioural change, each verified to fail before its fix,
    including the constructed false-negative from criterion 3.
 8. Bare `python3 -m pytest` passes (baseline 486) and `knowledge_lint` stays clean.
+9. (added at review) Both readers are **fence-aware**: a fenced example of a Status field,
+   a `## Status` heading, or a promote marker is documentation, not a declaration.
+
+**All nine met.** Suite 501 passed from a 486 baseline; `knowledge_lint` clean; the only
+unit reading as in-flight is this one, correctly, until it is promoted.
 
 ## Open questions
 

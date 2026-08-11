@@ -157,3 +157,32 @@ def test_no_promoted_unit_in_the_live_corpus_reads_as_in_flight():
     flagged = [d.name for d in sorted(WORK.iterdir())
                if d.is_dir() and unit_state(d)["promoted"] and unit_state(d)["in_flight"]]
     assert flagged == [], f"promoted units still reading as in-flight: {flagged}"
+
+
+# --- fence-awareness: a fenced example is documentation, not a declaration ---
+def test_a_fenced_status_field_does_not_shadow_the_real_one():
+    """The dangerous direction. A convention doc or template showing
+    `**Status**: Shipped` ahead of the unit's real `**Status**: Draft` would otherwise
+    read a LIVE unit as finished, and `in_flight` would stop protecting it."""
+    t = ("# P\n\n```\n**Status**: Shipped (2020-01-01)\n```\n\n**Status**: Draft\n")
+    assert read_status(t) == "Draft"
+
+
+def test_a_fenced_status_heading_is_not_a_status_section():
+    t = "# P\n\n```\n## Status\nShipped (2020-01-01)\n```\n\n## Goal\nx\n"
+    assert read_status(t) is None
+
+
+def test_a_fenced_promote_marker_does_not_read_as_promoted():
+    """Symmetric hole in the marker reader: every skill documenting the convention
+    contains a fenced example of the marker."""
+    t = ("# Scratchpad: x\n\nHere is what promote writes:\n\n```\n"
+         "Summarized at minerva:promote on 2026-08-11 — see archive/.\n```\n\n"
+         "## Notes\nstill working\n")
+    assert not is_post_promote(t)
+
+
+def test_a_real_marker_outside_a_fence_still_reads_as_promoted():
+    t = ("# Scratchpad: x\n\n```\nexample: <!-- post-promote -->\n```\n\n"
+         "Summarized at minerva:promote on 2026-08-11 — see archive/.\n")
+    assert is_post_promote(t)

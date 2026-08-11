@@ -34,7 +34,32 @@ test is what actually holds:
 Writers should still emit the canonical form; this only governs READING.
 """
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from knowledge_spans import FENCE_RE  # noqa: E402
+
+
+def _nonfenced(text: str):
+    """Lines of `text` outside code fences.
+
+    Both readers below scan for a declared value, and a fenced block is documentation
+    SHOWING what that value looks like — a convention doc, a template, this module's own
+    docstring. Reading one as the real declaration is the failure knowledge
+    `2026-06-11-constraint-fence-scans-import-fence-re` exists to prevent, which is why
+    `FENCE_RE` is imported rather than re-derived. The direction matters here: a fenced
+    example `**Status**: Shipped` shadowing a real `**Status**: Draft` reads a LIVE unit
+    as finished, which is the dangerous way for the in-flight check to be wrong.
+    """
+    in_fence = False
+    for line in text.splitlines():
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            yield line
 
 # The canonical marker new promotions write. Reading is tolerant; writing is not.
 CANONICAL_MARKER = "Summarized at minerva:promote on {date} — see archive/."
@@ -65,17 +90,17 @@ def is_post_promote(text: str) -> bool:
     the promote of its day used. A false negative here re-runs a mutating pass; a false
     positive only skips one, so the tolerant reading is also the safer failure direction.
     """
-    return any(_PROMOTED_LINE_RE.match(line) for line in text.splitlines())
+    return any(_PROMOTED_LINE_RE.match(line) for line in _nonfenced(text))
 
 
 # The canonical Status field, used by 52 of 53 units. Written by `minerva:promote`.
-_STATUS_FIELD_RE = re.compile(r"^\*\*Status\*\*:\s*(.+?)\s*$", re.M)
+_STATUS_FIELD_RE = re.compile(r"^\*\*Status\*\*:\s*(.+?)\s*$")
 # A `## Status` heading — one unit predates the inline field. Matched with its section
 # BOUNDARY, not "the next non-blank line": an empty `## Status` followed by
 # `## Goal\nShipped code already exists…` would otherwise yield "Shipped code already
 # exists…", classifying a live draft as done. That is a false negative on the one check
 # that stops two agents colliding on a unit, so the parse stops at the next `#` line.
-_STATUS_HEADING_RE = re.compile(r"^##\s+Status\s*$", re.M)
+_STATUS_HEADING_RE = re.compile(r"^##\s+Status\s*$")
 
 
 def read_status(proposal_text: str):
@@ -90,17 +115,20 @@ def read_status(proposal_text: str):
     one instance and the prose that produced it has been corrected, so a permissive
     walker would exist forever to serve one frozen file while adding misread risk.
     """
-    m = _STATUS_FIELD_RE.search(proposal_text)
-    if m:
-        return m.group(1)
-    h = _STATUS_HEADING_RE.search(proposal_text)
-    if not h:
+    lines = list(_nonfenced(proposal_text))
+    for line in lines:
+        m = _STATUS_FIELD_RE.match(line)
+        if m:
+            return m.group(1)
+    for i, line in enumerate(lines):
+        if not _STATUS_HEADING_RE.match(line):
+            continue
+        for nxt in lines[i + 1:]:
+            if nxt.startswith("#"):
+                return None          # section ended before any value: Status is absent
+            if nxt.strip():
+                return nxt.strip()   # the single value line inside the section
         return None
-    for line in proposal_text[h.end():].splitlines():
-        if line.startswith("#"):
-            return None          # section ended before any value: Status is absent
-        if line.strip():
-            return line.strip()  # the single value line inside the section
     return None
 
 
