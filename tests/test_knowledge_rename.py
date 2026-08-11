@@ -238,3 +238,28 @@ def test_an_already_migrated_work_dir_is_not_re_migrated(tmp_path):
     work = ren.plan(tmp_path)["work"]
     assert "2026-08-07-already-migrated" not in work
     assert "111-legacy-unit" in work  # the genuine legacy unit still migrates
+
+
+def test_shorthand_count_ignores_fenced_examples(tmp_path):
+    """A `[[139]]` inside a fence is documentation showing the old syntax, not a live
+    reference. Counting it would report migration work that does not exist — the same
+    fence-blindness the plugin has had to re-fix twice before."""
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    git(tmp_path, "init", "-q")
+    (tmp_path / "doc.md").write_text(
+        "live [[139]] here\n\n```\nexample: see [[204]] for the old style\n```\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    assert ren.plan(tmp_path)["shorthand_refs"] == {"139": 1}
+
+
+def test_a_markdown_link_outside_the_knowledge_dir_is_still_map_bound():
+    """`MD_LINK_RE` is not directory-anchored, unlike `KNOWLEDGE_PATH_RE` — deliberately,
+    matching `WIKILINK_STEM_RE`'s existing whole-repo reach. What bounds it is the map:
+    a stem the migration is not moving is left byte-identical wherever it appears."""
+    assert ren.rewrite_links("[x](README.md) and [y](099-bug-other.md)\n", MAP) == \
+        "[x](README.md) and [y](099-bug-other.md)\n"
+    assert ren.rewrite_links("[x](015-decision-foo.md)\n", MAP) == \
+        "[x](2026-05-19-decision-foo.md)\n"

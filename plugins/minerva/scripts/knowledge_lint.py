@@ -291,8 +291,6 @@ def parse_entry(path: Path):
     # of targets — the whole-line scan that used to be kept separately for back-link
     # detection is now what `related_edges` itself does.
     edge_stems = {target for target, _ in related_edges(text)}
-    related_out_stems = set(edge_stems)
-    related_mention_stems = set(edge_stems)
     related_out = {ID_PREFIX_RE.match(s).group(1) for s in edge_stems}
     return {
         "nnn": ENTRY_RE.match(path.name).group(1),
@@ -301,12 +299,17 @@ def parse_entry(path: Path):
         "summary": summary,
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
-        # STEM-keyed twins of the two sets above. An NNN shared by several entries
+        # STEM-keyed twin of `related_out` above. An NNN shared by several entries
         # cannot say WHICH entry an edge points at; a stem always can. Kept alongside
-        # rather than replacing them so this linter's own NNN-shaped checks are
-        # untouched by the fixer's move to stems.
-        "related_out_stems": related_out_stems,
-        "backlink_stems": related_mention_stems | banner_target_stems,
+        # rather than replacing it so this linter's own NNN-shaped checks are untouched
+        # by the fixer's move to stems.
+        #
+        # Outbound and inbound now derive from ONE set. They used to differ — outbound
+        # read only a line's first wikilink while inbound scanned the whole line — and
+        # that asymmetry is precisely the defect `related_edges` closes: a target could
+        # be counted as linked-to without being counted as linked-from.
+        "related_out_stems": edge_stems,
+        "backlink_stems": edge_stems | banner_target_stems,
     }
 
 

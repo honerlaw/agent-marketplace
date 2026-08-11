@@ -76,7 +76,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from knowledge_lint import (ENTRY_RE, ID_RE_SRC, WIKILINK_STEM_RE,  # noqa: E402
-                            is_date_id)
+                            _strip_fences, is_date_id)
 from knowledge_spans import FENCE_RE  # noqa: E402
 
 # The SHARED id grammar, date arm first — not a bare `\d{3,}`. Against an already
@@ -218,10 +218,15 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
             seen.setdefault(new, []).append(old)
         collisions.extend((t, s) for t, s in sorted(seen.items()) if len(s) > 1)
 
+    # Fence-aware, like every other scan in this plugin: a `[[139]]` inside a fenced
+    # block is documentation showing what the old syntax looked like, not a live
+    # reference, and counting it would report work that does not exist. Same rule as
+    # `rewrite_links` below and `knowledge_lint.related_edges`.
     shorthand_refs = {}
     for _, text in _corpus_md(root):
-        for m in BARE_SHORTHAND_RE.finditer(text):
-            shorthand_refs[m.group(1)] = shorthand_refs.get(m.group(1), 0) + 1
+        for _, line in _strip_fences(text.splitlines()):
+            for m in BARE_SHORTHAND_RE.finditer(line):
+                shorthand_refs[m.group(1)] = shorthand_refs.get(m.group(1), 0) + 1
 
     return {"entries": entries, "work": work,
             "undated": undated, "collisions": collisions,

@@ -128,3 +128,14 @@ def test_orphan_query_counts_an_inbound_only_entry_as_linked(tmp_path):
     entry(tmp_path, "2026-02-01-decision-src", related=["2026-02-02-pattern-dst"])
     entry(tmp_path, "2026-02-02-pattern-dst")
     assert run_orphan_query(tmp_path) == []
+
+
+def test_verification_grep_ignores_a_number_narrower_than_a_legacy_id(corpus):
+    """`{3,}` is the legacy id's own width (`ID_RE_SRC`). Loosening it to `+` would make
+    the check report any bracketed number — a narrower rerun of the imprecision the
+    date-shape exclusion was added to fix."""
+    (corpus / "prose.md").write_text("see [[42-not-an-id]] here\n")
+    out = subprocess.run(["bash", "-c", legacy_link_grep()], cwd=corpus,
+                         capture_output=True, text=True).stdout
+    assert "42-not-an-id" not in out
+    assert "015-decision-legacy" in out
