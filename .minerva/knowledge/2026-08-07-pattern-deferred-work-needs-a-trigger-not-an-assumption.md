@@ -59,3 +59,4 @@ The tell that this class is present: a comment or doc that says *"the next run"*
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — the design this gap lived inside, which is otherwise sound and unchanged
 - [[2026-08-05-pattern-read-then-act-is-not-a-lock]] — the sibling hazard in the same step: that one is about two runs racing, this one about no second run existing
 - [[2026-08-05-constraint-knowledge-allocation-scans-across-branches]] — the allocation half of the same concurrency story
+- [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also

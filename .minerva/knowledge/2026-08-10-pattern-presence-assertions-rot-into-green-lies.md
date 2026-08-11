@@ -52,3 +52,5 @@ entry at all. The pair brackets the real behaviour.
 ## Related
 - [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — builds on
 - [[2026-08-10-decision-date-ids-make-identity-the-path]] — see also
+- [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also
+- [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
