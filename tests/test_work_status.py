@@ -3,8 +3,12 @@
 The failure this exists to prevent: `minerva:promote`'s idempotency check matched ONE
 exact marker string while the corpus contained at least eight spellings, so on 15 of 50
 units it failed open — re-running a mutating pass that can duplicate knowledge entries.
-Every spelling below was taken from a real unit, not invented — including the last,
-which the live-corpus test below caught after the first eight had been enumerated.
+Every spelling below is verified present in a real unit. An earlier draft of this list
+carried a tenth entry, `promoted <date><!-- post-promote -->`, that exists nowhere: it was
+an artifact of `head -1` over a file with no trailing newline, which concatenated two
+units' markers into one phantom line. Enumerating by eye is exactly what keeps failing
+here — `test_no_live_unit_is_misread_as_unpromoted` below is the assertion that actually
+holds, because it asks the corpus instead of a human.
 """
 from pathlib import Path
 
@@ -21,7 +25,6 @@ REAL_MARKERS = [
     "promoted 2026-07-28 — durable knowledge in .minerva/knowledge/051; see archive/ for the working scratchpad.",
     "promoted 2026-08-10 — durable knowledge in .minerva/knowledge/ (4 entries dated 2026-08-10); see archive/ for the working scratchpad.",
     "Promoted 2026-06-13. Scratchpad archived.",
-    "promoted 2026-06-13<!-- post-promote -->",
     "promoted 2026-05-27",
     "<!-- post-promote -->",
     "> **PROMOTED 2026-08-07** — durable item is knowledge 057; this file is the archived one.",
@@ -64,3 +67,14 @@ def test_no_live_unit_is_misread_as_unpromoted():
         if st["status"] and st["status"].startswith("Shipped") and not st["promoted"]:
             missed.append(d.name)
     assert missed == [], f"Shipped but reads unpromoted: {missed}"
+
+
+@pytest.mark.parametrize("prose", [
+    "Promoted entries are listed below in the index.",
+    "Promoted knowledge items should never be edited directly.",
+    "## Promoted work",
+])
+def test_prose_opening_with_promoted_is_not_a_marker(prose):
+    """A false positive makes `minerva:promote` skip real work silently, so the
+    `promoted` arm requires a date right after the word — every real marker has one."""
+    assert not is_post_promote(prose)

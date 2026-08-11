@@ -189,7 +189,7 @@ The recommendation:
 
 `minerva:ship` does **not** run `minerva:promote` or `minerva:review` for the user. It surfaces nudges, not blockers:
 
-- If `scratchpad.md` contains entries that look unpromoted (i.e. it's not just the post-promote marker) → "Consider running `minerva:promote` before shipping so the PR body picks up durable knowledge."
+- If `scratchpad.md` contains entries that look unpromoted (i.e. it's not just the post-promote state per `work_status.is_post_promote`) → "Consider running `minerva:promote` before shipping so the PR body picks up durable knowledge."
 - If `minerva:review` has not obviously been run for this branch (no `## Review triage` blocks in scratchpad, no review-fix commits) → "Consider running `minerva:review` before shipping."
 
 Surface both nudges as part of the initial summary, then proceed. The user can ship and skip — strict ordering is not enforced.

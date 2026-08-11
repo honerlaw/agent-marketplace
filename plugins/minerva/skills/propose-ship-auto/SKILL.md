@@ -18,7 +18,7 @@ The mechanism: at each strategic or tactical decision point, dispatch a 3-agent 
 Identical to `minerva:propose-ship`'s pre-flight section. This check is **not** panel-decided — wrong call here destroys real work, so escalation to the user is hardcoded:
 
 1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
-2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad is **not** the post-promote marker, treat it as in-flight.
+2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad `work_status.is_post_promote` reports as **not** promoted (that predicate, never a match against the canonical marker string — the marker has nine spellings in one 51-unit corpus), treat it as in-flight.
 3. If the user's inline description overlaps a slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
 

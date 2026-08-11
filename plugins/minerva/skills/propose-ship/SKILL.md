@@ -24,7 +24,7 @@ The `minerva:propose` phase creates the work unit's branch + worktree at `.miner
 Before invoking `minerva:propose`, check for in-flight work units that might collide with the user's intent:
 
 1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
-2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad is **not** the post-promote marker, treat it as in-flight.
+2. If any unit has a `proposal.md` whose `## Status` is `Draft` or whose scratchpad `work_status.is_post_promote` reports as **not** promoted (that predicate, never a match against the canonical marker string — the marker has nine spellings in one 51-unit corpus), treat it as in-flight.
 3. If the user's inline description (`minerva:propose-ship "add payments"`) clearly overlaps with an in-flight unit's slug or goal, **stop and ask**:
    > "Found in-flight work unit `005-add-payments` — looks related to what you just asked. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
 

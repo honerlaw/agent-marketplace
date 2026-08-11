@@ -39,16 +39,19 @@ from pathlib import Path
 CANONICAL_MARKER = "Summarized at minerva:promote on {date} — see archive/."
 
 # A line that DECLARES promote has run, in any spelling the corpus contains. Anchored at
-# line start so a passing mention mid-sentence ("we promoted the finding") cannot trip it.
+# line start so a mid-sentence mention ("we promoted the finding") cannot trip it, and the
+# `promoted`/`## Promote` arms additionally require a DATE right after the word — without
+# that, ordinary prose OPENING a line ("Promoted entries are listed below") reads as a
+# marker, and a false positive here makes promote skip real work silently.
 _PROMOTED_LINE_RE = re.compile(
     r"""^\s*
         (?:>\s*)*                             # a blockquote-styled marker
         (?:\*\*)?                             # ...and/or a bold-wrapped one
         (?:
           summarized\s+at\s+\S*promote\b     # "Summarized at minerva:promote" / "at /promote"
-        | promoted\b                          # "promoted 2026-05-27", "Promoted …. archived."
+        | promoted\b\D{0,4}\d{4}-\d{2}-\d{2}   # "promoted 2026-05-27", "Promoted 2026-06-13. …"
         | <!--\s*post-promote\s*-->           # a bare HTML marker
-        | \#{1,6}\s*promote(?:d)?\b           # an appended "## Promote <date>" section
+        | \#{1,6}\s*promote(?:d)?\b\D{0,4}\d{4}-\d{2}-\d{2}   # "## Promote <date>" section
     )""",
     re.IGNORECASE | re.VERBOSE)
 
