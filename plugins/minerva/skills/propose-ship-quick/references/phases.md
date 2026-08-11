@@ -60,7 +60,7 @@ Replaces the user-interactive triage in `minerva:review`.
 Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
-2. **Idempotency check.** If `scratchpad.md` is the post-promote marker, report "already promoted" and continue to Phase 5.
+2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5.
 3. **Partition.** The main model proposes the four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already `→ promoted to ...`. Escalate if an entry's bucket is genuinely ambiguous.
 4. **TODO disposition.** For each TODO: followups.md / seed new proposal / discard. The main model decides; escalate if unsure.
 5. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.

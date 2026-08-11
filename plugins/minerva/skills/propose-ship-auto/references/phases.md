@@ -91,7 +91,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
-2. **Idempotency check.** If `scratchpad.md` is the one-line promote marker, report "already promoted" and continue to Phase 5.
+2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5. Use that predicate, never a match against the marker string — the marker has nine spellings in one 51-unit corpus and a string match reads 16 of them as un-promoted, re-running a mutating pass.
 
 3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
 

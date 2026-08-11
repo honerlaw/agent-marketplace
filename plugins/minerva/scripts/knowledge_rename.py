@@ -75,8 +75,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from knowledge_lint import (ENTRY_RE, ID_RE_SRC, WIKILINK_STEM_RE,  # noqa: E402
-                            _strip_fences, is_date_id)
+from knowledge_lint import (DATE_ID_RE, ENTRY_RE, ID_RE_SRC,  # noqa: E402
+                            WIKILINK_STEM_RE, _strip_fences, is_date_id)
 from knowledge_spans import FENCE_RE  # noqa: E402
 
 # The SHARED id grammar, date arm first — not a bare `\d{3,}`. Against an already
@@ -160,7 +160,50 @@ def _corpus_md(root: Path):
             continue
 
 
-def plan(repo_root, knowledge_dir=None, work_dir=None):
+def _resolve_shorthand(ids, by_entry_id, by_work_id, entries, already_migrated):
+    """Resolve bare `[[NNN]]` ids to new stems. Returns ({id: new_stem}, [(id, reason)]).
+
+    Refuses by default and resolves only what is provably unambiguous, because a wrong
+    rewrite here is invisible where an unresolved reference is not. The rules come from
+    measured failure data, not intuition: across 23 references where a bare number named
+    exactly ONE entry, about 6 meant something else — usually the same-numbered WORK UNIT,
+    one of them annotated "(work unit)" in the prose beside it.
+
+    **The whole-corpus precondition.** This is sound only within a single pass over a
+    corpus that is still entirely legacy. The work-unit guard below can only see units
+    that still carry a legacy id; once a unit is renamed its number leaves the filesystem,
+    so a reference that meant that unit stops colliding with anything and would resolve
+    "safely" to whatever entry still holds the number — the exact failure the guard
+    exists to prevent, reintroduced silently. So a partially-migrated corpus refuses
+    EVERYTHING. That also means resolution has one usable window, the first full
+    migration; afterwards the information needed to be safe is simply gone, and the
+    honest output is a refusal a human resolves.
+    """
+    if already_migrated:
+        return {}, [(i, f"corpus is partially migrated ({len(already_migrated)} paths "
+                       f"already carry a date id), so the id -> work-unit collision map "
+                       f"is incomplete and no resolution here can be trusted")
+                    for i in ids]
+    resolved, refusals = {}, []
+    for i in ids:
+        if i in by_work_id:
+            refusals.append((i, f"ambiguous: work unit "
+                                f"'{by_work_id[i][0]}' also has id {i}"))
+        elif i not in by_entry_id:
+            refusals.append((i, f"no entry has id {i} (it may be undated, or refer to "
+                                f"something outside this corpus)"))
+        elif len(by_entry_id[i]) > 1:
+            refusals.append((i, f"{len(by_entry_id[i])} entries share id {i}: "
+                                f"{', '.join(by_entry_id[i])}"))
+        elif by_entry_id[i][0] not in entries:
+            refusals.append((i, f"entry '{by_entry_id[i][0]}' has id {i} but git could not "
+                                f"date it, so there is no target stem to resolve to"))
+        else:
+            resolved[i] = entries[by_entry_id[i][0]]
+    return resolved, refusals
+
+
+def plan(repo_root, knowledge_dir=None, work_dir=None, resolve_shorthand=False):
     """Compute the full rename plan without touching anything.
 
     Returns {entries: {old_stem: new_stem}, work: {old_name: new_name},
@@ -186,12 +229,34 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
     wd = Path(work_dir) if work_dir else root / ".minerva" / "work"
 
     entries, work, undated = {}, {}, []
+    # What the scan SKIPPED or silently reshaped, so the caller can report it instead of
+    # leaving the operator to spot it. A peer's 637-entry migration produced three
+    # corrupted rows among 552 correct ones and they were missed on the dry run — a plan
+    # is a control only when its anomalies are separable at the output's real size.
+    already_migrated, invalid_date_ids = [], []
+    # Legacy id -> [old stem]. Keyed on the BARE id, which `entries`/`work` are not: they
+    # key on the full stem. Two entries can share a legacy id — this repo's own history
+    # has `001-gitignore-before-worktree` and `001-review-lens-ownership` — so this is a
+    # grouping, and treating it as a dict lookup would silently miss exactly that case.
+    by_entry_id, by_work_id = {}, {}
 
     if kd.is_dir():
         for p in sorted(kd.glob("*.md")):
             m = ENTRY_RE.match(p.name)
-            if not m or is_date_id(m.group(1)):
-                continue  # not an entry, or already migrated
+            if not m:
+                continue  # not an entry
+            if is_date_id(m.group(1)):
+                already_migrated.append(str(p.relative_to(root)))
+                continue
+            if DATE_ID_RE.match(m.group(1)):
+                # Date-SHAPED but not a real date (`2026-13-45`). It is re-dated like a
+                # legacy id, which is defensible; doing it without saying so is not.
+                invalid_date_ids.append(str(p.relative_to(root)))
+            # Record the id BEFORE the date lookup. The grouping exists to detect
+            # collisions, and an entry git cannot date still HOLDS that id — recording it
+            # only on the dated path makes a real collision invisible, and resolution
+            # then picks the surviving entry with false confidence.
+            by_entry_id.setdefault(m.group(1), []).append(p.name[:-3])
             d = landing_date(root, p.relative_to(root))
             if not d:
                 undated.append(str(p.relative_to(root)))
@@ -202,8 +267,14 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
     if wd.is_dir():
         for p in sorted(x for x in wd.iterdir() if x.is_dir()):
             m = WORK_DIR_RE.match(p.name)
-            if not m or is_date_id(m.group(1)):
-                continue  # not a work unit, or already migrated
+            if not m:
+                continue  # not a work unit
+            if is_date_id(m.group(1)):
+                already_migrated.append(str(p.relative_to(root)))
+                continue
+            if DATE_ID_RE.match(m.group(1)):
+                invalid_date_ids.append(str(p.relative_to(root)))
+            by_work_id.setdefault(m.group(1), []).append(p.name)  # before dating: see above
             anchor = p / "proposal.md"
             d = landing_date(root, (anchor if anchor.exists() else p).relative_to(root))
             if not d:
@@ -222,18 +293,29 @@ def plan(repo_root, knowledge_dir=None, work_dir=None):
     # block is documentation showing what the old syntax looked like, not a live
     # reference, and counting it would report work that does not exist. Same rule as
     # `rewrite_links` below and `knowledge_lint.related_edges`.
-    shorthand_refs = {}
-    for _, text in _corpus_md(root):
-        for _, line in _strip_fences(text.splitlines()):
+    shorthand_refs, shorthand_sites = {}, []
+    for path, text in _corpus_md(root):
+        rel = str(path.relative_to(root))
+        for i, line in _strip_fences(text.splitlines()):
             for m in BARE_SHORTHAND_RE.finditer(line):
                 shorthand_refs[m.group(1)] = shorthand_refs.get(m.group(1), 0) + 1
+                # Per-occurrence, because every refusal below is resolved BY HAND and a
+                # report without file+line makes that needlessly expensive.
+                shorthand_sites.append((rel, i + 1, m.group(1)))
+
+    resolved, refusals = _resolve_shorthand(
+        sorted(shorthand_refs), by_entry_id, by_work_id, entries,
+        already_migrated) if resolve_shorthand else ({}, [])
 
     return {"entries": entries, "work": work,
             "undated": undated, "collisions": collisions,
-            "shorthand_refs": shorthand_refs}
+            "shorthand_refs": shorthand_refs, "shorthand_sites": shorthand_sites,
+            "already_migrated": already_migrated,
+            "invalid_date_ids": invalid_date_ids,
+            "shorthand_resolved": resolved, "shorthand_refusals": refusals}
 
 
-def rewrite_links(text, stem_map, dir_map=None):
+def rewrite_links(text, stem_map, dir_map=None, shorthand_map=None):
     """Retarget wikilinks, banner markers and Context paths OUTSIDE code fences.
 
     Fence-awareness is the whole safety property (knowledge 023, and 028 recording it
@@ -275,6 +357,14 @@ def rewrite_links(text, stem_map, dir_map=None):
         if dir_map:
             line = CONTEXT_PATH_RE.sub(
                 lambda m: m.group(1) + dir_map.get(m.group(2), m.group(2)), line)
+        if shorthand_map:
+            # Bare `[[139]]` -> the full stem. Map-lookup-only like the rest: an id absent
+            # from the map is left byte-identical, and the map holds only what
+            # `_resolve_shorthand` proved unambiguous. Empty/None by default, so the
+            # default rewrite is byte-for-byte what it was before this existed.
+            line = BARE_SHORTHAND_RE.sub(
+                lambda m: (f"[[{shorthand_map[m.group(1)]}]]"
+                           if m.group(1) in shorthand_map else m.group(0)), line)
         out.append(line)
     return "".join(out)
 
@@ -293,8 +383,9 @@ def apply(repo_root, plan_result, knowledge_dir=None, work_dir=None):
 
     # Rewrite references BEFORE moving, so every path in the map still resolves.
     touched = 0
+    shorthand_map = plan_result.get("shorthand_resolved") or None
     for p, text in _corpus_md(root):
-        new = rewrite_links(text, stem_map, dir_map)
+        new = rewrite_links(text, stem_map, dir_map, shorthand_map)
         if new != text:
             p.write_text(new)
             touched += 1
@@ -314,20 +405,45 @@ def apply(repo_root, plan_result, knowledge_dir=None, work_dir=None):
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     root = Path(_git(["rev-parse", "--show-toplevel"], Path.cwd()).strip())
-    result = plan(root)
+    result = plan(root, resolve_shorthand="--resolve-shorthand" in argv)
     if result["collisions"]:
         for target, sources in result["collisions"]:
             print(f"COLLISION {target} <- {', '.join(sources)}", file=sys.stderr)
         return 1
     for path in result["undated"]:
         print(f"UNDATED (skipped) {path}", file=sys.stderr)
+    # Say what was skipped and what was reshaped. A run that reports only what it DID
+    # leaves the operator to find the rest by reading every row, which does not scale:
+    # three corrupted rows among 552 were missed on a real dry run.
+    if result.get("already_migrated"):
+        print(f"ALREADY MIGRATED (skipped) {len(result['already_migrated'])} path(s)",
+              file=sys.stderr)
+    for path in result.get("invalid_date_ids", []):
+        print(f"INVALID DATE ID (re-dated) {path} — date-shaped but not a real date",
+              file=sys.stderr)
+
     shorthand = result.get("shorthand_refs", {})
+    resolved = result.get("shorthand_resolved", {})
+    refusals = result.get("shorthand_refusals", [])
     if shorthand:
         total = sum(shorthand.values())
-        print(f"SHORTHAND (not rewritten) {total} bare [[NNN]] reference(s) across "
+        verb = "resolved where provably safe" if resolved or refusals else "not rewritten"
+        print(f"SHORTHAND ({verb}) {total} bare [[NNN]] reference(s) across "
               f"{len(shorthand)} id(s): "
               + ", ".join(f"[[{k}]]x{v}" for k, v in sorted(shorthand.items())),
               file=sys.stderr)
+        for i, new_stem in sorted(resolved.items()):
+            print(f"  RESOLVE [[{i}]] -> [[{new_stem}]]", file=sys.stderr)
+        for i, reason in refusals:
+            print(f"  REFUSED [[{i}]] — {reason}", file=sys.stderr)
+        if refusals:
+            # Where, so hand-resolution is cheap. This is the path the peer actually took.
+            refused_ids = {i for i, _ in refusals}
+            for rel, lineno, i in result.get("shorthand_sites", []):
+                if i in refused_ids:
+                    print(f"    [[{i}]] {rel}:{lineno}", file=sys.stderr)
+        if not resolved and not refusals:
+            print("  (pass --resolve-shorthand to attempt resolution)", file=sys.stderr)
     if "--apply" not in argv:
         print(f"plan: {len(result['entries'])} entries, {len(result['work'])} work dirs")
         for old, new in sorted(result["entries"].items()):

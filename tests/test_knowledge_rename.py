@@ -263,3 +263,123 @@ def test_a_markdown_link_outside_the_knowledge_dir_is_still_map_bound():
         "[x](README.md) and [y](099-bug-other.md)\n"
     assert ren.rewrite_links("[x](015-decision-foo.md)\n", MAP) == \
         "[x](2026-05-19-decision-foo.md)\n"
+
+
+# --- bare [[NNN]] resolution: refuses by default, resolves only the provable case ---
+def _legacy_corpus(tmp_path, entries=(), work=(), text=""):
+    """A corpus that is still ENTIRELY legacy — the only state resolution is sound in."""
+    kd = tmp_path / ".minerva" / "knowledge"
+    wd = tmp_path / ".minerva" / "work"
+    kd.mkdir(parents=True)
+    wd.mkdir(parents=True)
+    for name in entries:
+        (kd / f"{name}.md").write_text("body\n")
+    for name in work:
+        (wd / name).mkdir()
+        (wd / name / "proposal.md").write_text("# p\n")
+    if text:
+        (tmp_path / "notes.md").write_text(text)
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+    return tmp_path
+
+
+def test_shorthand_resolves_only_when_provably_unambiguous(tmp_path):
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"], text="see [[139]]\n")
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_refusals"] == []
+    assert r["shorthand_resolved"]["139"].endswith("-decision-foo")
+
+
+def test_shorthand_refuses_when_a_work_unit_shares_the_id(tmp_path):
+    """The dominant observed failure: of 23 bare numbers naming exactly one entry, ~6
+    meant the same-numbered WORK UNIT instead. `entries` alone cannot see that."""
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"],
+                          work=["139-some-unit"], text="see [[139]]\n")
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}
+    assert "work unit" in dict(r["shorthand_refusals"])["139"]
+
+
+def test_shorthand_refuses_when_two_entries_share_the_id(tmp_path):
+    """Not hypothetical: this repo's own history has `001-gitignore-before-worktree` and
+    `001-review-lens-ownership`. `entries` keys on the full stem, so a naive lookup by
+    bare id would never notice."""
+    root = _legacy_corpus(tmp_path, entries=["001-decision-foo", "001-decision-bar"],
+                          text="see [[001]]\n")
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}
+    assert "2 entries share id 001" in dict(r["shorthand_refusals"])["001"]
+
+
+def test_shorthand_refuses_everything_on_a_partially_migrated_corpus(tmp_path):
+    """The guard can only see work units that still carry a legacy id. Once one is
+    renamed its number leaves the filesystem, so a reference meaning THAT unit stops
+    colliding with anything and would resolve to whatever entry still holds the number —
+    the exact failure the guard exists to prevent. So a mixed corpus refuses outright."""
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"],
+                          work=["2026-01-01-already-migrated"], text="see [[139]]\n")
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}
+    assert "partially migrated" in dict(r["shorthand_refusals"])["139"]
+
+
+def test_shorthand_is_never_rewritten_without_the_flag(tmp_path):
+    """Upgrading minerva must not silently start rewriting anyone's corpus."""
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"], text="see [[139]]\n")
+    r = ren.plan(root)
+    assert r["shorthand_resolved"] == {} and r["shorthand_refusals"] == []
+    assert ren.rewrite_links("see [[139]]\n", r["entries"]) == "see [[139]]\n"
+
+
+def test_resolution_is_fence_aware_and_map_bound(tmp_path):
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"], text="see [[139]]\n")
+    smap = ren.plan(root, resolve_shorthand=True)["shorthand_resolved"]
+    assert ren.rewrite_links("```\nsee [[139]]\n```\n", {}, None, smap) == \
+        "```\nsee [[139]]\n```\n"
+    assert ren.rewrite_links("see [[999]]\n", {}, None, smap) == "see [[999]]\n"
+
+
+def test_plan_reports_skipped_and_invalid_date_ids(tmp_path):
+    """A plan is a control only when its anomalies are separable at the output's real
+    size — three corrupted rows among 552 were missed on a real dry run."""
+    root = _legacy_corpus(tmp_path, entries=["2026-01-01-decision-done"],
+                          work=["2026-13-45-bad-date"])
+    r = ren.plan(root)
+    assert any("2026-01-01-decision-done" in p for p in r["already_migrated"])
+    assert any("2026-13-45-bad-date" in p for p in r["invalid_date_ids"])
+
+
+def test_shorthand_sites_carry_file_and_line(tmp_path):
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"],
+                          text="line one\nsee [[139]]\n")
+    sites = ren.plan(root)["shorthand_sites"]
+    assert ("notes.md", 2, "139") in sites
+
+
+def test_an_undated_colliding_entry_still_blocks_resolution(tmp_path, monkeypatch):
+    """The collision guard must see every entry holding the id, not just the datable ones.
+
+    `by_entry_id` used to be populated only on the path that succeeds at `landing_date`,
+    so an entry git could not date (uncommitted, or no history — a state `migrate-fix`
+    documents as ordinary) dropped out of the grouping. The collision then vanished and
+    resolution picked the surviving entry with false confidence.
+    """
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo", "139-decision-bar"],
+                          text="see [[139]]\n")
+    real = ren.landing_date
+    monkeypatch.setattr(ren, "landing_date",
+                        lambda r, p: None if "bar" in str(p) else real(r, p))
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}, "an undated collision must not resolve"
+    assert "2 entries share id 139" in dict(r["shorthand_refusals"])["139"]
+
+
+def test_a_lone_undated_entry_refuses_rather_than_resolving(tmp_path, monkeypatch):
+    """No collision, but nothing to resolve TO — the entry has no target stem."""
+    root = _legacy_corpus(tmp_path, entries=["139-decision-foo"], text="see [[139]]\n")
+    monkeypatch.setattr(ren, "landing_date", lambda r, p: None)
+    r = ren.plan(root, resolve_shorthand=True)
+    assert r["shorthand_resolved"] == {}
+    assert "could not date it" in dict(r["shorthand_refusals"])["139"]

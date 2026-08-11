@@ -128,11 +128,38 @@ the throwaway leaves no trace. Address it by prefix — every path gets
 
    **The push is the lock.** It must be non-forced: `--force` / `--force-with-lease`
    would let a second concurrent cleanup overwrite the first's branch out from under
-   its open PR. If the push is rejected as non-fast-forward, another reconciliation
-   won the race — report `reconciliation: another run is in flight, skipping`, clean
-   up per step 4, and exit 0. That is a correct outcome, not a failure: the winning
-   run's pass covers the same pending entries, because both computed their edits from
-   the same default-branch corpus.
+   its open PR.
+
+   **A rejected push has two causes, and they need opposite responses. Diagnose before
+   concluding — do not assume the race.**
+
+   ```bash
+   gh pr list --head minerva/reconcile --state all --json number,state --limit 5
+   ```
+
+   - **A reconcile PR is OPEN → a real race.** Another run won. Report
+     `reconciliation: another run is in flight`, name every still-pending entry stem
+     under `Pending, NOT catalogued` (see below), clean up per step 4, and exit 0. The
+     winning run's pass covers the same pending set, because both computed their edits
+     from the same default-branch corpus — but say which entries you did not write, in
+     case it does not.
+   - **No PR is OPEN → a stale branch, NOT a race.** This is the common case in a
+     squash-merging repo: the merged PR's commit never lands on the default branch, and
+     GitHub keeps the branch unless configured to delete it, so the next run's
+     `-B`-reset branch diverges from a ref nothing is using. Observed on this repo
+     2026-08-11, and again after the very next reconciliation merged. Concluding "race"
+     here strands the run's entries for a concurrency event that never happened.
+     The remedy is to delete the stale remote branch and push again — **not** to force,
+     since the rule above exists to protect an open PR's head and there is no open PR.
+     Deleting a shared remote ref is outward-facing, so **ask the user first**; if they
+     decline, fall through to the report and list the entries under
+     `Pending, NOT catalogued`.
+
+   **Neither path may exit quietly.** A skip that names no entries is the same
+   silent-deferral failure step 2 above was already corrected for
+   (knowledge 2026-08-07): the run reports success, the entries sit on the default
+   branch uncatalogued, and nothing surfaces it. Whatever the cause, a run that does
+   not catalogue a pending entry must name that entry in its report.
 
    The body names the entries catalogued, whether `overview.md` was refreshed, and any
    refusals. Auto-merge is appropriate here **because the content is derived** —
