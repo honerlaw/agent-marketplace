@@ -1,7 +1,7 @@
 # Proposal: enforce-fence-aware-scans
 
 **Date**: 2026-08-11
-**Status**: Draft
+**Status**: Shipped (2026-08-11)
 **Base**: `origin/main`
 
 ## Goal
@@ -76,6 +76,10 @@ scan — in the style `tests/test_skill_budget.py` already uses for its strength
 4. The check has negative coverage: a fixture proves it fires rather than passing vacuously.
 5. Zero exemptions are needed today.
 6. Bare `python3 -m pytest` passes (baseline 501) and `knowledge_lint` stays clean.
+
+**All six met.** Suite 522 passed from a 501 baseline; lint clean; zero exemptions. Both
+fixtures fail against `origin/main`, and the enforcing test itself flags `knowledge_fix.py`
+when the fix is reverted — the gate catching the defect it was written for.
 
 ## Open questions
 
