@@ -74,3 +74,4 @@ Three practical consequences:
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — builds on
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — see also
 - [[2026-06-03-decision-migration-check-read-only-entry-re-blindspot]] — builds on
+- [[2026-08-11-decision-ci-runs-the-whole-suite]] — see also

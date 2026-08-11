@@ -366,6 +366,37 @@ coverage has to come from a fixture that **fails before the fix** — on the rep
 were fixed, 0 of 62 entries exhibited the divergent shape, so a clean lint run proved
 precisely nothing.
 
+A third pass closed the loop on *why* these keep recurring, and the answer is uncomfortable:
+the recognizer is usually a hand-written list of the shapes someone believed the data took.
+
+- `minerva:promote`'s idempotency check matched **one** post-promote marker string. The
+  corpus holds **eight**, so on 16 of 51 units the check failed open — promote re-ran a
+  mutating pass and could duplicate knowledge entries. It had been reported in May with a
+  prescribed fix that was never applied, while the affected set grew from 3 units to 16 as
+  each promote author reworded the marker. The sharper finding is what happened next:
+  enumerating those spellings **failed three times in one sitting**, once producing a format
+  that exists nowhere — an artifact of `head -1` over a file with no trailing newline
+  splicing two units' markers together, which was then pinned in a fixture asserting it was
+  real. Both errors were caught by review, never by rereading
+  ([[2026-08-11-pattern-the-enumeration-is-what-fails]]).
+- The same shape one layer up: fixing the check in `promote` left **eight other files**
+  carrying their own inlined copy of it, including three orchestrators' Phase 4. A shared
+  invariant duplicated across nine prose files is not shared
+  ([[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]]).
+- And sometimes the honest move is to delete the cause instead. CI ran a hand-enumerated
+  test-module list — silently skipping anything not appended, which had already shipped one
+  unit's tests dark — solely because three files testing a **deleted plugin** aborted
+  collection. Removing them let CI run `pytest tests/`, so collection *is* the enumeration
+  and the constraint governing it was superseded rather than obeyed
+  ([[2026-08-11-decision-ci-runs-the-whole-suite]]).
+
+So the cluster's final rule is about where recognition lives. A list of accepted forms is a
+hypothesis about the data, maintained by hand, and it decays every time an author writes
+something reasonable that nobody predicted. What holds is a **tolerant predicate over
+meaning, paired with one assertion that queries the real corpus** — that pairing found the
+eighth marker spelling immediately, after eight had been enumerated by eye. Fixtures record
+the shapes you know about; only the corpus test finds the ones you do not.
+
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer
