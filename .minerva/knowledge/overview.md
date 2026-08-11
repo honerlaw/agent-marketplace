@@ -75,6 +75,15 @@ so a fallback can only fill a gap and never override an author, with the last re
 concordance *measured* (642 entries, two corpora, zero disagreements) before it is trusted
 ([[2026-08-09-pattern-read-authored-metadata-from-where-it-is]]).
 
+The type *vocabulary* moved for the same reason the parser did — because authors had
+already moved it. Four values (`decision` / `bug` / `pattern` / `constraint`) were
+hardcoded across the tooling and four skill docs, and entries declaring `reference` were
+refused indefinitely, since a line whose declared type has no section cannot be placed.
+Admitting `## References` as a fifth section ratifies practice rather than inventing
+policy, and it lands inertly: the section is **appended, never interleaved**, which is
+the only position leaving every existing index byte-identical, and an unused section
+renders as its bare header ([[2026-08-09-decision-reference-is-a-fifth-entry-type]]).
+
 That backfill also flushed out the **third instance of the fence trap**: the span editors
 read entry 015's fenced `## Related` example as structure, crashing on (and silently
 de-duping against) any edge into it — fixed with fence-aware header *location* that never
@@ -237,6 +246,18 @@ same change, scanning across branches and treating "allocated" as *ever-added on
 reachable ref* rather than "present on some tip"
 ([[2026-08-05-constraint-knowledge-allocation-scans-across-branches]]).
 
+That backstop has since been **removed by removing its premise**. An id only needs
+allocating while it is scarce, and a sequential number is scarce only because someone
+chose it to be. Entry ids are now dates, and identity is the full `YYYY-MM-DD-type-slug`
+stem ([[2026-08-10-decision-date-ids-make-identity-the-path]]). Nothing is negotiated —
+a date is read off the clock — and the guard moves out of a script and into the
+filesystem: two branches producing an identical stem produce the *same path*, which git
+refuses to merge. The failure mode inverts from silent to loud, which is the whole
+argument. It also makes a rule out of what used to be a defect — **several entries
+sharing a leading token is now ordinary**, so the duplicate-id check and its quarantine
+were deleted rather than adapted, and every scalar floor over ids went with them: a date
+is not totally ordered, so no watermark can express progress even in principle.
+
 Two more defects were hiding underneath, both of the same species: a data structure that
 made a bad state *unrepresentable rather than detectable*. The wiki tooling keyed its
 lookups `{nnn: entry}`, so on a duplicate the second file silently overwrote the first and
@@ -280,20 +301,66 @@ format** ([[2026-05-19-bug-promote-idempotency-check-misses-old-marker]]), and t
 the **post-promote scratchpad's one-line marker is the canonical empty state** downstream
 skills expect ([[2026-05-19-constraint-post-promote-scratchpad-canonical-empty]]).
 
+## Silent success: when a tool reports done and did nothing
+
+The corpus's newest entries share a shape distinct from the concurrency cluster. There the
+danger was two writers colliding; here it is a **single** operation that completes, exits
+zero, and reports success while having accomplished nothing — leaving no failure for
+anyone to investigate.
+
+Three instances, found within one migration:
+
+- `git log --follow --diff-filter=A` returns **empty for every renamed path**, because
+  `--follow` reports a creation as a rename and the add-filter then discards it. The
+  command succeeds and prints nothing; the caller read that as "this path has no history"
+  and skipped it. Five of 102 paths would have been dropped from a migration reporting
+  success ([[2026-08-10-bug-git-follow-and-diff-filter-a-cancel-out]]).
+- A guard excluding `.minerva/worktrees` by **absolute** path matches every file in the
+  repo when the tool runs inside a worktree — which is where minerva always runs. The run
+  renamed 107 paths and rewrote 0 references, and said so
+  ([[2026-08-10-bug-absolute-path-guard-matches-everything-inside-a-worktree]]).
+- A test written as `assert "x" in prose` **cannot fail** once `x` is deleted, because
+  deleting a thing does not touch the text mentioning it. The invariant pinning promote's
+  use of the id allocator stayed green after the allocator was removed, attesting a
+  configuration that no longer existed
+  ([[2026-08-10-pattern-presence-assertions-rot-into-green-lies]]).
+
+The common lesson is that **an empty or zero result is not self-evidently correct**. Each
+case had a signal available — a count of zero rewrites beside 107 renames, an empty git
+result distinguishable from an unanswerable query, an assertion that could have
+dereferenced its subject instead of grepping for its name — and in each the check that
+would have caught it was cheaper than the one that was written. Two of the three had
+survived a multi-agent design review, which is the sharpest point: review reads intent,
+and these failures are invisible in intent. They surface only when the thing is run and
+its output is read sceptically.
+
 ## Limitations
 
-This overview is **advisory** — a navigation aid, never a CI-gated artifact. Its
-synthesis watermark (`058`) is a **new-scope-only floor**:
+This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer
+carries a synthesis watermark: coverage is derived **per-record** from the file itself, an
+entry counting as synthesized iff this document actually links it. That is strictly
+stronger than the floor it replaces, which could not survive out-of-order merges and
+cannot express anything at all over date ids, since same-day ties mean they are not
+totally ordered.
 
-- it attests which entries had been *added* at synthesis time (max NNN reflected), and
-  the `minerva:synthesize` signal flags any entry with a higher NNN as un-synthesized;
-- it does **not** detect in-place edits to already-synthesized entries (a later
-  `## Related` rewiring, a supersession banner, or an appended body) — that drift is a
-  judgment call for the next synthesis, not something the watermark can show;
-- it attests synthesis **intent, not body content** — a watermark at the corpus max with
-  a stale narrative below it is not mechanically detectable.
+What the per-record signal does and does not attest:
 
-This overview was refreshed during `051-resolve-entry-type-tolerantly`'s reconciliation,
+- it detects an entry this overview has **never mentioned** — including one dropped by a
+  rewrite, which the old floor silently counted as done;
+- it does **not** detect in-place edits to an already-linked entry (a later `## Related`
+  rewiring, a supersession banner, an appended body) — that drift remains a judgment call
+  for the next synthesis;
+- it attests synthesis **intent, not body content** — a link from a narrative that no
+  longer describes the entry reads as covered, and nothing mechanical can tell.
+
+This refresh ran during `2026-08-09-date-prefixed-identity`'s reconciliation, on five
+un-synthesized entries. It is the first refresh after the id migration, so every wikilink
+above is a date stem, and it **retired its own watermark** — the paragraph describing that
+floor is gone because the floor is. It also closed the concurrency arc: the cross-branch
+allocator that theme introduces as a necessary backstop no longer exists, its premise
+removed rather than its implementation improved.
+
+The prior refresh ran during `051-resolve-entry-type-tolerantly`'s reconciliation,
 reflecting the corpus through entry `058`, on two un-synthesized entries (`057`, `058`).
 The count was small; the reason to refresh was not. It **corrected a claim the corpus had
 falsified without any entry recording it**: the `## Related` relationship vocabulary is no

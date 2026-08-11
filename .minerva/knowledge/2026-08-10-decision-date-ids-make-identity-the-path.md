@@ -53,3 +53,6 @@ quarantine cost when ids collided by accident; under dates it would fire constan
 - [[2026-08-05-constraint-knowledge-allocation-scans-across-branches]] — supersedes
 - [[2026-08-05-constraint-nnn-keyed-lookups-hide-duplicates]] — builds on
 - [[2026-08-05-constraint-reconciliation-state-is-not-a-scalar]] — builds on
+- [[2026-08-10-bug-absolute-path-guard-matches-everything-inside-a-worktree]] — see also
+- [[2026-08-10-bug-git-follow-and-diff-filter-a-cancel-out]] — see also
+- [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — see also
