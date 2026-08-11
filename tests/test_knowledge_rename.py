@@ -154,3 +154,64 @@ def test_follow_without_diff_filter_dates_a_renamed_path(repo):
     got = ren.landing_date(repo, ".minerva/knowledge/001-decision-foo.md")
     assert got is not None, "a renamed path must still resolve to a date"
     assert len(got) == 10 and got[4] == "-"
+
+
+# --- reference forms the rewriter used to miss --------------------------------
+MAP = {"015-decision-foo": "2026-05-19-decision-foo"}
+
+
+def test_rewrites_a_knowledge_path_reference():
+    """An entry referenced by PATH rather than by wikilink. The linter's edge model only
+    knows `[[wikilinks]]`, so a corpus can lose every one of these and still lint clean
+    both before and after — 182 of them broke in one real migration, undetected."""
+    src = "See `.minerva/knowledge/015-decision-foo.md` for detail.\n"
+    assert ren.rewrite_links(src, MAP) == \
+        "See `.minerva/knowledge/2026-05-19-decision-foo.md` for detail.\n"
+
+
+def test_rewrites_a_relative_markdown_link():
+    assert ren.rewrite_links("[e](015-decision-foo.md)\n", MAP) == \
+        "[e](2026-05-19-decision-foo.md)\n"
+    assert ren.rewrite_links("[e](./015-decision-foo.md)\n", MAP) == \
+        "[e](./2026-05-19-decision-foo.md)\n"
+
+
+def test_leaves_an_unmapped_path_byte_identical():
+    """Map-lookup-only is what bounds the blast radius: these patterns can only retarget
+    a file the migration is already moving, never invent a target."""
+    src = "See `.minerva/knowledge/099-bug-other.md` and [x](other.md).\n"
+    assert ren.rewrite_links(src, MAP) == src
+
+
+def test_leaves_a_fenced_path_reference_alone():
+    src = "```\n`.minerva/knowledge/015-decision-foo.md`\n```\n"
+    assert ren.rewrite_links(src, MAP) == src
+
+
+def test_context_path_with_trailing_punctuation_resolves():
+    """`,` used to be captured INTO the lookup key, so `111-terms,` missed the map and
+    the path was left behind while its neighbour on the same line was rewritten."""
+    dmap = {"111-terms": "2026-06-05-terms"}
+    out = ren.rewrite_links(
+        "**Context**: .minerva/work/111-terms, .minerva/work/111-terms\n", {}, dmap)
+    assert "111-terms" not in out
+    assert out.count("2026-06-05-terms") == 2
+
+
+def test_plan_counts_bare_shorthand_without_rewriting_it(tmp_path):
+    """`[[139]]` names an entry with no slug. Before a rename a reader can resolve it
+    with `ls .minerva/knowledge/139-*`; after one the number is in no filename at all.
+    Counted so the migration reports it — never resolved, because resolving by number
+    alone is wrong often enough to refuse."""
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    git(tmp_path, "init", "-q")
+    (kd / "015-decision-foo.md").write_text("body\n")
+    (tmp_path / "notes.md").write_text("see [[139]] and [[139]] and [[204]]\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+
+    result = ren.plan(tmp_path)
+    assert result["shorthand_refs"] == {"139": 2, "204": 1}
+    # and the rewriter leaves them exactly as they were
+    assert ren.rewrite_links("see [[139]]\n", result["entries"]) == "see [[139]]\n"

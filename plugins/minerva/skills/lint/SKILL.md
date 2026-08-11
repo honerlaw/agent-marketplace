@@ -69,13 +69,18 @@ attention, so a clean result is not a guarantee).
   ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
   from pathlib import Path; from knowledge_lint import parse_entry, ENTRY_RE; \
   E={p.name: parse_entry(p) for p in Path('$ROOT/.minerva/knowledge').glob('*.md') if ENTRY_RE.match(p.name)}; \
-  inbound={e['nnn']: set() for e in E.values()}; \
-  [inbound[t].add(e['nnn']) for e in E.values() for t in e['backlinks'] if t in inbound]; \
-  print(json.dumps(sorted(n for n,e in ((v['nnn'],v) for v in E.values()) if not e['backlinks'] and not inbound[n])))"
+  inbound={e['stem']: set() for e in E.values()}; \
+  [inbound[t].add(e['stem']) for e in E.values() for t in e['backlink_stems'] if t in inbound]; \
+  print(json.dumps(sorted(s for s,e in ((v['stem'],v) for v in E.values()) if not e['backlink_stems'] and not inbound[s])))"
   ```
 
+  Keyed on the entry's **stem**, never on `nnn`. Under date ids `nnn` is the DATE, so an
+  `nnn`-keyed graph collapses every entry sharing a day into one bucket and almost
+  nothing can look orphaned — 0 reported against 14 real ones, on the corpus where this
+  was caught. `parse_entry` exposes `backlink_stems` for exactly this reason.
+
   An entry with no outbound and no inbound edge — where an edge is a `## Related`
-  link **or** a supersession-banner back-link, matching the detector's `backlinks`
+  link **or** a supersession-banner back-link, matching the detector's `backlink_stems`
   edge model — is an **orphan candidate for cross-linking**, *not* a defect. Whether
   an orphan should be linked (and to what) is the only LLM judgment here; many
   entries legitimately stand alone.

@@ -69,8 +69,15 @@ warnings are normal and are `minerva:cleanup`'s job. Then confirm no live legacy
 survived:
 
 ```bash
-grep -rE '\[\[[0-9]{3,}-' --include='*.md' . | grep -v '.minerva/worktrees'
+grep -rE '\[\[[0-9]+-' --include='*.md' . \
+  | grep -vE '\[\[[0-9]{4}-[0-9]{2}-[0-9]{2}-' | grep -v '.minerva/worktrees'
 ```
+
+The second `grep -v` is what makes this check mean anything. A bare `[[0-9]{3,}-` also
+matches the `2026` of every correctly-migrated `[[2026-05-19-…]]` link, so the pattern
+that looks like it finds leftovers actually matches the whole corpus — 6,005 hits against
+26 real ones, on the corpus where this was caught. Excluding the date shape first leaves
+only genuine legacy ids.
 
 Remaining hits should only ever be inside fenced examples, or prose in an entry recounting
 an old number. Both are correct: the migration is fence-aware by design.
