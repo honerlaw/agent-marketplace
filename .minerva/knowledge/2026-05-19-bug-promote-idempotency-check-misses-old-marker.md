@@ -35,3 +35,4 @@ Fix options:
 
 ## Related
 - [[2026-05-19-constraint-post-promote-scratchpad-canonical-empty]] — see also
+- [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also

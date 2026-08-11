@@ -26,6 +26,7 @@
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — promote writes only new entry files; index, watermark, reciprocals and overview reconcile on the default branch
 - [[2026-08-09-decision-reference-is-a-fifth-entry-type]] — The entry-type vocabulary was four values — `decision` / `bug` / `pattern` / `constraint` — hardcoded in `SECTION_TO_TYPE`, `SECTION_ORDER` and four skill docs. Authors wrote `reference` entries anyway (four of them in one corpus), and the tooling had nowhere to put them: `plan_index` cannot place a line whose declared type has no section, so they were refused indefinitely. Adding `## References` as a fifth section ratifies what authors already do. Two rules fall out: **append a new section, never interleave it** (appending is the only position that leaves every existing index's line order byte-identical), and an empty section renders as its header alone, so the change is inert for every corpus that does not use it.
 - [[2026-08-10-decision-date-ids-make-identity-the-path]] — an unallocated id plus full-stem identity turns silent duplicate-merges into loud add/add conflicts
+- [[2026-08-11-decision-ci-runs-the-whole-suite]] — three dead test files forced an enumerated CI list for months; deleting them dissolved the constraint instead of guarding it
 
 ## Bugs
 
@@ -47,6 +48,7 @@
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — `assert "x" in prose` cannot fail when x is removed from the codebase; invert it, don't delete it
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — two derivations plus a comment asserting they match will drift; share one implementation, or the invariant is only a wish
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — lint read clean before AND after 182 references broke, because its model of "a reference" was the writer's model; a clean gate is evidence only over what the gate can see
+- [[2026-08-11-pattern-the-enumeration-is-what-fails]] — a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
 
 ## Constraints
 
