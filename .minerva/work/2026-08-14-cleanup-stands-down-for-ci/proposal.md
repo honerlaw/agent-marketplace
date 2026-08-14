@@ -1,7 +1,7 @@
 # Proposal: cleanup-stands-down-for-ci
 
 **Date**: 2026-08-14
-**Status**: Draft
+**Status**: Shipped (2026-08-14)
 **Base**: `main`
 
 ## Goal
