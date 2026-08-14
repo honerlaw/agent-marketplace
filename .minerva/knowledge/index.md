@@ -77,5 +77,6 @@
 - [[2026-08-05-constraint-knowledge-allocation-scans-across-branches]] — new-file id collisions merge cleanly with no conflict, so the allocator is the only backstop
 - [[2026-08-05-constraint-nnn-keyed-lookups-hide-duplicates]] — `{id: record}` silently drops duplicates; build `{id: [records]}` and exclude dupes from every derived edit
 - [[2026-08-05-constraint-reconciliation-state-is-not-a-scalar]] — a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
+- [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — an atomic-push lock excludes nothing from a second writer that pushes a different branch name
 
 ## References
