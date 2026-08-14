@@ -48,3 +48,22 @@ so a stand-down is visible rather than reported as "nothing pending".
 
 `knowledge_lint`: 0 errors. The 4 warnings are `pending reconciliation` back-links, which
 is what an add-only promote is supposed to leave for the default branch.
+
+## CI triage 2026-08-14
+
+`structural` failed: `cleanup/SKILL.md is 9354 bytes, over the 9216-byte budget`. A gate I
+did not know existed, and its assertion message states the remedy — keep detail prose in
+`references/*.md` rather than growing the core. My SKILL.md sentence carried the whole
+argument (unserialised vs redundant) when the core only needs the exception to exist and a
+pointer; the reference already carries the reasoning.
+
+Trimmed to `Exception: a repo that reconciles in CI (Step 0).` — 9204 bytes, 12 to spare.
+Measured each candidate rather than estimating, after the first two rewrites came in 45 and
+2 bytes over. Full suite green locally: 522 passed.
+
+Note for whoever is next: 12 bytes of headroom is not much. The right move if it overflows
+again is to move prose out, not to trim the exception further — it is already minimal.
+
+Also worth recording: `gh pr checks --watch --fail-fast` exited **0** on this failing
+check, the third falsely-green signal of the session. Verify `bucket` values, never the
+watcher's exit code.
