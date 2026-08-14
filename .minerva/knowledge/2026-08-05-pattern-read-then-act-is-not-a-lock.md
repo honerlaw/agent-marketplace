@@ -51,3 +51,4 @@ pointless work in the common case, explicitly documented as *not* the lock.
 ## Related
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — builds on
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the sibling hazard: that one is two runs racing, this one is no second run existing
+- [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — see also

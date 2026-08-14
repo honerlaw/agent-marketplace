@@ -281,11 +281,20 @@ design did — and the same shape recurred one file over in the reconciliation g
 a `gh pr list` check preceding a branch create is a check-then-act race rather than a lock.
 That one is fixed by letting git's atomic ref update *be* the lock: a non-forced push, where
 exactly one of two concurrent runs wins and the loser exits cleanly
-([[2026-08-05-pattern-read-then-act-is-not-a-lock]]).
+([[2026-08-05-pattern-read-then-act-is-not-a-lock]]) — subject to a precondition that later
+turned out to be load-bearing. That lock is a lock over one **ref**, not over the resource
+it was meant to protect. When a consumer repo added a CI job that reconciles on merge,
+pushing a unique branch per run so its own runs could not collide, there was suddenly no
+contended ref: nothing rejected the loser, two writers could edit `index.md`, and the
+absence of the exclusion produced no error at all. The fix was not to make the second
+writer share the ref but to detect it and have the first stand down — where two writers
+cannot be serialised, only one of them runs
+([[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]]).
 
-Read together, this cluster is one lesson in four shapes: **shared mutable state is where
+Read together, this cluster is one lesson in five shapes: **shared mutable state is where
 concurrency bugs go to hide**, and the ones that survive testing are the ones where the
-test and the design share an assumption.
+test and the design share an assumption — or, in the last case, where the guarantee was
+written down as a property of the resource when it was only ever a property of the ref.
 
 ## Git worktrees and promote/scratchpad mechanics
 

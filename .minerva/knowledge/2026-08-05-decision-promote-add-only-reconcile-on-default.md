@@ -66,3 +66,4 @@ local config that CI checkouts silently lack.
 - [[2026-08-05-constraint-knowledge-allocation-scans-across-branches]] — see also
 - [[2026-08-05-pattern-read-then-act-is-not-a-lock]] — see also
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — the one gap in this design, and how it was closed
+- [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — see also
