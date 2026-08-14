@@ -26,6 +26,37 @@ worktrees, and including `minerva:cleanup` invoked with no argument on a clean t
 A merge that happened through the GitHub UI leaves pending entries with no worktree
 to remove, and those still need cataloguing.
 
+The one exception is Step 0: a repo that reconciles in CI already has a writer, and a
+second one is a race rather than a redundancy.
+
+## Step 0 — Stand down if the repo reconciles in CI
+
+Some repos have installed a workflow that reconciles on merge. Where one exists it owns
+this work, and cleanup must not also do it:
+
+```bash
+grep -rl "knowledge_fix.py" .github/workflows/ 2>/dev/null
+```
+
+A hit means stand down: report `reconciliation: owned by CI (<workflow file>)`, **name any
+entries the signal below would have reported as pending** so the run is not quietly
+trusting something it has not verified, and skip to the final report. Do not open a PR.
+
+The anchor is the pinned fixer rather than a filename or a marker: `knowledge_fix.py` *is*
+the deterministic half of reconciliation, so a workflow that calls it is a CI reconciler and
+one that does not is not. A declared marker file would need per-repo setup, and a repo that
+installs the workflow and forgets the marker gets exactly the race described below.
+
+**This is not a de-duplication nicety — the two writers are unserialised.** Step 3.3's
+mutual exclusion is a non-forced push to the fixed `minerva/reconcile` ref, and that
+argument holds only because both racers push the *same* ref. A CI job pushes a unique
+branch per run (`minerva/reconcile-ci/<run_id>` in the known implementation), so there is no
+contended ref, nothing rejects the loser, and both writers can open a PR editing `index.md`
+— the concurrent-writer collision this whole add-only design exists to prevent.
+
+Repos with no such workflow are unaffected; the grep finds nothing and every instruction
+below applies unchanged.
+
 ## Step 1 — Signal (deterministic, read-only)
 
 Both signals already exist; neither is a judgment call.
@@ -46,8 +77,15 @@ case and must stay silent and cheap.
 ## Step 2 — One at a time, but never abandon the pending set
 
 ```bash
-gh pr list --head minerva/reconcile --state open --json number,url --limit 1
+gh pr list --state open --json number,url,headRefName \
+  --jq '[.[] | select(.headRefName | startswith("minerva/reconcile"))][0]'
 ```
+
+A **prefix** match, not `--head`. `--head` takes an exact branch name, so an open
+`minerva/reconcile-ci/31727177896` is invisible to it and the check reports clear while a
+reconciliation is in flight. Step 0 should already have stood the run down before this
+line is reached; this is what keeps the failure safe when it has not — a differently-named
+CI job, or a caller that skipped Step 0.
 
 **At most one outstanding at a time** — two would edit `index.md` concurrently and
 conflict with each other, recreating the exact problem this design removes.
@@ -191,7 +229,7 @@ reconciliation PR is already open — and stop. Create no branch, no worktree, n
 Add to cleanup's existing report:
 
 ```
-Reconciliation:          <nothing pending | PR #N opened, auto-merge enabled | waited on PR #N>
+Reconciliation:          <nothing pending | owned by CI (<workflow>) | PR #N opened, auto-merge enabled | waited on PR #N>
   Entries catalogued:    N (<list>)
   Overview refreshed:    <yes (N entries newly linked) | no (self-gate declined) | not run>
   Refusals:              N (<list — needs manual attention>)
