@@ -33,3 +33,4 @@ Corollary on the fallback: a long `ScheduleWakeup` stays armed underneath, and i
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — builds on
 - [[2026-05-19-constraint-skills-must-call-tools-not-prose]] — builds on
 - [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — see also
+- [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — see also

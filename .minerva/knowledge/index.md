@@ -51,6 +51,8 @@
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — permissiveness and scope are separate dials; widening what a parser accepts without bounding where it looks turns a gap-filler into a false reading
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a knowledge entry stating a rule enforces nothing — this one was violated three times in two months and the first enforcing test caught a live defect immediately
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
+- [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — guard a retry with the local record; an eventually-consistent index misses what you just wrote
+- [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
 
 ## Constraints
 

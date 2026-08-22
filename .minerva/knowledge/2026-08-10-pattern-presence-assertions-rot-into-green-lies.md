@@ -54,3 +54,4 @@ entry at all. The pair brackets the real behaviour.
 - [[2026-08-10-decision-date-ids-make-identity-the-path]] — see also
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
+- [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — see also

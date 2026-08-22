@@ -237,6 +237,19 @@ every aggregate and cross-entry write — catalog lines, watermark, reciprocal l
 banners, the overview — moved to a reconciliation pass that runs on the default branch
 where there is exactly one writer ([[2026-08-05-decision-promote-add-only-reconcile-on-default]]).
 
+A later entry extends the cluster from *two writers* to *one writer and its own guard*.
+When `minerva:promote` gained the ability to file deferred TODOs as GitHub issues, it needed
+the same check-before-write `minerva:ship` uses. The first draft read GitHub's **search
+index** — which is not updated synchronously with creation, so the guard was strongest where
+it mattered least (a re-run days later, against a settled index) and blindest exactly where
+it mattered most (a retry seconds after a partial failure, when the just-created issue is not
+yet searchable). The general shape: **when a write and its guard travel through different
+consistency domains, the guard is weakest in the window right after the write** — true of a
+search index, a CDN, a read replica, a cache. The fix was ordering rather than timing: check
+the source you control first (the run's own record, then a local file), and demote the
+eventually-consistent one to a backstop for the cases only it can see
+([[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]]).
+
 Removing those conflicts removed something load-bearing that nobody had designed: the
 textual collision was the *only* thing incidentally catching duplicate entry ids. A
 knowledge entry is a **new file**, so two units picking the same number merge cleanly with
@@ -435,6 +448,20 @@ live defect: `plan_index` rewrites `index.md` from a fence-blind parse, so a fen
 line naming a real entry became a real catalogued line, duplicating the entry with the
 example's fake summary while the fence-aware linter reported clean
 ([[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]]).
+
+A companion hazard sits one step upstream, in how these rules get *verified*. minerva
+skills document commands an agent runs verbatim, and this repo executes some of them in
+tests — safe only while every extracted block is read-only, a property nothing enforces.
+`minerva:promote`'s issue path is the first documented flow whose commands **mutate remote
+state**. Checking that its label helper correctly reported an unusable label was run against
+the live repository; the account had admin rights, so the "should fail" branch never
+executed and the command instead did exactly what it documents — creating a real label that
+had to be deleted. The trap generalizes: **a test written around "this should fail" becomes
+a test that succeeds and mutates the moment it runs with more permission than assumed**, and
+the stronger the credentials, the less the negative path is exercised and the more real the
+side effect. `bash -n` catches the quoting defects that motivate most such checks at zero
+side-effect cost; anything beyond that wants a stub or a scratch target
+([[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]]).
 
 That yields the cluster's governing test. For any rule this corpus records, ask **what fails
 if it is violated**; if the answer is "a reviewer might notice", it is a wish, not a

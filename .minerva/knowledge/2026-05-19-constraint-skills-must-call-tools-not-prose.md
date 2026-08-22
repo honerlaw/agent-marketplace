@@ -26,3 +26,4 @@ When a skill requires the model to change execution context (working directory, 
 - [[2026-07-21-constraint-handoffs-name-skill-tool]] — see also
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
 - [[2026-07-29-pattern-wait-shape-matches-what-is-awaited]] — see also
+- [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — see also
