@@ -71,3 +71,10 @@ has spent its one vote.
 - #76 done as designed — evidence appended to the bug entry; issue stays open, to be
   commented and retitled. NOT in the Closes list.
 - Suite: 636 passed.
+- CORRECTION: the completion checklist's first draft cited a `main` baseline of 571 tests.
+  Wrong — 571 is this branch's count after its own first commit. Re-measured on 7f56ce4:
+  535. Net new is +101, not +65. Caught by the completion Skeptic, verified directly.
+- [3/3 accept] completion verification: all three independently reproduced mutations against
+  the live worktree; the #81 inferred-gate revert failed the steady-state test for every
+  reviewer. Skeptic caught the 571-vs-535 baseline error (corrected above); Arbiter re-measured
+  535 on 7f56ce4 and judged the correction handled transparently.
