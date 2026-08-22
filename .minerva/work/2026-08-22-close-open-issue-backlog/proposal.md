@@ -1,7 +1,8 @@
 # Proposal: close-open-issue-backlog
 
 **Date**: 2026-08-22
-**Status**: Draft
+**Status**: Shipped (2026-08-22)
+**Closes**: #70, #71, #75, #77, #78, #79, #80, #81, #85
 **Base**: `origin/main`
 
 ## Goal
@@ -113,9 +114,10 @@ per-entry refusal present. An inferred gate would discard legitimate reciprocal 
 every steady-state run, reintroducing the half-reconciled corpus from the other direction —
 the bug wearing a different hat.
 
-So the signal is **explicit, not inferred**: `plan_index` returns a fourth element,
-`hard: bool`, set only at its two early-return sites. `plan()` suppresses entry edits on
-`hard` alone and never inspects text equality. This follows the repo's standing rule against
+So the signal is **explicit, not inferred**. **Shipped:** `plan_index` returns
+`(new, old, refusals, hard)`; `hard` is `True` only at the missing/empty-index return and
+the unplaceable-entry return. `plan()` returns `{"index": None, "entries": {}}` on `hard`
+and never inspects text equality. This follows the repo's standing rule against
 deriving state from a spelling or a coincidence — the same reasoning behind
 [[2026-08-09-pattern-read-authored-metadata-from-where-it-is]]. Two in-repo test call sites
 unpack the 3-tuple and are updated with it; the unpack arity is itself the mechanical check
@@ -162,6 +164,14 @@ Adopt the named-anchor form the corpus **already uses** elsewhere — ``per `min
 test that extracts every ``` `minerva:<skill>`'s "<Heading>" ``` mention and asserts a matching
 heading exists in that skill's `SKILL.md` or `references/*.md`. Runs after #80 so the test
 sees `propose-ship`'s final layout.
+
+**Shipped, decided during implementation.** Resolution matches by **prefix**, not equality:
+headings here carry trailing clarifiers (`## Implementation protocol — apply throughout the
+session`) while citations name the stable head, and two live correct citations were already
+prefixes — equality would have reded CI against correct prose on day one. The
+`Hard gate #1/#2` citations were **left unconverted**: they name bold lead-ins inside
+numbered list items, not headings, so there is no anchor for them to resolve to. Sixteen
+step-number citations were converted across the three orchestrators.
 
 ### 9. #77 — six target-resolution blocks kept in sync by a plea
 
@@ -248,6 +258,25 @@ and retitle it to the real ask — diagnose the loader. The issue stays **open**
 
 These three are reported prominently in the final report, not buried: the user reserved
 scope calls for themselves, so the exclusions are surfaced as decisions to review.
+
+### 11. Review fixes applied after triage
+
+Three defects in this unit's own new test-support code, found by the review phase and fixed
+before ship:
+
+- **A shared `step_number_citations()` predicate.** The step-citation regex had been defined
+  twice — once in the check, once in its own negative test — so a later edit to one would
+  have left the negative case passing against a stale copy. Exactly the rot #79's extracted
+  `description_overflow()` predicate was written to avoid, reintroduced two functions later.
+- **The self-reference exclusion is scoped to the gap.** The first version banned commas
+  anywhere between the skill mention and the step reference, which silenced a genuine
+  citation phrased with a natural comma (`See \`minerva:promote\`, step 5`). It now excludes
+  self-reference markers found only in that gap, so `re-run \`minerva:promote\`'s step 3` —
+  where the marker belongs to a different clause — is still caught. Both directions tested.
+- **The `gh` guard is an allowlist.** Review found ten mutating commands the hand-enumerated
+  denylist missed, including `gh api graphql` carrying a mutation, which bypassed the
+  method-flag checks entirely. Inverted to an allowlist of read-only verbs, all ten close by
+  construction.
 
 ## Success criteria
 
