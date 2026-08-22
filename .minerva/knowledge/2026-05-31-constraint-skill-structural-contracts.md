@@ -25,3 +25,4 @@ The format itself (anchor grammar including the `{any_of, ignore_case}` disjunct
 - [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[2026-06-10-constraint-site-fourth-catalog-surface]] — see also
 - [[2026-06-11-constraint-skill-progressive-disclosure]] — see also
+- [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]] — see also

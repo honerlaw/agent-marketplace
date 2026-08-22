@@ -251,6 +251,26 @@ project is honest about how much it trusts its own measurements: **behavioral sk
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[2026-05-31-decision-behavioral-evals-provisional]]).
 
+That honesty was later vindicated in a sharper way than intended. The validation spike
+finally ran, and the first half of its answer was that the control had never been a control
+at all: both arms shelled out to the *identical* command, so every delta the runner had
+reported compared a configuration against itself. A real control does exist — point
+`--plugin-dir` at a copy of the plugin with the one skill directory removed — and with it
+the second half of the answer is a **no**: on a 5-point rubric the treatment-minus-control
+delta came out at +0.5 against a within-arm standard deviation of 0.96, roughly 0.9 standard
+errors, needing ~59 runs per arm to resolve. So the methodology now measures something, and
+that something is still smaller than the noise; per-skill backfill stays blocked, for a new
+reason. The recommended move is to cut variance — a paired head-to-head judge removes
+judge-scale drift — rather than pay for 59x the runs
+([[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]]).
+
+The spike also produced a small, general lesson about degenerate cases. Its first live run
+failed loudly because the new control was being built from the repo root rather than the
+plugin root, and would have removed nothing — silently reproducing the very no-op it
+replaced. It refused instead, because the code that builds a control arm raises when the
+skill it is meant to suppress is absent. The old control degraded to noise in silence; the
+new one declines to run.
+
 Running that ladder in anger then exposed a defect class *below* the level of any policy:
 skill text can name the right tool and still get the control flow wrong by leaving a
 default unstated. Dispatch instructions pinned `subagent_type` and `model` but not the
