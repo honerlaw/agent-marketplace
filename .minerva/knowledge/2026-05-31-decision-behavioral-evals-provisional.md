@@ -4,6 +4,9 @@
 **Type**: decision
 **Context**: .minerva/work/2026-05-31-behavioral-skill-value-runner (see git history if the worktree has been cleaned up)
 
+<!-- superseded-by: 2026-08-22-decision-behavioral-eval-control-real-signal-not-yet -->
+> **Superseded by [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]]** (2026-08-22)
+
 ## Context
 The skill-eval mechanism has two tiers (see [[2026-05-31-constraint-skill-structural-contracts]]): the deterministic structural floor (`contract.json`) and a behavioral "does this skill add value" tier. Unit 018 built the behavioral runner — `scripts/run_skill_evals.py`, reading sibling `evals/<skill>/behavioral.json` cases — which runs a task with a skill vs without (control) and reports a `treatment − control` value-delta.
 
@@ -18,3 +21,4 @@ The format, run commands, and corrected prior-art framing live in **`evals/READM
 ## Related
 - [[2026-06-02-decision-phase-b-deterministic-lint-detector]] — see also
 - [[2026-06-03-decision-synthesis-layer-separate-file-advisory]] — see also
+- [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]] — superseded by

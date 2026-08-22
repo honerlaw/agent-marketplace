@@ -6,12 +6,21 @@ runner executes the task **with** the skill available (treatment) and **without*
 it (control), judges both transcripts against the case rubric with an
 LLM-as-judge, and reports the ``treatment - control`` "value-added" delta.
 
-PROVISIONAL — the methodology is not validated. Whether the with-minus-without
-delta is a stable, meaningful per-skill signal is an open question; cleanly
-suppressing ONE auto-discovered skill as a control is itself unsolved (see the
-work unit's followups.md — the mandatory validation spike). The cited prior art
-(skill-creator) does skill *triggering* and *variant-vs-variant* comparison, NOT
-present-vs-absent suppression. Treat reported deltas as experimental.
+CONTROL IS NOW REAL; THE DELTA IS STILL UNVALIDATED. The blocking half of the
+validation spike has returned "go": a single skill CAN be suppressed cleanly, by
+pointing ``--plugin-dir`` at a copy of this plugin with that one skill directory
+removed. Verified live 2026-08-22 — the treatment arm reports the skill present
+and the control arm reports it absent, reproducibly.
+
+The previous control was a **no-op**: it ran the identical ``claude -p`` command
+for both arms and only printed a warning, so ``treatment - control`` compared a
+configuration against itself and every reported delta was pure run-to-run noise.
+That is why no backfill was permitted against it.
+
+Still open: whether the delta, now that it measures something, is separable from
+run-to-run variance. Until that is answered, treat magnitudes as experimental and
+do not CI-gate. The cited prior art (skill-creator) does skill *triggering* and
+*variant-vs-variant* comparison, NOT present-vs-absent suppression.
 
 This is on-demand tooling — NOT a CI gate (non-deterministic, costs API).
 
@@ -26,8 +35,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -122,24 +133,63 @@ def build_plan(case: Case) -> CasePlan:
 # --------------------------------------------------------------------------- #
 # Layer 3 — execute (the ONLY non-deterministic layer; injectable)
 # --------------------------------------------------------------------------- #
-def claude_invoke(prompt: str, skill_available: bool, skill: str) -> str:
-    """Default real invocation: shell out to `claude -p`.
+# The minerva plugin tree the arms are built from. This runner is a repo-only script
+# (`<repo>/scripts/`), NOT shipped inside the plugin, so the plugin root is a sibling
+# path rather than this file's parent — getting that wrong silently produced a control
+# arm with nothing removed, which the `arm_plugin_dir` guard caught on first live run.
+PLUGIN_ROOT = REPO_ROOT / "plugins" / "minerva"
 
-    PROVISIONAL CONTROL: when ``skill_available`` is False we want the task run
-    WITHOUT this one skill in scope, but cleanly suppressing a single
-    auto-discovered skill is unsolved. This default is a best-effort placeholder
-    (it runs the prompt in a nested `claude -p` and does NOT yet guarantee the
-    skill is absent) and emits a warning. The validation spike must replace it.
+# Cache of materialised arm plugin dirs, keyed by (skill, skill_available), so a
+# multi-case run copies the plugin tree once per arm rather than once per call.
+_ARM_DIRS: dict = {}
+
+
+def arm_plugin_dir(skill: str, skill_available: bool) -> Path:
+    """A plugin directory for one arm: the full plugin, or it minus ``skill``.
+
+    THE control mechanism. `--plugin-dir` makes the nested run load exactly this
+    tree, so removing one skill directory from the copy removes exactly that skill
+    from the arm — the clean single-skill suppression the validation spike was
+    blocked on. Verified live 2026-08-22: probing for the skill's presence returns
+    true under the treatment dir and false under the control dir, reproducibly.
+
+    Do NOT add `--bare` to "isolate harder". It skips credential resolution, so a
+    nested run under it fails with "Not logged in" — measured, not assumed. The
+    plugin-dir override alone is sufficient: the control probe reports the skill
+    absent without it.
+    """
+    key = (skill, skill_available)
+    if key not in _ARM_DIRS:
+        dest = Path(tempfile.mkdtemp(prefix=f"skilleval-{skill}-")) / "plugin"
+        shutil.copytree(PLUGIN_ROOT, dest)
+        if not skill_available:
+            target = dest / "skills" / skill
+            if not target.is_dir():
+                raise RuntimeError(
+                    f"cannot build a control arm for {skill!r}: no skills/{skill} "
+                    f"directory in {PLUGIN_ROOT} — suppressing nothing would make the "
+                    "delta meaningless rather than merely noisy")
+            shutil.rmtree(target)
+        _ARM_DIRS[key] = dest
+    return _ARM_DIRS[key]
+
+
+def claude_invoke(prompt: str, skill_available: bool, skill: str) -> str:
+    """Default real invocation: shell out to `claude -p` with an arm-specific plugin dir.
+
+    The two arms differ in exactly one thing — whether ``skills/<skill>/`` exists in
+    the plugin tree the nested run loads. Everything else (model, tools, prompt,
+    environment) is identical.
+
+    The previous implementation ran the SAME command for both arms and only printed
+    a warning, so the reported delta compared a configuration against itself.
     Tests never reach this function — they inject a stub.
     """
-    if not skill_available:
-        print(f"WARNING: control arm for {skill!r} uses a provisional, unvalidated "
-              "suppression — the delta is experimental (see followups.md spike).",
-              file=sys.stderr)
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)  # allow nesting claude -p (mirrors skill-creator)
     result = subprocess.run(
-        ["claude", "-p", prompt],
+        ["claude", "-p", "--plugin-dir", str(arm_plugin_dir(skill, skill_available)),
+         prompt],
         capture_output=True, text=True, env=env, timeout=600,
     )
     # Fail loud: an empty transcript silently scored would fabricate a value-delta —

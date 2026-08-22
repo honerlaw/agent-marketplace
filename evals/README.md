@@ -133,22 +133,46 @@ Per case the runner plans three steps — **treatment** (skill available), **con
 suppressed), and **judge** — then reports `treatment - control` as the per-case "value-added"
 delta. `--dry-run` only parses and prints the plan; it makes no API calls.
 
-### ⚠️ The methodology is PROVISIONAL
+### The validation spike has run — control GO, signal NO-GO
 
-Whether the with-minus-without delta is a *stable, meaningful per-skill signal* is **not
-validated**. Two specific unsolved problems:
+Live spike, 2026-08-22, `debug` / `stale-cache-incident`, N=4 per arm.
 
-- **The control is a best-effort stub.** Cleanly running a task *without* one specific
-  auto-discovered skill (while leaving the other 12 available) is unsolved. The default control
-  invocation does not yet guarantee the skill is absent and warns at runtime.
-- **Judge calibration is unproven.** Rubric scores from an LLM-as-judge may be noisy.
+**The control works now (was: a stub that suppressed nothing).** A single skill is suppressed
+by pointing `--plugin-dir` at a copy of the plugin with that one skill directory removed.
+Verified: a presence probe returns the skill under the treatment dir and absent under the
+control dir, reproducibly. Do **not** add `--bare` to isolate harder — it skips credential
+resolution and the nested run dies with "Not logged in" (measured).
 
-The cited prior art (`skill-creator`) does skill **triggering** (making a skill *appear*) and
-**variant-vs-variant** blind comparison — **not** present-vs-absent suppression. So the control
-is a genuinely new problem, not a known pattern to wire up. The first follow-up is a live
-signal-and-control validation spike (1 skill / 1 case / N runs) whose go/no-go can force a
-redesign of the runner; see the work unit's `followups.md`. Treat all reported deltas as
-experimental until that spike lands.
+What shipped before was worse than a stub: `claude_invoke` ran the **identical** command for
+both arms and only printed a warning, so `treatment - control` compared a configuration
+against itself. Every delta it ever reported was run-to-run noise, by construction.
+
+**The signal is not yet separable from noise.** With a real control:
+
+| arm | scores (rubric max 5) | mean | stdev |
+|---|---|---|---|
+| treatment | 3, 2, 2, 4 | 2.75 | 0.96 |
+| control | 2, 3, 2, 2 | 2.25 | 0.50 |
+
+Delta **+0.5**, pooled noise **0.96** — the within-arm swing is ~4x the between-arm
+difference, and the delta is 0.9 standard errors. Not significant, not usable.
+
+**Therefore: do not backfill per-skill cases yet, and do not read a single-run delta as
+evidence about a skill.** At the observed effect size and variance, ~**59 runs per arm per
+case** would be needed for 80% power — against the 1 run per arm the runner does today.
+
+Two ways forward, in preference order:
+1. **Lower the variance rather than raise N.** Absolute rubric scoring by an LLM judge is the
+   dominant noise source. A paired head-to-head judgment ("which transcript better satisfies
+   this rubric?") removes judge-scale drift and typically needs far fewer runs.
+2. **Raise N** per case and report a confidence interval instead of a point delta, accepting
+   the API cost.
+
+Judge calibration remains unproven independently of the above.
+
+The cited prior art (`skill-creator`) does skill **triggering** and **variant-vs-variant**
+blind comparison — **not** present-vs-absent suppression, which is why the control had to be
+built rather than borrowed.
 
 The runner's own logic (parsing, planning, scoring, reporting) is deterministically
 regression-tested in `tests/test_skill_evals.py` with stubbed LLM calls — only the live
