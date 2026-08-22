@@ -229,3 +229,307 @@ def test_token_match_is_boundary_aware():
     assert not _present("minerva:propose", "only minerva:propose-ship here")
     assert _present("minerva:propose-ship", "minerva:propose-ship runs the lifecycle")
     assert not _present("minerva:propose-ship", "only minerva:propose-ship-auto here")
+
+
+# --- Description ceiling (issue #79) ------------------------------------------
+#
+# The platform truncates a skill description past this many characters, and the
+# tail is exactly where the disambiguating ambient-trigger phrases sit — so an
+# over-long description silently loses the part that makes it fire correctly.
+# `.minerva/knowledge/2026-07-21-constraint-skill-description-house-style.md`
+# has documented the ceiling since unit 046, which trimmed three skills to fit
+# it as prose. Nothing tested it, so nothing stopped it regressing — the shape
+# `2026-08-11-pattern-an-unenforced-constraint-is-aspirational` is named for.
+DESCRIPTION_MAX_CHARS = 1024
+
+
+def description_overflow(parsed: dict) -> int:
+    """Chars by which a skill's description exceeds the ceiling; 0 when it fits.
+
+    Extracted as a predicate so the negative case below can exercise the SAME
+    code the parametrized check runs, rather than restating its arithmetic — a
+    negative case that re-derives the rule cannot prove the rule is enforced.
+    """
+    return max(0, len(parsed.get("description") or "") - DESCRIPTION_MAX_CHARS)
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_description_within_ceiling(skill):
+    _raw, parsed, _body = _read_skill(skill)
+    over = description_overflow(parsed)
+    assert over == 0, (
+        f"{skill}/SKILL.md description is {over} chars over the "
+        f"{DESCRIPTION_MAX_CHARS}-char ceiling — the platform truncates past it and the "
+        "tail is where the ambient-trigger phrases live; move detail into the body"
+    )
+
+
+def test_description_ceiling_fires_on_an_over_long_description():
+    """Negative coverage: the predicate must flag the class it exists for.
+
+    Without this, `test_description_within_ceiling` is only ever observed passing
+    on a corpus that already fits, which cannot distinguish a working check from
+    a vacuous one (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+    """
+    assert description_overflow({"description": "x" * (DESCRIPTION_MAX_CHARS + 7)}) == 7
+    assert description_overflow({"description": "x" * DESCRIPTION_MAX_CHARS}) == 0
+    assert description_overflow({}) == 0
+
+
+# --- Cross-skill section citations (issue #78) ---------------------------------
+#
+# Skills cite each other's protocols. Citing by INTERNAL STEP NUMBER ("per
+# `minerva:propose` steps 8-9, 11") breaks silently the moment the cited skill
+# renumbers — nothing detects it, and the reader follows a pointer to the wrong
+# text. The corpus already had a better form in live use, so this makes it the
+# rule and checks it: `minerva:<skill>`'s "<Heading>".
+from knowledge_spans import FENCE_RE  # noqa: E402  (single-sourced fence grammar)
+
+HEADING_CITATION_RE = re.compile(r"`minerva:([a-z-]+)`'s \"([^\"]+)\"")
+
+
+def _unfenced(body: str) -> str:
+    """`body` with fenced blocks removed — a citation inside a fence is an
+    illustration, not a live pointer (the same rule the pointer-integrity checks use)."""
+    out, fenced = [], False
+    for line in body.splitlines():
+        if FENCE_RE.match(line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            out.append(line)
+    return "\n".join(out)
+
+
+def _headings(skill: str) -> list[str]:
+    """Every ATX heading in a skill's SKILL.md and references/*.md, hashes stripped."""
+    d = SKILLS_DIR / skill
+    files = [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]
+    return [ln.lstrip("#").strip()
+            for f in files if f.is_file()
+            for ln in f.read_text().splitlines() if ln.startswith("#")]
+
+
+def unresolved_heading_citations(body: str) -> list[tuple]:
+    """Citations in `body` that name a section which does not exist.
+
+    Matching is by PREFIX, not equality, and that is deliberate rather than lax.
+    Headings in this corpus carry trailing clarifiers — `## Implementation protocol
+    — apply throughout the session`, `## On approval — worktree setup + file writes`
+    — while citations name the stable head of the phrase. Two such citations were
+    already live and correct when this check was written; demanding equality would
+    have reded CI against correct prose on day one. The prefix must still start at
+    the beginning of the heading, so it cannot match an unrelated section.
+    """
+    bad = []
+    for m in HEADING_CITATION_RE.finditer(_unfenced(body)):
+        skill, heading = m.group(1), m.group(2)
+        if not (SKILLS_DIR / skill).is_dir():
+            bad.append((skill, heading, "no such skill"))
+        elif not any(h.startswith(heading) for h in _headings(skill)):
+            bad.append((skill, heading, "no heading with this prefix"))
+    return bad
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_cross_skill_citations_resolve(skill):
+    d = SKILLS_DIR / skill
+    for f in [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]:
+        if not f.is_file():
+            continue
+        bad = unresolved_heading_citations(f.read_text())
+        assert not bad, (
+            f"{f.relative_to(REPO_ROOT)} cites sections that do not exist: {bad} — "
+            "cite a real heading so a renumbering or rename is caught here"
+        )
+
+
+# A sibling cited by internal step number — the fragile form the heading anchors
+# replace. The GAP (group 2) is the text between the skill mention and the step
+# reference; the exclusion below reads only that span, never the whole sentence.
+STEP_CITATION_RE = re.compile(r"(`minerva:[a-z-]+`((?:'s)?[^.\n]{0,60}?)\bsteps? \d)")
+
+# Markers that make the step reference point at THIS document rather than the
+# skill just mentioned: "invoke `minerva:replan`, return to step 3" is a jump back
+# to the current protocol's own step 3.
+#
+# Scoped to the gap deliberately. An earlier version banned commas anywhere in the
+# gap, which silenced a genuine citation phrased with a natural comma
+# ("See `minerva:promote`, step 5"). Scanning the whole sentence instead would
+# reintroduce the mirror defect — "re-run `minerva:promote`'s step 3" would be
+# excluded by a marker that belongs to a different clause.
+SELF_REFERENCE_MARKERS = ("return to", "back to", "re-run", "rerun", "above")
+
+
+def step_number_citations(body: str) -> list:
+    """Cross-skill step-number citations in `body`, self-references excluded.
+
+    Module-level and shared, so the negative cases below exercise the SAME predicate
+    the enforcement check runs. An earlier draft defined this regex twice — once in
+    the check, once in its own negative test — which would have let the negative case
+    keep passing against a stale copy after the real one was edited
+    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+    """
+    out = []
+    for whole, gap in STEP_CITATION_RE.findall(_unfenced(body)):
+        if any(marker in gap.lower() for marker in SELF_REFERENCE_MARKERS):
+            continue
+        out.append(whole)
+    return out
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_no_cross_skill_step_number_citations(skill):
+    """Citing a sibling by internal step number is the form this check replaces."""
+    d = SKILLS_DIR / skill
+    for f in [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]:
+        if not f.is_file():
+            continue
+        hits = step_number_citations(f.read_text())
+        assert not hits, (
+            f"{f.relative_to(REPO_ROOT)} cites a sibling skill by step number "
+            f"({hits}) — renumbering breaks it silently; cite the section heading "
+            "as `minerva:<skill>`'s \"<Heading>\" instead"
+        )
+
+
+def test_citation_check_fires_on_a_missing_heading():
+    """Negative coverage for the resolver."""
+    assert unresolved_heading_citations('per `minerva:promote`\'s "No Such Section"') == [
+        ("promote", "No Such Section", "no heading with this prefix")]
+    assert unresolved_heading_citations('per `minerva:nonexistent-skill`\'s "Anything"') == [
+        ("nonexistent-skill", "Anything", "no such skill")]
+
+
+def test_citation_check_accepts_exact_and_prefix_matches():
+    # exact heading
+    assert unresolved_heading_citations('per `minerva:review`\'s "Triage persistence"') == []
+    # prefix of `## Implementation protocol — apply throughout the session`
+    assert unresolved_heading_citations('per `minerva:work`\'s "Implementation protocol"') == []
+
+
+def test_citation_check_ignores_fenced_examples():
+    assert unresolved_heading_citations('```\n`minerva:promote`\'s "Fake"\n```') == []
+
+
+def test_step_number_check_ignores_a_self_reference():
+    """`invoke minerva:replan, return to step 3` cites THIS skill's step 3.
+
+    Flagging it would push authors to reword correct prose to satisfy a false positive.
+    """
+    assert not step_number_citations("trigger `minerva:replan`, return to step 3")
+    assert not step_number_citations("then re-run step 4 of this protocol")
+    assert step_number_citations("per `minerva:promote` Mode A step 7")
+
+
+def test_step_number_check_catches_a_citation_phrased_with_a_comma():
+    """The false negative a blanket comma ban produced.
+
+    A genuine cross-skill citation can be phrased with a natural comma, and banning
+    commas in the gap silenced it — the check would have passed forever on the exact
+    defect it exists to catch.
+    """
+    assert step_number_citations("See `minerva:promote`, step 5 for details")
+
+
+def test_step_number_check_catches_a_citation_whose_sentence_starts_with_a_marker():
+    """The mirror defect a whole-sentence marker scan would introduce.
+
+    "re-run" here belongs to the leading clause, not to the gap between the skill
+    mention and the step reference — so this IS a cross-skill citation and must be
+    caught. Scoping the marker scan to the gap is what keeps both cases right.
+    """
+    assert step_number_citations("re-run `minerva:promote`'s step 3")
+    assert step_number_citations("go back to the top, then see `minerva:review` step 2")
+
+
+# --- The six target-resolution blocks (issue #77) ------------------------------
+#
+# The same "## Target resolution" protocol is stated in six skills, kept in sync by
+# the sentence "**Keep all six blocks in sync if you edit one.**" and nothing else —
+# the shape `2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant` is named
+# for, and it had already drifted.
+#
+# The blocks are NOT copies, and that is deliberate: `minerva:cleanup` has three steps
+# because its no-argument mode means "all merged worktrees"; `minerva:review` and
+# `minerva:ship` have materially different "none found" behaviour (skip to code review /
+# bare mode). So byte-identity is the wrong invariant — normalizing enough to make
+# cleanup's three steps match work's five would erase everything worth checking.
+#
+# What IS shared, exact, and load-bearing is asserted instead: each block enumerates
+# its five siblings, and each states the two lookup rules whose absence has caused
+# real bugs (a digit-anchored glob silently skipping date-named units).
+TARGET_RESOLUTION_BLOCKS = {
+    "work": "SKILL.md",
+    "replan": "SKILL.md",
+    "promote": "SKILL.md",
+    "cleanup": "SKILL.md",
+    "review": "references/protocol.md",
+    "ship": "references/protocol.md",
+}
+SYNC_PLEA = "**Keep all six blocks in sync if you edit one.**"
+
+
+def target_resolution_block(skill: str) -> str:
+    """The `## Target resolution` section of `skill`, up to the next heading."""
+    path = SKILLS_DIR / skill / TARGET_RESOLUTION_BLOCKS[skill]
+    m = re.search(r"^## Target resolution\n(.*?)(?=^## )", path.read_text(), re.S | re.M)
+    assert m, f"{skill}: no '## Target resolution' section in {TARGET_RESOLUTION_BLOCKS[skill]}"
+    return m.group(1)
+
+
+def cited_siblings(block: str) -> set:
+    """The skills named in the block's 'Same pattern used by ...' enumeration."""
+    m = re.search(r"Same pattern used by (.*?)\. \*\*Keep all six", block, re.S)
+    return set(re.findall(r"`minerva:([a-z-]+)`", m.group(1))) if m else set()
+
+
+def test_all_six_target_resolution_blocks_exist():
+    """Guards the enumeration itself — if the locator silently found nothing, every
+    check below would pass vacuously."""
+    assert len(TARGET_RESOLUTION_BLOCKS) == 6
+    for skill in TARGET_RESOLUTION_BLOCKS:
+        assert target_resolution_block(skill).strip()
+
+
+@pytest.mark.parametrize("skill", sorted(TARGET_RESOLUTION_BLOCKS))
+def test_target_resolution_block_names_its_five_siblings(skill):
+    """The sync invariant the plea asks for, now actually enforced.
+
+    A rename, a seventh adopter, or a dropped name reds CI here instead of drifting.
+    """
+    expected = set(TARGET_RESOLUTION_BLOCKS) - {skill}
+    block = target_resolution_block(skill)
+    assert SYNC_PLEA in block, f"{skill}: the sync plea is missing from its block"
+    assert cited_siblings(block) == expected, (
+        f"{skill}'s target-resolution block names {sorted(cited_siblings(block))}, "
+        f"expected the other five: {sorted(expected)}"
+    )
+
+
+@pytest.mark.parametrize("skill", sorted(TARGET_RESOLUTION_BLOCKS))
+def test_target_resolution_block_states_both_lookup_rules(skill):
+    """Both operational clauses, in every copy.
+
+    These are not stylistic. Scanning only `.minerva/work/*/` misses units that live
+    in a worktree; a digit-anchored glob misses `YYYY-MM-DD-<slug>` units entirely,
+    which this repo has already shipped and fixed once.
+    """
+    block = target_resolution_block(skill)
+    assert ".minerva/worktrees/" in block, (
+        f"{skill}: block does not say worktrees are scanned — a unit in a worktree "
+        "would be invisible to resolution")
+    assert "id form" in block, (
+        f"{skill}: block does not say BOTH id forms are matched — a digit-anchored "
+        "glob silently skips date-named units")
+
+
+def test_sibling_enumeration_check_fires_on_a_wrong_name():
+    """Negative coverage: exercise the same comparison the check runs."""
+    good = ("Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, "
+            "`minerva:review`, `minerva:ship`. " + SYNC_PLEA)
+    assert cited_siblings(good) == {"work", "replan", "promote", "review", "ship"}
+    renamed = good.replace("`minerva:ship`", "`minerva:shipp`")
+    assert cited_siblings(renamed) != {"work", "replan", "promote", "review", "ship"}
+    dropped = good.replace(", `minerva:ship`", "")
+    assert len(cited_siblings(dropped)) == 4

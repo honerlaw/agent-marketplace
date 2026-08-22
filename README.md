@@ -2,6 +2,8 @@
 
 A personal plugin marketplace for AI coding agents. Each plugin in `plugins/` is self-contained with its own skills and automation scripts.
 
+📖 **[Documentation site](https://honerlaw.github.io/agent-marketplace/)** — the minerva guide, skill reference, and lifecycle walkthroughs.
+
 ## Install a Plugin
 
 ```bash

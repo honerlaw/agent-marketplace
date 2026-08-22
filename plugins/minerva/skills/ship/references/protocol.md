@@ -74,11 +74,25 @@ If nothing is uncommitted, skip this step entirely.
    <bullets — surface anything the proposal mentioned about testing;
     otherwise a generic checklist of "run tests / manually verify X / etc.">
 
+   Closes #12
+   Closes #34
+
    ---
    Tracked in `.minerva/work/<date-slug>/proposal.md`
    ```
 
-   Bare-mode body is built from `git log` of branch-vs-default (no footer).
+   **The `Closes` lines.** Read the proposal's optional `**Closes**: #N, #M` field and emit
+   **one `Closes #N` line per entry** — GitHub only honours the keyword when each issue has
+   its own reference, so a single `Closes #12, #34` closes just the first. Omit the block
+   entirely when the field is absent, which is the common case.
+
+   The field is **authored**, never inferred: do not scan the diff, the branch name, or the
+   commit log for issue numbers to close. A wrong auto-close destroys a real record, and a
+   stale-open issue is the cheaper failure. If the work plainly closes an issue the field
+   does not list, say so in the summary and leave the issue open for a human.
+
+   Bare-mode body is built from `git log` of branch-vs-default (no footer, no `Closes`
+   lines — bare mode has no proposal to read the field from).
 5. **Hard gate #2 (PR title + body).** Show the proposed title and body block and prompt the user to redirect or accept. The user can edit either in place. Routine work can accept with one word ("ok"); bigger changes get a real preview.
 6. `gh pr create --title "<title>" --body "$(cat <<'EOF' ... EOF)"`. Capture the returned PR URL.
 

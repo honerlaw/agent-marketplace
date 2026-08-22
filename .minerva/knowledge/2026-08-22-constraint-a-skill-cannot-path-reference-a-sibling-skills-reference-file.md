@@ -6,6 +6,9 @@
 
 **Context**: .minerva/work/2026-08-22-backfill-followups-to-issues (see git history if the worktree has been cleaned up)
 
+<!-- superseded-by: 2026-08-22-decision-qualified-cross-skill-reference-pointers -->
+> **Superseded by [[2026-08-22-decision-qualified-cross-skill-reference-pointers]]** (2026-08-22)
+
 ## Context
 
 `tests/test_skill_budget.py::test_every_reference_pointer_resolves` guards progressive
@@ -56,3 +59,4 @@ prefer, not an exception.
 ## Related
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — the general shape: the gate's model of its subject is narrower than the subject, so it is clean over what it cannot see
 - [[2026-06-11-constraint-skill-progressive-disclosure]] — the constraint this gate enforces, and the reason the pointer must resolve at all
+- [[2026-08-22-decision-qualified-cross-skill-reference-pointers]] — superseded by
