@@ -7,3 +7,11 @@ Deferred work surfaced during unit 048 that was out of scope for this run.
 - ~~**Observe `gh pr checks --watch` blocking through a genuinely pending run.**~~ **Closed during this unit's own ship phase.** Watched PR #46 from `QUEUED` → `pending` → `pass`: the detached watcher held for the full run and exited on settle (~20s), and `gh` reports it refreshes internally every 10 seconds. Still unobserved on a *long* run — the multi-minute case (e.g. `onerlaw/seekless`, ~1000s CI) would additionally exercise whether the detached process survives that long, which the separate 780s probe suggests it does.
 
 - **The eight units with stale in-flight metadata make the pre-flight collision check noisy.** Every orchestrator run lists `001`, `005`, `007`, `024`, `037`, `038`, `039`, `040` as "in-flight" — all are `Draft`-status or non-marker-scratchpad records that predate the post-promote marker convention ([[003]]), and all shipped long ago. The check is supposed to be a hardcoded, never-skipped safety gate; a gate that cries wolf eight times per run trains the operator to wave it through. Fix by backfilling those units' `## Status` and scratchpad markers to reflect reality. **Why deferred:** it is a records-hygiene sweep across eight historical units, unrelated to this unit's subject.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Extract `propose-ship` into a `references/` split** → → #80 (priority: medium)
+- ~~**Observe `gh pr checks --watch` blocking through a genuinely pending run.**~~ → shipped — closed by its own author during that unit's ship phase
+- **The eight units with stale in-flight metadata make the pre-flight collision check noisy.** → shipped — this run's pre-flight reported 0 in-flight units

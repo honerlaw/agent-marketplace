@@ -54,3 +54,21 @@ Mechanism findings and deferred items from `findings.md` — seeds, not commitme
   poll with the same retry cap) for harnesses that lack it.
 - **Internal script docstrings carry old phase vocabulary** (`scripts/knowledge_lint.py` "Phase B.2", `scripts/knowledge_fix.py` "(Phase B.3)") — not user-facing catalog surfaces, but the same retired vocabulary this unit scrubbed elsewhere; scrub opportunistically.
 - **Document the resume-under-auto precedent** — unit 046 exercised a previously undocumented path: `propose-ship-auto`'s pre-flight collision gate resumed an in-flight unit whose proposal was human-approved in an interactive `propose` run, treating that approval as satisfying Phase 1 (user approval outranks the three propose-phase panels). Add this resume path to `propose-ship-auto`'s pre-flight text so the next run doesn't re-derive it.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- 1. **[M1, high] Rendered-listing description drop.** → → #76 (priority: medium) — diagnosed as `2026-07-21-bug-skill-listing-description-drop`, but the rendered-listing test it asks for does not exist
+- 2. **[M2] Six-block target-resolution duplication.** → → #77 (priority: medium) — all 6 files still carry the 'keep in sync' plea
+- 3. **[M3] Cross-skill step-number coupling.** → → #78 (priority: medium)
+- 4. **[M4] Description ≤1024-char contract test.** → → #79 (priority: medium) — verified no test references 1024
+- 5. **Handoff-phrasing contract test.** → open (low) — not filed at this pass; `test_skill_dispatch.py` checks dispatch sites and execution-mode pinning, not handoff phrasing
+- 6. **Ambient-trigger enforcement layer.** → open (low) — not filed at this pass; blocked behind #76, and the Routing-section half has distribution-wide blast radius
+- 7. **Empirical validation of the triggering diagnoses.** → open (low) — not filed at this pass; needs captured transcripts / analytics
+- 8. **Mechanized rubric checks.** → open (low) — not filed at this pass; deliberately deferred at proposal time
+- **C11 TOC pass** over 8 >100-line reference files → open (low) — not filed at this pass; author marked it 'Optional'
+- **C12 governance/protocol dedup** in quick + balanced → open (low) — not filed at this pass; author scoped it as 'its own unit'
+- **ScheduleWakeup portability note** → open (low) — not filed at this pass; the reviewer claim that prompted it was wrong for this harness
+- **Internal script docstrings carry old phase vocabulary** → open (low) — not filed at this pass; confirmed still present (`knowledge_fix.py` 'Phase B.3', `knowledge_lint.py` 'Phase B.2'). Author said scrub opportunistically
+- **Document the resume-under-auto precedent** → open (low) — not filed at this pass

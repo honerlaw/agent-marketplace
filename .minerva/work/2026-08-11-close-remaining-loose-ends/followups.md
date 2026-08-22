@@ -39,3 +39,13 @@
   untracked compiled bytecode from a plugin deleted in `20d32e0`. Harmless and gitignored,
   but it is why `ls` made a deleted plugin look present during this unit's investigation.
   A `git clean -ndX` would show it.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Two units are the INVERSE inconsistency: a promote marker is present but `**Status**` still says `Draft`.** → shipped — both now read `Shipped (…) — record closed retroactively 2026-08-11`
+- **The pre-flight in-flight predicate may itself be the defect.** → open (low) — not filed at this pass; the predicate still ORs the two limbs, and it fails safe
+- **`## Status` vs `**Status**:` — the prose and the corpus disagree.** → shipped — no orchestrator SKILL.md still says `## Status`
+- **Shorthand resolution has a documented blind spot worth surfacing at the gate.** → open (low) — not filed at this pass; a presentation improvement to `migrate-fix`'s gate
+- **The `financials` plugin left `__pycache__` on disk.** → obsolete — `plugins/` now holds only `minerva` and `utils`

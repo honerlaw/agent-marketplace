@@ -11,3 +11,9 @@ Items deferred from the original work unit. Not committed work — read these as
 **Why followup, not seed**: drift is rare (third occurrence over the plugin's lifetime as of 2026-05-21) and cheap to fix manually. Building automation now would pay recurring infrastructure cost (script, CI wiring, false-positive triage) against a problem that recurs every few weeks and is currently absorbed by manual review. Seed only if frequency rises and the comment-based convention fails.
 
 **Likely shape when promoted**: a small `scripts/check-skill-catalog.sh` (e.g.) that diffs `ls plugins/minerva/skills/` against the row sets in each of the three catalog surfaces (`plugins/minerva/README.md` skills table, `plugins/minerva/skills/using-minerva/SKILL.md` decision matrix, top-level `README.md` plugins-table minerva cell) and fails if any skill is missing. Run from CI or a pre-commit hook. Constraint to honor: the marketplace is "pure markdown, no Python deps, no build step" per the install README — shell-only is preferred. See [[2026-05-21-constraint-minerva-skill-catalog-sync]] for the rules the script would enforce.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Drift-prevention automation for minerva skill catalogs** → shipped — the automation exists as tests rather than the proposed shell script: `test_skill_contracts.py`'s `cross_surface` checks and `test_site_catalog.py` both enumerate skill dirs and fail on a missing catalog entry

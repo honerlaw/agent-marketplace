@@ -26,3 +26,11 @@
   imports the shared grammar — the same enumerating-test approach
   `tests/test_skill_contracts.py` already uses. **Trigger:** the third occurrence, or the
   next reader added to a scanning module.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **The repo's followup backlog is largely stale and nobody knows which parts.** → shipped — by this run. This item proposed exactly this tool, and its predicted disposition vocabulary (`shipped` / `still open` / `obsolete`) is the one `minerva:backfill-followups` implements
+- **`unit_state` is half state-reader, half policy.** → open (low) — not filed at this pass; explicitly a no-action note unless a fifth consumer wants a different notion of 'in progress'
+- **Nothing enforces that a new markdown scan is fence-aware.** → shipped — `tests/test_fence_awareness.py` exists and caught a live defect on its first run

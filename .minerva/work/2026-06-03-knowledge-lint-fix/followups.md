@@ -15,3 +15,10 @@
   summary (a judgment call). A future LLM-assisted path could draft the summary and
   let the deterministic serializer insert the line; kept out of the deterministic
   fixer to preserve its testability.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Phase C — synthesis / concept pages + `log.md`.** → shipped — `minerva:synthesize` exists
+- **Missing-catalog-line auto-fix (deferred from B.3).** → shipped — `knowledge_fix` writes catalog lines from each entry's `**Summary**` field

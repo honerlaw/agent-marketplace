@@ -39,3 +39,11 @@ is not re-derived a third time.
 Expected and inert, but worth knowing before someone sees the diff: every consumer repo's
 `index.md` gains one empty `## References` line the first time reconciliation runs after
 this ships. No existing line moves (the section is appended, never interleaved).
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- ## 1. `knowledge_lint` still keys entries by NNN, and quarantines duplicates → shipped — stem identity landed; `parse_index` is keyed on the full stem and duplicates are no longer excluded from per-entry checks
+- ## 2. Ten entries encode their type only in a prose H1 — CLOSED → shipped — marked CLOSED by its own author
+- ## 3. Consumer indexes gain a `## References` header on next reconcile → not-an-item — a heads-up about an expected, inert diff, not a task

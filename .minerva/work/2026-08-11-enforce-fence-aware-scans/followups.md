@@ -14,3 +14,10 @@
   `unit_state` state-reader/policy split (a no-action note unless a fifth consumer wants a
   different notion of "in progress"). Neither was in scope here — this unit took the single
   small follow-up that fit `propose-ship-quick`.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **The fence gate is per-module, not per-scan.** → open (low) — not filed at this pass; the stated trigger is a violation landing inside an already-aware module
+- **The two other follow-ups from `2026-08-11-close-the-followups` remain open** → not-an-item — a cross-reference to another file's items, dispositioned there

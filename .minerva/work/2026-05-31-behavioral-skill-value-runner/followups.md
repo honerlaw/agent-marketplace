@@ -36,3 +36,12 @@ compares against to flag a *value regression* (a skill that stopped helping). Ad
 
 If/when the methodology is trusted, wire an on-demand or nightly job (NOT a PR-blocking CI gate)
 that runs the behavioral evals and surfaces deltas. Out of scope until after the spike.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- ## 1. (MANDATORY, FIRST) Live signal-and-control validation spike → → #74 (priority: medium)
+- ## 2. Per-skill behavioral backfill → open (low) — not filed at this pass; 3 of 23 skills have `behavioral.json`, and this is gated behind #74
+- ## 3. Live baseline recording + regression detection → open (low) — not filed at this pass; gated behind #74
+- ## 4. (Optional) Nightly / on-demand harness wiring → shipped — `.github/workflows/behavioral-evals.yml` exists
