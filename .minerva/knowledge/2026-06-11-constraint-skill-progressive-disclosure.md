@@ -19,3 +19,4 @@ Every skill's `SKILL.md` must stay **≤9216 bytes**, with detail prose living i
 - [[2026-05-31-constraint-skill-structural-contracts]] — builds on
 - [[2026-06-11-constraint-ci-test-enumeration-explicit]] — see also
 - [[2026-07-21-constraint-skill-description-house-style]] — see also
+- [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — see also

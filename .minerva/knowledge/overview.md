@@ -150,6 +150,16 @@ token-presence tests cannot see the class, so meaning-changing skill edits deman
 systematic sweep of all four surfaces
 ([[2026-07-21-pattern-catalog-semantic-drift-recurs]]).
 
+Reuse between skills has since exposed a limit in that same guard. The pointer check finds
+mentions with an unanchored `references/<file>.md` pattern and resolves each against the
+**citing** skill, which was exactly right while every skill's references were private to it.
+Once `minerva:backfill-followups` began delegating its `gh` mechanics to `minerva:promote`'s
+protocol rather than restating them — the pattern to prefer, not an exception — that shape
+became unrepresentable: even a fully-qualified path to the sibling's file still contains the
+substring, resolves locally, and dangles. A cross-skill reference now has to be phrased
+around, naming the owning skill and the bare filename
+([[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]]).
+
 ## The lifecycle and its automation
 
 A third theme covers the proposal→work→promote→ship lifecycle and the judgment baked into
@@ -462,6 +472,20 @@ the stronger the credentials, the less the negative path is exercised and the mo
 side effect. `bash -n` catches the quoting defects that motivate most such checks at zero
 side-effect cost; anything beyond that wants a stub or a scratch target
 ([[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]]).
+
+The sharpest instance of the cluster turned up inside a tool built to cure it.
+`minerva:backfill-followups` exists because 24 `followups.md` files held ~79 deferred items
+with **nothing marking any of them done**, so every scoping pass re-read all of them. It
+triages each item, files the live ones, and writes a disposition ledger. Its first run left 25
+items honestly recorded as `open — not filed at this pass` — and its idempotency rule said
+*skip any item already carrying a disposition line*. That rule is right for a resolved item
+and wrong for a deferred one, and a single has-a-disposition test cannot tell them apart, so
+every one of those live items would have been passed over by every future run. The prose said
+"still open"; the machinery said "handled". **The cure had reproduced the disease one layer
+up, and strictly worse — a ledger invites you to stop looking.** The fix is to type
+dispositions rather than count them: terminal ones are skipped, `open — not filed` is
+re-offered every run, and only then does re-running become the trigger that deferral needs
+([[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]]).
 
 That yields the cluster's governing test. For any rule this corpus records, ask **what fails
 if it is violated**; if the answer is "a reviewer might notice", it is a wish, not a
