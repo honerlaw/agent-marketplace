@@ -53,17 +53,30 @@ genuinely blocks everything else, not for emphasis.
 Bootstrap each needed label once. Check before creating so an existing label is left
 untouched — never `--force`, which would overwrite a repo's own colour and description:
 
+**Do not run this block under `set -e` or `set -u`.** Every call here is allowed to fail —
+`ensure_label` returns 1 rather than aborting, and `USABLE` is legitimately empty on a repo
+where no label could be created.
+
 ```bash
+# Returns 0 if the label is usable (already present, or created just now), 1 if not.
 ensure_label() {  # $1 name, $2 hex colour, $3 description
   gh label list --limit 200 --json name --jq '.[].name' | grep -qxF "$1" \
-    || gh label create "$1" --color "$2" --description "$3"
+    || gh label create "$1" --color "$2" --description "$3" \
+    || return 1
 }
-ensure_label "minerva:followup" 5319E7 "Deferred work recorded by minerva:promote"
-ensure_label "priority: critical" B60205 "Should be done before anything else"
-ensure_label "priority: high"     D93F0B "Should be done as soon as possible"
-ensure_label "priority: medium"   FBCA04 "Should be done eventually"
-ensure_label "priority: low"      0E8A16 "Does not matter whether it is done"
+
+# Collect the flags for the labels that are actually usable. USABLE is what step 4 passes;
+# a label that could not be ensured simply contributes no flag.
+USABLE=()
+ensure_label "minerva:followup"   5319E7 "Deferred work recorded by minerva:promote" \
+  && USABLE+=(--label "minerva:followup")
+ensure_label "priority: $LEVEL"   "$COLOUR" "$DEFINITION" \
+  && USABLE+=(--label "priority: $LEVEL")
 ```
+
+Colour and definition per level — `critical` `B60205`, `high` `D93F0B`, `medium` `FBCA04`,
+`low` `0E8A16`, each described by its row in the step-2 table. Ensure only the level a given
+item actually uses; there is no reason to create all four on a repo that needs one.
 
 If a label cannot be created — the caller can open issues but not manage labels, or the
 repo already runs its own `P0`-style taxonomy — **do not fail and do not force it**. Carry
@@ -73,16 +86,23 @@ Note the degradation in the report.
 Then, before creating anything, ask whether this unit's followups are already filed.
 Creating an issue is the only externally-visible side effect promote has, and a duplicate
 is a notification on someone's repo — the same reason `minerva:ship` checks `gh pr view`
-before `gh pr create`:
+before `gh pr create`. Check three sources, cheapest and most reliable first:
 
-```bash
-gh issue list --state all --limit 200 --search '"<date-slug>" in:body' \
-  --json number,title --jq '.[] | "\(.number)\t\(.title)"'
-```
+1. **This run's own record** — issue numbers created earlier in this same promote run.
+2. **The unit's `proposal.md` `## Deferred work` section** (step 6). Local, exact, and
+   instant — this is the authority for a re-run after a partial failure.
+3. **A repository search**, for a re-run from a different clone or session:
 
-Skip any kept item whose headline already appears in that output, and report it as
-`already filed as #N`. This is what makes a re-run after a partial failure create only the
-items that are missing.
+   ```bash
+   gh issue list --state all --limit 200 --search '"<date-slug>" in:body' \
+     --json number,title --jq '.[] | "\(.number)\t\(.title)"'
+   ```
+
+Skip any kept item whose headline already appears, and report it as `already filed as #N`.
+
+Source 3 alone is **not** sufficient: GitHub's search index is not synchronous with issue
+creation, so an issue filed seconds ago may not be searchable yet. That is exactly the
+window a retry-after-partial-failure lands in, which is why sources 1 and 2 come first.
 
 ## Step 4 — Create the issue
 
@@ -91,21 +111,29 @@ the item's full prose so nothing is lost in compression:
 
 ```bash
 gh issue create \
-  --title "<headline>" \
-  --label "minerva:followup" \
-  --label "priority: <level>" \
-  --body "$(cat <<'BODY'
+  --title "$headline" \
+  "${USABLE[@]}" \
+  --body "$(cat <<'MINERVA_ISSUE_BODY'
 <the item's full prose, verbatim from the scratchpad>
 
 **Priority**: <level> — <that level's definition from step 2>
 
 Deferred from `.minerva/work/<date-slug>/` by `minerva:promote`.
-BODY
+MINERVA_ISSUE_BODY
 )"
 ```
 
-Drop a `--label` flag for any label step 3 could not ensure. Keep the back-link line
-exactly as written — it is what the step-3 duplicate search matches on.
+Two substitution rules, because the item's text is copied verbatim and you do not control it:
+
+- **Title.** Set `headline` as a shell variable and pass `"$headline"` — do **not** paste the
+  text straight into the command line. A headline like `Fix the "foo" parser` breaks a
+  double-quoted `--title`.
+- **Body.** The quoted `<<'MINERVA_ISSUE_BODY'` delimiter disables all expansion, so `$`,
+  backticks and quotes in the prose are safe. The one thing that still breaks it is a line
+  in the prose that is *exactly* the delimiter — hence the deliberately unlikely name. If
+  the item somehow contains it, pick another.
+
+Keep the back-link line exactly as written — it is what the step-3 search matches on.
 
 Only **Keep** items become issues. A **Seed new proposal** item still goes to
 `minerva:propose`, which produces a full `proposal.md` — a richer record than a one-line
