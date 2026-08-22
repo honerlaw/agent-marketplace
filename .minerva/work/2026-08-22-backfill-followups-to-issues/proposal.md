@@ -1,7 +1,7 @@
 # Proposal: backfill-followups-to-issues
 
 **Date**: 2026-08-22
-**Status**: Draft
+**Status**: Shipped (2026-08-22)
 **Base**: `origin/main`
 
 ## Goal
@@ -27,8 +27,8 @@ from turning a stale file backlog into a stale *issue* backlog.
 
 ## Approach
 
-A six-step skill protocol. Steps 1-4 are **read-only**; step 4 is a hard gate; only steps
-5-6 mutate. That plan→confirm→apply shape is deliberate and mirrors `migrate-fix`'s own
+A **seven**-step skill protocol (a `Report` step joined the six designed here). Steps 1-4 are
+**read-only**; step 4 is a hard gate; only steps 5-6 mutate, and step 7 reports. That plan→confirm→apply shape is deliberate and mirrors `migrate-fix`'s own
 internal structure. This is **one** skill rather than the `lint`/`lint-fix`,
 `migrate`/`migrate-fix` detector-plus-applier *pair* because those are recurring
 health-checks a project re-runs forever, whereas this is a **one-time migration** per
@@ -69,9 +69,17 @@ project — splitting it would ship a detector whose only consumer is its own ap
 **Idempotency.** `github-issues.md`'s duplicate check is three-tier, and its tier 2 is "the
 unit's `proposal.md` `## Deferred work` section". Backfill spans ~20 source units and does
 not own their proposals, so **backfill's tier-2 ledger is the `## Backfill disposition`
-section instead** — a documented specialization, not a silent divergence. The verbatim
-first line is what a re-run matches on, which is why step 2's atomization rule has to be
-stated rather than left to taste.
+section instead** — one of three documented divergences from that protocol (the others being
+cosmetic: the back-link names this skill, and a kept `manual` item says no code change will
+close it). The verbatim first line is what a re-run matches on, which is why step 2's
+atomization rule has to be stated rather than left to taste.
+
+A disposition is additionally **terminal** or **non-terminal**, and only terminal ones are
+skipped on a re-run. `open (…) — not filed` is non-terminal and is re-offered every run —
+including the case where the repo simply cannot host issues. Review caught that the original
+"skip anything with a disposition line" rule would have stranded all 25 not-filed items
+permanently, reproducing this skill's own target failure one layer up
+([[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]]).
 
 ### Rejected alternatives
 
@@ -113,3 +121,26 @@ the completion-verification Verifier is pointed specifically at the `shipped`/`o
 classifications — the only ones that can lose work — on top of the mandatory user gate and
 the fail-open rule. Escalating the whole unit to `propose-ship-auto` was considered and
 declined on that basis.
+
+## Deferred work
+
+- #85 — Let the pointer gate express a cross-skill reference (priority: low)
+
+## Outcome
+
+The skill was run on this repo. All 70 top-level bullets plus subsection items — 79
+disposition lines across 24 files — reached an evidence-cited disposition:
+
+| Disposition | Count |
+|---|---|
+| `shipped` | 24 |
+| `obsolete` | 3 |
+| `not-an-item` | 9 |
+| `open` | 33 (11 filed as #74-#84, 25 recorded non-terminal, 3 of them `manual`) |
+
+Roughly a third of the backlog was already done — `minerva:lint`, `lint-fix`, `synthesize`,
+the Phase B.3 fix-applier, the four-rung ladder prose, `pages.yml`, the CI-watch cadence
+re-derivation, and the eight stale in-flight units. Stem identity dissolved *both*
+duplicate-NNN items rather than fixing them. Two items were already struck through by their
+own authors, and `close-the-followups`' "the backlog is stale" item — which proposed exactly
+this tool — resolved to `shipped (this run)`.
