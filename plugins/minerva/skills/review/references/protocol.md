@@ -44,7 +44,7 @@ Before generating findings, read:
 1. `proposal.md` — the original design.
 2. **All** `replan.md` entries chronologically. On conflict, the latest replan wins.
 3. Current `scratchpad.md` — so review doesn't re-raise items already noted there. **Check for prior triage state** under `## Review triage YYYY-MM-DD` headers (see [Triage persistence](#triage-persistence)) and pre-fill dispositions from the most recent block when the underlying finding is re-surfaced.
-4. `followups.md` if present — items already deferred.
+4. Deferred work — `followups.md` if present, **and** open followup issues where the repo has them: `gh issue list --label "minerva:followup" --state open --json number,title,labels,url`. Since `minerva:promote` files kept TODOs as issues wherever it can, the file alone no longer sees everything already deferred. Skip the query without comment if `gh` is unavailable or the repo has no issues.
 5. `.minerva/knowledge/` — at minimum entries with `Type: pattern` and `Type: constraint`, since these encode invariants the diff may violate. Skim `Type: decision` and `Type: bug` entries too if the diff touches areas they describe.
 
 ### Finding generation

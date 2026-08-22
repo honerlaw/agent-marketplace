@@ -37,7 +37,7 @@ Everything minerva writes lands in a small hierarchy under `.minerva/`, ordered 
 |---|---|
 | `knowledge/` | Atomic, past-tense entries — decisions, bugs, patterns, constraints — cross-referenced like a wiki and read at the start of every new piece of work. Append-only by construction; corrections arrive as new entries. |
 | `reference/` | Present-tense operational docs: how the system works *now*. Replaced on change, read on demand. |
-| `work/` | One numbered directory per unit of work: the proposal, any replans, followups — the reasoning a future engineer can grep. |
+| `work/` | One numbered directory per unit of work: the proposal, any replans, followups — the reasoning a future engineer can grep. (Kept TODOs become prioritized `minerva:followup` GitHub issues where the repo can host them; `followups.md` is the fallback.) |
 | scratchpad | Ephemeral working memory, kept honest by being disposable: at the end of a unit, the durable parts are promoted and the rest is archived. |
 
 ---

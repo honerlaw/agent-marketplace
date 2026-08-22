@@ -6,7 +6,7 @@ Read each phase's section before executing that phase.
 
 This phase replaces the user-interactive intake in `minerva:propose`.
 
-1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone and conventions, and any `followups.md` whose entries could be adjacent.
+1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone and conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `minerva:promote` files kept TODOs as issues wherever the repo can host them, whose entries could be adjacent.
 
 2. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
 
@@ -69,7 +69,7 @@ Mirrors `minerva:replan`'s protocol with panel-based acceptance.
 
 Replaces the user-interactive triage in `minerva:review`. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
 
-1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md`, and relevant `.minerva/knowledge/` entries.
+1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), and relevant `.minerva/knowledge/` entries.
 
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution" section.
 
@@ -97,7 +97,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 4. **Partition panel.** Artifact = the full partition with one-line justifications per entry. On `2/3 accept`, apply. On revision-round failure, escalate with the contested entries.
 
-5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition (followups.md / seed new proposal / discard). On `2/3 accept`, apply. On revision-round failure, escalate.
+5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition — keep it (filed as a prioritized GitHub issue when `minerva:promote`'s capability probe says the repo can host one, else appended to `followups.md`; priority one of `critical`/`high`/`medium`/`low` per its `references/github-issues.md`), seed a new proposal, or discard. On `2/3 accept`, apply. On revision-round failure, escalate.
 
 6. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 

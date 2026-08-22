@@ -19,7 +19,19 @@
     "minerva:ship",
     "minerva:cleanup",
     "panel",
-    "No ceremony ratification"
+    "No ceremony ratification",
+    {
+      "any_of": [
+        "minerva:followup"
+      ],
+      "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "github-issues.md"
+      ],
+      "file": "references/phases.md"
+    }
   ],
   "cross_surface": {
     "root_readme": true,

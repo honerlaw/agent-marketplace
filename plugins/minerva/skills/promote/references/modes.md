@@ -19,23 +19,25 @@
    - **TODO** → forward-looking notes ("we should do X later", "investigate Y", "consider Z"). These are surfaced separately at step 5 so they don't vanish silently.
    Skip entries already marked `→ promoted to .minerva/knowledge/...` — they were promoted mid-work.
 4. Present the partition as a numbered list with each entry's classification and a one-line justification. Wait for confirmation or edits.
-5. **TODO disposition gate.** If any entries landed in the TODO bucket, surface them and ask:
-   > "These forward-looking items don't belong in `.minerva/knowledge/` but I don't want to drop them silently. For each one: keep in `followups.md` for this work unit, seed a new `minerva:propose`, or discard?"
+5. **TODO disposition gate.** If any entries landed in the TODO bucket, run the capability probe in [references/github-issues.md](github-issues.md) step 1 — **read that file now if any item may be kept** — then surface the items and ask:
+   > "These forward-looking items don't belong in `.minerva/knowledge/` but I don't want to drop them silently. For each one: keep it (I'll file it as a GitHub issue on `<nameWithOwner>` at the priority shown / I'll add it to `followups.md`), seed a new `minerva:propose`, or discard?"
 
-   - **Keep** → append to `.minerva/work/<target>/followups.md` (create the file if missing) under a `## YYYY-MM-DD` header, one bullet per item. `minerva:propose` scans this file as part of project context.
-   - **Seed new proposal** → after Mode A finishes, offer to invoke `minerva:propose "<the todo>"` for each chosen item.
+   - **Keep** → **issue path** when the probe says the repo has issues we can create: one issue per item, carrying a proposed priority (`critical` / `high` / `medium` / `low`), the `minerva:followup` marker label, and a back-link to this unit. **File path** otherwise — no `gh`, not authenticated, no GitHub remote, issues disabled, or creation fails for that item: append to `.minerva/work/<target>/followups.md` (create the file if missing) under a `## YYYY-MM-DD` header, one bullet per item. Both paths are specified in full in [references/github-issues.md](github-issues.md); the priority is a **proposal** that this gate and step 6 exist to correct.
+   - **Seed new proposal** → after Mode A finishes, offer to invoke `minerva:propose "<the todo>"` for each chosen item. These never become issues — a proposal is the richer record.
    - **Discard** → drop, no record.
+
+   Deferred work stays discoverable through whichever path it took: `minerva:review` and the `propose-ship-*` orchestrators read `followups.md` **and** open `minerva:followup` issues. Plain `minerva:propose` reads neither — do not claim otherwise.
 6. **Hard gate:** do not write files until the user — or, when invoked by an autonomous orchestrator, its adjudication mechanism — has confirmed the partition, the TODO dispositions, **and the new entry files** (each shown as a concrete diff, including its `**Summary**` and its forward `## Related` lines). There are no neighbor or `index.md` diffs to confirm — promote is add-only (see [Wiki maintenance](#wiki-maintenance-add-only)).
 7. On confirmation:
    - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and write `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template below, where the date is today (`date +%F`) — see [Entry naming](#entry-naming). If `.minerva/knowledge/` doesn't exist, create it. Each entry must stand alone.
    - **Run [Wiki maintenance](#wiki-maintenance-add-only) for each PROMOTE item:** write the forward `## Related` lines **into the new entry only**. Do not touch `index.md`, the watermark, any neighbor entry, or any supersession banner — the main-side reconciliation in `minerva:cleanup` derives all of those.
    - **Rewrite `proposal.md`:** the `## Approach` section (and any other section that's out of date) describes reality, not the original plan. Don't preserve obsolete planning prose just because it was there. Update the `**Status**:` field to `Shipped (YYYY-MM-DD)` — that inline field, not a `## Status` heading; 52 of 53 units use it and it is what this skill's own output produces.
-   - **Apply TODO dispositions** per step 5.
+   - **Apply TODO dispositions** per step 5. On the issue path, run [references/github-issues.md](github-issues.md) steps 3-6: ensure labels, skip items already filed, create one issue per kept item, drop any failed item to `followups.md`, and record the created issues in `proposal.md` under `## Deferred work`. Creating an issue is the only externally-visible side effect promote has — the duplicate check is what keeps a re-run after a partial failure from filing the same item twice.
    - **Archive the scratchpad:** create `.minerva/work/<target>/archive/` if needed, move `scratchpad.md` to `archive/scratchpad.md`, then write a new `scratchpad.md` containing exactly:
      ```
      Summarized at minerva:promote on YYYY-MM-DD — see archive/.
      ```
-8. Report: items promoted (with paths), proposal-update summary, TODOs handled, scratchpad disposition. If any TODOs were marked "seed new proposal," prompt the user to invoke `minerva:propose` now or later.
+8. Report: items promoted (with paths), proposal-update summary, TODOs handled, scratchpad disposition. For each kept TODO name where it landed — the issue URL, `already filed as #N`, or `fell back to followups.md` with the reason (including a label that could not be created). A report that omits a skipped item lies by omission. If any TODOs were marked "seed new proposal," prompt the user to invoke `minerva:propose` now or later.
 
 ### Mode B — with argument (single-item mid-work promote)
 
