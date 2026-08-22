@@ -1,6 +1,6 @@
 ---
 name: promote
-description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; forward-looking TODOs are offered as `followups.md` or a new-proposal seed, never silently discarded. Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
+description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; forward-looking TODOs are filed as prioritized GitHub issues when the repo can host them and fall back to `followups.md` when it cannot, never silently discarded. Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
 ---
 
 Promote durable items from `scratchpad.md` to `.minerva/knowledge/`, and (in the end-of-work pass) reshape the work unit's persistent record to match what shipped.
@@ -33,7 +33,7 @@ Knowledge files written by promote (`.minerva/knowledge/<YYYY-MM-DD>-<type>-<slu
 
 ## Two modes
 
-The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.**
+The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.** The two-path TODO disposition — the GitHub-issue capability probe, the `critical`/`high`/`medium`/`low` priority vocabulary, label bootstrap, the duplicate check, and the per-item fail-soft to `followups.md` — lives in `references/github-issues.md`. **Read it before disposing of any TODO you may keep.**
 
 ## Idempotency summary
 

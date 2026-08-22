@@ -7,7 +7,7 @@ Durable record discipline for software work. Encodes a persistence hierarchy whe
 | Tier | Files | When read |
 |------|-------|-----------|
 | Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` | Loaded for every new piece of work |
-| Searchable-on-demand | `.minerva/work/<date-slug>/proposal.md`, `.minerva/work/<date-slug>/replan.md`, `followups.md` | Grep when relevant |
+| Searchable-on-demand | `.minerva/work/<date-slug>/proposal.md`, `.minerva/work/<date-slug>/replan.md`, `followups.md`, plus open `minerva:followup` GitHub issues | Grep the files; `gh issue list --label "minerva:followup" --state open` for the rest |
 | Ephemeral | `.minerva/work/<date-slug>/scratchpad.md` | Gone after `minerva:promote` |
 
 The heuristic for what to keep: **would a new engineer (or new agent) joining the project in a year benefit from reading this?** If yes, keep it. If no, summarize and discard.
@@ -25,7 +25,7 @@ The heuristic for what to keep: **would a new engineer (or new agent) joining th
 | `minerva:grill-plan` | Interviews the user relentlessly about a drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached. Invoked by `minerva:propose` after approach selection and by `minerva:replan` after the new-plan brainstorm; also usable standalone on any drafted plan. |
 | `minerva:round-table ["decision"]` | Convene a 3-agent Proponent/Skeptic/Arbiter consensus panel of fresh-context subagents over a decision or drafted artifact: accept votes are counted against a caller-specified quorum (default 2/3), with at most one revision round, then escalation to the user when consensus fails twice. A pure extraction of the panel protocol formerly inlined in `minerva:propose-ship-auto`, which now delegates its panel calls here; usable standalone for any decision. |
 | `minerva:work` | Enter implementation mode in an isolated git worktree. Reads the proposal + replans, surfaces any unresolved Open Questions, maintains `scratchpad.md`, auto-triggers `minerva:replan` on load-bearing divergence, and verifies Success criteria before suggesting promote. |
-| `minerva:promote [item]` | No-arg: end-of-work full pass (promote concrete past-tense knowledge → `.minerva/knowledge/`, rewrite proposal to match reality, archive scratchpad, dispose of TODOs explicitly via `followups.md` / new proposal / discard). With arg: single-item mid-work promote. Idempotent. |
+| `minerva:promote [item]` | No-arg: end-of-work full pass (promote concrete past-tense knowledge → `.minerva/knowledge/`, rewrite proposal to match reality, archive scratchpad, dispose of TODOs explicitly — kept ones filed as prioritized GitHub issues where the repo can host them, else `followups.md`; or new proposal; or discard). With arg: single-item mid-work promote. Idempotent. |
 | `minerva:review` | Audit the implementation against the proposal (and `.minerva/knowledge/` invariants) by reviewing the local diff. Runs `code-review:code-review` when a PR exists, else does a structured inline check using the same finding format. Triage state persisted to scratchpad for resume. Runs **before** `minerva:promote` so findings flow through the partition. |
 | `minerva:ship` | Close the lifecycle: commit outstanding work to a branch (creating one if on the default branch), open a PR titled and described from `proposal.md`, watch CI without blocking the agent (a detached `gh pr checks --watch` that resumes the run when checks settle, with a long `ScheduleWakeup` armed underneath), bounded auto-fix loop (3 iterations), enable auto-merge when permissions allow. Bare mode for routine work outside a tracked unit. |
 | `minerva:cleanup [slug]` | Remove `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the matching local branches. Conservative — never touches unmerged work without explicit override. Idempotent. |
@@ -69,7 +69,7 @@ minerva:cleanup                           # remove the merged worktree + local b
     │       ├── proposal.md             (written by minerva:propose, rewritten by minerva:promote)
     │       ├── replan.md               (written by minerva:replan when needed)
     │       ├── scratchpad.md           (live during minerva:work, replaced by a one-line marker at minerva:promote)
-    │       ├── followups.md            (optional — TODOs that survived minerva:promote's TODO gate)
+    │       ├── followups.md            (optional — kept TODOs, when the repo can't host GitHub issues)
     │       └── archive/
     │           └── scratchpad.md       (raw scratchpad moved here by minerva:promote)
     └── worktrees/                      (gitignored — created by minerva:work, removed by minerva:cleanup)

@@ -6,7 +6,7 @@ Read each phase's section before executing that phase. These mirror `minerva:pro
 
 Replaces the user-interactive intake in `minerva:propose`.
 
-1. **Assemble context.** Read: the inline seed, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone/conventions, and any adjacent `followups.md`.
+1. **Assemble context.** Read: the inline seed, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone/conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `minerva:promote` files kept TODOs as issues wherever the repo can host them.
 
 2. **Design synthesis.** The main model drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with the 2-3 candidate approaches it considered. Context-grounded inference, not user Q&A. Keep it in conversation; write no file yet.
 
@@ -47,7 +47,7 @@ Mirrors `minerva:replan` with main-model acceptance.
 
 Replaces the user-interactive triage in `minerva:review`.
 
-1. **Read context.** `proposal.md`, all `replan.md`, current `scratchpad.md` (including prior `## Review triage` blocks), `followups.md`, relevant `.minerva/knowledge/`.
+1. **Read context.** `proposal.md`, all `replan.md`, current `scratchpad.md` (including prior `## Review triage` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), relevant `.minerva/knowledge/`.
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution".
 3. **Generate findings.** Two passes — **minerva audit** (spec fidelity + knowledge compliance) and **code review** (if a PR exists, invoke `code-review:code-review` via the `Skill` tool; otherwise the inline structured review per `minerva:review`).
 4. **Triage.** The main model triages the full numbered finding set (default: high → FIX, medium → SUGGEST, low → IGNORE). Escalate if a finding's disposition is genuinely contested.
@@ -62,7 +62,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5.
 3. **Partition.** The main model proposes the four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already `→ promoted to ...`. Escalate if an entry's bucket is genuinely ambiguous.
-4. **TODO disposition.** For each TODO: followups.md / seed new proposal / discard. The main model decides; escalate if unsure.
+4. **TODO disposition.** For each TODO: keep it — filed as a prioritized GitHub issue when `minerva:promote`'s capability probe says the repo can host one, else appended to `followups.md` — or seed a new proposal, or discard. Priority is one of `critical`/`high`/`medium`/`low` per `minerva:promote`'s `references/github-issues.md`. The main model decides; escalate if unsure.
 5. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 6. **TODO seed gate (if any).** Do **not** auto-invoke `minerva:propose` in the same run — surface "seed new proposal" TODOs in the final report as suggested follow-ups.
 7. Continue to Phase 5.

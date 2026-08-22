@@ -54,6 +54,12 @@
         "most recently modified"
       ],
       "ignore_case": true
+    },
+    {
+      "any_of": [
+        "minerva:followup"
+      ],
+      "file": "references/protocol.md"
     }
   ],
   "cross_surface": {

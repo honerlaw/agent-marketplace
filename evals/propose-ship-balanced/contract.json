@@ -76,6 +76,18 @@
       ],
       "ignore_case": true,
       "file": "references/governance.md"
+    },
+    {
+      "any_of": [
+        "minerva:followup"
+      ],
+      "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "github-issues.md"
+      ],
+      "file": "references/phases.md"
     }
   ],
   "cross_surface": {

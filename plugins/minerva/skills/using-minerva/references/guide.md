@@ -6,7 +6,7 @@
 |---|---|---|
 | Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog) | Every conversation in this project — decisions, bugs, patterns |
 | Reference (read on demand) | `.minerva/reference/<topic>.md` | Present-tense operational docs — architecture, glossary, conventions: how the system works now |
-| Searchable-on-demand | `.minerva/work/<date-slug>/proposal.md`, `.minerva/work/<date-slug>/replan.md`, `followups.md` if present | Grep when relevant |
+| Searchable-on-demand | `.minerva/work/<date-slug>/proposal.md`, `.minerva/work/<date-slug>/replan.md`, `followups.md` if present, plus open `minerva:followup` GitHub issues | Grep the files; `gh issue list --label "minerva:followup" --state open` for the rest |
 | Ephemeral | `.minerva/work/<date-slug>/scratchpad.md` | Live during `minerva:work`, archived by `minerva:promote` |
 
 The two LLM-owned wiki tiers differ in **time-shape**: `.minerva/knowledge/` is atomic, past-tense, append-only "what we learned"; `.minerva/reference/` is thematic, present-tense, replace-on-change "how the system works now."
@@ -42,7 +42,7 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → `minerva:review`. The skill reads the proposal + replans, audits the branch-vs-default diff (or the uncommitted diff if the tree is dirty), runs `code-review:code-review` (or a structured inline check if no PR exists yet), and walks you through each finding. Triage state is persisted to scratchpad so re-runs pre-fill prior dispositions. Run review **before** promote so review-derived notes flow through promote's partition.
 
 **"Tests pass, the feature works, success criteria are met."**
-→ `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — you decide per-item whether to keep them in `followups.md`, seed a new proposal, or discard.
+→ `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — you decide per-item whether to keep them (filed as a GitHub issue at a `critical`/`high`/`medium`/`low` priority when the repo can host one, otherwise appended to `followups.md`), seed a new proposal, or discard.
 
 **"OK, ship it — commit, PR, watch CI, and merge if it goes green."**
 → `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, watches CI without blocking (a detached `gh pr checks --watch` resumes the run when checks settle, with a long re-arming `ScheduleWakeup` armed underneath), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
