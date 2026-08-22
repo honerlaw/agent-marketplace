@@ -50,3 +50,4 @@ a state only reached after the code has run successfully for a while. And it fai
 ## Related
 - [[2026-08-09-pattern-read-authored-metadata-from-where-it-is]] — builds on
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — see also
+- [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]] — see also
