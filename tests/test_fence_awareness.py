@@ -30,7 +30,8 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent / "plugins" / "minerva" / "scripts"
 # Any reference to the shared grammar, or a helper built on it.
-FENCE_AWARE_RE = re.compile(r"FENCE_RE|_strip_fences|_nonfenced")
+# `unfenced` is the shared scan primitive; the older names are helpers built on it.
+FENCE_AWARE_RE = re.compile(r"FENCE_RE|unfenced|_strip_fences|_nonfenced")
 SPLIT_RE = re.compile(r"\.splitlines\(\)")
 EXEMPT_RE = re.compile(r"#\s*not-markdown:\s*(\S.*)$")
 
@@ -91,3 +92,93 @@ def test_the_check_accepts_a_declared_non_markdown_scan(tmp_path):
                   "        pass\n")
     n, ln = scanning_lines(ok.read_text())[0]
     assert EXEMPT_RE.search(ln).group(1).strip() == "git log output"
+
+
+# --- One fence-scan loop, and the three readers exempt from it (issue #88) --------
+#
+# `FENCE_RE` was single-sourced from the start; the six-line toggle loop around it was
+# not, and four independent copies accumulated — in `knowledge_lint`, `work_status`,
+# `test_skill_budget` and `test_skill_contracts`. They now all derive from
+# `knowledge_spans.unfenced`.
+#
+# Three readers keep their own loop ON PURPOSE. They look like the same code and are
+# not, which is the whole point of
+# `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`:
+# unify the copies that are copies, and leave the ones that differ.
+REPO = Path(__file__).resolve().parent.parent
+TOGGLE_RE = re.compile(r"FENCE_RE\.match")
+
+# path -> why this reader cannot use the shared primitive.
+FENCE_LOOP_EXEMPT = {
+    "plugins/minerva/scripts/knowledge_spans.py":
+        "defines the shared primitive",
+    "plugins/minerva/scripts/knowledge_edits.py":
+        "classifies EVERY line incl. delimiters as a boolean flag list; the byte-identity "
+        "guard needs a verdict per line, not a filtered subset",
+    "plugins/minerva/scripts/knowledge_rename.py":
+        "KEEPS fences and fenced content in its output — it rewrites text rather than "
+        "filtering it, so dropping lines would corrupt the file",
+    "tests/test_skill_dispatch.py":
+        "measures the fence's run length for pairing, which the shared regex does not expose",
+}
+
+
+# This module is the checker; its only `FENCE_RE.match` occurrence is the pattern
+# literal above, not a loop. Excluded by identity rather than by an exemption entry,
+# so it can never be mistaken for a reader that was granted a pass.
+_CHECKER = str(Path(__file__).resolve().relative_to(REPO))
+
+
+def _files_with_a_fence_toggle() -> set:
+    roots = [REPO / "plugins" / "minerva" / "scripts", REPO / "tests"]
+    return {
+        str(f.relative_to(REPO))
+        for root in roots for f in root.rglob("*.py")
+        if TOGGLE_RE.search(f.read_text())
+    } - {_CHECKER}
+
+
+def test_only_sanctioned_readers_write_their_own_fence_loop():
+    """A new `FENCE_RE.match` loop must be a deliberate, reviewed act.
+
+    Without this the refactor is an unenforced constraint — the shape
+    `2026-08-11-pattern-an-unenforced-constraint-is-aspirational` is named for, and the
+    one this very cleanup exists to undo.
+    """
+    unexpected = _files_with_a_fence_toggle() - set(FENCE_LOOP_EXEMPT)
+    assert not unexpected, (
+        f"{sorted(unexpected)} write their own fence-toggle loop — use "
+        "knowledge_spans.unfenced / unfenced_lines, or add the file to "
+        "FENCE_LOOP_EXEMPT with the reason it genuinely differs"
+    )
+
+
+def test_every_fence_loop_exemption_still_exists_and_still_loops():
+    """A stale exemption is a lie that reads as coverage.
+
+    If a listed file stops looping, the entry must go — otherwise the set silently
+    grows into a permission slip nobody re-checks
+    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+    """
+    looping = _files_with_a_fence_toggle()
+    for path, reason in FENCE_LOOP_EXEMPT.items():
+        assert (REPO / path).is_file(), f"exempt file {path} no longer exists"
+        assert path in looping, (
+            f"{path} is exempted from the shared fence scan but no longer writes its "
+            "own loop — drop the exemption")
+        assert reason.strip(), f"{path} is exempted with no stated reason"
+
+
+def test_the_converged_readers_share_one_implementation():
+    """The four that were unified must not have quietly re-derived."""
+    from knowledge_spans import unfenced, unfenced_lines
+    import knowledge_lint, work_status
+    assert knowledge_lint._strip_fences is unfenced
+    assert list(unfenced_lines("a\n```\nb\n```\nc")) == ["a", "c"]
+    assert list(work_status._nonfenced("a\n```\nb\n```\nc")) == ["a", "c"]
+
+
+def test_the_exemption_check_fires_on_a_new_unsanctioned_loop(tmp_path):
+    """Negative coverage: exercise the same set difference the check runs."""
+    looping = {"tests/test_skill_dispatch.py", "tests/some_new_file.py"}
+    assert looping - set(FENCE_LOOP_EXEMPT) == {"tests/some_new_file.py"}

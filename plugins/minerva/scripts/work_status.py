@@ -39,7 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from knowledge_spans import FENCE_RE  # noqa: E402
+from knowledge_spans import unfenced  # noqa: E402
 
 
 def _nonfenced(text: str):
@@ -49,17 +49,12 @@ def _nonfenced(text: str):
     SHOWING what that value looks like — a convention doc, a template, this module's own
     docstring. Reading one as the real declaration is the failure knowledge
     `2026-06-11-constraint-fence-scans-import-fence-re` exists to prevent, which is why
-    `FENCE_RE` is imported rather than re-derived. The direction matters here: a fenced
+    the scan is imported rather than re-derived. The direction matters here: a fenced
     example `**Status**: Shipped` shadowing a real `**Status**: Draft` reads a LIVE unit
     as finished, which is the dangerous way for the in-flight check to be wrong.
     """
-    in_fence = False
-    for line in text.splitlines():
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if not in_fence:
-            yield line
+    for _, line in unfenced(text.splitlines()):
+        yield line
 
 # The canonical marker new promotions write. Reading is tolerant; writing is not.
 CANONICAL_MARKER = "Summarized at minerva:promote on {date} — see archive/."

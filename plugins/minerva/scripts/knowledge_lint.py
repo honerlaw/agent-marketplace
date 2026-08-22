@@ -57,8 +57,8 @@ from collections import namedtuple
 from pathlib import Path
 
 from knowledge_spans import (
+    unfenced,
     BANNER_MARKER_RE,
-    FENCE_RE,
     RELATED_HEADER,
     SECTION_RE,
 )
@@ -174,15 +174,10 @@ SECTION_TO_TYPE = {
 }
 
 
-def _strip_fences(lines):
-    """Yield (index, line) for lines OUTSIDE code fences."""
-    in_fence = False
-    for i, line in enumerate(lines):
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if not in_fence:
-            yield i, line
+# `_strip_fences` is the shared `knowledge_spans.unfenced` primitive under its
+# historical name — kept because `knowledge_fix` imports it from here and the
+# fence-awareness gate recognises the name. One implementation, two names, no drift.
+_strip_fences = unfenced
 
 
 def related_edges(text: str) -> list:
