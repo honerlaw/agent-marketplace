@@ -45,3 +45,26 @@ forks) without finding a single falsified classification. Append-only discipline
 
 Also verified: the new contract anchors fail on drift (mutated `Atomization rule` →
 `test_body_anchors[backfill-followups]` fails; restored → 535 pass).
+
+Code-quality review returned 1 high / 4 medium / 2 low; all seven triaged FIX, none changing
+the approach:
+
+- **The protocol was titled six-step and has seven headings.** `Report` was added during
+  implementation and no surrounding step-count language followed it — so an agent skimming
+  SKILL.md's enumeration could read the closing report as optional, which is exactly the
+  "a report that omits what it passed over lies by omission" failure the same file warns
+  about. Retitled, and `Report` added to SKILL.md's list.
+- **"The one documented specialization" undercounted its own divergences.** Step 5 documents
+  two more (the back-link names this skill; a kept `manual` item gets an extra body line).
+  Now stated as three, with the load-bearing one called out.
+- **The reused duplicate check's source 2 was never redirected.** It names the unit's
+  `proposal.md` `## Deferred work` — a file backfill never writes — while Step 5 says to
+  follow the protocol "exactly". Substitution now stated inline where the instruction is.
+- **The no-capability path had no ledger disposition.** An `open` item on a repo that cannot
+  host issues is functionally a declined item and must stay non-terminal; without a named
+  template an agent could invent a string or wrongly treat it as terminal.
+- Rule text said `open — not filed` while the write template said
+  `open (<priority>) — not filed at this pass; <why>`; a dropped `manual` had no documented
+  shape. Both closed.
+- Anchor `{"any_of": ["manual"]}` was vacuous — the bare word survives deleting the
+  mechanism. Tightened to the feature phrase and re-verified it fails on drift.

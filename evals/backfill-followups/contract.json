@@ -49,7 +49,7 @@
     },
     {
       "any_of": [
-        "manual"
+        "grouped at the gate for one keep-or-drop call"
       ],
       "file": "references/protocol.md"
     },

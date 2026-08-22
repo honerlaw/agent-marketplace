@@ -1,4 +1,4 @@
-# backfill-followups — the six-step protocol
+# backfill-followups — the seven-step protocol
 
 Steps 1-4 are read-only. Step 4 is a hard gate. Only steps 5-6 mutate anything.
 
@@ -102,9 +102,12 @@ tracker. **Nothing is created before this gate.**
 
 ## Step 5 — File
 
-Follow the `github-issues.md` protocol in `minerva:promote`'s `references/` directory exactly: label bootstrap, the
+Follow the `github-issues.md` protocol in `minerva:promote`'s `references/` directory exactly, with
+**one substitution**: its duplicate check's *source 2* names the unit's `proposal.md`
+`## Deferred work` section, which backfill never writes — read the `## Backfill disposition`
+section of that unit's `followups.md` instead. Sources 1 and 3 are unchanged. Then: label bootstrap, the
 duplicate check, the `gh issue create` invocation with its title/body substitution rules, and
-the per-item fail-soft. Two backfill-specific details:
+the per-item fail-soft. Two further backfill-specific details — which, with the ledger substitution above, are the **three** documented divergences from `github-issues.md`:
 
 - The back-link line names the **source unit**, so items keep their provenance:
   `Deferred from `.minerva/work/<source-date-slug>/` by `minerva:backfill-followups`.`
@@ -139,13 +142,22 @@ This section is **this skill's tier-2 idempotency ledger**, standing in for the
 many already-shipped units and does not own their proposals.
 
 On a re-run, skip an item whose disposition is **terminal** (`→ #NN`, `shipped`, `obsolete`,
-`not-an-item`, or a dropped `manual`). **Re-offer** an item whose disposition is
-`open — not filed` — it is still live, and a ledger line is not a resolution. An operator who
+`not-an-item`, or a dropped `manual`). **Re-offer** an item whose disposition begins
+`open (…) — not filed` — it is still live, and a ledger line is not a resolution. An operator who
 keeps only the high-priority items this pass gets the rest back next pass; that is what makes
 a second run worth doing.
 
 Write a not-filed item as `open (<priority>) — not filed at this pass; <why>`, so the reason
-survives for whoever reads it next.
+survives for whoever reads it next. Two `<why>` cases are worth naming, because both are easy to
+record as something more final than they are:
+
+- **The operator declined it this pass** — `; not selected at the gate`.
+- **The repo cannot host issues** (step 1's probe took the file path) — `; repo has no GitHub
+  issues`. This is **not** terminal: the same item files normally on a repo that can host it.
+
+A `manual` item the operator **dropped** is terminal, and is written
+`manual — dropped at the gate; <why>`. A `manual` item they kept is written `→ #NN` like any other
+filed item.
 
 ## Step 7 — Report
 
