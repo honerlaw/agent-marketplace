@@ -24,22 +24,50 @@ SKILLS = REPO / "plugins" / "minerva" / "skills"
 SCRIPTS = REPO / "plugins" / "minerva" / "scripts"
 
 
-# Verbs that mutate state outside the test process. This module EXECUTES what it
-# extracts, so a block carrying any of these would have CI creating labels, opening
-# issues, or pushing branches against whatever repo the runner is authenticated to —
-# which has already cost a real label that had to be deleted by hand
-# (`2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state`).
+# This module EXECUTES what it extracts, so a block carrying a mutating command would
+# have CI creating labels, opening issues, or pushing branches against whatever repo the
+# runner is authenticated to — which has already cost a real label that had to be deleted
+# by hand (`2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state`).
 #
-# `minerva:promote`'s references/github-issues.md is the first documented flow whose
-# commands mutate remote state, so the safety this module relied on — "every block it
-# happens to extract is read-only" — is no longer a property of the corpus.
-MUTATING_VERBS = (
-    "gh issue create", "gh issue close", "gh issue edit", "gh issue comment",
-    "gh label create", "gh label delete", "gh pr create", "gh pr merge",
-    "gh pr close", "gh api -X", "gh api --method",
-    "git push", "git commit", "git worktree add", "git branch -D",
-    "rm -rf", "rm -f",
+# `gh` is checked by ALLOWLIST, not denylist. A denylist of the commands its author
+# happened to recall is the wrong shape for a safety guard: `gh` grows subcommands, and
+# every one not thought of fails open. An allowlist fails closed — a new read-only verb
+# has to be added deliberately, and the cost of that is a red test, not a mutated repo.
+GH_READ_ONLY_VERBS = {
+    "list", "view", "status", "diff", "log", "checks", "search", "browse",
+}
+GH_COMMAND_RE = re.compile(r"\bgh\s+([a-z-]+)\s+([a-z-]+)")
+
+# `gh api` takes no resource/verb pair, so it is judged separately: a plain GET is
+# read-only, anything carrying a method flag or a GraphQL mutation is not.
+GH_API_RE = re.compile(r"\bgh\s+api\b")
+GH_API_MUTATING_RE = re.compile(r"--method\s+(?!GET\b)|-X\s+(?!GET\b)|mutation\s*[({]")
+
+# git has a small, stable mutating surface — enumerating it is honest here in a way it
+# is not for `gh`.
+MUTATING_GIT_RE = re.compile(
+    r"\bgit\s+(push|commit|merge|rebase|reset|clean|rm|mv|tag|checkout|switch|branch\s+-[dD]|"
+    r"worktree\s+(add|remove)|cherry-pick|revert|stash|apply|am|filter-branch)\b"
 )
+
+# Non-git, non-gh commands that destroy state.
+MUTATING_SHELL_RE = re.compile(r"\brm\s+-[rf]|\bmv\s+|\btruncate\b|>\s*/dev/sd")
+
+
+def mutating_commands(body: str) -> list:
+    """Every command in `body` that would change state outside the test process."""
+    found = []
+    for resource, verb in GH_COMMAND_RE.findall(body):
+        if resource == "api":
+            continue  # judged by GH_API_RE below
+        if verb not in GH_READ_ONLY_VERBS:
+            found.append(f"gh {resource} {verb}")
+    if GH_API_RE.search(body) and GH_API_MUTATING_RE.search(body):
+        found.append("gh api (non-GET / GraphQL mutation)")
+    found += [f"git {m}" for m in
+              (mm.group(1) for mm in MUTATING_GIT_RE.finditer(body))]
+    found += [m.group(0).strip() for m in MUTATING_SHELL_RE.finditer(body)]
+    return found
 
 
 def assert_read_only(body: str, where: str) -> None:
@@ -50,12 +78,12 @@ def assert_read_only(body: str, where: str) -> None:
     six files to stay in sync — it protects only the call sites someone thought of.
     Guarding the extractor covers every extraction, present and future.
     """
-    for verb in MUTATING_VERBS:
-        assert verb not in body, (
-            f"{where} extracts a fenced block containing `{verb}`, and this module "
-            "EXECUTES what it extracts — CI would mutate real state. Assert on the "
-            "snippet's text instead of running it, or stub the command."
-        )
+    bad = mutating_commands(body)
+    assert not bad, (
+        f"{where} extracts a fenced block containing {bad}, and this module EXECUTES "
+        "what it extracts — CI would mutate real state. Assert on the snippet's text "
+        "instead of running it, or stub the command."
+    )
 
 
 def fenced_blocks(md: Path, lang: str) -> list:
@@ -220,3 +248,47 @@ def test_guard_covers_every_extraction_not_just_remembered_call_sites():
         "the read-only guard must run inside fenced_blocks — a guard the caller "
         "must remember to invoke protects only the call sites someone thought of"
     )
+
+
+def test_guard_catches_the_commands_a_denylist_missed():
+    """Regression for the gaps a hand-enumerated denylist left open.
+
+    Every command below was absent from the first version of this guard. Under an
+    allowlist they are caught by construction rather than by having been recalled.
+    """
+    for cmd in [
+        "gh issue reopen 12",
+        "gh pr edit 3 --title x",
+        "gh pr comment 3 --body hi",
+        "gh pr review 3 --approve",
+        "gh workflow run deploy.yml",
+        "gh label delete stale",
+        "git rm -r src",
+        "git reset --hard origin/main",
+        "git clean -fd",
+        "git tag -d v1",
+    ]:
+        assert mutating_commands(cmd), f"{cmd!r} slipped past the guard"
+
+
+def test_guard_catches_a_graphql_mutation_that_bypasses_method_flags():
+    """`gh api graphql -f query='mutation {...}'` carries no -X/--method flag."""
+    assert mutating_commands("gh api graphql -f query='mutation { addComment }'")
+    # a plain GET through gh api stays legal
+    assert not mutating_commands("gh api repos/o/r/pages")
+
+
+def test_guard_still_allows_every_read_only_gh_command_in_the_corpus():
+    """The allowlist must not red CI on the read-only commands skills actually document."""
+    for cmd in [
+        "gh pr list --state open",
+        "gh pr view 3 --json state",
+        "gh pr checks 3 --json name,state,bucket",
+        "gh issue list --label 'minerva:followup' --state open",
+        "gh issue view 76",
+        "gh label list",
+        "gh repo view --json defaultBranchRef",
+        "gh run view 12",
+        "gh auth status",
+    ]:
+        assert not mutating_commands(cmd), f"{cmd!r} wrongly rejected as mutating"

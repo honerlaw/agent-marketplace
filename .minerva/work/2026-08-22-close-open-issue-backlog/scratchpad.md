@@ -78,3 +78,33 @@ has spent its one vote.
   the live worktree; the #81 inferred-gate revert failed the steady-state test for every
   reviewer. Skeptic caught the 571-vs-535 baseline error (corrected above); Arbiter re-measured
   535 on 7f56ce4 and judged the correction handled transparently.
+
+## Review triage 2026-08-22
+- [2/3 accept] triage panel over 7 findings (6 code-quality, 1 minerva audit).
+  FIX C1, C2, C3, M1 · SUGGEST C5 · IGNORE C4, C6. Both voters verified every premise
+  against the live worktree; no finding revealed a load-bearing divergence, so no replan.
+
+Applied:
+- C1 FIX — `step_number_citations()` hoisted to module scope so the negative cases exercise
+  the same predicate the check runs. The first draft had defined the regex twice, which is
+  the presence-assertion rot this unit's own #79 item extracted a predicate to avoid.
+- C2 FIX — blanket comma ban replaced by a self-reference-marker exclusion scoped to the GAP
+  between the skill mention and the step reference. The Skeptic raised a mirror defect
+  ("re-run `minerva:promote`'s step 3" excluded by a marker in a different clause); gap
+  scoping already prevents it, and it now has an explicit regression test, as they asked.
+- C3 FIX — `gh` guard inverted from denylist to ALLOWLIST of read-only verbs. A denylist of
+  the commands its author recalled fails open on every subcommand not thought of; an
+  allowlist fails closed. `gh api` judged separately (plain GET legal; -X/--method/GraphQL
+  mutation not). Regression test enumerates the 10 commands the denylist missed —
+  `gh pr comment` was verified caught after the change and not before.
+- M1 FIX — duplicated `## Out of scope` removed from references/phases.md.
+
+Not applied:
+- C5 SUGGEST — `_unfenced_lines` / `_unfenced` duplicated across two test modules. Needs a
+  shared tests/ support module that does not exist; file as a followup issue in promote.
+- C4 IGNORE — substring guard could reject prose mentioning a command. No corpus instance,
+  and the fix would trade a harmless false positive for a false NEGATIVE on a safety guard.
+- C6 IGNORE — prefix heading matching is the documented deliberate tradeoff; two live
+  citations depend on it.
+
+Suite: 641 passed. Mutations re-verified after the rewrites.

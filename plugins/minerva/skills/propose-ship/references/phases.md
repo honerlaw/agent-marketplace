@@ -80,7 +80,3 @@ After `minerva:ship` returns, check PR merge state and decide what to do with th
 6. **No PR found** → ship must have bailed before opening one. Skip cleanup and exit.
 
 This phase is also the entry point when `propose-ship` is re-invoked via the wake-up (`--cleanup-only` flag) — in that mode, skip phases 1–7 and re-run phase 7 directly.
-
-## Out of scope
-
-This skill does not define what "done" means for any phase — each skill defines its own completion signal. It does not add checkpoints, summaries, or status messages between phases beyond the explicit work → review trigger words, the promote → ship gate, and the cleanup gate.
