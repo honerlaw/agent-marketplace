@@ -1,7 +1,7 @@
 # Proposal: followups-become-github-issues
 
 **Date**: 2026-08-22
-**Status**: Draft
+**Status**: Shipped (2026-08-22)
 **Base**: `origin/main`
 
 ## Goal
@@ -49,17 +49,20 @@ no GitHub remote must behave exactly as it does today.
    work unit `.minerva/work/<date-slug>/`. Labels = `priority: <level>` plus the marker
    label `minerva:followup`, each created on demand if absent.
 
-4. **Idempotency.** Issue creation is the only externally-visible side effect promote has,
-   and a duplicate is a notification on someone's repo, not a cosmetic double bullet.
-   Mirroring `minerva:ship`'s `gh pr view`-before-`gh pr create`: before creating, search
-   for an existing followup issue carrying this unit's back-link and skip the item if one
-   exists. A re-run after a partial failure therefore creates only what is missing.
+4. **Idempotency, in three sources.** Issue creation is the only externally-visible side
+   effect promote has, and a duplicate is a notification on someone's repo. The check reads
+   the run's own record first, then the unit's `proposal.md` `## Deferred work` section,
+   and only then a repository search. The search cannot be the authority: GitHub's search
+   index is not synchronous with creation, so it is blindest in exactly the
+   retry-after-partial-failure window the check exists for — see
+   [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]].
 
-5. **Fail-soft, per item.** Any `gh issue create` failure drops **that item** to
-   `followups.md` verbatim. Label creation failing (a repo where the caller can open issues
-   but not manage labels, or one with its own `P0`-style taxonomy) degrades to the body
-   `**Priority**:` line alone — minerva never forces its taxonomy onto a repo that has one.
-   Nothing is ever lost.
+5. **Fail-soft, expressed in the code.** `ensure_label` returns non-zero when a label is
+   unusable and the caller builds a `USABLE` flag array from what succeeded, so a repo
+   where the caller can open issues but not manage labels degrades to the body
+   `**Priority**:` line alone rather than depending on the executor's shell settings. Any
+   `gh issue create` failure drops **that item** to `followups.md` verbatim. Nothing is
+   ever lost.
 
 6. **Durable record.** Created issue URLs are written to the unit's `proposal.md` under a
    `## Deferred work` section. This is a historical fact ("this unit deferred X to #12")
@@ -116,3 +119,12 @@ an orphaned issue naming its source unit is a better failure than silently losin
 
 None outstanding. The two propose-phase reviewer gates resolved the priority-authorship
 gap, the `viewerPermission` mis-gate, the idempotency gap, and the consumer list.
+
+## Deferred work
+
+Filed by this unit's own promote run — the feature's first live exercise, on
+`honerlaw/agent-marketplace`:
+
+- #69 — Triage the existing followups.md backlog and file the survivors as issues (priority: medium)
+- #70 — Guard tests/test_skill_snippets.py against extracting mutating gh blocks (priority: medium)
+- #71 — Have minerva:cleanup close minerva:followup issues whose work has shipped (priority: low)
