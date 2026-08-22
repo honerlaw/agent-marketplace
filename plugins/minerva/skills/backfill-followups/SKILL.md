@@ -36,6 +36,18 @@ An item the triage cannot confidently resolve is classified `unsure` and **filed
 
 ## Idempotency
 
-- An item already carrying a disposition line in `## Backfill disposition` is skipped.
-- Filing additionally inherits `github-issues.md`'s duplicate check.
-- A run interrupted between filing and recording is recovered by the same check — re-run it.
+A disposition is **terminal** or **non-terminal**, and only terminal ones are skipped:
+
+- **Terminal** — `→ #NN`, `shipped`, `obsolete`, `not-an-item`, or a `manual` item the
+  operator dropped. The item is done being decided; a re-run passes over it.
+- **Non-terminal** — `open — not filed`. The item is still live and was simply not filed
+  this pass. **A re-run re-offers it at the gate.**
+
+That split is the whole reason a re-run is worth anything. Skipping every dispositioned line
+would let an `open` item sit annotated forever with nothing to resurface it — the exact
+shape `.minerva/knowledge/2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption.md`
+warns about, reintroduced inside the tool built to cure it. Re-running the skill **is** the
+trigger; do not let it become a no-op over live work.
+
+Filing additionally inherits the `github-issues.md` duplicate check, so a run interrupted
+between filing and recording is recovered by re-running it.

@@ -12,6 +12,6 @@ Deferred work surfaced during unit 048 that was out of scope for this run.
 
 Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
 
-- **Extract `propose-ship` into a `references/` split** → → #80 (priority: medium)
+- **Extract `propose-ship` into a `references/` split** → #80 (priority: medium)
 - ~~**Observe `gh pr checks --watch` blocking through a genuinely pending run.**~~ → shipped — closed by its own author during that unit's ship phase
 - **The eight units with stale in-flight metadata make the pre-flight collision check noisy.** → shipped — this run's pre-flight reported 0 in-flight units

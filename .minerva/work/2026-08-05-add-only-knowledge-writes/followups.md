@@ -81,7 +81,7 @@ Triaged by `minerva:backfill-followups`. Every item above is unchanged; this sec
 - **`using-minerva/SKILL.md` has ~60 bytes of headroom against the 9216-byte cap.** → shipped — addressed by this unit: the over-long `propose-ship-balanced` row was trimmed, taking the file to 9116 bytes
 - **Reconciliation's serialization is prose, not a tested script.** → open (low) — not filed at this pass; still prose in `cleanup/references/reconciliation.md`, with the stated trigger being 'if reconciliation grows any further coordination logic'
 - **Success criterion 1's second clause was unverifiable as written.** → not-an-item — a retrospective note explaining a rewrite that already happened
-- **`plan_reciprocals` runs even when `plan_index` refuses** → → #81 (priority: medium)
+- **`plan_reciprocals` runs even when `plan_index` refuses** → #81 (priority: medium)
 - **A doubled catalog line for one entry is invisible.** → open (low) — not filed at this pass; `parse_index` is now stem-keyed, but two lines for the same stem still collapse
 - **The live `index.md` has one entry out of ascending order** → shipped — reconciliation re-sorted it, exactly as the note predicted
 - **`synthesis_status.py` still carries the scalar floor this unit rejected for the index.** → shipped — `synthesis_status` now returns a per-record `unsynthesized` list of stems, not a watermark threshold

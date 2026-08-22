@@ -23,3 +23,25 @@
   narrower than the reality it guards. Not fixed here (out of scope, and the workaround is
   one sentence), but it will recur for any skill that reuses another's protocol — which is
   now an established pattern rather than a one-off.
+
+## Review finding 2026-08-22
+
+Completion-verification Verifier returned `accept` — all 8 criteria met, and it re-derived
+every `shipped`/`obsolete`/`not-an-item` call across the 79-item corpus (with two independent
+forks) without finding a single falsified classification. Append-only discipline confirmed:
+0 deletions across all 24 `followups.md`. Two non-blocking observations, both triaged FIX:
+
+- **Double-arrow format defect.** All 11 filed-issue lines rendered `item → → #NN` because
+  the writer's format string added an arrow the disposition value already carried. The
+  skill's own documented ledger format is a single arrow. Fixed in all 24 files.
+- **The idempotency rule would have stranded the 25 not-filed items.** "An item already
+  carrying a disposition line is skipped on a re-run" is right for a resolved item and wrong
+  for `open — not filed`: those are still live, and a ledger line is not a resolution. As
+  written, a re-run would pass over them forever with nothing to resurface them — which is
+  [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] reappearing *inside
+  the tool built to cure it*. Split the rule: terminal dispositions (`→ #NN`, `shipped`,
+  `obsolete`, `not-an-item`, dropped `manual`) are skipped; `open — not filed` is
+  **re-offered at the gate on every run**. Re-running the skill is the trigger.
+
+Also verified: the new contract anchors fail on drift (mutated `Atomization rule` →
+`test_body_anchors[backfill-followups]` fails; restored → 535 pass).

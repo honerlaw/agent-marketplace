@@ -64,6 +64,8 @@ not evidence.
 | `not-an-item` | Blurb, header, or an author's own skip decision | no |
 | `unsure` | Cannot be resolved with evidence | **yes — filed as `open`** |
 
+An `open` item the operator declines to file this pass is recorded `open — not filed`, which is **non-terminal**: the next run offers it again (see step 6).
+
 **`manual` items cannot be verified by any evidence source** — nothing in the repo records
 whether someone submitted a web form. Do not guess in either direction: surface them as a
 group and let the operator make one call.
@@ -134,8 +136,16 @@ across runs.
 
 This section is **this skill's tier-2 idempotency ledger**, standing in for the
 `proposal.md` `## Deferred work` section that `github-issues.md` names — a backfill run spans
-many already-shipped units and does not own their proposals. An item already carrying a
-disposition line is skipped on a re-run.
+many already-shipped units and does not own their proposals.
+
+On a re-run, skip an item whose disposition is **terminal** (`→ #NN`, `shipped`, `obsolete`,
+`not-an-item`, or a dropped `manual`). **Re-offer** an item whose disposition is
+`open — not filed` — it is still live, and a ledger line is not a resolution. An operator who
+keeps only the high-priority items this pass gets the rest back next pass; that is what makes
+a second run worth doing.
+
+Write a not-filed item as `open (<priority>) — not filed at this pass; <why>`, so the reason
+survives for whoever reads it next.
 
 ## Step 7 — Report
 

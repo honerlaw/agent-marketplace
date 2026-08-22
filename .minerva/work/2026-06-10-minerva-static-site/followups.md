@@ -8,6 +8,6 @@
 
 Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
 
-- **Link the site from the repo's surfaces** → → #75 (priority: medium)
+- **Link the site from the repo's surfaces** → #75 (priority: medium)
 - **Optional: GitHub Pages deploy via an Actions workflow.** → shipped — `.github/workflows/pages.yml` exists
 - **Optional test hardening:** → open (low) — not filed at this pass; `tests/test_site_catalog.py` still uses `str.index` twice

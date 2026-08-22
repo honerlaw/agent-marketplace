@@ -41,7 +41,7 @@ that runs the behavioral evals and surfaces deltas. Out of scope until after the
 
 Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
 
-- ## 1. (MANDATORY, FIRST) Live signal-and-control validation spike → → #74 (priority: medium)
+- ## 1. (MANDATORY, FIRST) Live signal-and-control validation spike → #74 (priority: medium)
 - ## 2. Per-skill behavioral backfill → open (low) — not filed at this pass; 3 of 23 skills have `behavioral.json`, and this is gated behind #74
 - ## 3. Live baseline recording + regression detection → open (low) — not filed at this pass; gated behind #74
 - ## 4. (Optional) Nightly / on-demand harness wiring → shipped — `.github/workflows/behavioral-evals.yml` exists

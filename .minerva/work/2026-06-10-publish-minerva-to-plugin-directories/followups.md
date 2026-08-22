@@ -25,9 +25,9 @@ Reusable blurb to paste:
 Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
 
 - - Name: `minerva` / Repo URL / One-liner / Install (4 bullets) → not-an-item — a reusable paste-blurb for a human doing the submissions, not a task. Carried into #82-#84 so it is where it is needed
-- **claudepluginhub.com** → → #82 (priority: medium, manual)
-- **cc-marketplace** (ananddtyagi) → → #83 (priority: medium, manual)
-- **aitmpl.com** (optional, low priority) → → #84 (priority: low, manual)
+- **claudepluginhub.com** → #82 (priority: medium, manual)
+- **cc-marketplace** (ananddtyagi) → #83 (priority: medium, manual)
+- **aitmpl.com** (optional, low priority) → #84 (priority: low, manual)
 - **claude-plugins.dev** (Await — auto-crawl) → not-an-item — explicitly 'no action; re-check in a few days'; a reminder, not a task
 - **claudemarketplaces.com** (Await — auto-crawl) → not-an-item — same
 - **awesome-claude-plugins** (Decided: skip) → not-an-item — the author already closed it

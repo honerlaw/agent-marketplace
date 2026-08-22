@@ -59,10 +59,10 @@ Mechanism findings and deferred items from `findings.md` — seeds, not commitme
 
 Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
 
-- 1. **[M1, high] Rendered-listing description drop.** → → #76 (priority: medium) — diagnosed as `2026-07-21-bug-skill-listing-description-drop`, but the rendered-listing test it asks for does not exist
-- 2. **[M2] Six-block target-resolution duplication.** → → #77 (priority: medium) — all 6 files still carry the 'keep in sync' plea
-- 3. **[M3] Cross-skill step-number coupling.** → → #78 (priority: medium)
-- 4. **[M4] Description ≤1024-char contract test.** → → #79 (priority: medium) — verified no test references 1024
+- 1. **[M1, high] Rendered-listing description drop.** → #76 (priority: medium) — diagnosed as `2026-07-21-bug-skill-listing-description-drop`, but the rendered-listing test it asks for does not exist
+- 2. **[M2] Six-block target-resolution duplication.** → #77 (priority: medium) — all 6 files still carry the 'keep in sync' plea
+- 3. **[M3] Cross-skill step-number coupling.** → #78 (priority: medium)
+- 4. **[M4] Description ≤1024-char contract test.** → #79 (priority: medium) — verified no test references 1024
 - 5. **Handoff-phrasing contract test.** → open (low) — not filed at this pass; `test_skill_dispatch.py` checks dispatch sites and execution-mode pinning, not handoff phrasing
 - 6. **Ambient-trigger enforcement layer.** → open (low) — not filed at this pass; blocked behind #76, and the Routing-section half has distribution-wide blast radius
 - 7. **Empirical validation of the triggering diagnoses.** → open (low) — not filed at this pass; needs captured transcripts / analytics
