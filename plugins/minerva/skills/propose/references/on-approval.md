@@ -46,6 +46,7 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
    **Date**: YYYY-MM-DD
    **Status**: Draft
+   **Closes**: #12, #34          <- optional; omit the line entirely when nothing is closed
 
    ## Goal
    <approved goal>
@@ -64,6 +65,16 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
    ## Open Questions
    - <any remaining items>
    ```
+
+   **The `**Closes**` field.** Optional, and normally absent at propose time — you rarely
+   know the issue numbers before the work is done. It is authored at the **end** of the
+   work phase, by whoever just wrote the diff and therefore knows what it actually closes.
+   `minerva:ship` reads it when composing the PR body and emits one `Closes #N` line per
+   entry, so GitHub closes the issues on merge.
+
+   Only list an issue the diff genuinely resolves. Nothing infers this field from the diff
+   or the branch name — a wrong auto-close destroys a real record, which is why the linkage
+   is authored rather than guessed.
 
    Also write `scratchpad.md` with this header and nothing else:
 

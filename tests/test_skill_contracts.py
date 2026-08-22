@@ -274,3 +274,212 @@ def test_description_ceiling_fires_on_an_over_long_description():
     assert description_overflow({"description": "x" * (DESCRIPTION_MAX_CHARS + 7)}) == 7
     assert description_overflow({"description": "x" * DESCRIPTION_MAX_CHARS}) == 0
     assert description_overflow({}) == 0
+
+
+# --- Cross-skill section citations (issue #78) ---------------------------------
+#
+# Skills cite each other's protocols. Citing by INTERNAL STEP NUMBER ("per
+# `minerva:propose` steps 8-9, 11") breaks silently the moment the cited skill
+# renumbers — nothing detects it, and the reader follows a pointer to the wrong
+# text. The corpus already had a better form in live use, so this makes it the
+# rule and checks it: `minerva:<skill>`'s "<Heading>".
+from knowledge_spans import FENCE_RE  # noqa: E402  (single-sourced fence grammar)
+
+HEADING_CITATION_RE = re.compile(r"`minerva:([a-z-]+)`'s \"([^\"]+)\"")
+
+
+def _unfenced(body: str) -> str:
+    """`body` with fenced blocks removed — a citation inside a fence is an
+    illustration, not a live pointer (the same rule the pointer-integrity checks use)."""
+    out, fenced = [], False
+    for line in body.splitlines():
+        if FENCE_RE.match(line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            out.append(line)
+    return "\n".join(out)
+
+
+def _headings(skill: str) -> list[str]:
+    """Every ATX heading in a skill's SKILL.md and references/*.md, hashes stripped."""
+    d = SKILLS_DIR / skill
+    files = [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]
+    return [ln.lstrip("#").strip()
+            for f in files if f.is_file()
+            for ln in f.read_text().splitlines() if ln.startswith("#")]
+
+
+def unresolved_heading_citations(body: str) -> list[tuple]:
+    """Citations in `body` that name a section which does not exist.
+
+    Matching is by PREFIX, not equality, and that is deliberate rather than lax.
+    Headings in this corpus carry trailing clarifiers — `## Implementation protocol
+    — apply throughout the session`, `## On approval — worktree setup + file writes`
+    — while citations name the stable head of the phrase. Two such citations were
+    already live and correct when this check was written; demanding equality would
+    have reded CI against correct prose on day one. The prefix must still start at
+    the beginning of the heading, so it cannot match an unrelated section.
+    """
+    bad = []
+    for m in HEADING_CITATION_RE.finditer(_unfenced(body)):
+        skill, heading = m.group(1), m.group(2)
+        if not (SKILLS_DIR / skill).is_dir():
+            bad.append((skill, heading, "no such skill"))
+        elif not any(h.startswith(heading) for h in _headings(skill)):
+            bad.append((skill, heading, "no heading with this prefix"))
+    return bad
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_cross_skill_citations_resolve(skill):
+    d = SKILLS_DIR / skill
+    for f in [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]:
+        if not f.is_file():
+            continue
+        bad = unresolved_heading_citations(f.read_text())
+        assert not bad, (
+            f"{f.relative_to(REPO_ROOT)} cites sections that do not exist: {bad} — "
+            "cite a real heading so a renumbering or rename is caught here"
+        )
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_no_cross_skill_step_number_citations(skill):
+    """Citing a sibling by internal step number is the form this check replaces."""
+    # No comma in the gap: a comma means the sentence moved on, so
+    # "invoke `minerva:replan`, return to step 3" is a self-reference to THIS
+    # skill's own step 3, not a citation of replan's.
+    step_cite = re.compile(r"`minerva:[a-z-]+`(?:'s)?[^.,\n]{0,60}?\bsteps? \d")
+    d = SKILLS_DIR / skill
+    for f in [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]:
+        if not f.is_file():
+            continue
+        hits = step_cite.findall(_unfenced(f.read_text()))
+        assert not hits, (
+            f"{f.relative_to(REPO_ROOT)} cites a sibling skill by step number "
+            f"({hits}) — renumbering breaks it silently; cite the section heading "
+            "as `minerva:<skill>`'s \"<Heading>\" instead"
+        )
+
+
+def test_citation_check_fires_on_a_missing_heading():
+    """Negative coverage for the resolver."""
+    assert unresolved_heading_citations('per `minerva:promote`\'s "No Such Section"') == [
+        ("promote", "No Such Section", "no heading with this prefix")]
+    assert unresolved_heading_citations('per `minerva:nonexistent-skill`\'s "Anything"') == [
+        ("nonexistent-skill", "Anything", "no such skill")]
+
+
+def test_citation_check_accepts_exact_and_prefix_matches():
+    # exact heading
+    assert unresolved_heading_citations('per `minerva:review`\'s "Triage persistence"') == []
+    # prefix of `## Implementation protocol — apply throughout the session`
+    assert unresolved_heading_citations('per `minerva:work`\'s "Implementation protocol"') == []
+
+
+def test_citation_check_ignores_fenced_examples():
+    assert unresolved_heading_citations('```\n`minerva:promote`\'s "Fake"\n```') == []
+
+
+def test_step_number_check_ignores_a_self_reference_after_a_comma():
+    """`invoke minerva:replan, return to step 3` cites THIS skill's step 3.
+
+    Without the comma exclusion the check flags it, which would push authors to
+    reword correct prose to satisfy a false positive.
+    """
+    step_cite = re.compile(r"`minerva:[a-z-]+`(?:'s)?[^.,\n]{0,60}?\bsteps? \d")
+    assert not step_cite.findall("trigger `minerva:replan`, return to step 3")
+    assert step_cite.findall("per `minerva:promote` Mode A step 7")
+
+
+# --- The six target-resolution blocks (issue #77) ------------------------------
+#
+# The same "## Target resolution" protocol is stated in six skills, kept in sync by
+# the sentence "**Keep all six blocks in sync if you edit one.**" and nothing else —
+# the shape `2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant` is named
+# for, and it had already drifted.
+#
+# The blocks are NOT copies, and that is deliberate: `minerva:cleanup` has three steps
+# because its no-argument mode means "all merged worktrees"; `minerva:review` and
+# `minerva:ship` have materially different "none found" behaviour (skip to code review /
+# bare mode). So byte-identity is the wrong invariant — normalizing enough to make
+# cleanup's three steps match work's five would erase everything worth checking.
+#
+# What IS shared, exact, and load-bearing is asserted instead: each block enumerates
+# its five siblings, and each states the two lookup rules whose absence has caused
+# real bugs (a digit-anchored glob silently skipping date-named units).
+TARGET_RESOLUTION_BLOCKS = {
+    "work": "SKILL.md",
+    "replan": "SKILL.md",
+    "promote": "SKILL.md",
+    "cleanup": "SKILL.md",
+    "review": "references/protocol.md",
+    "ship": "references/protocol.md",
+}
+SYNC_PLEA = "**Keep all six blocks in sync if you edit one.**"
+
+
+def target_resolution_block(skill: str) -> str:
+    """The `## Target resolution` section of `skill`, up to the next heading."""
+    path = SKILLS_DIR / skill / TARGET_RESOLUTION_BLOCKS[skill]
+    m = re.search(r"^## Target resolution\n(.*?)(?=^## )", path.read_text(), re.S | re.M)
+    assert m, f"{skill}: no '## Target resolution' section in {TARGET_RESOLUTION_BLOCKS[skill]}"
+    return m.group(1)
+
+
+def cited_siblings(block: str) -> set:
+    """The skills named in the block's 'Same pattern used by ...' enumeration."""
+    m = re.search(r"Same pattern used by (.*?)\. \*\*Keep all six", block, re.S)
+    return set(re.findall(r"`minerva:([a-z-]+)`", m.group(1))) if m else set()
+
+
+def test_all_six_target_resolution_blocks_exist():
+    """Guards the enumeration itself — if the locator silently found nothing, every
+    check below would pass vacuously."""
+    assert len(TARGET_RESOLUTION_BLOCKS) == 6
+    for skill in TARGET_RESOLUTION_BLOCKS:
+        assert target_resolution_block(skill).strip()
+
+
+@pytest.mark.parametrize("skill", sorted(TARGET_RESOLUTION_BLOCKS))
+def test_target_resolution_block_names_its_five_siblings(skill):
+    """The sync invariant the plea asks for, now actually enforced.
+
+    A rename, a seventh adopter, or a dropped name reds CI here instead of drifting.
+    """
+    expected = set(TARGET_RESOLUTION_BLOCKS) - {skill}
+    block = target_resolution_block(skill)
+    assert SYNC_PLEA in block, f"{skill}: the sync plea is missing from its block"
+    assert cited_siblings(block) == expected, (
+        f"{skill}'s target-resolution block names {sorted(cited_siblings(block))}, "
+        f"expected the other five: {sorted(expected)}"
+    )
+
+
+@pytest.mark.parametrize("skill", sorted(TARGET_RESOLUTION_BLOCKS))
+def test_target_resolution_block_states_both_lookup_rules(skill):
+    """Both operational clauses, in every copy.
+
+    These are not stylistic. Scanning only `.minerva/work/*/` misses units that live
+    in a worktree; a digit-anchored glob misses `YYYY-MM-DD-<slug>` units entirely,
+    which this repo has already shipped and fixed once.
+    """
+    block = target_resolution_block(skill)
+    assert ".minerva/worktrees/" in block, (
+        f"{skill}: block does not say worktrees are scanned — a unit in a worktree "
+        "would be invisible to resolution")
+    assert "id form" in block, (
+        f"{skill}: block does not say BOTH id forms are matched — a digit-anchored "
+        "glob silently skips date-named units")
+
+
+def test_sibling_enumeration_check_fires_on_a_wrong_name():
+    """Negative coverage: exercise the same comparison the check runs."""
+    good = ("Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, "
+            "`minerva:review`, `minerva:ship`. " + SYNC_PLEA)
+    assert cited_siblings(good) == {"work", "replan", "promote", "review", "ship"}
+    renamed = good.replace("`minerva:ship`", "`minerva:shipp`")
+    assert cited_siblings(renamed) != {"work", "replan", "promote", "review", "ship"}
+    dropped = good.replace(", `minerva:ship`", "")
+    assert len(cited_siblings(dropped)) == 4

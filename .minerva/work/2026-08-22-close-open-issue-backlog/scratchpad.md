@@ -49,3 +49,25 @@ has spent its one vote.
   the missing-index hard path instead of the per-entry path; fixed by seeding a catalog that
   already lists the odd entry under a known section.
 - Suite: 571 passed.
+- #71 done — optional `**Closes**: #N, #M` documented in propose's on-approval template;
+  promote authors it when rewriting proposal.md; ship emits ONE `Closes #N` line per entry
+  (GitHub only honours the keyword per-reference — `Closes #12, #34` closes just #12).
+  Bare mode explicitly emits none: no proposal to read the field from.
+- #80 done — propose-ship split into references/phases.md. SKILL.md 8691 -> 3846 bytes.
+  Added the Phase 7 constant-delay rationale its siblings carry and it lacked (the wait is
+  on auto-merge landing, which does not track CI duration, so there is no completion signal
+  to subscribe to and a constant is the honest shape).
+- #78 done — 16 step-number citations across the three orchestrators converted to the
+  quoted-heading form already in live use. Contract test matches by PREFIX, not equality:
+  2 of 9 pre-existing correct citations name the stable head of a heading with a trailing
+  clarifier, so equality would have reded CI on correct prose. First draft of the
+  step-number check false-positived on "invoke `minerva:replan`, return to step 3" — a
+  self-reference, not a citation; fixed by excluding commas from the gap, with coverage.
+  `Hard gate #1/#2` left alone as decided: they name bold list lead-ins, not headings.
+- #77 done — NOT the byte-diff the approach panel approved. The six blocks are deliberately
+  different (see the proposal's table), so the shared invariant is asserted instead: each
+  block names exactly its five siblings, and each states both lookup rules. All six already
+  satisfied both; cleanup's extra paragraph is intentional divergence, not drift.
+- #76 done as designed — evidence appended to the bug entry; issue stays open, to be
+  commented and retitled. NOT in the Closes list.
+- Suite: 636 passed.

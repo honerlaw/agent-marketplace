@@ -16,21 +16,21 @@ This phase replaces the user-interactive intake in `minerva:propose`.
 
 5. **Whole-proposal-acceptance panel.** Dispatch panel with artifact = the full Goal/Why/Approach/Success-criteria/Open-Questions draft (post step 4). On `accept`, the draft is final. On revision-round failure, escalate with the Skeptic's top 1-3 concerns as a batched question.
 
-6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes" section, steps 1–7:
+6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
    - Derive slug, check for a duplicate slug across local work / local branches / remote branches, and take today's date as the id.
    - Resolve default branch.
    - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
    - `git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>`.
    - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
 
-7. **File writes (inside the worktree).** Identical to `minerva:propose` steps 8–9, 11:
+7. **File writes (inside the worktree).** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
    - Create `.minerva/work/<date-slug>/`.
-   - Write `proposal.md` with the approved content per the template in `minerva:propose` step 9.
-   - Write `scratchpad.md` with the header-only template from `minerva:propose` step 9.
+   - Write `proposal.md` with the approved content per the template in `minerva:propose`'s "On approval — worktree setup + file writes".
+   - Write `scratchpad.md` with the header-only template in `minerva:propose`'s "On approval — worktree setup + file writes".
    - Append the initial `## Panel decisions YYYY-MM-DD` block to `scratchpad.md` with the votes from steps 3–5.
    - `git add` the work-unit directory; commit `chore: initialize <date-slug> work unit`.
 
-8. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose` step 10 (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal-acceptance panel already covered that role.
+8. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose`'s "On approval — worktree setup + file writes" (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal-acceptance panel already covered that role.
 
 9. Continue to Phase 2.
 
@@ -93,13 +93,13 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5. Use that predicate, never a match against the marker string — the marker has nine spellings in one 51-unit corpus and a string match reads 16 of them as un-promoted, re-running a mutating pass.
 
-3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote` Mode A step 3: PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
+3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
 
 4. **Partition panel.** Artifact = the full partition with one-line justifications per entry. On `2/3 accept`, apply. On revision-round failure, escalate with the contested entries.
 
 5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition — keep it (filed as a prioritized GitHub issue when `minerva:promote`'s capability probe says the repo can host one, else appended to `followups.md`; priority one of `critical`/`high`/`medium`/`low` per its `references/github-issues.md`), seed a new proposal, or discard. On `2/3 accept`, apply. On revision-round failure, escalate.
 
-6. **Apply writes.** Per `minerva:promote` Mode A step 7: write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
+6. **Apply writes.** Per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 
 7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `minerva:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
 
