@@ -3,7 +3,41 @@
 A theme-grouped synthesis of the `.minerva/knowledge/` corpus — the LLM-owned
 "concept pages" layer over the raw entries (Karpathy's LLM-wiki shape). Each theme is a
 short narrative linking the entries that compose it; the entries themselves remain the
-source of truth. Maintained by `minerva:synthesize`; see `## Limitations` for what the
+source of truth. Maintained by `minerva:synthesize`; see `Three later findings extend the same cluster, and each is a case where the *check itself*
+was the thing that could not fail.
+
+**A distinguished state inferred from the shape of the outputs is usually the resting
+state.** A fixer refused index rewrites in two ways — wholesale, and per-entry — and only
+the first should suppress the companion pass that writes reciprocal links. The obvious test
+read it off the return values: index unchanged *and* refusals present. That signature is not
+the failure; it is what a healthy canonical corpus looks like on every subsequent run, once
+a benign standing refusal coexists with an index that no longer changes. Gating on it would
+have discarded legitimate edits forever after — the very half-reconciled corpus the fix
+existed to prevent, arrived at from the other side. The trap passes every test written
+against a fresh fixture, because the collision only appears at equilibrium, which is exactly
+when nobody is watching ([[2026-08-22-pattern-a-distinguished-state-inferred-from-outputs-is-the-steady-state]]).
+
+**Repeated blocks that look like copy-paste may be diverging on purpose.** Six skills carry
+a `## Target resolution` block held together by a plea to keep them in sync, which reads as
+pure duplication and invites a byte-identity test. They are not copies: one has three steps
+because its no-argument mode means something different, and two more have materially
+different terminal cases. Normalizing enough to make them match would have erased everything
+the test was meant to check. Read the copies before choosing the invariant — when they
+differ deliberately, the enforceable property is the intersection, the specific clauses whose
+absence causes bugs, not the whole text
+([[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]]).
+
+**A safety guard written as a denylist fails open on everything its author did not recall.**
+The guard stopping the snippet runner from executing mutating commands shipped as an
+enumerated list; review found ten real gaps in it on first inspection, including a GraphQL
+mutation that bypassed the method-flag checks entirely. Inverted to an allowlist of
+read-only verbs, all ten close by construction. The denylist's inadequacy is unobservable
+by definition — you cannot notice the entry you did not think of — and the surface it
+guards grows independently of the list. Enumerate the safe set whenever the unsafe set is
+open-ended or belongs to someone else
+([[2026-08-22-pattern-a-denylist-safety-guard-fails-open]]).
+
+## Limitations` for what the
 synthesis watermark does and does not attest.
 
 ## The knowledge wiki: a navigable, machine-checked corpus
@@ -159,6 +193,19 @@ became unrepresentable: even a fully-qualified path to the sibling's file still 
 substring, resolves locally, and dangles. A cross-skill reference now has to be phrased
 around, naming the owning skill and the bare filename
 ([[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]]).
+
+That constraint has since been **dissolved rather than accommodated**. The gate now reads two
+pointer forms: a bare `references/<f>.md` resolves under the citing skill as before, and a
+qualified `plugins/minerva/skills/<skill>/references/<f>.md` resolves under the skill it
+names. The ordering is the whole fix — qualified mentions are matched and stripped *before*
+the bare pass, because a qualified path literally contains a bare-looking tail and
+attributing that tail locally was the defect. Two properties are deliberately kept: the
+orphan check stays local, so a reference file must still be pointed at from its own
+`SKILL.md` or it becomes undiscoverable from the skill that owns it; and qualification is no
+escape hatch, so a qualified pointer to a missing file still dangles and still fails. The
+standing guidance flips accordingly — cite a sibling's protocol by path rather than
+restating it, because copies drift silently while a pointer fails loudly
+([[2026-08-22-decision-qualified-cross-skill-reference-pointers]]).
 
 ## The lifecycle and its automation
 

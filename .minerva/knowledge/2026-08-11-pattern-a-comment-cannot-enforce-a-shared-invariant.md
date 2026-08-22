@@ -82,3 +82,4 @@ consumer already has a safe path for the widened case before designing one.**
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also
+- [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — see also

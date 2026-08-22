@@ -47,3 +47,4 @@ side effect.
 ## Related
 - [[2026-05-19-constraint-skills-must-call-tools-not-prose]] — the constraint that puts runnable mutating commands in skill prose in the first place
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — sibling testing-hazard: there the check cannot fail, here it cannot fail *safely*
+- [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — see also

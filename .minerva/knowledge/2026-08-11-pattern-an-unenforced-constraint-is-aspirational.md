@@ -71,3 +71,4 @@ a false sense of one.
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — builds on
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
+- [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — see also
