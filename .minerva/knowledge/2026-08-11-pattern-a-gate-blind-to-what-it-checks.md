@@ -75,3 +75,5 @@ Three practical consequences:
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — see also
 - [[2026-06-03-decision-migration-check-read-only-entry-re-blindspot]] — builds on
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — see also
+- [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — see also
+- [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — see also

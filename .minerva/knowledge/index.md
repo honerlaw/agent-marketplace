@@ -52,6 +52,7 @@
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a knowledge entry stating a rule enforces nothing — this one was violated three times in two months and the first enforcing test caught a live defect immediately
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
 - [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — guard a retry with the local record; an eventually-consistent index misses what you just wrote
+- [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — a record marking work handled must separate decided-and-done from decided-to-wait, or it buries it
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
 
 ## Constraints
@@ -80,5 +81,6 @@
 - [[2026-08-05-constraint-nnn-keyed-lookups-hide-duplicates]] — `{id: record}` silently drops duplicates; build `{id: [records]}` and exclude dupes from every derived edit
 - [[2026-08-05-constraint-reconciliation-state-is-not-a-scalar]] — a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
 - [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — an atomic-push lock excludes nothing from a second writer that pushes a different branch name
+- [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — the pointer gate resolves any `references/<file>.md` substring against the citing skill only
 
 ## References
