@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from knowledge_spans import FENCE_RE
+from knowledge_spans import unfenced_lines
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
@@ -54,24 +54,11 @@ REF_LOOSE_RE = re.compile(r"references/[A-Za-z0-9._-]+")
 READ_VERB_RE = re.compile(r"\bread\b", re.IGNORECASE)
 
 
-def _unfenced_lines(body: str) -> list[str]:
-    """Lines of ``body`` outside fenced code blocks.
-
-    Fenced examples are illustrations, not live pointers (the same reasoning
-    as knowledge 023's fence-aware edge derivation) — the strengthened checks
-    must not flag them.
-    """
-    lines, fenced = [], False
-    for line in body.splitlines():
-        # FENCE_RE is the single-sourced fence grammar (indented + tilde
-        # fences included) — imported, never re-derived (knowledge 019's rule,
-        # applied beyond the wiki corpus). Toggle semantics pinned below.
-        if FENCE_RE.match(line):
-            fenced = not fenced
-            continue
-        if not fenced:
-            lines.append(line)
-    return lines
+# Lines outside fenced blocks. Fenced examples are illustrations, not live pointers
+# (knowledge 023's fence-aware edge derivation), so the checks below must not flag them.
+# The loop itself is `knowledge_spans.unfenced_lines` — imported, never re-derived, the
+# same rule the grammar has always followed and the loop around it now does too.
+_unfenced_lines = unfenced_lines
 
 
 def malformed_pointers(body: str) -> list[str]:

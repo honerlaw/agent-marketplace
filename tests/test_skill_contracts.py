@@ -283,22 +283,19 @@ def test_description_ceiling_fires_on_an_over_long_description():
 # renumbers — nothing detects it, and the reader follows a pointer to the wrong
 # text. The corpus already had a better form in live use, so this makes it the
 # rule and checks it: `minerva:<skill>`'s "<Heading>".
-from knowledge_spans import FENCE_RE  # noqa: E402  (single-sourced fence grammar)
+from knowledge_spans import unfenced_lines  # noqa: E402  (single-sourced fence scan)
 
 HEADING_CITATION_RE = re.compile(r"`minerva:([a-z-]+)`'s \"([^\"]+)\"")
 
 
 def _unfenced(body: str) -> str:
     """`body` with fenced blocks removed — a citation inside a fence is an
-    illustration, not a live pointer (the same rule the pointer-integrity checks use)."""
-    out, fenced = [], False
-    for line in body.splitlines():
-        if FENCE_RE.match(line):
-            fenced = not fenced
-            continue
-        if not fenced:
-            out.append(line)
-    return "\n".join(out)
+    illustration, not a live pointer (the same rule the pointer-integrity checks use).
+
+    A joined-string view over the shared `knowledge_spans.unfenced_lines`; the toggle
+    loop lives there so this module and `test_skill_budget` cannot drift apart.
+    """
+    return "\n".join(unfenced_lines(body))
 
 
 def _headings(skill: str) -> list[str]:
