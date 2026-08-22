@@ -1,0 +1,28 @@
+{
+  "skill": "backfill-followups",
+  "frontmatter": {
+    "required_keys": ["name", "description"],
+    "values": { "name": "backfill-followups" },
+    "non_empty": ["description"]
+  },
+  "anchors": [
+    "followups.md",
+    ".minerva/work/",
+    "github-issues.md",
+    { "any_of": ["fail open", "fails open", "failing open"], "ignore_case": true },
+    { "any_of": ["one-time"], "ignore_case": true },
+    { "any_of": ["## Backfill disposition"] },
+    { "any_of": ["Atomization rule"], "file": "references/protocol.md" },
+    { "any_of": ["`unsure` | Cannot be resolved with evidence | **yes — filed as `open`**"], "file": "references/protocol.md" },
+    { "any_of": ["manual"], "file": "references/protocol.md" },
+    { "any_of": ["not-an-item"], "file": "references/protocol.md" },
+    { "any_of": ["publish-minerva-to-plugin-directories"], "file": "references/protocol.md" },
+    { "any_of": ["verbatim first line"], "file": "references/protocol.md" },
+    { "any_of": ["test_skill_snippets.py"], "file": "references/protocol.md" }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
