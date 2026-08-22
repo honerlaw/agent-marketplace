@@ -141,3 +141,99 @@ def test_dry_run_all_skills(monkeypatch, capsys):
     out = json.loads(capsys.readouterr().out)
     skills = {entry["skill"] for entry in out}
     assert {"debug", "propose"} <= skills
+
+
+# --- The control arm actually suppresses (issue #74) ------------------------------
+#
+# The previous control ran the identical command for both arms, so `treatment - control`
+# compared a configuration against itself and every delta was run-to-run noise. These
+# tests pin the property that makes a delta mean anything: the two arms differ in exactly
+# one skill directory, and nothing else.
+
+def test_control_arm_dir_is_missing_exactly_the_one_skill(tmp_path, monkeypatch):
+    import run_skill_evals as r
+    plugin = tmp_path / "minerva"
+    (plugin / "skills" / "debug").mkdir(parents=True)
+    (plugin / "skills" / "debug" / "SKILL.md").write_text("---\nname: debug\n---\n")
+    (plugin / "skills" / "promote").mkdir(parents=True)
+    (plugin / "skills" / "promote" / "SKILL.md").write_text("---\nname: promote\n---\n")
+    monkeypatch.setattr(r, "PLUGIN_ROOT", plugin)
+    monkeypatch.setattr(r, "_ARM_DIRS", {})
+
+    treatment = r.arm_plugin_dir("debug", True)
+    control = r.arm_plugin_dir("debug", False)
+
+    assert (treatment / "skills" / "debug").is_dir(), "treatment must keep the skill"
+    assert not (control / "skills" / "debug").exists(), "control must drop the skill"
+    # ...and differ in NOTHING else, or the delta measures more than the skill.
+    t_rest = {p.relative_to(treatment) for p in treatment.rglob("*")
+              if "debug" not in p.relative_to(treatment).parts}
+    c_rest = {p.relative_to(control) for p in control.rglob("*")}
+    assert t_rest == c_rest
+
+
+def test_control_arm_refuses_when_there_is_no_skill_to_suppress(tmp_path, monkeypatch):
+    """Suppressing nothing would make the delta meaningless rather than merely noisy —
+    the precise failure the old no-op control shipped with, so it must be loud."""
+    import run_skill_evals as r
+    plugin = tmp_path / "minerva"
+    (plugin / "skills").mkdir(parents=True)
+    monkeypatch.setattr(r, "PLUGIN_ROOT", plugin)
+    monkeypatch.setattr(r, "_ARM_DIRS", {})
+    with pytest.raises(RuntimeError, match="no skills/ghost directory"):
+        r.arm_plugin_dir("ghost", False)
+
+
+def test_arm_dirs_are_cached_per_arm(tmp_path, monkeypatch):
+    """A multi-case run must not re-copy the plugin tree per invocation."""
+    import run_skill_evals as r
+    plugin = tmp_path / "minerva"
+    (plugin / "skills" / "debug").mkdir(parents=True)
+    monkeypatch.setattr(r, "PLUGIN_ROOT", plugin)
+    monkeypatch.setattr(r, "_ARM_DIRS", {})
+    assert r.arm_plugin_dir("debug", True) is r.arm_plugin_dir("debug", True)
+    assert r.arm_plugin_dir("debug", True) != r.arm_plugin_dir("debug", False)
+
+
+def test_invocation_passes_the_arm_specific_plugin_dir(tmp_path, monkeypatch):
+    """The two arms must reach `claude -p` with DIFFERENT --plugin-dir values.
+
+    Without this the suppression is unobservable from the outside and could silently
+    regress to the old same-command-twice behaviour.
+    """
+    import run_skill_evals as r
+    plugin = tmp_path / "minerva"
+    (plugin / "skills" / "debug").mkdir(parents=True)
+    monkeypatch.setattr(r, "PLUGIN_ROOT", plugin)
+    monkeypatch.setattr(r, "_ARM_DIRS", {})
+
+    seen = []
+
+    class _Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    monkeypatch.setattr(r.subprocess, "run",
+                        lambda cmd, **kw: (seen.append(cmd), _Result())[1])
+    r.claude_invoke("task", True, "debug")
+    r.claude_invoke("task", False, "debug")
+
+    assert all("--plugin-dir" in cmd for cmd in seen)
+    assert "--bare" not in seen[0], "--bare breaks credential resolution (measured)"
+    dirs = [cmd[cmd.index("--plugin-dir") + 1] for cmd in seen]
+    assert dirs[0] != dirs[1], "both arms used the same plugin dir — no control at all"
+
+
+def test_plugin_root_points_at_a_real_plugin_tree():
+    """PLUGIN_ROOT must be the plugin, not the repo.
+
+    This runner lives in `<repo>/scripts/`, not inside the plugin, so the obvious
+    `parent.parent` is the repo root — and a control arm built from the repo root
+    removes nothing. Caught on the first live run by `arm_plugin_dir`'s guard; pinned
+    here so it cannot come back silently.
+    """
+    import run_skill_evals as r
+    assert (r.PLUGIN_ROOT / "skills").is_dir(), f"{r.PLUGIN_ROOT} has no skills/"
+    assert r.PLUGIN_ROOT.name == "minerva"
+    assert (r.PLUGIN_ROOT / "skills" / "debug").is_dir()

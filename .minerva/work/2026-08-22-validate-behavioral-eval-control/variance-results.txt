@@ -1,0 +1,41 @@
+treatment[0] = 3.0
+treatment[1] = 2.0
+treatment[2] = 2.0
+treatment[3] = 4.0
+control[0] = 2.0
+control[1] = 3.0
+control[2] = 2.0
+control[3] = 2.0
+{
+  "skill": "debug",
+  "case": "stale-cache-incident",
+  "n": 4,
+  "rubric_max": 5,
+  "treatment": [
+    3.0,
+    2.0,
+    2.0,
+    4.0
+  ],
+  "control": [
+    2.0,
+    3.0,
+    2.0,
+    2.0
+  ],
+  "treatment_mean": 2.75,
+  "treatment_stdev": 0.9574271077563381,
+  "treatment_range": [
+    2.0,
+    4.0
+  ],
+  "control_mean": 2.25,
+  "control_stdev": 0.5,
+  "control_range": [
+    2.0,
+    3.0
+  ],
+  "delta": 0.5,
+  "pooled_noise": 0.9574271077563381,
+  "separable": false
+}
