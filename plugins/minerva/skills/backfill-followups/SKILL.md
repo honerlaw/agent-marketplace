@@ -26,7 +26,7 @@ Steps 1-4 are read-only and step 4 is a hard gate; only steps 5-6 mutate anythin
 
 ## Filing is delegated, not reimplemented
 
-Issue creation follows the `github-issues.md` protocol in `minerva:promote`'s own `references/` directory, **verbatim** — the capability probe, the `critical`/`high`/`medium`/`low` vocabulary, label bootstrap, the duplicate check, and the per-item fail-soft to `followups.md`. **Read that file too.** Do not restate `gh` mechanics here; if the two ever disagree, `github-issues.md` wins.
+Issue creation follows `plugins/minerva/skills/promote/references/github-issues.md`, **verbatim** — the capability probe, the `critical`/`high`/`medium`/`low` vocabulary, label bootstrap, the duplicate check, and the per-item fail-soft to `followups.md`. **Read that file too.** Do not restate `gh` mechanics here; if the two ever disagree, `github-issues.md` wins.
 
 There are **three** documented divergences, all in `references/protocol.md`; two are cosmetic (the back-link names this skill, and a kept `manual` item gets a line saying no code change will close it). The load-bearing one is the idempotency ledger. That file's tier-2 duplicate check reads the unit's `proposal.md` `## Deferred work` section, written by promote for the unit it is promoting. A backfill run spans many already-shipped units and does not own their proposals, so **its tier-2 ledger is the `## Backfill disposition` section** this skill appends to each `followups.md` instead. Same role, different file.
 

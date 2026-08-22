@@ -34,6 +34,17 @@ BUDGET_BYTES = 9216
 # A reference pointer as written in skill prose: ``references/<name>.md``.
 REF_MENTION_RE = re.compile(r"references/[A-Za-z0-9._-]+\.md")
 
+# A CROSS-SKILL pointer names its owning skill explicitly:
+# ``plugins/minerva/skills/<skill>/references/<name>.md``. Without this form a
+# skill cannot path-reference a sibling's reference file at all — the bare
+# pattern above matches the *tail* of a qualified path and resolves it against
+# the CITING skill, where it dangles. That was inert while every skill's
+# references were private to it, and stopped being inert once skills began
+# reusing each other's protocols verbatim rather than restating them.
+QUALIFIED_MENTION_RE = re.compile(
+    r"plugins/minerva/skills/([A-Za-z0-9._-]+)/(references/[A-Za-z0-9._-]+\.md)"
+)
+
 # Any references/ token at all, canonical or not — superset of REF_MENTION_RE
 # used to catch malformed pointers (``references/briefs`` missing ``.md``).
 REF_LOOSE_RE = re.compile(r"references/[A-Za-z0-9._-]+")
@@ -91,6 +102,22 @@ def files_missing_read_directive(refs_dir: Path, body: str) -> list[str]:
     return missing
 
 
+def reference_mentions(body: str) -> list[tuple]:
+    """Every reference pointer in ``body`` as ``(owning_skill_or_None, "references/<f>.md")``.
+
+    ``None`` means "resolve against the citing skill" — the bare, local form.
+    A named skill means the pointer is qualified and resolves against THAT skill.
+
+    Qualified mentions are matched and stripped FIRST so the bare pass cannot
+    re-match their tail: a qualified path contains a literal ``references/x.md``
+    substring, and attributing that to the citing skill is the whole defect.
+    """
+    qualified = [(m.group(1), m.group(2)) for m in QUALIFIED_MENTION_RE.finditer(body)]
+    bare_only = QUALIFIED_MENTION_RE.sub("", body)
+    bare = [(None, m.group(0)) for m in REF_MENTION_RE.finditer(bare_only)]
+    return qualified + bare
+
+
 def _discover_skills() -> list[str]:
     """Enumerate skill directories (those holding a SKILL.md) under SKILLS_DIR.
 
@@ -139,13 +166,19 @@ def test_every_reference_file_is_pointed_to(skill):
 
 @pytest.mark.parametrize("skill", SKILLS)
 def test_every_reference_pointer_resolves(skill):
-    """No dangling pointers: each references/<file>.md mention must exist."""
+    """No dangling pointers: each reference mention must exist.
+
+    A bare mention resolves under the citing skill; a qualified
+    ``plugins/minerva/skills/<other>/references/<f>.md`` mention resolves under
+    the skill it names, so one skill can cite another's protocol by path.
+    """
     body = (SKILLS_DIR / skill / "SKILL.md").read_text()
-    for mention in sorted(set(REF_MENTION_RE.findall(body))):
-        target = SKILLS_DIR / skill / mention
+    for owner, mention in sorted(set(reference_mentions(body)), key=lambda t: (t[0] or "", t[1])):
+        target = SKILLS_DIR / (owner or skill) / mention
         assert target.is_file(), (
-            f"{skill}/SKILL.md points at {mention}, which does not exist under "
-            f"{skill}/ — a dangling pointer fails exactly when the detail is needed"
+            f"{skill}/SKILL.md points at {mention} under "
+            f"{owner or skill}/, which does not exist — a dangling pointer "
+            "fails exactly when the detail is needed"
         )
 
 
@@ -218,3 +251,40 @@ def test_unfenced_lines_strips_fences():
     assert _unfenced_lines("a\n```\nb\n```\nc") == ["a", "c"]
     # tilde fences are part of the single-sourced grammar
     assert _unfenced_lines("a\n~~~\nb\n~~~\nc") == ["a", "c"]
+
+
+def test_qualified_mention_is_attributed_to_the_named_skill():
+    """The #85 defect: a qualified path's tail matched the bare pattern, so a
+    sibling's file resolved against the citing skill and dangled."""
+    body = "Read plugins/minerva/skills/promote/references/github-issues.md verbatim."
+    assert reference_mentions(body) == [("promote", "references/github-issues.md")]
+    # and crucially NOT also attributed locally
+    assert (None, "references/github-issues.md") not in reference_mentions(body)
+
+
+def test_bare_mention_still_resolves_locally():
+    assert reference_mentions("read references/phases.md") == [(None, "references/phases.md")]
+
+
+def test_mixed_mentions_keep_their_owners():
+    body = ("read references/phases.md, then "
+            "plugins/minerva/skills/promote/references/modes.md")
+    assert sorted(reference_mentions(body), key=lambda x: (x[0] or "", x[1])) == [
+        (None, "references/phases.md"),
+        ("promote", "references/modes.md"),
+    ]
+
+
+def test_qualified_mention_of_a_real_sibling_file_exists():
+    """The live citation added for #85 must actually resolve — a qualified form
+    that cannot be checked against disk is no better than the phrasing it replaced."""
+    owner, mention = ("promote", "references/github-issues.md")
+    assert (SKILLS_DIR / owner / mention).is_file()
+
+
+def test_qualified_pointer_to_a_missing_file_is_still_a_dangling_pointer():
+    """Qualification must not become an escape hatch: naming another skill does
+    not exempt the pointer from resolving."""
+    owner, mention = reference_mentions(
+        "see plugins/minerva/skills/promote/references/does-not-exist.md")[0]
+    assert not (SKILLS_DIR / owner / mention).is_file()

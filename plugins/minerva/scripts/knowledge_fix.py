@@ -135,7 +135,7 @@ def _duplicate_nnns(kd: Path) -> set:
 
 # --- INDEX fix (watermark / stale line / wrong Type section) ------------------
 def plan_index(kd: Path) -> tuple:
-    """Return (new_index_text, old_index_text, refusals) — a canonical,
+    """Return (new_index_text, old_index_text, refusals, hard) — a canonical,
     skeleton-preserving serialization that fixes watermark, removes stale catalog
     lines, relocates wrong-Type lines, and ADDS a catalog line for any entry that
     lacks one and carries its own `**Summary**`. Preserves each surviving catalog
@@ -144,6 +144,15 @@ def plan_index(kd: Path) -> tuple:
 
     Entries are identified by STEM, so several entries sharing an NNN each get their
     own catalog line, placed under their own declared type (see `_entries`).
+
+    `hard` is True only on the two early returns below, where the index rewrite is
+    refused WHOLESALE. It is an explicit flag rather than something a caller infers,
+    because the obvious inference is wrong: "index unchanged and refusals present" is
+    the STEADY STATE, not a hard refusal. Once a corpus is canonical, a benign
+    per-entry refusal (an unrecognized type already sitting in a known section)
+    recurs on every run against an index that no longer changes, so `new == old` with
+    refusals present is the ordinary case. A caller gating on that signature would
+    discard legitimate reciprocal edits forever after.
     """
     index_path = kd / "index.md"
     old = index_path.read_text() if index_path.exists() else ""
@@ -154,7 +163,7 @@ def plan_index(kd: Path) -> tuple:
     # summaries to author) — refuse rather than write a hollow skeleton.
     if not old.strip():
         return old, old, [("index", "—", "index.md is missing/empty — run minerva:init "
-                                          "or author the catalog by hand (fixer won't fabricate summaries)")]
+                                          "or author the catalog by hand (fixer won't fabricate summaries)")], True
 
     refusals = []
     # Collect surviving catalog lines verbatim, with the section they're under, from
@@ -193,7 +202,7 @@ def plan_index(kd: Path) -> tuple:
             # Can't place safely — refuse the whole index rewrite, leave index.md as-is.
             return old, old, refusals + [(stem, "—", f"entry {stem} has an unrecognized "
                                           f"type and is in an unknown section; index "
-                                          f"left unchanged")]
+                                          f"left unchanged")], True
 
     # ADD a line for any entry that has none. This is the operation that makes an
     # add-only promote possible: promote writes the entry file carrying its own
@@ -248,7 +257,7 @@ def plan_index(kd: Path) -> tuple:
         + "\n\n".join(blocks)
         + "\n"
     )
-    return new, old, refusals
+    return new, old, refusals, False
 
 
 # --- ENTRY fix (missing reciprocal) ------------------------------------------
@@ -345,9 +354,21 @@ def _assert_body_preserved(before: str, after: str):
 
 # --- orchestration -----------------------------------------------------------
 def plan(kd: Path, date: str) -> dict:
-    """Compute the full fix batch from one recompute. No writes."""
-    new_index, old_index, index_refusals = plan_index(kd)
+    """Compute the full fix batch from one recompute. No writes.
+
+    A HARD index refusal suppresses the entry edits too. Without that, a refused
+    index rewrite still let neighbour entries gain reciprocal `## Related` links,
+    leaving a corpus half-reconciled: back-links the catalog does not know about.
+
+    The gate is `hard` and nothing else. Text equality is NOT a proxy for it — see
+    `plan_index`'s docstring — and per-entry refusals must keep both halves, since
+    they are the ordinary steady state rather than a failure.
+    """
+    new_index, old_index, index_refusals, hard = plan_index(kd)
     recip_edits, recip_refusals = plan_reciprocals(kd, date)
+    if hard:
+        return {"index": None, "entries": {},
+                "refusals": index_refusals + recip_refusals}
     index_change = new_index if new_index != old_index else None
     return {"index": index_change, "entries": recip_edits,
             "refusals": index_refusals + recip_refusals}

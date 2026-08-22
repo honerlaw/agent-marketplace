@@ -229,3 +229,48 @@ def test_token_match_is_boundary_aware():
     assert not _present("minerva:propose", "only minerva:propose-ship here")
     assert _present("minerva:propose-ship", "minerva:propose-ship runs the lifecycle")
     assert not _present("minerva:propose-ship", "only minerva:propose-ship-auto here")
+
+
+# --- Description ceiling (issue #79) ------------------------------------------
+#
+# The platform truncates a skill description past this many characters, and the
+# tail is exactly where the disambiguating ambient-trigger phrases sit — so an
+# over-long description silently loses the part that makes it fire correctly.
+# `.minerva/knowledge/2026-07-21-constraint-skill-description-house-style.md`
+# has documented the ceiling since unit 046, which trimmed three skills to fit
+# it as prose. Nothing tested it, so nothing stopped it regressing — the shape
+# `2026-08-11-pattern-an-unenforced-constraint-is-aspirational` is named for.
+DESCRIPTION_MAX_CHARS = 1024
+
+
+def description_overflow(parsed: dict) -> int:
+    """Chars by which a skill's description exceeds the ceiling; 0 when it fits.
+
+    Extracted as a predicate so the negative case below can exercise the SAME
+    code the parametrized check runs, rather than restating its arithmetic — a
+    negative case that re-derives the rule cannot prove the rule is enforced.
+    """
+    return max(0, len(parsed.get("description") or "") - DESCRIPTION_MAX_CHARS)
+
+
+@pytest.mark.parametrize("skill", SKILLS)
+def test_description_within_ceiling(skill):
+    _raw, parsed, _body = _read_skill(skill)
+    over = description_overflow(parsed)
+    assert over == 0, (
+        f"{skill}/SKILL.md description is {over} chars over the "
+        f"{DESCRIPTION_MAX_CHARS}-char ceiling — the platform truncates past it and the "
+        "tail is where the ambient-trigger phrases live; move detail into the body"
+    )
+
+
+def test_description_ceiling_fires_on_an_over_long_description():
+    """Negative coverage: the predicate must flag the class it exists for.
+
+    Without this, `test_description_within_ceiling` is only ever observed passing
+    on a corpus that already fits, which cannot distinguish a working check from
+    a vacuous one (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+    """
+    assert description_overflow({"description": "x" * (DESCRIPTION_MAX_CHARS + 7)}) == 7
+    assert description_overflow({"description": "x" * DESCRIPTION_MAX_CHARS}) == 0
+    assert description_overflow({}) == 0

@@ -590,7 +590,7 @@ def test_a_fenced_catalog_line_does_not_become_a_live_entry(tmp_path):
         "- [[001-decision-foo]] — the real one\n\n"
         "## Bugs\n\n## Patterns\n\n## Constraints\n\n## References\n",
     )
-    new, _old, refusals = fix.plan_index(kd)
+    new, _old, refusals, _hard = fix.plan_index(kd)
     assert new.count("001-decision-foo") == 1, "the fenced example must not be catalogued"
     assert "QUOTED IN A FENCE" not in new
     assert refusals == []
@@ -607,6 +607,82 @@ def test_the_fixer_and_the_linter_read_index_md_the_same_way(tmp_path):
         "- [[001-decision-foo]] — the real one\n\n"
         "## Bugs\n\n## Patterns\n\n## Constraints\n\n## References\n",
     )
-    new, _old, _r = fix.plan_index(kd)
+    new, _old, _r, _hard = fix.plan_index(kd)
     assert "002-bug-fenced" not in new
     assert "002-bug-fenced" not in parse_index(kd / "index.md")["catalog"]
+
+
+# --- Hard index refusal suppresses entry edits (issue #81) ------------------------
+
+def _entry(kd, stem, typ="decision", related=(), summary="s"):
+    body = f"# {stem}\n\n**Type**: {typ}\n\n**Summary**: {summary}\n\n## Related\n"
+    body += "".join(f"- [[{t}]] — refines\n" for t in related)
+    (kd / f"{stem}.md").write_text(body)
+
+
+def test_hard_refusal_suppresses_entry_edits(tmp_path):
+    """A refused index rewrite must not leave reciprocal links behind.
+
+    The defect: `plan()` called `plan_index` and `plan_reciprocals` independently, so a
+    wholesale index refusal still returned entry edits and `apply()` wrote them —
+    neighbour entries gained back-links the catalog does not know about.
+    """
+    kd = tmp_path
+    # A links to B, so plan_reciprocals WOULD want to write B's back-link...
+    _entry(kd, "2026-01-01-decision-a", related=["2026-01-02-decision-b"])
+    _entry(kd, "2026-01-02-decision-b")
+    # ...but index.md is missing, which is a hard refusal.
+    batch = fix.plan(kd, "2026-01-03")
+    assert batch["index"] is None
+    assert batch["entries"] == {}, (
+        "a hard index refusal must suppress entry edits — writing them leaves the "
+        "corpus half-reconciled"
+    )
+    assert batch["refusals"], "the refusal itself must still be reported"
+
+
+def test_hard_refusal_flag_is_set_on_the_missing_index_path(tmp_path):
+    _entry(tmp_path, "2026-01-01-decision-a")
+    _new, _old, refusals, hard = fix.plan_index(tmp_path)
+    assert hard is True
+    assert refusals
+
+
+def test_per_entry_refusal_on_a_canonical_index_still_yields_entry_edits(tmp_path):
+    """NEGATIVE CASE — the steady state that breaks the obvious (inferred) gate.
+
+    Gating on "index unchanged AND refusals present" looks equivalent to gating on a
+    hard refusal, and is not. An entry of unrecognized type sitting in a known section
+    produces a per-entry refusal on EVERY run; once the index is canonical, that run
+    also has `new == old`. The inferred gate would fire here and silently discard the
+    reciprocal edits below, forever after.
+    """
+    kd = tmp_path
+    _entry(kd, "2026-01-01-weird-thing", typ="weird")
+    _entry(kd, "2026-01-01-decision-a", related=["2026-01-02-decision-b"])
+    _entry(kd, "2026-01-02-decision-b")
+    # Seed a catalog that already lists the weird entry under a KNOWN section: that is
+    # what makes its refusal per-entry ("left under ## Decisions, not relocated")
+    # rather than the unplaceable hard refusal.
+    (kd / "index.md").write_text(
+        "# Knowledge index\n\n## Decisions\n\n"
+        "- [[2026-01-01-weird-thing]] — s\n"
+        "- [[2026-01-01-decision-a]] — s\n"
+        "- [[2026-01-02-decision-b]] — s\n\n"
+        "## Patterns\n\n## Constraints\n\n## Bugs\n")
+    # Canonicalise, so a later run leaves the index untouched.
+    new, _old, _refusals, hard = fix.plan_index(kd)
+    assert hard is False
+    (kd / "index.md").write_text(new)
+
+    new2, old2, refusals2, hard2 = fix.plan_index(kd)
+    # The precise conditions that make the inferred gate wrong:
+    assert new2 == old2, "index is canonical, so the rewrite is a no-op"
+    assert refusals2, "and a benign per-entry refusal is present"
+    assert hard2 is False, "yet this is NOT a hard refusal"
+
+    batch = fix.plan(kd, "2026-01-03")
+    assert batch["entries"], (
+        "a per-entry refusal must NOT suppress entry edits — this is the ordinary "
+        "steady state, not a failure"
+    )

@@ -24,19 +24,58 @@ SKILLS = REPO / "plugins" / "minerva" / "skills"
 SCRIPTS = REPO / "plugins" / "minerva" / "scripts"
 
 
+# Verbs that mutate state outside the test process. This module EXECUTES what it
+# extracts, so a block carrying any of these would have CI creating labels, opening
+# issues, or pushing branches against whatever repo the runner is authenticated to —
+# which has already cost a real label that had to be deleted by hand
+# (`2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state`).
+#
+# `minerva:promote`'s references/github-issues.md is the first documented flow whose
+# commands mutate remote state, so the safety this module relied on — "every block it
+# happens to extract is read-only" — is no longer a property of the corpus.
+MUTATING_VERBS = (
+    "gh issue create", "gh issue close", "gh issue edit", "gh issue comment",
+    "gh label create", "gh label delete", "gh pr create", "gh pr merge",
+    "gh pr close", "gh api -X", "gh api --method",
+    "git push", "git commit", "git worktree add", "git branch -D",
+    "rm -rf", "rm -f",
+)
+
+
+def assert_read_only(body: str, where: str) -> None:
+    """Refuse to hand back a snippet that would mutate state if executed.
+
+    This lives INSIDE `fenced_blocks` rather than beside it deliberately. A guard a
+    future author must remember to call is the same defect shape as a comment asking
+    six files to stay in sync — it protects only the call sites someone thought of.
+    Guarding the extractor covers every extraction, present and future.
+    """
+    for verb in MUTATING_VERBS:
+        assert verb not in body, (
+            f"{where} extracts a fenced block containing `{verb}`, and this module "
+            "EXECUTES what it extracts — CI would mutate real state. Assert on the "
+            "snippet's text instead of running it, or stub the command."
+        )
+
+
 def fenced_blocks(md: Path, lang: str) -> list:
     """Every ```<lang> fenced block in `md`, dedented, as a list of block bodies.
 
     Fences are matched with a leading-whitespace allowance because a snippet nested in a
     list item is indented, and its body is dedented by the fence's own indent so the
     extracted program is runnable as-is.
+
+    Every returned block is checked read-only first — see `assert_read_only`.
     """
     blocks = re.findall(rf"^([ \t]*)```{lang}\n(.*?)^[ \t]*```",
                         md.read_text(), re.S | re.M)
-    return [textwrap.dedent(body) if not indent else
-            "".join(ln[len(indent):] if ln.startswith(indent) else ln
-                    for ln in body.splitlines(keepends=True))
-            for indent, body in blocks]
+    bodies = [textwrap.dedent(body) if not indent else
+              "".join(ln[len(indent):] if ln.startswith(indent) else ln
+                      for ln in body.splitlines(keepends=True))
+              for indent, body in blocks]
+    for body in bodies:
+        assert_read_only(body, str(md))
+    return bodies
 
 
 # --- migrate-fix Step 4: the legacy-link verification grep ------------------------
@@ -139,3 +178,45 @@ def test_verification_grep_ignores_a_number_narrower_than_a_legacy_id(corpus):
                          capture_output=True, text=True).stdout
     assert "42-not-an-id" not in out
     assert "015-decision-legacy" in out
+
+
+# --- The guard itself (issue #70) -------------------------------------------------
+
+def test_guard_rejects_a_mutating_gh_block(tmp_path):
+    """The defect this guards: an extraction added for a flow that mutates remote state.
+
+    `minerva:promote`'s references/github-issues.md documents exactly these commands, so
+    this is not hypothetical — it is the next extraction someone would plausibly add.
+    """
+    md = tmp_path / "SKILL.md"
+    md.write_text("```bash\ngh label create 'minerva:followup' --color 5319E7\n```\n")
+    with pytest.raises(AssertionError, match="gh label create"):
+        fenced_blocks(md, "bash")
+
+
+def test_guard_rejects_a_pushing_block(tmp_path):
+    md = tmp_path / "SKILL.md"
+    md.write_text("```bash\ngit push -u origin my-branch\n```\n")
+    with pytest.raises(AssertionError, match="git push"):
+        fenced_blocks(md, "bash")
+
+
+def test_guard_allows_read_only_blocks(tmp_path):
+    md = tmp_path / "SKILL.md"
+    md.write_text("```bash\ngh issue list --state open\ngrep -rn foo .\n```\n")
+    assert fenced_blocks(md, "bash") == [
+        "gh issue list --state open\ngrep -rn foo .\n"]
+
+
+def test_guard_covers_every_extraction_not_just_remembered_call_sites():
+    """The guard is inside `fenced_blocks`, so the live extractors inherit it.
+
+    Asserting this explicitly stops a refactor from moving the check out to the
+    call sites, where it would only protect the ones someone thought of.
+    """
+    import inspect
+    src = inspect.getsource(fenced_blocks)
+    assert "assert_read_only" in src, (
+        "the read-only guard must run inside fenced_blocks — a guard the caller "
+        "must remember to invoke protects only the call sites someone thought of"
+    )

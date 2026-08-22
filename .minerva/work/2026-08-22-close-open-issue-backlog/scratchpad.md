@@ -30,3 +30,22 @@ has spent its one vote.
 - [#81, low] `plan_reciprocals` may still be invoked when `hard` is true — correctness-neutral,
   since `plan()` performs no writes. Gate the returned `entries`, not the computation.
 - [#81, low] `plan_index`'s docstring documents a 3-tuple; update it with the signature.
+
+## Progress 2026-08-22
+- #85 done — `QUALIFIED_MENTION_RE` + `reference_mentions()`; qualified mentions stripped
+  before the bare pass so a sibling's file cannot be mis-attributed to the citing skill.
+  `backfill-followups` now cites `plugins/minerva/skills/promote/references/github-issues.md`
+  by real path. 5 new tests.
+- #79 done — `description_overflow()` predicate + parametrized ceiling check. Negative case
+  exercises the SAME predicate rather than restating the arithmetic; a negative case that
+  re-derives the rule cannot prove the rule is enforced.
+- #70 done — `assert_read_only()` called from INSIDE `fenced_blocks()`, so every extraction
+  inherits it. A test asserts the guard stays inside the extractor (inspect.getsource), so a
+  refactor cannot quietly move it out to the call sites.
+- #75 done — Pages URL (confirmed live via `gh api .../pages`) linked from both READMEs.
+- #81 done — explicit `hard: bool` as plan_index's 4th return; `plan()` gates on it alone.
+  The steady-state case is the negative test and it asserts precisely the trap:
+  `new2 == old2` AND `refusals2` truthy AND `hard2 is False`. First draft of that test hit
+  the missing-index hard path instead of the per-entry path; fixed by seeding a catalog that
+  already lists the odd entry under a known section.
+- Suite: 571 passed.

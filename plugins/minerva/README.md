@@ -2,6 +2,8 @@
 
 Durable record discipline for software work. Encodes a persistence hierarchy where **artifacts get promoted, not just accumulated** — concrete, past-tense knowledge (decisions made, bugs fixed, patterns discovered) becomes `.minerva/knowledge/` entries; proposals get rewritten to describe what shipped; raw scratchpads are archived.
 
+📖 **[Documentation site](https://honerlaw.github.io/agent-marketplace/)** — the same material as a browsable site.
+
 ## The hierarchy
 
 | Tier | Files | When read |
