@@ -17,3 +17,10 @@
   never-auto-applied per [[2026-05-31-decision-behavioral-evals-provisional]].
 - **Duplicate-NNN detection in the detector** (carried from unit 021's followups) —
   still open; can't occur in a promote-managed corpus, so low priority.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Phase B.3 — the gated, span-confined, idempotent fix-applier.** → shipped — `plugins/minerva/skills/lint-fix/` exists
+- **Duplicate-NNN detection in the detector** → obsolete — dissolved by stem identity, same as its twin in `2026-06-02-knowledge-lint-detector`

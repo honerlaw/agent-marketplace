@@ -20,3 +20,10 @@
   auto-incremented), so it was deferred — but a drift detector could legitimately own
   a "duplicate NNN on disk" error. Cheap to add (~4 lines + a fixture) if it ever
   becomes a real risk.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **Phase B.2 — the interactive `minerva:lint` skill.** → shipped — `plugins/minerva/skills/lint/` exists
+- **Duplicate-NNN detection in the linter** → obsolete — stem identity dissolved the problem rather than policing it; `parse_index` is keyed on the full stem (see `2026-08-10-decision-date-ids-make-identity-the-path`)

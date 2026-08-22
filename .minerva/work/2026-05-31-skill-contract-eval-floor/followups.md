@@ -27,3 +27,9 @@ with-minus-without delta is a stable, meaningful per-skill signal (the reason it
 as its own unit).
 
 To start it: `minerva:propose` (or `minerva:propose-ship-auto`) with this seed as the brief.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- ## Unit 2 — behavioral skill-value runner (seeded) → shipped — `scripts/run_skill_evals.py` and the `evals/<skill>/behavioral.json` format both exist

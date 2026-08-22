@@ -28,3 +28,11 @@
   branch's long-standing behaviour, so it is a property of the shared guard rather than
   something this unit introduced — recorded so it is not later mistaken for a gap in the
   work-dir fix.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- **A slug-first resolver for bare `[[NNN]]` shorthand.** → open (low) — not filed at this pass; a new capability with its own accuracy question, and its stated trigger (an impractically large shorthand count) has not fired
+- **Two stale `Draft` work units.** → shipped — both now carry `Shipped` with a retroactive-closure note
+- **A calendar-invalid but date-shaped work dir still re-migrates.** → open (low) — not filed at this pass; recorded so it is not mistaken for a gap, and it is a property of the shared guard

@@ -36,3 +36,11 @@ operational docs). Not a bug in the tooling either way — the refusal is honest
 correctly, so nothing is broken, but their body carries no type field. A cosmetic
 normalization pass could add one; deliberately not attempted here, since parsing a
 title to write a field would be the same guesswork this unit declined to do.
+
+## Backfill disposition (2026-08-22)
+
+Triaged by `minerva:backfill-followups`. Every item above is unchanged; this section records where each one landed.
+
+- ## 1. `knowledge_lint` still calls a shared NNN a hard error (63 of them) → shipped — dissolved by stem identity; a duplicate stem cannot exist, so the severity question no longer arises
+- ## 2. Four `reference`-typed entries have no index section → shipped — `reference` became the fifth entry type (`2026-08-09-decision-reference-is-a-fifth-entry-type`)
+- ## 3. Ten entries encode their type only in a prose H1 → shipped — the filename fallback resolves them; explicitly closed in the successor unit

@@ -44,6 +44,10 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 **"Tests pass, the feature works, success criteria are met."**
 → `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — you decide per-item whether to keep them (filed as a GitHub issue at a `critical`/`high`/`medium`/`low` priority when the repo can host one, otherwise appended to `followups.md`), seed a new proposal, or discard.
 
+**Adopting the issue workflow on a project with an existing backlog?**
+→ `minerva:backfill-followups`. A one-time pass that triages every `.minerva/work/*/followups.md` item as open / manual / shipped / obsolete with cited evidence, files the survivors as prioritized issues behind a batched gate, and appends a `## Backfill disposition` section to each file. Items it cannot judge are filed, not dropped.
+
+
 **"OK, ship it — commit, PR, watch CI, and merge if it goes green."**
 → `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, watches CI without blocking (a detached `gh pr checks --watch` resumes the run when checks settle, with a long re-arming `ScheduleWakeup` armed underneath), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
 
