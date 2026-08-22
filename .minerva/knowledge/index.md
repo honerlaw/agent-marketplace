@@ -27,6 +27,7 @@
 - [[2026-08-09-decision-reference-is-a-fifth-entry-type]] — The entry-type vocabulary was four values — `decision` / `bug` / `pattern` / `constraint` — hardcoded in `SECTION_TO_TYPE`, `SECTION_ORDER` and four skill docs. Authors wrote `reference` entries anyway (four of them in one corpus), and the tooling had nowhere to put them: `plan_index` cannot place a line whose declared type has no section, so they were refused indefinitely. Adding `## References` as a fifth section ratifies what authors already do. Two rules fall out: **append a new section, never interleave it** (appending is the only position that leaves every existing index's line order byte-identical), and an empty section renders as its header alone, so the change is inert for every corpus that does not use it.
 - [[2026-08-10-decision-date-ids-make-identity-the-path]] — an unallocated id plus full-stem identity turns silent duplicate-merges into loud add/add conflicts
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — three dead test files forced an enumerated CI list for months; deleting them dissolved the constraint instead of guarding it
+- [[2026-08-22-decision-qualified-cross-skill-reference-pointers]] — the pointer gate now resolves `plugins/minerva/skills/<skill>/references/<f>.md` against the NAMED skill, dissolving the constraint that made cross-skill citation unrepresentable
 
 ## Bugs
 
@@ -51,8 +52,11 @@
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — permissiveness and scope are separate dials; widening what a parser accepts without bounding where it looks turns a gap-filler into a false reading
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a knowledge entry stating a rule enforces nothing — this one was violated three times in two months and the first enforcing test caught a live defect immediately
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
+- [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — enumerate what is SAFE, not what is dangerous — a denylist's gaps are invisible by construction
+- [[2026-08-22-pattern-a-distinguished-state-inferred-from-outputs-is-the-steady-state]] — gating on "outputs look like X" instead of an explicit flag catches the resting state, not the failure
 - [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — guard a retry with the local record; an eventually-consistent index misses what you just wrote
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — a record marking work handled must separate decided-and-done from decided-to-wait, or it buries it
+- [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — read the copies before choosing the invariant — a byte-identity test over intentionally-divergent blocks either cannot pass or passes vacuously
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
 
 ## Constraints
