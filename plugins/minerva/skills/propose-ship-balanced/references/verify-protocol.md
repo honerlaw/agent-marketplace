@@ -56,7 +56,7 @@ A `revise`/`reject` verdict that names an unmet criterion is load-bearing catego
 
 ### Skeptic brief
 
-The Skeptic brief (scope / approach / divergence / replan gates), adapted from `minerva:round-table`'s `references/briefs.md`:
+The Skeptic brief (scope / approach / divergence / replan gates), adapted from `plugins/minerva/skills/round-table/references/briefs.md`:
 
 ```
 YOUR ROLE: You are an independent Skeptic reviewing the decision in the ARTIFACT

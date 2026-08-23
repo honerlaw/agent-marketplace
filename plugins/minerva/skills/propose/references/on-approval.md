@@ -69,6 +69,12 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
    **The `**Closes**` field.** Optional, and normally absent at propose time — you rarely
    know the issue numbers before the work is done. It is authored at the **end** of the
    work phase, by whoever just wrote the diff and therefore knows what it actually closes.
+
+   **The one exception is an adopted issue.** When intake matched this request to an open
+   issue and the user chose to execute it (see `references/issue-match.md`), the number is
+   known before a line is written and the whole point of adopting it was to close it — so
+   write `**Closes**: #NN` here, at creation. That is the only case where the field is
+   authored this early; it does not license guessing at any other issue number.
    `minerva:ship` reads it when composing the PR body and emits one `Closes #N` line per
    entry, so GitHub closes the issues on merge.
 

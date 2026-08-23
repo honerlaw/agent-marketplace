@@ -31,6 +31,19 @@
         "github-issues.md"
       ],
       "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "plugins/minerva/skills/propose/references/issue-match.md"
+      ],
+      "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "escalation counter"
+      ],
+      "ignore_case": true,
+      "file": "references/phases.md"
     }
   ],
   "cross_surface": {

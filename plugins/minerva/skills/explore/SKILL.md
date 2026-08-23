@@ -30,7 +30,9 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 3. **Weigh multiple directions.** As understanding forms, surface 2–3 *high-level directions* (not implementation approaches) with their tradeoffs, leading with your reasoning. The goal is to widen the option space and pressure-test whether the idea is worth pursuing at all — not to pick a design.
 
-4. **Be willing to land anywhere.** Exploration has three legitimate terminal outcomes, and none is a failure:
+4. **Surface an open issue that already tracks it.** Once the idea has a nameable shape — here, not while it is still fuzzy, which is too early for the match to mean anything — check the repo's open GitHub issues for one that would be satisfied by substantially the same change. **Read `plugins/minerva/skills/propose/references/issue-match.md`** for the protocol; it fails soft and skips itself where no issue tracker is reachable. At this surface a match is **information, not a gate**: say that #NN looks like the same thing and keep exploring. An adoption question here would ask the user to commit before any direction has been weighed, which is the one thing exploration is for not doing. If they want it, adoption happens at the handoff below.
+
+5. **Be willing to land anywhere.** Exploration has three legitimate terminal outcomes, and none is a failure:
    - **Drop** — "this isn't worth building." A clear, well-reasoned *no* is a successful exploration.
    - **Reframe** — "the real problem is Y." The idea mutates into a better one; keep exploring the new framing.
    - **Ready** — a direction is chosen and the user wants to commit it to a work unit. Proceed to handoff.
@@ -40,6 +42,8 @@ Exploration is conversation only — everything it produces lives in the transcr
 When — and *only* when — the user has converged on a direction and wants to turn it into a real work unit, hand off by invoking the `minerva:propose` skill **via the `Skill` tool**, passing the converged direction as the inline argument:
 
 > invoke the `minerva:propose` skill with argument `"<the converged direction, in one phrase>"`
+>
+> — or, when exploration surfaced an open issue the user wants to execute, `"<the converged direction> (adopting #NN)"`. That exact parenthetical is what lets `minerva:propose` skip its own open-issue match instead of asking the user to adopt an issue they just adopted.
 
 Passing the direction inline lets `minerva:propose` pick up exactly where exploration left off: it treats the direction as the draft goal and proceeds straight to designing *how* to build it, rather than re-asking what you want to build or re-opening the problem space you just closed. Do **not** merely describe the handoff in prose and stop ("you should now run propose"); actually invoke the skill.
 
