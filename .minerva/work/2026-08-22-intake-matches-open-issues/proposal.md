@@ -1,7 +1,7 @@
 # Proposal: intake-matches-open-issues
 
 **Date**: 2026-08-22
-**Status**: Draft
+**Status**: Shipped (2026-08-22)
 
 ## Goal
 
@@ -27,61 +27,65 @@ This unit builds the open-half: the intake match-and-offer that feeds it.
 
 ## Approach
 
-One canonical protocol file, cited by every intake surface — no duplicated `gh` prose, no new
-skill.
+One canonical protocol file, cited by every intake surface — no duplicated `gh` prose, no new skill.
+Review then pulled two more files into scope; see `replan.md` for why.
 
-1. **New `plugins/minerva/skills/propose/references/issue-match.md`** — the whole protocol:
-   - **Skip clause (idempotency).** If the incoming inline argument already names an adopted
-     issue (`#NN`), skip the query — an `explore` → `propose` handoff must not ask twice.
-   - **Capability probe.** Delegated to `minerva:promote`'s "Step 1 — Capability probe (once per
-     promote run)"; a non-zero exit or `hasIssuesEnabled: false` **silently skips** the whole
-     check. No `gh` is the common case elsewhere and must never block a proposal.
-   - **Query.** `gh issue list --state open --limit 100 --json number,title,labels,updatedAt`,
-     reading a body with `gh issue view` only for plausible candidates, plus a
-     `--search`-keyword pass when the list hits the cap.
-   - **Match bar, stated behaviorally.** A **match** is an issue whose stated outcome and the
-     user's request would be satisfied by substantially the same change. Same subsystem or same
-     theme is *not* a match. Unsure resolves to **adjacent** — surfaced in one line, never
-     offered. The asymmetry is deliberate: a false offer derails an intake and re-litigates a
-     settled request, while a missed match costs a duplicate that `minerva:promote` can still
-     close by authoring `**Closes**` at end-of-work.
-   - **Response shape, graded by surface.** At the convergent surfaces (`propose` and the three
-     orchestrators) a match is a real `AskUserQuestion` offer — execute #NN instead / proceed as
-     asked and link #NN / adopt #NN and extend it. At `explore` it is **information in the
-     dialogue only**: explore's own protocol says "resist jumping to solutions", so an adoption
-     gate there would convert a commitment-free exploration into a premature commitment. Explore
-     defers adoption to the handoff, passing `"<direction> (adopting #NN)"` as the inline
-     argument — the pinned format the skip clause detects.
-   - **What adoption records.** The issue's title and body seed `## Goal`/`## Why`, and
-     `**Closes**: #NN` is written into `proposal.md` at creation.
-2. **`propose/SKILL.md`** — the intake step points at the reference with a read directive.
-3. **`propose/references/on-approval.md`** — the `**Closes**` paragraph currently says the field
-   is "normally absent at propose time"; an adopted issue is the documented exception.
-4. **`explore/SKILL.md`** — the check fires where directions are weighed, not at first context
-   read: a fuzzy idea has nothing concrete to match against, and a semantic match judged against
-   a half-formed problem statement is exactly the false positive the match bar exists to avoid.
-5. **The three orchestrators' `references/phases.md`** — Phase 1 gains the intake step, citing
-   the protocol by the qualified path form. The ask **increments the run's escalation counter**,
-   like every other hardcoded escalation those skills define; it is not exempt.
-6. **`tests/test_skill_budget.py`** — the pointer-resolution and malformed-pointer checks read
-   only `SKILL.md`, so a qualified pointer written inside a `references/*.md` file is invisible
-   to them. Since this unit's own orchestrator citations live in `phases.md` (their cores have
-   no byte headroom), the guard is extended to scan reference files too — otherwise the wiring
-   this unit adds is unprotected against a later rename.
-7. **Four pre-existing dangling pointers** that the extended guard immediately catches — three
-   `phases.md` files and one `verify-protocol.md` citing `references/github-issues.md` /
-   `references/briefs.md` unqualified, which resolve under the *citing* skill and do not exist
-   there — are rewritten in the qualified form.
-8. **Five `evals/*/contract.json` files** gain anchors for the new prose, so the wiring cannot
-   rot silently.
+1. **`plugins/minerva/skills/propose/references/issue-match.md`** holds the whole protocol: a skip
+   clause (an inline argument already naming `#NN` means the decision is made — an
+   `explore` → `propose` handoff must not ask twice); a capability probe delegated to
+   `minerva:promote`'s, which silently skips the check where no issue tracker is reachable; the
+   query (`gh issue list --state open`, bodies read only for plausible candidates, a `--search`
+   pass when the list hits the cap); a behavioral match bar; the response shapes; and what
+   adoption records.
+2. **The match bar is stated behaviorally.** A **match** is an issue the user's request would
+   resolve with substantially the same change; same subsystem or theme is *not* a match, and
+   unsure resolves to **adjacent** — one informational line, no question. The asymmetry is the
+   point: a false offer derails an intake and makes the user re-litigate a settled request, while
+   a missed match costs a duplicate that promote can still close at end-of-work.
+3. **The response is graded by surface.** `propose` and the three orchestrators put a real
+   `AskUserQuestion` gate on a match (execute the issue instead / proceed as asked and link it /
+   adopt and extend, with several matches offered together). `explore` gets information only —
+   its protocol says to resist jumping to solutions, so an adoption gate mid-exploration would
+   force a commitment before any direction was weighed. Explore defers to the handoff, passing
+   `"<direction> (adopting #NN)"`, which the skip clause detects.
+4. **In the autonomous orchestrators the ask is hardcoded** — it fires regardless of the run's own
+   skip or verify predicates, like the in-flight-work collision — and it **increments the run's
+   escalation counter**, like every other escalation those skills count. An early draft exempted
+   it on the belief that the in-flight precedent was exempt; it is not. Each orchestrator's
+   decision taxonomy and hardcoded-trigger list now names this decision point, so the
+   enumerations do not lag what `phases.md` asserts.
+5. **Adoption writes `**Closes**: #NN` at creation**, and a match the user declined to adopt writes
+   the new sibling field `**Linked**: #NN — <title> (not adopted)`. Both are documented in
+   `on-approval.md`. `**Linked**` replaced a first draft that recorded the issue as a scratchpad
+   line: promote Mode A runs every scratchpad entry through a four-way partition whose only
+   documented exemption is the `→ promoted to` marker, so a bare link line would most naturally
+   have been discarded before anything read it.
+6. **Both consumers of `**Closes**` re-verify it**, because moving the authoring point to intake
+   turned the field into a claim that predates its evidence. `promote/references/modes.md` gains
+   amend-or-drop for `**Closes**` and add-if-warranted for `**Linked**`;
+   `ship/references/protocol.md` re-checks each entry against the diff before emitting it and
+   reports what it dropped. Ship is not optional cover: it documents that a user may ship without
+   promote, and the autonomous orchestrators auto-accept its PR-body gate.
+7. **`tests/test_skill_budget.py`'s pointer-integrity scan widened** from `SKILL.md` to
+   `SKILL.md` + `references/*.md`, since this unit's own cross-skill citations live in `phases.md`
+   (the orchestrator cores have no byte headroom) and were otherwise unguarded against a rename.
+   Widening it immediately caught **four pre-existing dangling pointers** — three orchestrators
+   citing `references/github-issues.md` and one citing `references/briefs.md` unqualified, all of
+   which resolved against the citing skill, where no such file exists — now written in the
+   qualified form. Both widened checks read unfenced text, and a new test pins the scan's scope so
+   narrowing `skill_docs` back to the core cannot pass silently.
+8. **Five `evals/*/contract.json` files gained anchors** for the new prose, so the wiring cannot rot
+   silently.
 
 **Rejected alternatives.** *Restating the check inline at all five surfaces* — five copies of one
-`gh` protocol drift, the failure `2026-07-21-pattern-catalog-semantic-drift-recurs` and
-`2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant` both describe. *A dedicated
-`minerva:match-issue` skill* — a new skill costs four catalog surfaces, a contract, evals and an
-invocation hop, for one bounded protocol whose consumer set is fixed and internal;
-`minerva:backfill-followups` makes this same argument against splitting a tool whose only
-consumer is its own caller.
+`gh` protocol drift. *A dedicated `minerva:match-issue` skill* — a new skill costs four catalog
+surfaces, a contract, evals and an invocation hop, for one bounded protocol whose consumer set is
+fixed and internal.
+
+## Deferred work
+
+- Match a reported bug against open issues in `minerva:debug` — filed as
+  [#94](https://github.com/honerlaw/agent-marketplace/issues/94) (`priority: medium`).
 
 ## Success criteria
 
