@@ -72,3 +72,4 @@ a false sense of one.
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — see also
+- [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — see also

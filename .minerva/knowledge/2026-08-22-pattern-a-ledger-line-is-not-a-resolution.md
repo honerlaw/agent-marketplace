@@ -64,3 +64,4 @@ coverage.
 ## Related
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — extends it: that entry says deferral needs a trigger, this one says the record must distinguish which items the trigger should pick up
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — sibling shape: a check whose model of its subject is narrower than the subject
+- [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — see also
