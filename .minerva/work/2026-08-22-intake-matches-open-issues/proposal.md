@@ -100,6 +100,13 @@ consumer is its own caller.
 - The four pre-existing unqualified cross-skill pointers are qualified; the extended check passes
   across the whole corpus.
 - The five updated `evals/*/contract.json` anchors pass `tests/test_skill_contracts.py`.
+- `propose/references/on-approval.md` documents the `**Linked**` field beside `**Closes**`, and
+  `issue-match.md`'s "proceed as asked" branch writes it (see `replan.md`).
+- `promote/references/modes.md` states both rules and their asymmetry: a pre-existing `**Closes**`
+  entry is re-verified and amended-or-dropped; a `**Linked**` entry is added only if warranted.
+- `ship/references/protocol.md` re-verifies each `Closes` entry against the diff before emitting it,
+  drops unsupported entries, and reports the drop.
+- Each orchestrator's decision taxonomy and hardcoded-trigger list names the intake open-issue match.
 - The full pytest suite passes.
 
 ## Open Questions

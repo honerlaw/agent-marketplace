@@ -44,6 +44,7 @@ For each, the escalation predicate still applies: if the self-check leaves you g
 These reach the user (or halt) regardless of the predicate — see `references/governance.md` for the full list and the bail-report format:
 
 - in-flight work collision (pre-flight);
+- an open issue matching the seed at intake (`plugins/minerva/skills/propose/references/issue-match.md`);
 - worktree-creation failure (git error, missing gitignore, slug collision);
 - ship-phase failures: CI auto-fix classified `other`, push rejection, `gh` auth failure;
 - the global escalation counter reaching 3.
@@ -75,6 +76,7 @@ Every strategic/tactical decision is **main-model-decided by default**, with the
 | Phase | Decision | Default | Never-elide? |
 |---|---|---|---|
 | Pre-flight | In-flight work collision | Hardcoded user escalation | **Yes** — hardcoded |
+| Propose | Open-issue match at intake | Hardcoded user escalation on a match | **Yes** — hardcoded |
 | Propose | Scope check (single unit vs. decompose) | Main model decides | No — escalate only if genuinely ambiguous |
 | Propose | Approach selection | Main model decides | No — escalate if no dominant option |
 | Propose | Whole-proposal soundness | Main model decides | No — escalate if a public-interface/contract call is uncertain |

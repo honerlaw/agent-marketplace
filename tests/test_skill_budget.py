@@ -209,7 +209,7 @@ def test_no_malformed_reference_pointers(skill):
 
     Scanned across ``SKILL.md`` and ``references/*.md`` alike."""
     for doc in skill_docs(skill):
-        bad = malformed_pointers(doc.read_text())
+        bad = malformed_pointers(_pointer_text(doc))
         assert not bad, (
             f"{doc.relative_to(SKILLS_DIR)} has malformed reference pointers {bad} — "
             "write the canonical references/<name>.md form so the integrity checks see them"
@@ -275,21 +275,18 @@ def test_unfenced_lines_strips_fences():
     assert _unfenced_lines("a\n~~~\nb\n~~~\nc") == ["a", "c"]
 
 
-def test_reference_files_are_in_the_pointer_scan(tmp_path):
-    """Negative coverage for the widened scan: a dangling pointer written in a
-    ``references/*.md`` file must be reachable by the same predicates that guard
-    ``SKILL.md``. Without this, `skill_docs` could silently narrow back to the core
-    and both widened tests would keep passing on a corpus that is already clean
-    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`)."""
+def test_reference_files_are_in_the_pointer_scan():
+    """The widened scan's own guard: `skill_docs` must keep returning reference files.
+
+    Both widened tests run over a corpus that is currently clean, so neither can tell
+    the difference between "scanned the reference files and found nothing" and "never
+    scanned them" — narrowing `skill_docs` back to the core would leave them green
+    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`). This pins the scope
+    itself; the predicates it feeds are covered by the negative cases below."""
     docs = skill_docs("propose")
     assert docs[0].name == "SKILL.md"
     assert any(d.parent.name == "references" for d in docs[1:]), (
         "skill_docs returned no reference files — the widened scan is vacuous")
-
-    # The two predicates the widened tests apply, exercised on reference-file prose.
-    assert reference_mentions("see plugins/minerva/skills/promote/references/nope.md") == [
-        ("promote", "references/nope.md")]
-    assert malformed_pointers("see references/nope") == ["references/nope"]
 
 
 def test_fenced_pointer_in_a_reference_file_is_not_live():

@@ -11,6 +11,7 @@
 
 **Hard escalation triggers (skip the panel entirely).**
 - In-flight work collision (pre-flight).
+- An open issue matching the seed at intake — the ask in `plugins/minerva/skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
 - Global escalation counter reaching 3.

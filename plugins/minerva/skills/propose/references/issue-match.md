@@ -75,12 +75,16 @@ someone else already asked for it, not a correction.
 
 **At the convergent surfaces** — `minerva:propose`, and the inline Phase 1 of
 `minerva:propose-ship-quick` / `-balanced` / `-auto`, where a work unit is about to exist — a
-`match` is a real gate. Ask with `AskUserQuestion`, naming the issue number, its title and its
-priority label:
+`match` is a real gate. Ask with `AskUserQuestion`, naming the issue number, its title, and its
+`priority:` label when it has one — a human-filed issue, or one predating the convention, carries
+no priority, and its absence is not a reason to withhold the offer:
 
 - **Execute #NN instead** — the issue becomes the work unit's goal.
-- **Proceed as asked, link #NN** — build the request as stated; record the issue so promote can
-  decide at end-of-work whether the diff closed it after all.
+- **Proceed as asked, link #NN** — build the request as stated, and write
+  `**Linked**: #NN — <title> (not adopted)` into `proposal.md` beside the `**Closes**` field, per
+  `references/on-approval.md`. That field is the whole record: `minerva:promote` reads it at
+  end-of-work and promotes it into `**Closes**` if the diff resolved the issue after all. A note
+  left anywhere else — the scratchpad, this conversation — does not survive to that point.
 - **Adopt #NN and extend it** — the unit covers the issue plus what the user added.
 
 In an autonomous orchestrator this ask is **hardcoded** — it fires without regard to the run's
@@ -95,6 +99,12 @@ resist jumping to solutions; an adoption gate mid-exploration converts a dialogu
 to abandon into a commitment made before any direction was weighed. If the user shows interest,
 adoption happens at the handoff — pass `"<direction> (adopting #NN)"` as the inline argument to
 `minerva:propose`. The skip clause above then detects it, so nobody is asked twice.
+
+**More than one issue can clear the bar.** Offer them together in one question rather than picking
+for the user — a backlog that duplicated a request once often duplicated it twice, and which of two
+overlapping issues to close is exactly the call the user is better placed to make. Adopting several
+is legal: `**Closes**` takes a comma-separated list, and `minerva:ship` emits one `Closes #N` line
+per entry.
 
 **An `adjacent` result gets one line at any surface** — "#NN is related but not the same thing" —
 and no question, so the user can pull it in if they want it without being asked to decide.
