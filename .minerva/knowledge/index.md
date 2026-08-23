@@ -57,6 +57,7 @@
 - [[2026-08-22-pattern-a-distinguished-state-inferred-from-outputs-is-the-steady-state]] — gating on "outputs look like X" instead of an explicit flag catches the resting state, not the failure
 - [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — guard a retry with the local record; an eventually-consistent index misses what you just wrote
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — a record marking work handled must separate decided-and-done from decided-to-wait, or it buries it
+- [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — a field authored ahead of its evidence is a claim; re-verify it at every consumer, not just the nearest
 - [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — read the copies before choosing the invariant — a byte-identity test over intentionally-divergent blocks either cannot pass or passes vacuously
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
 

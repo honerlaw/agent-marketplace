@@ -62,3 +62,4 @@ The tell that this class is present: a comment or doc that says *"the next run"*
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
 - [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — see also
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — see also
+- [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — see also
