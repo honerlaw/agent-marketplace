@@ -1,0 +1,5 @@
+# Scratchpad: intake-matches-open-issues
+
+## Balanced decisions 2026-08-22
+- [reviewed — clean] scope check: single unit, 8 file groups (Skeptic accept; flagged handoff idempotency, explore's tonal fit and the match-fuzziness bar as drafting requirements, not scope gaps — all three folded into the approach)
+- [reviewed — folded] approach: option A (one canonical reference + qualified citations) over B (inline copies, drift) and C (new skill, four catalog surfaces). Skeptic surfaced two load-bearing defects, both verified against the corpus and folded: (1) D7 claimed the in-flight-collision precedent does not increment the escalation counter — it does ("every user escalation (predicate-driven or hardcoded)"), so the issue-match ask increments like every other hardcoded trigger, no exception; (2) the pointer-integrity tests read only SKILL.md, so this unit's own qualified citations inside phases.md would be unguarded — the guard is extended to references/*.md, which immediately caught four pre-existing dangling pointers now in scope to qualify.
