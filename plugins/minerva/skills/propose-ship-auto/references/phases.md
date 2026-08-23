@@ -8,31 +8,33 @@ This phase replaces the user-interactive intake in `minerva:propose`.
 
 1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone and conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `minerva:promote` files kept TODOs as issues wherever the repo can host them.
 
-2. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
+2. **Open-issue match.** Before designing anything, check whether an **open** GitHub issue already tracks what the seed asks for, per `plugins/minerva/skills/propose/references/issue-match.md` — read it and run it. A match is a **hardcoded ask** (`AskUserQuestion`: execute the issue instead / proceed as seeded and link it / adopt and extend), fired regardless of this run's decision policy, exactly as the in-flight-work collision is. Like every other escalation this skill counts, it **increments the global escalation counter**; it is not exempt. No match, or no reachable issue tracker, means no user contact at all. On adoption, `**Closes**: #NN` goes into `proposal.md` at creation.
 
-3. **Scope-check panel.** Dispatch panel with artifact = "is this a single work unit, or should it decompose into multiple?". On `≤1/3 accept` after revision, escalate with the sub-units the Skeptic identified as options. If user picks "decompose", abort the auto run cleanly: "scope check escalated to decomposition — re-run with one sub-unit at a time."
+3. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
 
-4. **Approach-selection panel.** Dispatch panel with artifact = the 2-3 candidate approaches + the recommended one. On consensus, the picked approach replaces the draft's `## Approach` section. On escalation, ask the user to pick.
+4. **Scope-check panel.** Dispatch panel with artifact = "is this a single work unit, or should it decompose into multiple?". On `≤1/3 accept` after revision, escalate with the sub-units the Skeptic identified as options. If user picks "decompose", abort the auto run cleanly: "scope check escalated to decomposition — re-run with one sub-unit at a time."
 
-5. **Whole-proposal-acceptance panel.** Dispatch panel with artifact = the full Goal/Why/Approach/Success-criteria/Open-Questions draft (post step 4). On `accept`, the draft is final. On revision-round failure, escalate with the Skeptic's top 1-3 concerns as a batched question.
+5. **Approach-selection panel.** Dispatch panel with artifact = the 2-3 candidate approaches + the recommended one. On consensus, the picked approach replaces the draft's `## Approach` section. On escalation, ask the user to pick.
 
-6. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
+6. **Whole-proposal-acceptance panel.** Dispatch panel with artifact = the full Goal/Why/Approach/Success-criteria/Open-Questions draft (post step 5). On `accept`, the draft is final. On revision-round failure, escalate with the Skeptic's top 1-3 concerns as a batched question.
+
+7. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
    - Derive slug, check for a duplicate slug across local work / local branches / remote branches, and take today's date as the id.
    - Resolve default branch.
    - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
    - `git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>`.
    - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
 
-7. **File writes (inside the worktree).** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
+8. **File writes (inside the worktree).** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
    - Create `.minerva/work/<date-slug>/`.
    - Write `proposal.md` with the approved content per the template in `minerva:propose`'s "On approval — worktree setup + file writes".
    - Write `scratchpad.md` with the header-only template in `minerva:propose`'s "On approval — worktree setup + file writes".
-   - Append the initial `## Panel decisions YYYY-MM-DD` block to `scratchpad.md` with the votes from steps 3–5.
+   - Append the initial `## Panel decisions YYYY-MM-DD` block to `scratchpad.md` with the votes from steps 4–6.
    - `git add` the work-unit directory; commit `chore: initialize <date-slug> work unit`.
 
-8. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose`'s "On approval — worktree setup + file writes" (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal-acceptance panel already covered that role.
+9. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose`'s "On approval — worktree setup + file writes" (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal-acceptance panel already covered that role.
 
-9. Continue to Phase 2.
+10. Continue to Phase 2.
 
 ## Phase 2 — Work (inline)
 
@@ -97,7 +99,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 4. **Partition panel.** Artifact = the full partition with one-line justifications per entry. On `2/3 accept`, apply. On revision-round failure, escalate with the contested entries.
 
-5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition — keep it (filed as a prioritized GitHub issue when `minerva:promote`'s capability probe says the repo can host one, else appended to `followups.md`; priority one of `critical`/`high`/`medium`/`low` per its `references/github-issues.md`), seed a new proposal, or discard. On `2/3 accept`, apply. On revision-round failure, escalate.
+5. **TODO disposition panel.** Only if any entries landed in the TODO bucket. Artifact = each TODO with a proposed disposition — keep it (filed as a prioritized GitHub issue when `minerva:promote`'s capability probe says the repo can host one, else appended to `followups.md`; priority one of `critical`/`high`/`medium`/`low` per `plugins/minerva/skills/promote/references/github-issues.md`), seed a new proposal, or discard. On `2/3 accept`, apply. On revision-round failure, escalate.
 
 6. **Apply writes.** Per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 

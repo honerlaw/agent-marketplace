@@ -75,6 +75,7 @@ The `Skippable?` column applies the [Skip predicate](#skip-predicate-small-decis
 | Phase | Decision | Tier | Quorum | Skippable? |
 |---|---|---|---|---|
 | Pre-flight | In-flight work collision | n/a | Hardcoded user escalation | **No** — hardcoded user escalation |
+| Propose | Open-issue match at intake | n/a | Hardcoded user escalation on a match | **No** — hardcoded user escalation |
 | Propose | Scope check (single unit vs. decompose) | Strategic | 3/3 | Only if obviously a single additive unit |
 | Propose | Approach selection (from 2-3 candidates) | Strategic | 3/3 | Only if ≥2 approaches enumerated & one strictly dominant; skip log records the rejected alternatives |
 | Propose | Whole-proposal acceptance | Strategic | 3/3 | Only if every section is trivially sound & single-surface |

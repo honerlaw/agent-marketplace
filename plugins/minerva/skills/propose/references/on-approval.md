@@ -47,6 +47,7 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
    **Date**: YYYY-MM-DD
    **Status**: Draft
    **Closes**: #12, #34          <- optional; omit the line entirely when nothing is closed
+   **Linked**: #56 — <title> (not adopted)   <- optional; see below
 
    ## Goal
    <approved goal>
@@ -69,8 +70,21 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
    **The `**Closes**` field.** Optional, and normally absent at propose time — you rarely
    know the issue numbers before the work is done. It is authored at the **end** of the
    work phase, by whoever just wrote the diff and therefore knows what it actually closes.
+
+   **The one exception is an adopted issue.** When intake matched this request to an open
+   issue and the user chose to execute it (see `references/issue-match.md`), the number is
+   known before a line is written and the whole point of adopting it was to close it — so
+   write `**Closes**: #NN` here, at creation. That is the only case where the field is
+   authored this early; it does not license guessing at any other issue number.
    `minerva:ship` reads it when composing the PR body and emits one `Closes #N` line per
    entry, so GitHub closes the issues on merge.
+
+   **The `**Linked**` field.** Also optional. Written at creation in exactly one case: intake
+   matched this request to an open issue and the user chose **proceed as asked, link #NN**
+   rather than adopting it (see `references/issue-match.md`). It is a note to the end of the
+   work phase, not a promise — `minerva:promote` reads it and promotes it into `**Closes**`
+   only if the diff turned out to resolve the issue after all. Nothing else reads it, and it
+   never closes anything by itself.
 
    Only list an issue the diff genuinely resolves. Nothing infers this field from the diff
    or the branch name — a wrong auto-close destroys a real record, which is why the linkage

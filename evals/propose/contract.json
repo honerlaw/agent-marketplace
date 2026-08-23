@@ -23,6 +23,32 @@
         "questions one at a time"
       ],
       "ignore_case": true
+    },
+    "references/issue-match.md",
+    {
+      "any_of": [
+        "Open-issue match"
+      ],
+      "file": "references/issue-match.md"
+    },
+    {
+      "any_of": [
+        "adopting #NN"
+      ],
+      "file": "references/issue-match.md"
+    },
+    {
+      "any_of": [
+        "Closes**: #NN"
+      ],
+      "file": "references/issue-match.md"
+    },
+    {
+      "any_of": [
+        "adopted issue"
+      ],
+      "ignore_case": true,
+      "file": "references/on-approval.md"
     }
   ],
   "cross_surface": {

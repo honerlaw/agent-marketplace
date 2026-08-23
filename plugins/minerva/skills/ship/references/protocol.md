@@ -86,6 +86,16 @@ If nothing is uncommitted, skip this step entirely.
    its own reference, so a single `Closes #12, #34` closes just the first. Omit the block
    entirely when the field is absent, which is the common case.
 
+   **Re-verify each entry against the diff before emitting it.** The field may have been written
+   at intake, when the user adopted an open issue and no diff existed yet
+   (`plugins/minerva/skills/propose/references/issue-match.md`), and ship is reached without
+   `minerva:promote` often enough for that to matter — this skill nudges, it does not enforce
+   ordering, and an autonomous orchestrator auto-accepts the PR-body gate below, so this is the
+   last point anything checks. Drop an entry the diff does not resolve and say which, in the
+   report. This is not inference in the sense the next paragraph forbids: dropping an unsupported
+   claim leaves an issue open, the cheap failure, while the expensive one is closing an issue
+   nothing resolved.
+
    The field is **authored**, never inferred: do not scan the diff, the branch name, or the
    commit log for issue numbers to close. A wrong auto-close destroys a real record, and a
    stale-open issue is the cheaper failure. If the work plainly closes an issue the field

@@ -89,6 +89,35 @@ def files_missing_read_directive(refs_dir: Path, body: str) -> list[str]:
     return missing
 
 
+def skill_docs(skill: str) -> list[Path]:
+    """Every prose file a skill ships: its ``SKILL.md`` plus its ``references/*.md``.
+
+    The pointer-integrity checks below originally read ``SKILL.md`` alone, which made
+    them blind to the pointers that most need guarding: a reference file is where a
+    protocol is written out, so it is where one skill cites another's protocol by the
+    qualified ``plugins/minerva/skills/<skill>/references/<f>.md`` path. Those citations
+    were invisible to every check in this module — a rename would break them silently,
+    exactly the shape of `2026-08-11-pattern-a-gate-blind-to-what-it-checks` (the gate
+    read clean because its model of "a pointer" was narrower than the corpus's). Widening
+    the scan to reference files caught four already-dangling cross-skill pointers on the
+    day it was written.
+    """
+    d = SKILLS_DIR / skill
+    return [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]
+
+
+def _pointer_text(path: Path) -> str:
+    """A doc's pointer-bearing prose: unfenced lines only.
+
+    A pointer inside a fence is an illustration, not a live reference — the rule
+    `malformed_pointers` already followed, applied here too so the two checks cannot
+    disagree about what counts as a pointer. Verified behavior-preserving for the
+    ``SKILL.md`` scan when this widened: no SKILL.md in the corpus carries a pointer
+    that appears only inside a fence.
+    """
+    return "\n".join(_unfenced_lines(path.read_text()))
+
+
 def reference_mentions(body: str) -> list[tuple]:
     """Every reference pointer in ``body`` as ``(owning_skill_or_None, "references/<f>.md")``.
 
@@ -155,30 +184,36 @@ def test_every_reference_file_is_pointed_to(skill):
 def test_every_reference_pointer_resolves(skill):
     """No dangling pointers: each reference mention must exist.
 
+    Scanned across ``SKILL.md`` **and** ``references/*.md`` (see `skill_docs`).
     A bare mention resolves under the citing skill; a qualified
     ``plugins/minerva/skills/<other>/references/<f>.md`` mention resolves under
     the skill it names, so one skill can cite another's protocol by path.
     """
-    body = (SKILLS_DIR / skill / "SKILL.md").read_text()
-    for owner, mention in sorted(set(reference_mentions(body)), key=lambda t: (t[0] or "", t[1])):
-        target = SKILLS_DIR / (owner or skill) / mention
-        assert target.is_file(), (
-            f"{skill}/SKILL.md points at {mention} under "
-            f"{owner or skill}/, which does not exist — a dangling pointer "
-            "fails exactly when the detail is needed"
-        )
+    for doc in skill_docs(skill):
+        body = _pointer_text(doc)
+        for owner, mention in sorted(set(reference_mentions(body)), key=lambda t: (t[0] or "", t[1])):
+            target = SKILLS_DIR / (owner or skill) / mention
+            assert target.is_file(), (
+                f"{doc.relative_to(SKILLS_DIR)} points at {mention} under "
+                f"{owner or skill}/, which does not exist — a dangling pointer "
+                "fails exactly when the detail is needed. Citing a sibling skill's "
+                "protocol needs the qualified plugins/minerva/skills/<skill>/"
+                "references/<file>.md form; a bare mention resolves locally"
+            )
 
 
 @pytest.mark.parametrize("skill", SKILLS)
 def test_no_malformed_reference_pointers(skill):
     """A pointer that lost its .md (``references/briefs``) dangles invisibly —
-    the canonical-mention checks above never see it. Work unit 036."""
-    body = (SKILLS_DIR / skill / "SKILL.md").read_text()
-    bad = malformed_pointers(body)
-    assert not bad, (
-        f"{skill}/SKILL.md has malformed reference pointers {bad} — "
-        "write the canonical references/<name>.md form so the integrity checks see them"
-    )
+    the canonical-mention checks above never see it. Work unit 036.
+
+    Scanned across ``SKILL.md`` and ``references/*.md`` alike."""
+    for doc in skill_docs(skill):
+        bad = malformed_pointers(_pointer_text(doc))
+        assert not bad, (
+            f"{doc.relative_to(SKILLS_DIR)} has malformed reference pointers {bad} — "
+            "write the canonical references/<name>.md form so the integrity checks see them"
+        )
 
 
 @pytest.mark.parametrize("skill", SKILLS)
@@ -238,6 +273,31 @@ def test_unfenced_lines_strips_fences():
     assert _unfenced_lines("a\n```\nb\n```\nc") == ["a", "c"]
     # tilde fences are part of the single-sourced grammar
     assert _unfenced_lines("a\n~~~\nb\n~~~\nc") == ["a", "c"]
+
+
+def test_reference_files_are_in_the_pointer_scan():
+    """The widened scan's own guard: `skill_docs` must keep returning reference files.
+
+    Both widened tests run over a corpus that is currently clean, so neither can tell
+    the difference between "scanned the reference files and found nothing" and "never
+    scanned them" — narrowing `skill_docs` back to the core would leave them green
+    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`). This pins the scope
+    itself; the predicates it feeds are covered by the negative cases below."""
+    docs = skill_docs("propose")
+    assert docs[0].name == "SKILL.md"
+    assert any(d.parent.name == "references" for d in docs[1:]), (
+        "skill_docs returned no reference files — the widened scan is vacuous")
+
+
+def test_fenced_pointer_in_a_reference_file_is_not_live():
+    """A pointer inside a fence is an illustration — `_pointer_text` drops it, so a
+    documented example naming a file that does not exist cannot red the suite."""
+    assert reference_mentions(_pointer_text_of("```\nreferences/nope.md\n```")) == []
+
+
+def _pointer_text_of(raw: str) -> str:
+    """`_pointer_text` for a literal string rather than a file on disk."""
+    return "\n".join(_unfenced_lines(raw))
 
 
 def test_qualified_mention_is_attributed_to_the_named_skill():

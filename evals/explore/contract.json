@@ -22,7 +22,8 @@
         "terminal outcomes"
       ],
       "ignore_case": true
-    }
+    },
+    "plugins/minerva/skills/propose/references/issue-match.md"
   ],
   "cross_surface": {
     "root_readme": true,
