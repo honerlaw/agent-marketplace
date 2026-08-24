@@ -1,0 +1,13 @@
+# Scratchpad: cross-session-preflight
+
+## Balanced decisions 2026-08-24
+- [decided] pre-flight in-flight collision: no unit reports `in_flight`, no worktrees — clear (hardcoded gate, no collision to escalate)
+- [decided] open-issue match at intake: #94 (`minerva:debug` issue matching) is adjacent, not a match — one informational line, no ask
+- [reviewed — folded] scope check: single unit. Skeptic proposed splitting the live-session query into its own unit (least precedented piece) — REJECTED, it is the piece the seed asked for; splitting would ship everything except the request. Folded its other points: fail-soft when the harness lacks ListAgents/SendMessage, self-describing reply contract for protocol-illiterate peers, and the trigger-enumeration surface corrected from "possibly governance.md" to a verified six locations (two per autonomous orchestrator).
+- [reviewed — folded] approach: option B (one canonical shared reference, five citing surfaces). Skeptic surfaced no dominant alternative but four load-bearing corrections, all folded: (1) HIGH — the ref-lock backstop binds only writers sharing the ref, per `2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref`; the resource protected is the SLUG not the GOAL, so the pre-worktree same-goal race has no atomic backstop at all, now stated outright; (2) the four pre-flight blocks carry deliberate per-surface divergence per `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`, so each keeps its own qualifier and a test pins them; (3) unscoped SendMessage fan-out; (4) no staleness bound on remote branches. Also adopted its finding that `propose/SKILL.md` has no pre-flight block at all, which is an argument for B beyond the stated criteria.
+- [decided] sibling-session fan-out scope: resolved empirically rather than by escalation. `ListAgents` on this repo returned 32 peers — 5 live local, 18 offline Remote Control, 10 idle cloud. Filter on liveness (offline cannot process), reply capability (cloud cannot reply), and project-name prefix (`agent-marketplace-*`), which reduced 32 candidates to 0 on the authoring repo. With the fan-out bounded to near-zero in the common case, the escalation predicate no longer fires — no user escalation spent.
+- [decided] whole-proposal soundness (solo gate): internally consistent, no placeholders, every criterion checkable. The `MINERVA-BUSY`/`MINERVA-IDLE` reply contract is the one new cross-session convention, but it is self-describing per message, unpersisted, and nothing depends on it — not an unfamiliar public interface requiring escalation.
+
+## Run counters
+- Reviewer gates fired: 2 (scope, approach) — both `revise`, both folded
+- Escalations to user: 0
