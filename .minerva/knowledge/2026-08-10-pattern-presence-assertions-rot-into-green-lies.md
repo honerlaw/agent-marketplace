@@ -57,3 +57,4 @@ entry at all. The pair brackets the real behaviour.
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — see also
 - [[2026-08-22-pattern-a-distinguished-state-inferred-from-outputs-is-the-steady-state]] — see also
 - [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — see also
+- [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — see also

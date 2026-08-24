@@ -60,6 +60,8 @@
 - [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — a field authored ahead of its evidence is a claim; re-verify it at every consumer, not just the nearest
 - [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — read the copies before choosing the invariant — a byte-identity test over intentionally-divergent blocks either cannot pass or passes vacuously
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
+- [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — name the resource an atomic primitive protects, not just the ref — a slug lock does not serialize two sessions working the same goal
+- [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — after extracting a repeated block, byte-identity is right for the shared half and wrong for the rung-specific half; test both
 
 ## Constraints
 
@@ -90,3 +92,5 @@
 - [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — the pointer gate resolves any `references/<file>.md` substring against the citing skill only
 
 ## References
+
+- [[2026-08-24-reference-listagents-returns-the-whole-fleet]] — filter ListAgents on liveness, reply capability, and project-name prefix before messaging — unfiltered fan-out pings unrelated projects

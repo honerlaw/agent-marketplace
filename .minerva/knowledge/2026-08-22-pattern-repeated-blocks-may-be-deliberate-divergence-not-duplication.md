@@ -49,3 +49,4 @@ same reason: with six genuinely different blocks there is no single block to ext
 ## Related
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — builds on
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — see also
+- [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — see also

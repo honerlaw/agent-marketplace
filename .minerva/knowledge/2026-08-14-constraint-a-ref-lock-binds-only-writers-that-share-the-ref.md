@@ -48,3 +48,4 @@ writers cannot be serialised, the answer is that only one of them runs.
 - [[2026-08-05-pattern-read-then-act-is-not-a-lock]] — builds on: the lock this qualifies, and whose stated precondition is the whole point
 - [[2026-08-05-decision-promote-add-only-reconcile-on-default]] — see also: the design whose single-writer assumption a CI reconciler breaks
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — see also
+- [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — see also

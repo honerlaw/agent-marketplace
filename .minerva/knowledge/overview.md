@@ -381,10 +381,37 @@ writer share the ref but to detect it and have the first stand down — where tw
 cannot be serialised, only one of them runs
 ([[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]]).
 
-Read together, this cluster is one lesson in five shapes: **shared mutable state is where
+The ref/resource gap then turned up a third time, in the opposite direction. A pre-flight
+check for concurrent work needed an honest answer to "if a check-then-act read is not a
+lock, what is?", and named the obvious one: `git worktree add -b <date-slug>` creates a
+branch ref, and a ref create is atomic. True, and beside the point — that serializes two
+sessions choosing the same **slug**, while what collides is the **goal**. A slug is a
+summary of intent, and two summarizations of one idea rarely match, so for the case that
+motivated the whole feature there is no atomic backstop at all. The lock sits on a
+**derived** name while the contention sits on the **source** it was derived from, and a
+derivation that is not injective breaks the correspondence in whichever direction it is
+non-injective ([[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]]).
+The remedy was not a better lock but writing the residual risk into the protocol itself —
+a guard whose limits go undocumented is worse than none, because the next reader extends
+it rather than replacing it.
+
+That check also had to reach *outside* the repo, to sibling Claude sessions that may be
+designing the same work with nothing yet on disk — the longest blind window in any run.
+Designing that fan-out before running the enumeration proved a mistake: `ListAgents`
+returns the whole fleet, and on one machine that was 32 peers of which 27 could never
+answer (offline, or cloud sessions that receive but cannot reply). Filtering on liveness,
+reply capability, and a project-name prefix took 32 candidates to **0**, which is the
+intended common case rather than a degenerate one
+([[2026-08-24-reference-listagents-returns-the-whole-fleet]]). The listing carries name,
+kind and liveness but never intent, so overlap can only be learned by asking — and a reply
+that drains at the peer's next tool round means silence has to count as `unknown`, never
+as `clear`.
+
+Read together, this cluster is one lesson in several shapes: **shared mutable state is where
 concurrency bugs go to hide**, and the ones that survive testing are the ones where the
-test and the design share an assumption — or, in the last case, where the guarantee was
-written down as a property of the resource when it was only ever a property of the ref.
+test and the design share an assumption — or where the guarantee was written down as a
+property of the resource when it was only ever a property of the ref, or of a name derived
+from it.
 
 ## Git worktrees and promote/scratchpad mechanics
 
@@ -553,6 +580,27 @@ up, and strictly worse — a ledger invites you to stop looking.** The fix is to
 dispositions rather than count them: terminal ones are skipped, `open — not filed` is
 re-offered every run, and only then does re-running become the trigger that deferral needs
 ([[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]]).
+
+Two later entries show the same failure wearing different clothes. One is about a value
+that looks settled and is not: `proposal.md`'s `**Closes**: #NN` was safe while only
+end-of-work promote wrote it, having just read the finished diff. Moving the authoring
+point to intake — where a user adopts an open issue before any diff exists — turned the
+field into a **claim that predates its evidence**, and a claim has to be re-verified at
+every consumer rather than the nearest one, because the work may since have been
+replanned, narrowed or split
+([[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]]).
+
+The other is about what survives an extraction. Pulling one repeated protocol out of four
+skills left each caller with a short block, and the obvious next question — "are these
+copies or are they deliberately different?" — has the annoying answer *both*. Each block
+split into a **shared half** (what the check does) where drift is always a bug, and a
+**divergent half** (which rung adjudicates, how much user contact it permits) where
+sameness would be the bug. The two halves need opposite invariants, and pinning only one
+leaves the other free to rot while the suite reads green; the first draft pinned only the
+divergent half, so a fifth evidence source would have left four stale summaries and a
+passing build ([[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]]).
+Mutation-testing each new guard is what separates this from a presence assertion that
+cannot fail.
 
 That yields the cluster's governing test. For any rule this corpus records, ask **what fails
 if it is violated**; if the answer is "a reviewer might notice", it is a wish, not a
