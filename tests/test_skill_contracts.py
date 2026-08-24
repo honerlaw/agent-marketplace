@@ -562,6 +562,17 @@ PREFLIGHT_QUALIFIERS = {
     "propose-ship-auto": "only permitted",
 }
 
+# The second half of each rung's qualifier: WHO adjudicates the run's other gates.
+# `propose-ship` is human-gated end to end, so it has no adjudicator clause to keep —
+# mapped to None rather than omitted, so the enumeration still covers all four blocks
+# and a dropped entry cannot look like an intentional exemption.
+PREFLIGHT_ADJUDICATORS = {
+    "propose-ship": None,
+    "propose-ship-quick": "**not** main-model-decided",
+    "propose-ship-balanced": "**not** main-model-decided",
+    "propose-ship-auto": "**not** panel-decided",
+}
+
 SHARED_PREFLIGHT_REF = "plugins/minerva/skills/propose/references/in-flight-check.md"
 
 
@@ -627,3 +638,29 @@ def test_preflight_qualifier_check_fires_on_a_flattened_block():
     """Exercise the same comparison the check runs, on a block that lost its clause."""
     flattened = "Read the shared protocol and run it. Detection, not a lock.\n"
     assert PREFLIGHT_QUALIFIERS["propose-ship-auto"] not in flattened
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_ADJUDICATORS))
+def test_preflight_block_keeps_its_adjudicator_clause(skill):
+    """The other half of the divergence.
+
+    `test_preflight_block_keeps_its_own_qualifier` pins how much user contact a rung
+    permits; this pins WHO decides its other gates. Both halves distinguish the rungs,
+    so testing only one leaves a flattening pass free to erase the other.
+    """
+    clause = PREFLIGHT_ADJUDICATORS[skill]
+    block = preflight_block(skill)
+    if clause is None:
+        assert "panel-decided" not in block and "main-model-decided" not in block, (
+            f"{skill}: human-gated rung acquired an adjudicator clause — if that is "
+            "intentional, add it to PREFLIGHT_ADJUDICATORS rather than leaving it untested")
+        return
+    assert clause in block, (
+        f"{skill}: pre-flight block lost its adjudicator clause {clause!r} — the four "
+        "blocks diverge on purpose; do not flatten them")
+
+
+def test_adjudicator_clauses_cover_every_preflight_block():
+    """The two divergence checks must span the same four blocks; a block present in one
+    enumeration and missing from the other would be half-guarded and look fully guarded."""
+    assert set(PREFLIGHT_ADJUDICATORS) == set(PREFLIGHT_BLOCKS)
