@@ -1,7 +1,7 @@
 # Proposal: cross-session-preflight
 
 **Date**: 2026-08-24
-**Status**: Draft
+**Status**: Shipped (2026-08-24)
 
 ## Goal
 
@@ -141,6 +141,42 @@ crash-stale garbage collection. Recorded as the upgrade path if detection proves
 that it is the least precedented piece. Rejected: it is also the piece the seed actually asked
 for, so shipping the git/gh widening alone would deliver everything except the request.
 
+### What review changed
+
+Review returned six findings, all fixed in place (none was a load-bearing divergence, so no
+replan was triggered):
+
+- **Step 4's skip condition was scoped wrong.** "Only send when steps 1–3 came back silent"
+  let an *adjacent* result suppress the peer query — silencing the only source that sees the
+  pre-worktree window exactly when unrelated noise appeared. Now scoped to "surfaced no
+  **collision**", with adjacent and stale explicitly non-suppressing.
+- **The staleness bound had no runnable command and an unexplained gap.** "Not in flight when
+  its PR is merged or closed" could not be executed with the commands shown — step 3's
+  `--state open` query cannot distinguish a merged PR from no PR. Added
+  `gh pr list --state all --head <branch>` and `git log -1 --format=%cI`. The absence of an
+  age bound on open PRs is now stated as deliberate: an open PR is standing human intent, a
+  pushed branch is only residue.
+- **The extraction was incomplete.** The four orchestrator blocks each carried a verbatim
+  two-sentence summary of the protocol with nothing pinning it, so a fifth evidence source
+  would have left four stale copies and a green suite. Pinned by byte-identity across the
+  three autonomous rungs, a marker check on all four, and a check tying "four evidence
+  sources" to the protocol file's real step run.
+- **A negative-coverage test was vacuous**, asserting on a fabricated literal rather than the
+  production predicate; it would have passed with the real check gutted. Both now route
+  through one `block_keeps_qualifier`.
+- **The section locator** required a following `## ` heading; a block placed last in its file
+  would fail blaming the heading for being absent. Now tolerates end-of-file. The same latent
+  defect in the pre-existing `target_resolution_block` is filed as
+  [#98](https://github.com/honerlaw/agent-marketplace/issues/98).
+
+All three new guards were mutation-tested: drifting a summary, adding a fifth evidence-source
+step, and flattening a rung qualifier each turn CI red.
+
+## Deferred work
+
+- Apply the same locator fix to `target_resolution_block` — filed as
+  [#98](https://github.com/honerlaw/agent-marketplace/issues/98) (`priority: low`).
+
 ## Success criteria
 
 - `plugins/minerva/skills/propose/references/in-flight-check.md` exists and specifies, each in
@@ -167,5 +203,5 @@ for, so shipping the git/gh widening alone would deliver everything except the r
 - Whether a peer that never replies should ever escalate on its own. Current answer: no —
   silence is recorded as unknown and the run proceeds, because the alternative stalls every
   intake on an unrelated session's turn length.
-- The exact recency window bounding source (b) is set during implementation; the criterion is
-  that a window exists and is stated, not its particular value.
+- ~~The exact recency window bounding source (b)~~ — resolved: **14 days**, applied to
+  branches only. Open PRs are deliberately unbounded (see Approach step 3).
