@@ -536,3 +536,86 @@ def test_lint_reports_a_broken_link_on_a_multi_target_line(tmp_path):
         "# Knowledge index\n\n## Decisions\n\n- [[001-decision-foo]] — d\n")
     msgs = [f.message for f in lint_knowledge(tmp_path)]
     assert any("999-bug-gone" in m for m in msgs)
+
+
+# --- reciprocals the fixer refuses by design ---------------------------------
+def _multi_target_corpus(tmp_path):
+    """001 reaches 002 only from a bullet whose label prose names a THIRD entry.
+
+    `related_edges` yields label=None for every target on such a line, and
+    `knowledge_fix.plan_reciprocals` refuses to derive a reciprocal from it --
+    deliberately, since a multi-target line has no single label to reciprocate.
+    """
+    multi = ("\n## Related\n"
+             "- [[002-constraint-bar]] — the spawn mutex (see the TTL caveat: "
+             "[[003-pattern-baz]])\n")
+    return make_dir(
+        tmp_path,
+        {
+            "001-decision-foo.md": entry("decision", "foo", extra_body="") + multi,
+            "002-constraint-bar.md": entry("constraint", "bar"),
+            "003-pattern-baz.md": entry("pattern", "baz"),
+        },
+        index(decisions=["001-decision-foo"], constraints=["002-constraint-bar"],
+              patterns=["003-pattern-baz"]),
+    )
+
+
+def test_multi_target_reciprocal_is_not_called_pending_reconciliation(tmp_path):
+    """The warning must not claim a tool will clear it, because none ever will.
+
+    `minerva:cleanup` decides "pending work exists" by looking for the phrase
+    `pending reconciliation`. Using it for an edge `knowledge_fix` refuses on every
+    run describes a reconcile that can never settle.
+    """
+    findings = lint_knowledge(_multi_target_corpus(tmp_path))
+    assert errors(findings) == []
+    recip = [f for f in findings if f.family in {"reciprocal", "reciprocal-manual"}]
+    assert recip, "the unrecorded relationship must still be reported, not suppressed"
+    for f in recip:
+        assert "pending reconciliation" not in f.message
+
+
+def test_multi_target_reciprocal_says_to_write_it_by_hand(tmp_path):
+    findings = lint_knowledge(_multi_target_corpus(tmp_path))
+    manual = [f for f in findings if f.family == "reciprocal-manual"]
+    assert manual, "expected a reciprocal-manual finding"
+    assert any("by hand" in f.message for f in manual)
+
+
+def test_a_labelled_edge_still_reports_pending_reconciliation(tmp_path):
+    """The ordinary case is untouched: a single-target labelled line IS derivable."""
+    d = make_dir(
+        tmp_path,
+        {
+            "001-decision-foo.md": entry(
+                "decision", "foo", related=[("002-constraint-bar", "see also")]),
+            "002-constraint-bar.md": entry("constraint", "bar"),
+        },
+        index(decisions=["001-decision-foo"], constraints=["002-constraint-bar"]),
+    )
+    findings = lint_knowledge(d)
+    assert any(f.family == "reciprocal" and "pending reconciliation" in f.message
+               for f in findings)
+
+
+def test_a_target_labelled_on_another_line_is_still_derivable(tmp_path):
+    """Labelled-elsewhere wins: reaching a target from BOTH a multi-target line and
+    a proper labelled one must not downgrade it to manual -- the fixer can derive it."""
+    body = ("\n## Related\n"
+            "- [[002-constraint-bar]] — the spawn mutex (see also [[003-pattern-baz]])\n"
+            "- [[002-constraint-bar]] — see also\n")
+    d = make_dir(
+        tmp_path,
+        {
+            "001-decision-foo.md": entry("decision", "foo") + body,
+            "002-constraint-bar.md": entry("constraint", "bar"),
+            "003-pattern-baz.md": entry("pattern", "baz"),
+        },
+        index(decisions=["001-decision-foo"], constraints=["002-constraint-bar"],
+              patterns=["003-pattern-baz"]),
+    )
+    findings = lint_knowledge(d)
+    bar = [f for f in findings
+           if f.family in {"reciprocal", "reciprocal-manual"} and "002-constraint-bar" in f.message]
+    assert bar and all(f.family == "reciprocal" for f in bar)
