@@ -576,11 +576,17 @@ PREFLIGHT_ADJUDICATORS = {
 SHARED_PREFLIGHT_REF = "plugins/minerva/skills/propose/references/in-flight-check.md"
 
 
+def block_keeps_qualifier(block: str, qualifier: str) -> bool:
+    """Whether `block` still carries `qualifier`. One definition, so the real check and
+    its negative coverage cannot drift apart about what "kept" means."""
+    return qualifier in block
+
+
 def preflight_block(skill: str) -> str:
     """The pre-flight section of `skill`, up to the next heading."""
     rel, heading = PREFLIGHT_BLOCKS[skill]
     path = SKILLS_DIR / skill / rel
-    m = re.search(rf"^{re.escape(heading)}\n(.*?)(?=^## )", path.read_text(), re.S | re.M)
+    m = re.search(rf"^{re.escape(heading)}\n(.*?)(?=^## |\Z)", path.read_text(), re.S | re.M)
     assert m, f"{skill}: no '{heading}' section in {rel}"
     return m.group(1)
 
@@ -612,7 +618,7 @@ def test_preflight_block_keeps_its_own_qualifier(skill):
     """
     qualifier = PREFLIGHT_QUALIFIERS[skill]
     block = preflight_block(skill)
-    assert qualifier in block, (
+    assert block_keeps_qualifier(block, qualifier), (
         f"{skill}: pre-flight block lost its rung-specific qualifier {qualifier!r} — "
         "the four blocks diverge on purpose; do not flatten them")
 
@@ -635,9 +641,19 @@ def test_qualifiers_are_distinct():
 
 
 def test_preflight_qualifier_check_fires_on_a_flattened_block():
-    """Exercise the same comparison the check runs, on a block that lost its clause."""
-    flattened = "Read the shared protocol and run it. Detection, not a lock.\n"
-    assert PREFLIGHT_QUALIFIERS["propose-ship-auto"] not in flattened
+    """Negative coverage that actually exercises the production predicate.
+
+    Asserting on a fabricated literal would prove nothing: it would still pass if
+    `block_keeps_qualifier` were gutted to `return True`. Both the real check and this
+    one call the same function, so they cannot disagree about what "kept" means.
+    """
+    real = preflight_block("propose-ship-auto")
+    qualifier = PREFLIGHT_QUALIFIERS["propose-ship-auto"]
+    assert block_keeps_qualifier(real, qualifier), "the live block should pass"
+
+    flattened = real.replace(qualifier, "")
+    assert not block_keeps_qualifier(flattened, qualifier), (
+        "the check does not fire on a block whose qualifier was removed")
 
 
 @pytest.mark.parametrize("skill", sorted(PREFLIGHT_ADJUDICATORS))
@@ -664,3 +680,68 @@ def test_adjudicator_clauses_cover_every_preflight_block():
     """The two divergence checks must span the same four blocks; a block present in one
     enumeration and missing from the other would be half-guarded and look fully guarded."""
     assert set(PREFLIGHT_ADJUDICATORS) == set(PREFLIGHT_BLOCKS)
+
+
+# The four blocks also share a two-sentence SUMMARY of the protocol, written once and
+# pasted into each. That part is meant to be identical — unlike the qualifiers above,
+# which are meant to differ. `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`
+# says to read the copies before choosing the invariant: here the copies genuinely split
+# into a shared half and a divergent half, so the two halves get opposite invariants.
+# Byte-identity on the shared half is exactly right; applying it to the whole block would
+# be the vacuous test that entry warns about.
+#
+# Without this, a fifth evidence source (or a reworded framing) in in-flight-check.md
+# leaves four stale summaries and nothing goes red.
+SHARED_SUMMARY_MARKERS = (
+    "It reads four evidence sources",
+    "each failing soft",
+    "detection, not a lock",
+    "serializes only sessions choosing the *same slug*",
+)
+
+
+SUMMARY_END = "not that nobody else is working the goal."
+
+
+def shared_summary(skill: str) -> str:
+    """The block's shared summary — from the read directive to the end of the
+    not-a-lock sentence. Deliberately EXCLUDES the rung-specific lead and tail: those
+    are meant to diverge and are pinned separately by the qualifier checks above."""
+    block = preflight_block(skill)
+    start = block.index("**Read `" + SHARED_PREFLIGHT_REF)
+    end = block.index(SUMMARY_END, start) + len(SUMMARY_END)
+    return block[start:end]
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_shared_summary_states_every_marker(skill):
+    """Each copy carries the whole shared framing, not a truncated paraphrase."""
+    summary = shared_summary(skill)
+    missing = [m for m in SHARED_SUMMARY_MARKERS if m not in summary]
+    assert not missing, f"{skill}: shared summary is missing {missing}"
+
+
+def test_shared_summary_is_identical_across_the_autonomous_rungs():
+    """The three autonomous orchestrators paste the same summary; drift between them is
+    always a mistake, so byte-identity is the correct invariant for this half."""
+    rungs = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+    summaries = {s: shared_summary(s).strip() for s in rungs}
+    first = summaries[rungs[0]]
+    for skill, text in summaries.items():
+        assert text == first, (
+            f"{skill}'s shared pre-flight summary has drifted from "
+            f"{rungs[0]}'s; the summary half is meant to be identical")
+
+
+def test_summary_source_count_matches_the_protocol_file():
+    """The summary says 'four evidence sources'. Pin that against the protocol file's
+    actual step count, so adding a fifth source cannot leave four stale summaries."""
+    protocol = (SKILLS_DIR / "propose" / "references" / "in-flight-check.md").read_text()
+    headings = dict(re.findall(r"^## Step ([0-9]) — (.+)$", protocol, re.M))
+    # Steps 1-4 are the evidence sources; step 5 is the match bar, which is where the
+    # run of sources ends. A fifth source would push the match bar to step 6.
+    assert set("1234") <= set(headings), f"missing evidence-source steps: {headings}"
+    assert "match bar" in headings.get("5", "").lower(), (
+        f"step 5 is {headings.get('5')!r}, not the match bar — the evidence-source run "
+        "is no longer four long, but every orchestrator summary says 'four evidence "
+        "sources'; update the summaries")

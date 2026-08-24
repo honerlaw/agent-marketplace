@@ -54,9 +54,21 @@ Use `git ls-remote`, **not** `git branch -r`: remote-tracking refs are only as f
 last fetch, so `git branch -r` reads clean for a branch pushed five minutes ago.
 
 **Bound this source for staleness.** A pushed-and-abandoned branch otherwise produces a
-recurring false collision on every future intake touching its theme, forever. A branch is
-**not** in flight when its PR is merged or closed. An unmerged branch whose newest commit is
-older than **14 days** is reported as *stale* — named in one line, never raised as a collision.
+recurring false collision on every future intake touching its theme, forever. Two bounds:
+
+```bash
+git log -1 --format=%cI <branch>              # newest commit — older than 14 days is stale
+gh pr list --state all --head <branch> --json number,state   # merged/closed is not in flight
+```
+
+Use `--state all`, not the `--state open` query in step 3: that one cannot tell a branch whose
+PR merged from a branch that never had one. A branch whose PR is merged or closed is **not** in
+flight. An unmerged branch whose newest commit is older than **14 days** is reported as *stale*
+— named in one line, never raised as a collision.
+
+**Step 3 gets no such bound, deliberately.** An open PR is standing human intent that someone
+chose not to withdraw; a pushed branch is only residue. Age alone is not evidence an open PR
+was abandoned, so it is never aged out.
 
 ## Step 3 — Open pull requests
 
@@ -96,8 +108,11 @@ of them would ping unrelated projects on every intake, fleet-wide. Apply all thr
 On the authoring repo those filters reduced 32 candidate peers to **0**. That is the intended
 common case: **no messages at all**.
 
-**Only send when steps 1–3 came back silent.** If they already found something, the ask in
-step 6 fires on that evidence and a ping adds nothing.
+**Only send when steps 1–3 surfaced no _collision_.** If they already found one, the ask in
+step 6 fires on that evidence and a ping adds nothing. An **adjacent** or **stale** result does
+**not** suppress this step: those are not collisions, and this is the only source that sees a
+live peer with nothing on disk yet. Suppressing on adjacent noise would silence the step
+exactly when it is doing the job it exists for.
 
 ### 4b — One self-describing message per peer
 

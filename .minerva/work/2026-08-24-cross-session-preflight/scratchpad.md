@@ -11,3 +11,16 @@
 ## Run counters
 - Reviewer gates fired: 2 (scope, approach) — both `revise`, both folded
 - Escalations to user: 0
+
+## Review finding 2026-08-24
+Minerva audit: no spec-fidelity or knowledge-compliance findings. (`2026-06-11-constraint-ci-test-enumeration-explicit` would have applied but is already marked superseded by `2026-08-11-decision-ci-runs-the-whole-suite`; CI runs `pytest tests/` wholesale, confirmed independently.)
+
+Code review returned 6 findings, all triaged FIX (none a load-bearing divergence, so no replan gate fired):
+1. [MEDIUM] negative-coverage test asserted on a fabricated literal — would still pass if the real check were gutted. Both now route through one `block_keeps_qualifier` predicate.
+2. [LOW] section locator required a following `## ` heading; a block placed last in its file would fail with a message blaming the heading for being absent. Regex now tolerates EOF.
+3. [MEDIUM-HIGH] Step 4's skip condition said "steps 1-3 came back silent", so an ADJACENT hit would suppress the only source that sees the pre-worktree window — silencing the step exactly when it is doing its job. Now scoped to "surfaced no collision", with adjacent/stale explicitly non-suppressing.
+4. [MEDIUM] the 14-day staleness bound covered branches but not open PRs, unexplained. The asymmetry is now stated: an open PR is standing human intent, a pushed branch is residue.
+5. [MEDIUM] "not in flight when its PR is merged or closed" had no runnable command — step 3's `--state open` query cannot answer it. Added `gh pr list --state all --head <branch>` and `git log -1 --format=%cI`.
+6. [MEDIUM] the four orchestrator blocks share a verbatim summary with nothing pinning it — a fifth evidence source would leave four stale copies. Added byte-identity across the three autonomous rungs, a marker check on all four, and a check tying "four evidence sources" to the protocol file's actual step run.
+
+All three new guards mutation-tested: drifting a summary, adding a fifth source step, and flattening a qualifier each turn CI red.
