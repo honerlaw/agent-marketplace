@@ -70,7 +70,14 @@ python3 "$SCRIPTS/synthesis_status.py" "$ROOT/.minerva/knowledge"   # un-synthes
 ```
 
 Pending work exists if `knowledge_lint` reports any `pending reconciliation` warning
-**or** `synthesis_status` reports un-synthesized entries. If neither does, report
+**or** `synthesis_status` reports un-synthesized entries.
+
+A `reciprocal-manual` warning is **not** pending work and must not be treated as such.
+It marks an edge on a line with no single relationship label — a multi-target bullet —
+which `knowledge_fix.plan_reciprocals` refuses to derive a reciprocal for, by design and
+on every run. Its wording deliberately omits `pending reconciliation` for exactly this
+reason: counting it would describe a reconcile that can never settle. Clearing one means
+a human writing the back-link, or splitting the line into one target and one label. If neither does, report
 `reconciliation: nothing pending` and skip to the final report — this is the common
 case and must stay silent and cheap.
 

@@ -285,8 +285,17 @@ def parse_entry(path: Path):
     # editor read the same block the same way. `related_mention_stems` is the same set
     # of targets — the whole-line scan that used to be kept separately for back-link
     # detection is now what `related_edges` itself does.
-    edge_stems = {target for target, _ in related_edges(text)}
+    edges = related_edges(text)
+    edge_stems = {target for target, _ in edges}
     related_out = {ID_PREFIX_RE.match(s).group(1) for s in edge_stems}
+    # Targets reached ONLY by a line `related_edges` could not attach a single
+    # label to - a multi-target bullet, or one whose prose is not `- [[x]] - label`.
+    # `knowledge_fix.plan_reciprocals` REFUSES these by design (a multi-target line
+    # has no single label to reciprocate, and inventing one would write a wrong edge
+    # into a neighbouring entry), so a finding on them is one no tool will ever clear.
+    # Labelled-elsewhere wins: an entry may reach the same target from two lines.
+    labelled = {target for target, label in edges if label is not None}
+    unlabelled_out_stems = {target for target, label in edges if label is None} - labelled
     return {
         "nnn": ENTRY_RE.match(path.name).group(1),
         "stem": path.name[:-3],
@@ -294,6 +303,7 @@ def parse_entry(path: Path):
         "summary": summary,
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
+        "unlabelled_out_stems": unlabelled_out_stems,
         # STEM-keyed twin of `related_out` above. An NNN shared by several entries
         # cannot say WHICH entry an edge points at; a stem always can. Kept alongside
         # rather than replacing it so this linter's own NNN-shaped checks are untouched
@@ -409,11 +419,26 @@ def lint_knowledge(knowledge_dir) -> list:
         for target in sorted(entries[stem][1]["related_out_stems"]):
             if target not in entry_stems:
                 continue  # broken link, already reported above
-            if stem not in entries[target][1]["backlink_stems"]:
+            if stem in entries[target][1]["backlink_stems"]:
+                continue
+            if target in entries[stem][1]["unlabelled_out_stems"]:
+                # Deliberately NOT worded "pending reconciliation". That phrase is
+                # the signal `minerva:cleanup` reads to decide pending work exists,
+                # so using it here would describe a reconcile that can never settle:
+                # the fixer refuses this edge on every run, by design, forever.
+                # Still reported rather than suppressed - the relationship really is
+                # unrecorded on the target side, and silence would be its own lie.
                 findings.append(Finding(
-                    "reciprocal", "warning",
-                    f"entry {stem} links {target} but {target} has no back-link to "
-                    f"{stem} — pending reconciliation"))
+                    "reciprocal-manual", "warning",
+                    f"entry {stem} links {target} from a line with no single "
+                    f"relationship label (multi-target or unlabelled), so no "
+                    f"reciprocal can be derived — write the back-link on {target} "
+                    f"by hand, or split the line into one target and one label"))
+                continue
+            findings.append(Finding(
+                "reciprocal", "warning",
+                f"entry {stem} links {target} but {target} has no back-link to "
+                f"{stem} — pending reconciliation"))
     return findings
 
 
