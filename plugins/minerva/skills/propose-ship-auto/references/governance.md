@@ -10,7 +10,7 @@
 **Global escalation counter.** Maintain across the run. Increment on every user escalation. If it reaches **3**, halt before the next panel call and report status. Recovery: run individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip the panel entirely).**
-- In-flight work collision (pre-flight).
+- In-flight work collision (pre-flight) — the check in `plugins/minerva/skills/propose/references/in-flight-check.md`.
 - An open issue matching the seed at intake — the ask in `plugins/minerva/skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.

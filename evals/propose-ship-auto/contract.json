@@ -44,6 +44,22 @@
       ],
       "ignore_case": true,
       "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "plugins/minerva/skills/propose/references/in-flight-check.md"
+      ]
+    },
+    {
+      "any_of": [
+        "detection, not a lock"
+      ],
+      "ignore_case": true
+    },
+    {
+      "any_of": [
+        "only permitted"
+      ]
     }
   ],
   "cross_surface": {

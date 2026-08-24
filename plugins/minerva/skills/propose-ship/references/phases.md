@@ -4,22 +4,11 @@ Read this file in full before executing the lifecycle; the SKILL.md core names t
 
 ## Pre-flight: detect in-flight work
 
-Before invoking `minerva:propose`, check for in-flight work units that might collide with the user's intent:
+Before invoking `minerva:propose`, check whether the user's intent is **already in flight** — in this checkout, in another clone, or in a live sibling Claude session.
 
-1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
-2. If any unit has a `proposal.md` that `work_status` reports as in-flight, treat it as in-flight:
+**Read `plugins/minerva/skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and live sibling Claude sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
-   ```bash
-   python3 -c "import sys; sys.path.insert(0, '<scripts>'); from work_status import unit_state; print(unit_state('.minerva/work/<date-slug>')['in_flight'])"
-   ```
-
-   `in_flight` is `Status is Draft` **or** not promoted. Call it — do not restate it as a
-   string comparison: the promote marker has eight spellings in this corpus and `Status`
-   has two, and matching one spelling of either reads a finished unit as live work.
-3. If the user's inline description (`minerva:propose-ship "add payments"`) clearly overlaps with an in-flight unit's slug or goal, **stop and ask**:
-   > "Found in-flight work unit `005-add-payments` — looks related to what you just asked. Resume that one (`minerva:work 005-add-payments`) or genuinely start fresh?"
-
-   Only proceed to `minerva:propose` after the user confirms a fresh start.
+A collision stops the run and asks. Only proceed to `minerva:propose` after the user confirms a fresh start.
 
 This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" and accidentally spawns a parallel work unit.
 

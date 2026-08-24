@@ -49,6 +49,44 @@
       ],
       "ignore_case": true,
       "file": "references/on-approval.md"
+    },
+    {
+      "any_of": [
+        "references/in-flight-check.md"
+      ]
+    },
+    {
+      "any_of": [
+        "detection, not mutual exclusion"
+      ],
+      "ignore_case": true,
+      "file": "references/in-flight-check.md"
+    },
+    {
+      "any_of": [
+        "binds only writers that share the ref",
+        "the resource the lock protects"
+      ],
+      "ignore_case": true,
+      "file": "references/in-flight-check.md"
+    },
+    {
+      "any_of": [
+        "Skip silently if `ListAgents` or `SendMessage` is unavailable"
+      ],
+      "file": "references/in-flight-check.md"
+    },
+    {
+      "any_of": [
+        "MINERVA-BUSY"
+      ],
+      "file": "references/in-flight-check.md"
+    },
+    {
+      "any_of": [
+        "Silence is `unknown`, never `clear`"
+      ],
+      "file": "references/in-flight-check.md"
     }
   ],
   "cross_surface": {

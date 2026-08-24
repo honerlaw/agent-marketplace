@@ -17,7 +17,20 @@
     "minerva:ship",
     "minerva:cleanup",
     "minerva:review",
-    "minerva:promote"
+    "minerva:promote",
+    {
+      "any_of": [
+        "plugins/minerva/skills/propose/references/in-flight-check.md"
+      ],
+      "file": "references/phases.md"
+    },
+    {
+      "any_of": [
+        "detection, not a lock"
+      ],
+      "ignore_case": true,
+      "file": "references/phases.md"
+    }
   ],
   "cross_surface": {
     "root_readme": true,

@@ -15,19 +15,11 @@ The four orchestrators form a ladder by adjudication cost: `minerva:propose-ship
 
 ## Pre-flight: in-flight work collision
 
-Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-model-decided — a wrong call here destroys real work, so escalation to the user is hardcoded:
+Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-model-decided — a wrong call here destroys real work, so escalation to the user is hardcoded.
 
-1. List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`.
-2. If any unit has a `proposal.md` that `work_status` reports as in-flight, treat it as in-flight:
+**Read `plugins/minerva/skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and live sibling Claude sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
-   ```bash
-   python3 -c "import sys; sys.path.insert(0, '<scripts>'); from work_status import unit_state; print(unit_state('.minerva/work/<date-slug>')['in_flight'])"
-   ```
-
-   `in_flight` is `Status is Draft` **or** not promoted. Call it — do not restate it as a
-   string comparison: the promote marker has eight spellings in this corpus and `Status`
-   has two, and matching one spelling of either reads a finished unit as live work.
-3. If the seed overlaps a slug or goal, **stop and ask** whether to resume that unit (`minerva:work <date-slug>`) or start fresh.
+A collision is a hardcoded `AskUserQuestion` (resume that work / start fresh anyway / abandon this run) and **increments the global escalation counter**.
 
 Only proceed after the user confirms. This is the only mandatory pre-run user interaction; everything else reaches the user via escalation.
 

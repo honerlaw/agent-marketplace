@@ -530,3 +530,100 @@ def test_sibling_enumeration_check_fires_on_a_wrong_name():
     assert cited_siblings(renamed) != {"work", "replan", "promote", "review", "ship"}
     dropped = good.replace(", `minerva:ship`", "")
     assert len(cited_siblings(dropped)) == 4
+
+
+# --- The four intake pre-flight blocks ----------------------------------------
+#
+# The in-flight collision protocol was extracted to one shared file
+# (`propose/references/in-flight-check.md`) and the four orchestrator blocks that
+# used to restate it inline now cite it. The blocks are NOT copies, and that is
+# deliberate — `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`.
+# Each orchestrator's block carries a qualifier that is true only of that rung:
+# who adjudicates the run's other gates, and how much user contact the rung permits
+# at all. A later "let's dedupe these" pass that flattens them into one generic
+# citation line would erase exactly that, silently.
+#
+# So byte-identity is the wrong invariant here too. What is asserted instead is the
+# pair that must hold together: every block reaches the ONE shared protocol, and
+# every block still says the thing only it says.
+PREFLIGHT_BLOCKS = {
+    "propose-ship": ("references/phases.md", "## Pre-flight: detect in-flight work"),
+    "propose-ship-quick": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+    "propose-ship-balanced": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+    "propose-ship-auto": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+}
+
+# The per-rung qualifier each block must keep. Losing one is not a wording nit: it
+# is the sentence that tells a run how much it is allowed to bother the user.
+PREFLIGHT_QUALIFIERS = {
+    "propose-ship": "foot-cannon",
+    "propose-ship-quick": "only guaranteed",
+    "propose-ship-balanced": "only mandatory pre-run user interaction",
+    "propose-ship-auto": "only permitted",
+}
+
+SHARED_PREFLIGHT_REF = "plugins/minerva/skills/propose/references/in-flight-check.md"
+
+
+def preflight_block(skill: str) -> str:
+    """The pre-flight section of `skill`, up to the next heading."""
+    rel, heading = PREFLIGHT_BLOCKS[skill]
+    path = SKILLS_DIR / skill / rel
+    m = re.search(rf"^{re.escape(heading)}\n(.*?)(?=^## )", path.read_text(), re.S | re.M)
+    assert m, f"{skill}: no '{heading}' section in {rel}"
+    return m.group(1)
+
+
+def test_all_four_preflight_blocks_exist():
+    """Guards the enumeration itself — a silently-empty locator would make every
+    check below pass vacuously (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`)."""
+    assert len(PREFLIGHT_BLOCKS) == 4
+    for skill in PREFLIGHT_BLOCKS:
+        assert preflight_block(skill).strip(), f"{skill}: empty pre-flight block"
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_cites_the_shared_protocol(skill):
+    """One protocol, four citations — no orchestrator restates it inline again."""
+    block = preflight_block(skill)
+    assert SHARED_PREFLIGHT_REF in block, (
+        f"{skill}: pre-flight block does not cite {SHARED_PREFLIGHT_REF}; a rung that "
+        "restates the protocol inline drifts from the other three")
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_keeps_its_own_qualifier(skill):
+    """The deliberate divergence, enforced.
+
+    Without this, collapsing four blocks to one shared citation is indistinguishable
+    from collapsing them to one shared *sentence* — and the rung-specific clause about
+    permitted user contact is the first thing such a pass would drop.
+    """
+    qualifier = PREFLIGHT_QUALIFIERS[skill]
+    block = preflight_block(skill)
+    assert qualifier in block, (
+        f"{skill}: pre-flight block lost its rung-specific qualifier {qualifier!r} — "
+        "the four blocks diverge on purpose; do not flatten them")
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_says_it_is_not_a_lock(skill):
+    """`2026-08-05-pattern-read-then-act-is-not-a-lock`'s documented failure mode is
+    that a check-then-act guard *looks* sufficient, so the next reader extends it
+    rather than replacing it. Every block states outright that it is not a lock."""
+    block = preflight_block(skill).lower()
+    assert "detection, not a lock" in block, (
+        f"{skill}: pre-flight block does not say the check is detection rather than a "
+        "lock — the framing this whole protocol depends on")
+
+
+def test_qualifiers_are_distinct():
+    """Negative coverage: if the four qualifiers ever collapse to one string, the
+    divergence check above would pass while asserting nothing rung-specific."""
+    assert len(set(PREFLIGHT_QUALIFIERS.values())) == 4
+
+
+def test_preflight_qualifier_check_fires_on_a_flattened_block():
+    """Exercise the same comparison the check runs, on a block that lost its clause."""
+    flattened = "Read the shared protocol and run it. Detection, not a lock.\n"
+    assert PREFLIGHT_QUALIFIERS["propose-ship-auto"] not in flattened
