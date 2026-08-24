@@ -530,3 +530,218 @@ def test_sibling_enumeration_check_fires_on_a_wrong_name():
     assert cited_siblings(renamed) != {"work", "replan", "promote", "review", "ship"}
     dropped = good.replace(", `minerva:ship`", "")
     assert len(cited_siblings(dropped)) == 4
+
+
+# --- The four intake pre-flight blocks ----------------------------------------
+#
+# The in-flight collision protocol was extracted to one shared file
+# (`propose/references/in-flight-check.md`) and the four orchestrator blocks that
+# used to restate it inline now cite it. The blocks are NOT copies, and that is
+# deliberate — `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`.
+# Each orchestrator's block carries a qualifier that is true only of that rung:
+# who adjudicates the run's other gates, and how much user contact the rung permits
+# at all. A later "let's dedupe these" pass that flattens them into one generic
+# citation line would erase exactly that, silently.
+#
+# So byte-identity is the wrong invariant here too. What is asserted instead is the
+# pair that must hold together: every block reaches the ONE shared protocol, and
+# every block still says the thing only it says.
+PREFLIGHT_BLOCKS = {
+    "propose-ship": ("references/phases.md", "## Pre-flight: detect in-flight work"),
+    "propose-ship-quick": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+    "propose-ship-balanced": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+    "propose-ship-auto": ("SKILL.md", "## Pre-flight: in-flight work collision"),
+}
+
+# The per-rung qualifier each block must keep. Losing one is not a wording nit: it
+# is the sentence that tells a run how much it is allowed to bother the user.
+PREFLIGHT_QUALIFIERS = {
+    "propose-ship": "foot-cannon",
+    "propose-ship-quick": "only guaranteed",
+    "propose-ship-balanced": "only mandatory pre-run user interaction",
+    "propose-ship-auto": "only permitted",
+}
+
+# The second half of each rung's qualifier: WHO adjudicates the run's other gates.
+# `propose-ship` is human-gated end to end, so it has no adjudicator clause to keep —
+# mapped to None rather than omitted, so the enumeration still covers all four blocks
+# and a dropped entry cannot look like an intentional exemption.
+PREFLIGHT_ADJUDICATORS = {
+    "propose-ship": None,
+    "propose-ship-quick": "**not** main-model-decided",
+    "propose-ship-balanced": "**not** main-model-decided",
+    "propose-ship-auto": "**not** panel-decided",
+}
+
+SHARED_PREFLIGHT_REF = "plugins/minerva/skills/propose/references/in-flight-check.md"
+
+
+def block_keeps_qualifier(block: str, qualifier: str) -> bool:
+    """Whether `block` still carries `qualifier`. One definition, so the real check and
+    its negative coverage cannot drift apart about what "kept" means."""
+    return qualifier in block
+
+
+def preflight_block(skill: str) -> str:
+    """The pre-flight section of `skill`, up to the next heading."""
+    rel, heading = PREFLIGHT_BLOCKS[skill]
+    path = SKILLS_DIR / skill / rel
+    m = re.search(rf"^{re.escape(heading)}\n(.*?)(?=^## |\Z)", path.read_text(), re.S | re.M)
+    assert m, f"{skill}: no '{heading}' section in {rel}"
+    return m.group(1)
+
+
+def test_all_four_preflight_blocks_exist():
+    """Guards the enumeration itself — a silently-empty locator would make every
+    check below pass vacuously (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`)."""
+    assert len(PREFLIGHT_BLOCKS) == 4
+    for skill in PREFLIGHT_BLOCKS:
+        assert preflight_block(skill).strip(), f"{skill}: empty pre-flight block"
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_cites_the_shared_protocol(skill):
+    """One protocol, four citations — no orchestrator restates it inline again."""
+    block = preflight_block(skill)
+    assert SHARED_PREFLIGHT_REF in block, (
+        f"{skill}: pre-flight block does not cite {SHARED_PREFLIGHT_REF}; a rung that "
+        "restates the protocol inline drifts from the other three")
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_keeps_its_own_qualifier(skill):
+    """The deliberate divergence, enforced.
+
+    Without this, collapsing four blocks to one shared citation is indistinguishable
+    from collapsing them to one shared *sentence* — and the rung-specific clause about
+    permitted user contact is the first thing such a pass would drop.
+    """
+    qualifier = PREFLIGHT_QUALIFIERS[skill]
+    block = preflight_block(skill)
+    assert block_keeps_qualifier(block, qualifier), (
+        f"{skill}: pre-flight block lost its rung-specific qualifier {qualifier!r} — "
+        "the four blocks diverge on purpose; do not flatten them")
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_preflight_block_says_it_is_not_a_lock(skill):
+    """`2026-08-05-pattern-read-then-act-is-not-a-lock`'s documented failure mode is
+    that a check-then-act guard *looks* sufficient, so the next reader extends it
+    rather than replacing it. Every block states outright that it is not a lock."""
+    block = preflight_block(skill).lower()
+    assert "detection, not a lock" in block, (
+        f"{skill}: pre-flight block does not say the check is detection rather than a "
+        "lock — the framing this whole protocol depends on")
+
+
+def test_qualifiers_are_distinct():
+    """Negative coverage: if the four qualifiers ever collapse to one string, the
+    divergence check above would pass while asserting nothing rung-specific."""
+    assert len(set(PREFLIGHT_QUALIFIERS.values())) == 4
+
+
+def test_preflight_qualifier_check_fires_on_a_flattened_block():
+    """Negative coverage that actually exercises the production predicate.
+
+    Asserting on a fabricated literal would prove nothing: it would still pass if
+    `block_keeps_qualifier` were gutted to `return True`. Both the real check and this
+    one call the same function, so they cannot disagree about what "kept" means.
+    """
+    real = preflight_block("propose-ship-auto")
+    qualifier = PREFLIGHT_QUALIFIERS["propose-ship-auto"]
+    assert block_keeps_qualifier(real, qualifier), "the live block should pass"
+
+    flattened = real.replace(qualifier, "")
+    assert not block_keeps_qualifier(flattened, qualifier), (
+        "the check does not fire on a block whose qualifier was removed")
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_ADJUDICATORS))
+def test_preflight_block_keeps_its_adjudicator_clause(skill):
+    """The other half of the divergence.
+
+    `test_preflight_block_keeps_its_own_qualifier` pins how much user contact a rung
+    permits; this pins WHO decides its other gates. Both halves distinguish the rungs,
+    so testing only one leaves a flattening pass free to erase the other.
+    """
+    clause = PREFLIGHT_ADJUDICATORS[skill]
+    block = preflight_block(skill)
+    if clause is None:
+        assert "panel-decided" not in block and "main-model-decided" not in block, (
+            f"{skill}: human-gated rung acquired an adjudicator clause — if that is "
+            "intentional, add it to PREFLIGHT_ADJUDICATORS rather than leaving it untested")
+        return
+    assert clause in block, (
+        f"{skill}: pre-flight block lost its adjudicator clause {clause!r} — the four "
+        "blocks diverge on purpose; do not flatten them")
+
+
+def test_adjudicator_clauses_cover_every_preflight_block():
+    """The two divergence checks must span the same four blocks; a block present in one
+    enumeration and missing from the other would be half-guarded and look fully guarded."""
+    assert set(PREFLIGHT_ADJUDICATORS) == set(PREFLIGHT_BLOCKS)
+
+
+# The four blocks also share a two-sentence SUMMARY of the protocol, written once and
+# pasted into each. That part is meant to be identical — unlike the qualifiers above,
+# which are meant to differ. `2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`
+# says to read the copies before choosing the invariant: here the copies genuinely split
+# into a shared half and a divergent half, so the two halves get opposite invariants.
+# Byte-identity on the shared half is exactly right; applying it to the whole block would
+# be the vacuous test that entry warns about.
+#
+# Without this, a fifth evidence source (or a reworded framing) in in-flight-check.md
+# leaves four stale summaries and nothing goes red.
+SHARED_SUMMARY_MARKERS = (
+    "It reads four evidence sources",
+    "each failing soft",
+    "detection, not a lock",
+    "serializes only sessions choosing the *same slug*",
+)
+
+
+SUMMARY_END = "not that nobody else is working the goal."
+
+
+def shared_summary(skill: str) -> str:
+    """The block's shared summary — from the read directive to the end of the
+    not-a-lock sentence. Deliberately EXCLUDES the rung-specific lead and tail: those
+    are meant to diverge and are pinned separately by the qualifier checks above."""
+    block = preflight_block(skill)
+    start = block.index("**Read `" + SHARED_PREFLIGHT_REF)
+    end = block.index(SUMMARY_END, start) + len(SUMMARY_END)
+    return block[start:end]
+
+
+@pytest.mark.parametrize("skill", sorted(PREFLIGHT_BLOCKS))
+def test_shared_summary_states_every_marker(skill):
+    """Each copy carries the whole shared framing, not a truncated paraphrase."""
+    summary = shared_summary(skill)
+    missing = [m for m in SHARED_SUMMARY_MARKERS if m not in summary]
+    assert not missing, f"{skill}: shared summary is missing {missing}"
+
+
+def test_shared_summary_is_identical_across_the_autonomous_rungs():
+    """The three autonomous orchestrators paste the same summary; drift between them is
+    always a mistake, so byte-identity is the correct invariant for this half."""
+    rungs = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+    summaries = {s: shared_summary(s).strip() for s in rungs}
+    first = summaries[rungs[0]]
+    for skill, text in summaries.items():
+        assert text == first, (
+            f"{skill}'s shared pre-flight summary has drifted from "
+            f"{rungs[0]}'s; the summary half is meant to be identical")
+
+
+def test_summary_source_count_matches_the_protocol_file():
+    """The summary says 'four evidence sources'. Pin that against the protocol file's
+    actual step count, so adding a fifth source cannot leave four stale summaries."""
+    protocol = (SKILLS_DIR / "propose" / "references" / "in-flight-check.md").read_text()
+    headings = dict(re.findall(r"^## Step ([0-9]) — (.+)$", protocol, re.M))
+    # Steps 1-4 are the evidence sources; step 5 is the match bar, which is where the
+    # run of sources ends. A fifth source would push the match bar to step 6.
+    assert set("1234") <= set(headings), f"missing evidence-source steps: {headings}"
+    assert "match bar" in headings.get("5", "").lower(), (
+        f"step 5 is {headings.get('5')!r}, not the match bar — the evidence-source run "
+        "is no longer four long, but every orchestrator summary says 'four evidence "
+        "sources'; update the summaries")

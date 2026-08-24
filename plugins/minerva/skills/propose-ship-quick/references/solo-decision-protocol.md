@@ -43,7 +43,7 @@ For each, the escalation predicate still applies: if the self-check leaves you g
 
 These reach the user (or halt) regardless of the predicate — see `references/governance.md` for the full list and the bail-report format:
 
-- in-flight work collision (pre-flight);
+- in-flight work collision (pre-flight, `plugins/minerva/skills/propose/references/in-flight-check.md`);
 - an open issue matching the seed at intake (`plugins/minerva/skills/propose/references/issue-match.md`);
 - worktree-creation failure (git error, missing gitignore, slug collision);
 - ship-phase failures: CI auto-fix classified `other`, push rejection, `gh` auth failure;

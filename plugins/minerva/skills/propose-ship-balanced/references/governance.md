@@ -10,7 +10,7 @@
 **Global escalation counter.** Maintain across the run; per-run, owned by the main orchestration loop (it survives the inline `Skill`-tool delegations of Phases 6 / 7). Increment on every user escalation. If it reaches **3**, halt before the next decision point and report status. A run that escalates this often is not a good fit for this rung — recommend `minerva:propose-ship-auto` or `minerva:propose-ship`. Recovery: run the individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip the main model's judgment entirely).**
-- In-flight work collision (pre-flight).
+- In-flight work collision (pre-flight) — the check in `plugins/minerva/skills/propose/references/in-flight-check.md`.
 - An open issue matching the seed at intake — the ask in `plugins/minerva/skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
