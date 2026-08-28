@@ -44,7 +44,10 @@ walk invoked from a worktree, which is where `minerva:work` sessions live and ex
 The `cd … && pwd` wrapper is not decoration. Bare `dirname "$(git rev-parse
 --git-common-dir)"` returns `.` from the primary checkout and a relative path from any
 subdirectory; it is absolute only from inside a linked worktree — i.e. it is wrong in the
-common case, silently, and in the direction that produces a falsely-clean table.
+common case, silently, and in the direction that produces a falsely-clean table. The rule
+and its three-position test are
+`2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout`; this skill
+is one of its cases, not a second statement of it.
 
 `PLUGIN_SCRIPTS` follows the plugin-cache-first rule in
 `2026-06-03-constraint-skill-wraps-script-via-importable-api` — `find -L` included, because
