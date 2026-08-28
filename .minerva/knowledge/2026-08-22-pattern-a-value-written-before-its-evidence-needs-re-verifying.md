@@ -63,3 +63,4 @@ cheap failure. A stale-open issue lingers; a wrong auto-close destroys a record.
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — same shape: a later step that nothing schedules is not a step
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a rule living only in the skippable consumer enforces nothing
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — a record marking work handled must distinguish decided-and-done from decided-to-wait
+- [[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]] — see also

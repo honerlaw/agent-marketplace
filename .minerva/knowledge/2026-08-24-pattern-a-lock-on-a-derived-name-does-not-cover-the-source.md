@@ -46,3 +46,4 @@ it is one goal → many slugs, so the lock under-covers.
 - [[2026-08-05-pattern-read-then-act-is-not-a-lock]] — builds on
 - [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — builds on
 - [[2026-08-24-reference-listagents-returns-the-whole-fleet]] — see also
+- [[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]] — see also

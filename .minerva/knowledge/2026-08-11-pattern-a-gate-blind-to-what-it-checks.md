@@ -79,3 +79,4 @@ Three practical consequences:
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — see also
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also
 - [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — see also
+- [[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]] — see also
