@@ -28,6 +28,8 @@ General shape: when a test asks the corpus about a property a new feature introd
 about the property, not about the corpus's current contents. "Nothing does X yet" expires the
 first time something does.
 
+→ promoted to .minerva/knowledge/2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance.md
+
 ## The phase predicate stays hermetic on purpose
 
 `phase_progress` takes the merged-branch set as an argument rather than shelling out to git.
@@ -112,6 +114,8 @@ is DECIDED does not teach it at the points where the state is CONSUMED. Deciders
 are different surfaces. Same family as the definition-site/use-site split that let `priority: low`
 survive its own retirement earlier in this unit — twice in one work unit is not a coincidence,
 it is the shape of adding a concept to an existing system.
+
+→ promoted to .minerva/knowledge/2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces.md
 
 ## Review triage 2026-08-28 (phase 1)
 
