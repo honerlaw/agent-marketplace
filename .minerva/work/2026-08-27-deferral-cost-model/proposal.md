@@ -1,7 +1,7 @@
 # Proposal: deferral-cost-model
 
 **Date**: 2026-08-27
-**Status**: Draft
+**Status**: Shipped (2026-08-28)
 
 ## Goal
 
@@ -130,6 +130,36 @@ Ships *through* the phase-1 mechanism, which is what proves that mechanism works
   eliminate. Open issues below the bar are closed (#94), and #98, which passes the bar but predates
   the field, has `**Failure scenario**:` backfilled.
 
+## What shipped beyond the plan
+
+Three things were added during execution and are part of the merged result:
+
+- **The orchestrator phase loop.** All three autonomous orchestrators had been taught about
+  phasing at the scope check — where phases are *decided* — and nowhere else. Their Phase 7 would
+  ship phase 1, see `MERGED`, and report success while phases 2..N never shipped. Found by running
+  `minerva:propose-ship-quick` against this unit. Phase 7 of each now re-derives `phase_progress`
+  and loops back to Phase 6 while phases remain; `tests/test_phasing.py` holds it.
+- **Five review findings**, one from the author's minerva audit and four from an independent
+  reviewer: an unanchored proposal path and CWD-relative `sys.path` in the phase-resolution
+  snippets; `phase_numbering_gaps` implemented and tested but invoked by no workflow step;
+  `read_phases` truncating multi-line phase titles (live in this proposal); and two tests that
+  could not fail as named. All fixed, every new assertion mutation-tested.
+- **Primary-checkout path anchoring.** `git rev-parse --show-toplevel` returns the *linked
+  worktree* from inside one, which is wrong for paths reaching into `.minerva/worktrees/`.
+  Replaced with `cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd`, verified from three
+  positions. Surfaced by a peer session; their proposed form omitted the `cd … && pwd` and yields
+  a relative `.` from the primary checkout.
+
+Two deviations from the plan as written:
+
+- **Phase 1 keeps the bare `<date-slug>` branch**; only phases 2+ append `-phase-N`. The drafted
+  plan suffixed every phase. Keeping phase 1 bare leaves the worktree directory, all six `Target
+  resolution` blocks, the duplicate-slug check and cleanup's merge detection working untouched,
+  and removed this unit's own bootstrapping problem.
+- **`cleanup/SKILL.md` was split.** It sat at 9204 of its 9216-byte budget, so adding phase
+  awareness required moving the `## Removal` protocol into `references/removal.md` behind a
+  pointer — the progressive-disclosure pattern the budget test prescribes.
+
 ## Success criteria
 
 - `plugins/minerva/skills/promote/references/deferral-bar.md` exists, and a test asserts that every
@@ -180,3 +210,11 @@ Ships *through* the phase-1 mechanism, which is what proves that mechanism works
 None material. Both were resolved during grilling: knowledge stranded by an abandoned unit is handled
 by `promote`'s existing Mode B, and worktree handling across phases needs no new machinery because
 the record propagates by ordinary merge.
+
+## Deferred work
+
+- #104 — a script function added in a change is invisible to skill prose until the plugin redeploys (priority: medium)
+
+Also applied to the existing tracker under the new bar: **#94 closed** (a design question — no
+failure scenario can be written for it), and **#98** backfilled with a `**Failure scenario**:`
+line and re-levelled from the retired `low` to `medium`.
