@@ -35,7 +35,7 @@ def test_identical_copies_do_not_diverge(tmp_path):
     silent, or every such session hard-fails for no reason."""
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
     _tree(tmp_path / "wt", "work_status", "x = 1\n")
-    assert divergence("work_status", resolved, tmp_path / "wt") is None
+    assert divergence(resolved, tmp_path / "wt") is None
 
 
 def test_differing_copies_diverge(tmp_path):
@@ -43,9 +43,9 @@ def test_differing_copies_diverge(tmp_path):
     other copy."""
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
     _tree(tmp_path / "wt", "work_status", "x = 2\n")
-    found = divergence("work_status", resolved, tmp_path / "wt")
+    found = divergence(resolved, tmp_path / "wt")
     assert found is not None
-    assert found[0].name == "work_status.py" and found[1].name == "work_status.py"
+    assert found[0].is_dir() and found[1].is_dir()
 
 
 def test_a_consumer_project_is_a_silent_no_op(tmp_path):
@@ -55,24 +55,37 @@ def test_a_consumer_project_is_a_silent_no_op(tmp_path):
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
     consumer = tmp_path / "someones-app"
     (consumer / "src").mkdir(parents=True)
-    assert divergence("work_status", resolved, consumer) is None
+    assert divergence(resolved, consumer) is None
 
 
 def test_no_git_repo_is_a_silent_no_op(tmp_path):
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
-    assert divergence("work_status", resolved, None) is None
+    assert divergence(resolved, None) is None
 
 
 def test_the_same_file_does_not_diverge(tmp_path):
     """Running from the primary checkout itself: resolved and local are one file."""
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
-    assert divergence("work_status", resolved, tmp_path / "primary") is None
+    assert divergence(resolved, tmp_path / "primary") is None
 
 
-def test_a_module_absent_from_the_tree_does_not_diverge(tmp_path):
+def test_a_module_present_on_only_one_side_is_a_divergence(tmp_path):
+    """A module added or removed on the branch is as much a divergence as an edited one — the
+    per-module design returned None here, which is how a newly added script went unnoticed."""
     resolved = _tree(tmp_path / "primary", "work_status", "x = 1\n")
-    _tree(tmp_path / "wt", "something_else", "y = 1\n")
-    assert divergence("work_status", resolved, tmp_path / "wt") is None
+    _tree(tmp_path / "wt", "work_status", "x = 1\n")
+    (tmp_path / "wt" / TREE_SCRIPTS / "brand_new.py").write_text("z = 1\n")
+    assert divergence(resolved, tmp_path / "wt") is not None
+
+
+def test_a_sibling_module_diverging_is_caught(tmp_path):
+    """The transitive-dependency hole in the per-module design: a site guarding `workstream_status`
+    would not have noticed a stale `work_status.py` it imports. Directory scope catches it."""
+    resolved = _tree(tmp_path / "primary", "workstream_status", "a = 1\n")
+    (resolved / "work_status.py").write_text("b = 1\n")
+    local = _tree(tmp_path / "wt", "workstream_status", "a = 1\n")
+    (local / "work_status.py").write_text("b = 2\n")          # only the SIBLING differs
+    assert divergence(resolved, tmp_path / "wt") is not None
 
 
 def test_comparison_is_on_contents_not_paths(tmp_path):
@@ -81,7 +94,7 @@ def test_comparison_is_on_contents_not_paths(tmp_path):
     resolved = _tree(tmp_path / "primary", "work_status", "same\n")
     local_dir = _tree(tmp_path / "wt", "work_status", "same\n")
     assert local_dir.resolve() != resolved.resolve()      # genuinely different paths
-    assert divergence("work_status", resolved, tmp_path / "wt") is None
+    assert divergence(resolved, tmp_path / "wt") is None
 
 
 def test_the_override_short_circuits_the_check(tmp_path, monkeypatch):
@@ -89,11 +102,11 @@ def test_the_override_short_circuits_the_check(tmp_path, monkeypatch):
     without being second-guessed."""
     monkeypatch.setenv("MINERVA_SCRIPTS", str(tmp_path))
     monkeypatch.chdir(tmp_path)
-    assert main(["plugin_guard.py", "work_status"]) == 0
+    assert main(["plugin_guard.py"]) == 0
 
 
 def test_bad_usage_exits_two():
-    assert main(["plugin_guard.py"]) == 2
+    assert main(["plugin_guard.py", "extra-arg"]) == 2
 
 
 def test_the_guard_exits_non_zero_and_explains_itself(tmp_path):
@@ -106,10 +119,10 @@ def test_the_guard_exits_non_zero_and_explains_itself(tmp_path):
     _tree(wt, "work_status", "x = 2\n")
     subprocess.run(["git", "init", "-q"], cwd=wt, check=True)
 
-    proc = subprocess.run([sys.executable, str(primary / "plugin_guard.py"), "work_status"],
+    proc = subprocess.run([sys.executable, str(primary / "plugin_guard.py")],
                           cwd=wt, capture_output=True, text=True)
     assert proc.returncode == 1, proc.stderr
-    assert "stale" in proc.stderr and "work_status" in proc.stderr
+    assert "stale" in proc.stderr
     assert "MINERVA_SCRIPTS" in proc.stderr, "the message must name its own escape hatch"
 
 

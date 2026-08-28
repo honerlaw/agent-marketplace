@@ -18,23 +18,29 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = REPO / "plugins" / "minerva" / "skills"
 
-# Every place a skill resolves the scripts directory, with the module its snippet goes on to use.
-# Adding a row here is the registration; CI fails until the guard is actually present.
+# Every file that resolves the scripts directory. Adding a row here is the registration; CI fails
+# until the guard is actually present.
+#
+# Deliberately files, not (file, module) pairs. The first version of this set paired each file with
+# one module name, which made a real hole invisible: `cleanup/references/reconciliation.md` runs
+# BOTH `knowledge_lint` and `synthesis_status`, and only the first was registered or guarded. The
+# guard now compares the whole scripts directory, so there is no module to pair and no second
+# module to forget.
 REGISTERED_SITES = {
-    ("propose/references/on-approval.md", "work_status"),
-    ("lint/SKILL.md", "knowledge_lint"),
-    ("migrate-fix/SKILL.md", "knowledge_rename"),
-    ("status/SKILL.md", "workstream_status"),
-    ("cleanup/references/reconciliation.md", "knowledge_lint"),
-    ("cleanup/references/phased-units.md", "work_status"),
-    ("migrate/SKILL.md", "migration_status"),
-    ("lint-fix/SKILL.md", "knowledge_fix"),
-    ("ship/references/protocol.md", "work_status"),
-    ("synthesize/SKILL.md", "synthesis_status"),
+    "propose/references/on-approval.md",
+    "lint/SKILL.md",
+    "migrate-fix/SKILL.md",
+    "status/SKILL.md",
+    "cleanup/references/reconciliation.md",
+    "cleanup/references/phased-units.md",
+    "migrate/SKILL.md",
+    "lint-fix/SKILL.md",
+    "ship/references/protocol.md",
+    "synthesize/SKILL.md",
 }
 
 _RESOLVE_RE = re.compile(r"PLUGIN_SCRIPTS=\$\(find")
-_GUARD_RE = re.compile(r'python3 "\$PLUGIN_SCRIPTS/plugin_guard\.py" (\w+)')
+_GUARD_RE = re.compile(r'python3 "\$PLUGIN_SCRIPTS/plugin_guard\.py"')
 
 
 def _docs():
@@ -48,25 +54,25 @@ def _resolving_files():
 def test_the_registered_set_matches_reality():
     """A new resolution site must be registered, not silently unguarded."""
     found = {str(p.relative_to(SKILLS)) for p in _resolving_files()}
-    registered = {rel for rel, _ in REGISTERED_SITES}
+    registered = set(REGISTERED_SITES)
     assert found == registered, (
         f"unregistered resolution sites: {sorted(found - registered)}; "
         f"registered but absent: {sorted(registered - found)}"
     )
 
 
-@pytest.mark.parametrize("rel,module", sorted(REGISTERED_SITES))
-def test_every_resolution_site_guards_its_module(rel, module):
-    """The guard must name the module the snippet actually imports — guarding the wrong module
-    checks a file the snippet never loads and passes while the real one is stale."""
+@pytest.mark.parametrize("rel", sorted(REGISTERED_SITES))
+def test_every_resolution_is_guarded(rel):
+    """One guard per resolution. Counted, not merely present: a file with two resolution sites
+    (`lint/SKILL.md`, `lint-fix/SKILL.md`) must carry two guards, or one path is unprotected."""
     text = (SKILLS / rel).read_text()
-    guarded = set(_GUARD_RE.findall(text))
-    assert module in guarded, (
-        f"{rel} resolves PLUGIN_SCRIPTS but never guards '{module}' (guards: {sorted(guarded)})"
+    assert len(_GUARD_RE.findall(text)) == len(_RESOLVE_RE.findall(text)), (
+        f"{rel}: {len(_RESOLVE_RE.findall(text))} resolution site(s) but "
+        f"{len(_GUARD_RE.findall(text))} guard(s)"
     )
 
 
-@pytest.mark.parametrize("rel", sorted({r for r, _ in REGISTERED_SITES}))
+@pytest.mark.parametrize("rel", sorted(REGISTERED_SITES))
 def test_each_resolution_line_is_paired_with_a_guard(rel):
     """One guard per resolution, positioned so it runs BEFORE the call it protects.
 

@@ -32,7 +32,7 @@ path, which git refuses to merge rather than merging silently.
 Run the planner and show the user what would move:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" knowledge_rename || exit 1; }; python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_rename.py"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_rename.py"
 ```
 
 It prints every `old -> new` pair and exits without touching anything. Three outcomes

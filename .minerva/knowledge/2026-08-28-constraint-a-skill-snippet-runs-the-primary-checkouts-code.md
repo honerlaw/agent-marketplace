@@ -56,8 +56,17 @@ case it carved out.
 `scripts/plugin_guard.py`, invoked once per resolution site:
 
 ```bash
-[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" <module> || exit 1; }
+[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 ```
+
+- **It compares the whole scripts directory, not a named module.** The first design took a module
+  argument, and review found two holes in it. A single site can invoke several scripts —
+  `cleanup/references/reconciliation.md` runs `knowledge_lint` *and* `synthesis_status`, and only
+  the first was named. And every module imports siblings (`workstream_status` imports
+  `work_status`; most import `knowledge_lint`/`knowledge_spans`), so naming one left its transitive
+  dependencies unchecked. Directory scope makes both **unrepresentable** rather than patched, and
+  deletes the argument that could name the wrong module. A file present on only one side counts as
+  divergence too — an added or removed script is as stale as an edited one.
 
 - **Exits non-zero; does not warn.** A printed warning from a snippet is unenforced — the caller
   runs the stale code anyway, which is a constraint restated at runtime rather than enforced at
@@ -73,7 +82,11 @@ case it carved out.
   empty `PLUGIN_SCRIPTS` means the fallback *is* the working tree and nothing can diverge.
 
 `tests/test_plugin_guard_sites.py` pins the registered site set, so a new resolution site is a
-deliberate registration rather than a silent omission.
+deliberate registration rather than a silent omission. It **counts** guards against resolutions
+per file rather than checking presence: two files carry two resolution sites each, and a presence
+check passes while one of them is unprotected. That set was itself the vehicle for the bug above —
+pairing each file with one module name made the second module invisible to the test *and* to the
+reader, which is why the registration is now files only.
 
 ## Placement: the sites are not uniform
 

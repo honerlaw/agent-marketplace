@@ -15,7 +15,15 @@ plugin-redeploy lag (issue #104); the silent case is what this guard exists for.
 
 Invoked as one line at each `PLUGIN_SCRIPTS=` site::
 
-    python3 "${SCRIPTS}/plugin_guard.py" work_status || exit 1
+    [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
+
+**It compares the whole scripts directory, not one named module.** A per-module check was the
+first design and it had two holes, both found by review: a site can invoke more than one script
+(`cleanup/references/reconciliation.md` runs `knowledge_lint` *and* `synthesis_status`), and every
+module imports siblings — `workstream_status` imports `work_status`, and most modules import
+`knowledge_lint`/`knowledge_spans` — so naming one module leaves its transitive dependencies
+unchecked. Comparing the directory makes both unrepresentable rather than patched, and removes the
+argument that could name the wrong module.
 
 **It exits non-zero rather than printing a warning.** A printed warning from inside a snippet is
 unenforced — the caller runs the stale code anyway — which is a constraint restated at runtime
@@ -61,8 +69,8 @@ def working_tree_root():
     return Path(root) if root else None
 
 
-def divergence(module: str, resolved_dir: Path, tree_root):
-    """`(resolved, local)` when the two copies of `module` differ; None when they agree.
+def divergence(resolved_dir: Path, tree_root):
+    """`(resolved_dir, local_dir)` when the two scripts directories differ; None when they agree.
 
     None — meaning "proceed" — is returned for every case that is not a genuine divergence:
 
@@ -71,34 +79,38 @@ def divergence(module: str, resolved_dir: Path, tree_root):
       where minerva is an installed copy and the cache-only resolution cannot skew against a
       worktree at all. The guard ships in shared skill prose to every install, so a false positive
       here would emit warnings about worktrees and symlinks at users who have neither.
-    - **The tree has no copy of this module**: nothing to be stale against.
-    - **The two paths are the same file**: running from the primary checkout itself.
+    - **The two paths are the same directory**: running from the primary checkout itself.
 
-    The comparison is on **file contents**, never realpaths. Inside a worktree the realpaths
-    always differ, so a path comparison would hard-fail every self-development session even when
-    the code is byte-identical — which is the common case and must stay silent.
+    The comparison is over **every `*.py` in the directory**, by content. Scoping it to one named
+    module left two holes: a site may invoke several scripts, and every module imports siblings,
+    so a stale transitive dependency passed unnoticed. Directory scope closes both by construction.
+
+    Content, never realpaths — inside a worktree the realpaths always differ, so a path comparison
+    would hard-fail every self-development session even when the code is byte-identical.
     """
     if tree_root is None:
         return None
     local_dir = tree_root / _TREE_SCRIPTS
-    if not local_dir.is_dir():
+    if not local_dir.is_dir() or not resolved_dir.is_dir():
         return None
-    local = local_dir / f"{module}.py"
-    resolved = resolved_dir / f"{module}.py"
-    if not local.is_file() or not resolved.is_file():
+    if local_dir.resolve() == resolved_dir.resolve():
         return None
-    if local.resolve() == resolved.resolve():
-        return None
-    if filecmp.cmp(str(local), str(resolved), shallow=False):
-        return None
-    return resolved, local
+
+    names = {p.name for p in local_dir.glob("*.py")} | {p.name for p in resolved_dir.glob("*.py")}
+    match, mismatch, errors = filecmp.cmpfiles(str(resolved_dir), str(local_dir),
+                                               sorted(names), shallow=False)
+    # `errors` are files present on one side only — a module added or removed on the branch, which
+    # is a divergence exactly as much as an edited one.
+    if mismatch or errors:
+        return resolved_dir, local_dir
+    return None
 
 
 def main(argv):
-    if len(argv) != 2:
-        print("usage: plugin_guard.py <module-name>", file=sys.stderr)
+    if len(argv) != 1:
+        print("usage: plugin_guard.py   (no arguments; compares the whole scripts directory)",
+              file=sys.stderr)
         return 2
-    module = argv[1]
 
     # An explicit choice is always honoured — the escape hatch at the call site. Someone who has
     # deliberately pointed at a scripts directory does not need to be told it is not the one the
@@ -106,15 +118,15 @@ def main(argv):
     if os.environ.get("MINERVA_SCRIPTS"):
         return 0
 
-    found = divergence(module, Path(__file__).resolve().parent, working_tree_root())
+    found = divergence(Path(__file__).resolve().parent, working_tree_root())
     if found is None:
         return 0
 
     resolved, local = found
     print(
-        f"minerva: refusing to run against a stale '{module}'.\n"
-        f"  would import : {resolved}\n"
-        f"  you are editing: {local}\n"
+        f"minerva: refusing to run against a stale scripts directory.\n"
+        f"  would import from: {resolved}\n"
+        f"  you are editing  : {local}\n"
         f"These differ. Skill snippets resolve through ~/.claude/plugins/minerva, which on a\n"
         f"self-hosting checkout symlinks to the PRIMARY checkout — so this would execute that\n"
         f"checkout's branch, not your worktree's. Merge your change, or set MINERVA_SCRIPTS to\n"

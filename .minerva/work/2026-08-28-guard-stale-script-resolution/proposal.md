@@ -38,9 +38,12 @@ session. This unit does not pretend to fix that half.
 
 **A single-sourced guard, invoked in one line at each site.**
 
-1. **`scripts/plugin_guard.py`** — given a module name, compares the resolved scripts directory's
-   copy against the current working tree's `plugins/minerva/scripts/<module>.py`, and exits
-   non-zero when they differ.
+1. **`scripts/plugin_guard.py`** — compares the resolved scripts directory against the current
+   working tree's `plugins/minerva/scripts/`, over every `*.py` by content, and exits non-zero
+   when they differ.
+   - **Whole-directory, not a named module.** A per-module argument was the first design; the
+     completion Verifier found two holes in it (a site invoking two scripts, and unchecked
+     transitive imports). Directory scope closes both by construction.
    - **Compares file bytes, not realpaths.** Realpaths always differ inside a worktree, so a
      realpath check would hard-fail every self-development session even when the code is identical.
    - **Silent no-op when the working tree has no `plugins/minerva/scripts/`** — which is every
@@ -51,7 +54,9 @@ session. This unit does not pretend to fix that half.
      escape hatch at the call site that
      `2026-08-11-pattern-an-unenforced-constraint-is-aspirational` prescribes.
 2. **One line at each of the 12 sites**, immediately after the `PLUGIN_SCRIPTS=$(find …)`
-   assignment: `python3 "${SCRIPTS}/plugin_guard.py" <module> || exit 1`.
+   assignment: `[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }`.
+   - **No `$ROOT` fallback**, which is both required (see below) and right: an empty
+     `PLUGIN_SCRIPTS` means the fallback *is* the working tree, so nothing can diverge.
    - **Bash level, never inside the `python3 -c` payload.** `tests/test_skill_snippets.py:163-165`
      byte-substitutes `'${PLUGIN_SCRIPTS:-$ROOT/scripts}'` inside that payload and then asserts
      `"$ROOT" not in prog`; adding `$ROOT`-bearing text there trips it.
@@ -78,13 +83,15 @@ live when this was diagnosed.
 
 ## Success criteria
 
-- `scripts/plugin_guard.py` exists and exits non-zero when the resolved copy of a named module
-  differs from the current working tree's copy; zero when they match.
+- `scripts/plugin_guard.py` exists and exits non-zero when the resolved scripts directory differs
+  from the current working tree's copy — including a sibling module the caller never names, and a
+  file present on only one side; zero when they match.
 - It is a **silent no-op** when the working tree has no `plugins/minerva/scripts/` — asserted by a
   test that simulates a consumer project.
 - `MINERVA_SCRIPTS` skips the comparison and is honoured as the resolved directory.
 - All **12** `PLUGIN_SCRIPTS=$(find …)` sites across 10 files carry the guard line, at bash level;
-  a structural test enumerates the sites and fails if one lacks it.
+  a structural test **counts** guards against resolutions per file, so a file with two resolution
+  sites needs two guards.
 - The guard line appears **outside** every `python3 -c` payload, and `tests/test_skill_snippets.py`
   still passes unchanged.
 - A new knowledge entry states the hazard and **explicitly delimits**
