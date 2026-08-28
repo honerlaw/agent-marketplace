@@ -196,3 +196,37 @@ three with no context.
 The pattern is not "reviews are good". It is specific: the author's audit is strong on
 "does this violate a rule I can look up" and weak on "is this thing I just built actually wired
 to anything, and does the test I wrote actually test it". Those need someone who did not write it.
+
+## `git rev-parse --show-toplevel` is wrong for any path that reaches into a worktree
+
+A peer session (building a status skill) flagged this and it applied to code I had shipped in
+#101 an hour earlier. `--show-toplevel` returns the *linked worktree* root when invoked from
+inside one; all three phasing snippets anchor paths that reach INTO `.minerva/worktrees/`, so
+they need the primary checkout. Invoked from inside a worktree they would misresolve — either
+FileNotFoundError, or the stale merged copy of a proposal, which derives a wrong `next_branch`
+silently.
+
+The replacement, verified from the primary checkout, from inside a linked worktree, and from a
+nested subdirectory:
+
+    ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
+
+The `cd … && pwd` is not decoration. `git rev-parse --git-common-dir` prints a RELATIVE `.git`
+from the primary checkout, so the bare `dirname` is `.` — a CWD-relative ROOT, which is the exact
+anti-pattern `2026-06-03-constraint-skill-wraps-script-via-importable-api` forbids. The peer's
+version had this bug; I sent the correction back. Absolute in all three positions is the property
+worth testing for, not "it works where I ran it".
+
+Note the existing constraint entry already documented the `--show-toplevel` hazard in its
+Implications ("a skill that genuinely needs the main checkout cannot use --show-toplevel from
+inside a worktree") — and I read that entry during this unit's review and still shipped it. Knowing
+the hazard is stated somewhere is not the same as checking whether MY path is one of the cases.
+
+## A stale primary checkout reads as a missing feature
+
+While verifying the fix, the snippet threw `ImportError: cannot import name 'read_phases'` from
+the primary checkout — not because the fix was wrong, but because local `main` was still at the
+pre-merge commit; I had fetched without fast-forwarding. Anything that resolves scripts through
+`$ROOT` reads whatever branch that checkout happens to be on, which can lag origin arbitrarily.
+Same class as the plugin-cache skew logged above: two different ways for "the code is right there"
+to be false.
