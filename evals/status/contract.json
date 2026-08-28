@@ -1,0 +1,60 @@
+{
+  "skill": "status",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "status"
+    },
+    "non_empty": [
+      "description"
+    ],
+    "contains": [
+      "allowed-tools"
+    ]
+  },
+  "anchors": [
+    "workstream_status",
+    "read-only",
+    "git rev-parse --git-common-dir",
+    "phase_branch",
+    "PLUGIN_SCRIPTS",
+    "work_status",
+    {
+      "any_of": [
+        "--show-toplevel"
+      ]
+    },
+    {
+      "any_of": [
+        "Merged-PR first",
+        "squash-merged"
+      ]
+    },
+    {
+      "any_of": [
+        "is not a cleanup signal",
+        "not a cleanup signal"
+      ]
+    },
+    {
+      "file": "references/tables.md",
+      "any_of": [
+        "Next step"
+      ]
+    },
+    {
+      "file": "references/tables.md",
+      "any_of": [
+        "Teardown waits"
+      ]
+    }
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}
