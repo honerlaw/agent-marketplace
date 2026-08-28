@@ -13,7 +13,7 @@ on the invocation line. Never infer orchestrated mode from context — pass the 
 | Skill | How | Mode argument |
 |---|---|---|
 | `minerva:work` | inlined | `--auto=propose-ship-auto` |
-| `minerva:replan` | inlined | `--auto=propose-ship-auto` |
+| `minerva:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
 | `minerva:review` | inlined | `--auto=propose-ship-auto` |
 | `minerva:promote` | inlined | `--auto=propose-ship-auto` |
 | `minerva:ship` | invoked | `--auto=propose-ship-auto` |
@@ -86,7 +86,7 @@ Mirrors `minerva:replan`'s protocol with panel-based acceptance.
 
 ## Phase 3 — Review (inline)
 
-Replaces the user-interactive triage in `minerva:review`. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
+Replaces the user-interactive triage in `minerva:review`, whose protocol is read in `--auto=propose-ship-auto` mode. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
 
 1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), and relevant `.minerva/knowledge/` entries.
 
@@ -106,7 +106,7 @@ Replaces the user-interactive triage in `minerva:review`. Diff resolution and fi
 
 ## Phase 4 — Promote (inline)
 
-Replaces the user-interactive partition in `minerva:promote` Mode A.
+Replaces the user-interactive partition in `minerva:promote` Mode A, whose protocol is read in `--auto=propose-ship-auto` mode.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
@@ -150,7 +150,9 @@ These two gates are operational tier and don't warrant panel calls — the main 
 
 If `minerva:ship`'s CI auto-fix classifier marks a failure as `other` or bails on a non-trivial test/build, **do not panel-vote on the bail** — escalate to the user with the failing job log. This is a hard escalation trigger.
 
-When `minerva:ship` returns, continue to Phase 7.
+When `minerva:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
+turn on its CI watch, it re-enters this gate itself via `--cleanup-only` when checks settle — exactly
+one of the two paths runs, never both.
 
 ## Phase 7 — Cleanup gate
 

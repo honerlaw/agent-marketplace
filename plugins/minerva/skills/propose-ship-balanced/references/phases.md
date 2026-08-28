@@ -15,7 +15,7 @@ on the invocation line. Never infer orchestrated mode from context — pass the 
 | Skill | How | Mode argument |
 |---|---|---|
 | `minerva:work` | inlined | `--auto=propose-ship-balanced` |
-| `minerva:replan` | inlined | `--auto=propose-ship-balanced` |
+| `minerva:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
 | `minerva:review` | inlined | `--auto=propose-ship-balanced` |
 | `minerva:promote` | inlined | `--auto=propose-ship-balanced` |
 | `minerva:ship` | invoked | `--auto=propose-ship-balanced` |
@@ -60,7 +60,7 @@ Mirrors `minerva:replan` with reviewer-gated acceptance.
 
 ## Phase 3 — Review (inline)
 
-Replaces the user-interactive triage in `minerva:review`.
+Replaces the user-interactive triage in `minerva:review`, whose protocol is read in `--auto=propose-ship-balanced` mode.
 
 1. **Read context.** `proposal.md`, all `replan.md`, current `scratchpad.md` (including prior `## Review triage` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), relevant `.minerva/knowledge/`.
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution".
@@ -72,7 +72,7 @@ Replaces the user-interactive triage in `minerva:review`.
 
 ## Phase 4 — Promote (inline)
 
-Replaces the user-interactive partition in `minerva:promote` Mode A. All gates here are **solo**.
+Replaces the user-interactive partition in `minerva:promote` Mode A, whose protocol is read in `--auto=propose-ship-balanced` mode. All gates here are **solo**.
 
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5.
@@ -98,7 +98,9 @@ Invoke `minerva:ship <date-slug> --auto=propose-ship-balanced` via the `Skill` t
 
 These two gates are operational tier — the main model's draft from `proposal.md` is good enough by definition. If `minerva:ship`'s CI auto-fix classifier marks a failure `other` or bails on a non-trivial test/build, **escalate to the user with the failing job log** — a hardcoded trigger, never silently decided.
 
-When `minerva:ship` returns, continue to Phase 7.
+When `minerva:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
+turn on its CI watch, it re-enters this gate itself via `--cleanup-only` when checks settle — exactly
+one of the two paths runs, never both.
 
 ## Phase 7 — Cleanup gate
 

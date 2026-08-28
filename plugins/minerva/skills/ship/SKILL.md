@@ -21,11 +21,12 @@ run. Act on the argument — never on a judgment about who is calling
 
 - **Hard gates #1 and #2** (commit message, PR title + body) accept their drafts without prompting.
 - **The CI-watch wake-up carries the caller**, so the orchestrator survives the wait.
-- **The final report hands control back to `<orchestrator>`'s Phase 7** by invoking
-  `minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool, instead of printing a
-  recommendation addressed to a human. Without this the run ends inside ship and the orchestrator's
-  cleanup gate never fires — the failure `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption`
-  describes.
+- **The final report hands control back to `<orchestrator>`'s Phase 7 — but only when this run
+  resumed from ship's own CI-watch wake-up**, because that is precisely when the orchestrator's turn
+  already ended and its Phase 6 will never resume. On a synchronous return the orchestrator continues
+  to Phase 7 itself. Exactly one of the two paths runs; doing both runs the cleanup gate twice.
+  Without the wake-up path the run ends inside ship and the cleanup gate never fires — the failure
+  `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` describes.
 
 Absent the argument every gate behaves exactly as written.
 

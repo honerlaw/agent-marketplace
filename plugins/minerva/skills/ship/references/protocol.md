@@ -291,10 +291,19 @@ The recommendation:
 - CI failed after 3 fix iterations → "Investigate the failure manually; the fix loop bailed."
 - CI still pending → "Next watch wake scheduled."
 
-**Under `--auto=<orchestrator>`, the report is not the end of the run.** After printing it, invoke
-`minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool — the re-entry all four
-orchestrators document, which skips phases 1-6 and runs their cleanup gate. Do **not** print the
-"Run `minerva:cleanup` afterward" recommendation: it addresses a human who is not driving this run.
+**Under `--auto=<orchestrator>`, the report may not be the end of the run** — and which of the two
+paths applies is decided by an observable fact, not a guess:
+
+- **Resumed from a CI-watch wake-up** (this invocation carried `--watch-iteration`): the orchestrator's
+  turn ended when the watch was armed, so its Phase 6 will never resume. Hand back by invoking
+  `minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool — the re-entry all four
+  orchestrators document, which skips phases 1-6 and runs their cleanup gate.
+- **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
+  invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate
+  twice — a second `minerva:cleanup`, and potentially a second knowledge-reconciliation PR.
+
+Either way, do not print the "Run `minerva:cleanup` afterward" recommendation: it addresses a human
+who is not driving this run.
 
 ## Lifecycle nudges
 

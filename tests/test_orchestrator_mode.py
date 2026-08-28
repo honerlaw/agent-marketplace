@@ -42,10 +42,13 @@ AUTONOMOUS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"
 MODE_DECL_RE = re.compile(r"^\*\*Mode argument\*\*:\s*`(--[a-z-]+)`\s*$", re.M)
 
 # A row of an orchestrator's `## Delegated skills` table.
+# `invoked` = run through the Skill tool. `inlined` = its own prose is executed from within a
+# phase. `cited` = only a section is referenced for format, so no mode applies.
 INVENTORY_ROW_RE = re.compile(
-    r"^\|\s*`minerva:([a-z-]+)`\s*\|\s*(inlined|invoked)\s*\|\s*`(--[a-z-]+)(?:=[^`]*)?`\s*\|",
-    re.M,
+    r"^\|\s*`minerva:([a-z-]+)`\s*\|\s*(inlined|invoked|cited)\s*\|\s*([^|]*?)\s*\|", re.M
 )
+FLAG_RE = re.compile(r"`(--[a-z-]+)")
+INVENTORY_HEADING = "## Delegated skills"
 
 # Opening backtick + name, with NO closing-backtick requirement. An invocation is written
 # ``Invoke `minerva:ship <date-slug> --auto=X` via the `Skill` tool``, so the skill name is not
@@ -77,7 +80,24 @@ def declared_mode_argument(skill: str) -> str | None:
 
 def inventory(orch: str) -> dict[str, tuple[str, str]]:
     """skill -> (how, flag) from the orchestrator's `## Delegated skills` table."""
-    return {m.group(1): (m.group(2), m.group(3)) for m in INVENTORY_ROW_RE.finditer(phases_text(orch))}
+    out = {}
+    for m in INVENTORY_ROW_RE.finditer(phases_text(orch)):
+        flag = FLAG_RE.search(m.group(3))
+        out[m.group(1)] = (m.group(2), flag.group(1) if flag else None)
+    return out
+
+
+def phases_text_outside_inventory(orch: str) -> str:
+    """Everything but the `## Delegated skills` table.
+
+    The table lists each skill's mode argument, so a check that scans the whole file is satisfied
+    by the table itself and can never fail — the table is the claim, not evidence for it. Found by
+    a Verifier that blanked a phase body's mode mention and watched the suite stay green.
+    """
+    text = phases_text(orch)
+    start = text.index(INVENTORY_HEADING)
+    end = text.index("\n## ", start + len(INVENTORY_HEADING))
+    return text[:start] + text[end:]
 
 
 def invocation_lines(text: str) -> list[str]:
@@ -99,6 +119,8 @@ def test_every_inventoried_skill_declares_the_same_mode_argument(orch):
     """
     mismatches = []
     for skill, (_how, flag) in sorted(inventory(orch).items()):
+        if flag is None:
+            continue  # `cited` rows carry no mode
         declared = declared_mode_argument(skill)
         if declared != flag:
             mismatches.append(f"{skill}: orchestrator passes {flag}, skill declares {declared!r}")
@@ -148,11 +170,16 @@ def test_inlined_skills_name_their_mode_argument_somewhere(orch):
     """An inlined skill's protocol is restated in the phases, so the mode must still be stated
     there — otherwise the orchestrator reads the skill's interactive gate text with nothing
     signalling otherwise, which is the original defect."""
-    text = phases_text(orch)
+    # Per skill, not per file: `--auto=<orch>` is the SAME string for every inlined skill, so a
+    # bare "does it appear anywhere" check is satisfied for all three by any one of them. The
+    # mention has to sit on the same line as the skill it applies to, or it is evidence for
+    # nothing (`2026-08-11-pattern-a-gate-blind-to-what-it-checks`).
+    lines = phases_text_outside_inventory(orch).splitlines()
     bad = [
         skill
         for skill, (how, flag) in sorted(inventory(orch).items())
-        if how == "inlined" and f"{flag}={orch}" not in text
+        if how == "inlined"
+        and not any(f"`minerva:{skill}`" in l and f"{flag}={orch}" in l for l in lines)
     ]
     assert not bad, f"{orch} inlines {bad} without naming its mode argument in the phase protocols"
 
@@ -174,3 +201,53 @@ def test_a_citation_is_not_treated_as_an_invocation():
     citation = 'Append the entry to `replan.md` per `minerva:replan`\'s "On approval — file write".'
     assert INVOCATION_MARKER not in citation
     assert invocation_lines(citation) == []
+
+
+# --- The ship -> Phase 7 hand-back: exactly one path, never both ---------------------
+#
+# `minerva:ship` ends its turn on the CI watch, so an orchestrator that delegated to it loses
+# control flow. Ship therefore re-enters the orchestrator's cleanup gate itself via
+# `--cleanup-only`. But the orchestrator's Phase 6 ALSO continues to Phase 7 when ship returns in
+# the same turn. Both claims shipped unconditionally at first, which would run the cleanup gate
+# twice — a second `minerva:cleanup` and potentially a second reconciliation PR.
+#
+# There is no code here to test; it is an instruction to a model. What IS testable is that the two
+# halves stay mutually exclusive: a hand-back with no exclusion clause is the defect returning.
+
+SHIP_PROTOCOL = SKILLS / "ship" / "references" / "protocol.md"
+
+
+def hand_back_block() -> str:
+    """Just the `--auto` hand-back block.
+
+    Scoped deliberately: asserting against the whole file passes on words that happen to occur
+    elsewhere in 22KB of prose, which is how the first version of this test read clean while the
+    exclusion clause was deleted.
+    """
+    text = SHIP_PROTOCOL.read_text()
+    start = text.index("**Under `--auto=<orchestrator>`")
+    return text[start : text.index("\n## ", start)]
+
+
+def test_ship_hand_back_states_the_synchronous_exclusion():
+    block = hand_back_block()
+    assert "--cleanup-only" in block, "ship no longer documents the orchestrator hand-back"
+    assert "--watch-iteration" in block, (
+        "ship's hand-back must key off an observable fact (did this run resume from a wake-up), "
+        "not a guess about whether the orchestrator is still live"
+    )
+    assert "twice" in block, (
+        "ship documents the `--cleanup-only` hand-back without the synchronous-path exclusion — "
+        "Phase 6 also continues to Phase 7, so both firing runs the cleanup gate twice"
+    )
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_phase_six_states_that_exactly_one_path_runs(orch):
+    text = phases_text(orch)
+    i = text.index("## Phase 6")
+    body = text[i : text.index("\n## ", i + 5)]
+    assert "same turn" in body and "never both" in body, (
+        f"{orch} Phase 6 continues to Phase 7 without excluding ship's own `--cleanup-only` "
+        "re-entry; on the wake-up path both would run the cleanup gate"
+    )
