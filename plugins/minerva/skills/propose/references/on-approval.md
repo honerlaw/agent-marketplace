@@ -126,7 +126,9 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
     - **Phase numbering** — only if the proposal declares `## Phases`. Ask the parser, not your eyes:
 
       ```bash
-      ROOT="$(git rev-parse --show-toplevel)"
+      # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
+      # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
+      ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
       PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
       python3 -c "
       import sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')

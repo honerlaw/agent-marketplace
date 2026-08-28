@@ -45,10 +45,12 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → `minerva:review`. The skill reads the proposal + replans, audits the branch-vs-default diff (or the uncommitted diff if the tree is dirty), runs `code-review:code-review` (or a structured inline check if no PR exists yet), and walks you through each finding. Triage state is persisted to scratchpad so re-runs pre-fill prior dispositions. Run review **before** promote so review-derived notes flow through promote's partition.
 
 **"Tests pass, the feature works, success criteria are met."**
-→ `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — you decide per-item whether to keep them (filed as a GitHub issue at a `critical`/`high`/`medium`/`low` priority when the repo can host one, otherwise appended to `followups.md`), seed a new proposal, or discard.
+→ `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — each is routed through the deferral bar below: a defect with a writable failure scenario becomes a GitHub issue at a `critical`/`high`/`medium` priority (or a `followups.md` bullet where the repo can't host issues), a standing fact becomes a `.minerva/knowledge/` `reference` entry, and the rest is discarded.
 
-**Adopting the issue workflow on a project with an existing backlog?**
-→ `minerva:backfill-followups`. A one-time pass that triages every `.minerva/work/*/followups.md` item as open / manual / shipped / obsolete with cited evidence, files the survivors as prioritized issues behind a batched gate, and appends a `## Backfill disposition` section to each file. Items it cannot judge are filed, not dropped.
+**"Should this go on the backlog?"**
+→ Almost always no. The tracker takes an item only if you can write a concrete failure scenario for it — specific inputs or state producing a wrong output, a crash, data loss, or an exposure. Everything else is a standing fact about the system and belongs in `.minerva/knowledge/` as a `reference` entry, where `minerva:review` re-reads it on every future unit and nothing has to be burned down. Documentation for behavior your diff touched is neither: finish it now, as part of the work. The rule lives in `plugins/minerva/skills/promote/references/deferral-bar.md`.
+
+An existing `followups.md` backlog is **not** migrated. It stays as it is, still greppable, never re-triaged — re-triaging a legacy pile is the attention cost the bar exists to remove.
 
 
 **"OK, ship it — commit, PR, watch CI, and merge if it goes green."**

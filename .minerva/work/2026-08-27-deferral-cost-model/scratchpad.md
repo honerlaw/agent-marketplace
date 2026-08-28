@@ -85,6 +85,42 @@ form is git's documented shape. Verified empirically with a throwaway branch tha
 genuinely does NOT match `<date>-<slug>-phase-2` — which is the false-clean the widened glob
 exists to close, confirmed rather than assumed.
 
+## A presence assertion passed while the thing it guards was deleted
+
+Wrote two tests for the required `**Failure scenario**:` line: a loose one ("is the string in the
+file") and a strict one ("is it inside the `gh issue create` heredoc"). Mutation-tested by
+deleting the line from the heredoc — only the strict one failed. The loose one stayed green
+because the file's own explanatory prose mentions the field several times.
+
+That is `2026-08-10-pattern-presence-assertions-rot-into-green-lies` in miniature, and the useful
+detail is that the loose test was not merely weak, it was actively misleading: it reports green
+for a file whose *documentation of a requirement* survives while the *enforcement* of it is gone.
+The prose that explains a rule is exactly the thing that keeps a naive presence check alive after
+the rule dies. Scope a presence assertion to the region that does the work.
+
+## Retiring a vocabulary term leaks past the definition site
+
+Removed `low` from the priority table; the table test went green immediately. Two live uses
+survived elsewhere in the same file — a label hex colour and a `## Deferred work` example — and I
+found both by hand-grepping, which is the unreliable method this corpus keeps writing entries
+about.
+
+The fix generalises better than the instance: derive the legal set FROM the definition (the
+table) and check every *use* against it, so the enforcement cannot drift from the vocabulary and
+adding a level needs no test edit. A test written as "assert `low` is absent" would have been
+both wrong (the prose legitimately discusses the retired tier) and unmaintainable.
+
+Worth noting the shape: a definition site and its use sites are two different surfaces, and a
+test on the former says nothing about the latter. Same family as
+`2026-07-21-pattern-catalog-semantic-drift-recurs`.
+
+## The bar's single-sourcing is enforced by its own sentence
+
+`test_the_bar_is_stated_in_exactly_one_place` greps every skill markdown for the bar's defining
+clause and fails if any file other than `deferral-bar.md` contains it. That is a cheap, real
+guard against the six-copies-and-a-plea shape — and unlike a byte-identity test across copies, it
+does not assume the copies should be identical, because there are meant to be none.
+
 ## Quick decisions 2026-08-28
 
 - [escalated to user] Scope-fit escape fired on `minerva:propose-ship-quick`: 19 files, 5 commits,
@@ -160,3 +196,37 @@ three with no context.
 The pattern is not "reviews are good". It is specific: the author's audit is strong on
 "does this violate a rule I can look up" and weak on "is this thing I just built actually wired
 to anything, and does the test I wrote actually test it". Those need someone who did not write it.
+
+## `git rev-parse --show-toplevel` is wrong for any path that reaches into a worktree
+
+A peer session (building a status skill) flagged this and it applied to code I had shipped in
+#101 an hour earlier. `--show-toplevel` returns the *linked worktree* root when invoked from
+inside one; all three phasing snippets anchor paths that reach INTO `.minerva/worktrees/`, so
+they need the primary checkout. Invoked from inside a worktree they would misresolve — either
+FileNotFoundError, or the stale merged copy of a proposal, which derives a wrong `next_branch`
+silently.
+
+The replacement, verified from the primary checkout, from inside a linked worktree, and from a
+nested subdirectory:
+
+    ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
+
+The `cd … && pwd` is not decoration. `git rev-parse --git-common-dir` prints a RELATIVE `.git`
+from the primary checkout, so the bare `dirname` is `.` — a CWD-relative ROOT, which is the exact
+anti-pattern `2026-06-03-constraint-skill-wraps-script-via-importable-api` forbids. The peer's
+version had this bug; I sent the correction back. Absolute in all three positions is the property
+worth testing for, not "it works where I ran it".
+
+Note the existing constraint entry already documented the `--show-toplevel` hazard in its
+Implications ("a skill that genuinely needs the main checkout cannot use --show-toplevel from
+inside a worktree") — and I read that entry during this unit's review and still shipped it. Knowing
+the hazard is stated somewhere is not the same as checking whether MY path is one of the cases.
+
+## A stale primary checkout reads as a missing feature
+
+While verifying the fix, the snippet threw `ImportError: cannot import name 'read_phases'` from
+the primary checkout — not because the fix was wrong, but because local `main` was still at the
+pre-merge commit; I had fetched without fast-forwarding. Anything that resolves scripts through
+`$ROOT` reads whatever branch that checkout happens to be on, which can lag origin arbitrarily.
+Same class as the plugin-cache skew logged above: two different ways for "the code is right there"
+to be false.

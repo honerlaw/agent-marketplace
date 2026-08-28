@@ -30,7 +30,9 @@ If it *is* phased, resolve which phase this run is shipping. Never rebuild the b
 hand; ask the module that owns them:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"
+# The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
+# worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
+ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
 WT=".minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
 python3 -c "

@@ -3,8 +3,8 @@
 A user asks for something. Before a work unit is created for it, check whether an **open**
 GitHub issue already tracks that same thing, and offer to execute the issue instead.
 
-This exists because `minerva:promote` files kept TODOs as issues and `minerva:backfill-followups`
-migrated the historical backlog into the same tracker. Nothing but an authored `**Closes**` field
+This exists because `minerva:promote` files kept TODOs as issues, and a one-time backfill
+migrated part of this project's historical backlog into the same tracker. Nothing but an authored `**Closes**` field
 ever closes a `minerva:followup` issue, so a request that duplicates one produces a second record
 of the same work and leaves the first open indefinitely. Matching at intake is the only point
 where that is cheap to notice.
