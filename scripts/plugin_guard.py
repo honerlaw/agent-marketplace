@@ -1,0 +1,1 @@
+../plugins/minerva/scripts/plugin_guard.py

@@ -64,6 +64,7 @@ Both signals already exist; neither is a judgment call.
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
 PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 SCRIPTS="${PLUGIN_SCRIPTS:-$ROOT/scripts}"
 python3 "$SCRIPTS/knowledge_lint.py" "$ROOT/.minerva/knowledge"     # pending-reconciliation warnings
 python3 "$SCRIPTS/synthesis_status.py" "$ROOT/.minerva/knowledge"   # un-synthesized entries

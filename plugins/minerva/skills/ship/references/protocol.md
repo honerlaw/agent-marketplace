@@ -34,6 +34,7 @@ hand; ask the module that owns them:
 # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 WT=".minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
 python3 -c "
 import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
