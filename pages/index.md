@@ -131,6 +131,9 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 **`minerva:migrate-fix`**
 : The mutating companion to `minerva:migrate` — behind a confirmation gate, renames legacy `NNN-`prefixed entries and work units to date ids, deriving each date from git and retargeting every reference. Refuses the whole batch before moving anything if two entries would collide.
 
+**`minerva:status`**
+: A read-only status check for the whole workstream. Walks every work unit in the primary checkout and its worktrees, derives each one's lifecycle stage and phase progress from the records that already exist, joins branch and PR state, and renders three tables — active units with the next lifecycle step to run, a rollup, and knowledge-wiki health. It names the next skill and stops.
+
 **`minerva:init`**
 : One-time scaffolding of the `.minerva/` directory layout. Idempotent — re-runs report per-piece status without rewriting anything in place.
 

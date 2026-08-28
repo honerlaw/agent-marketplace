@@ -44,6 +44,7 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | Apply the mechanical wiki fixes `minerva:lint` reported (stale/misfiled catalog lines, missing reciprocals) | `minerva:lint-fix` (mutating — gated; deterministic fixes only) |
 | Corpus still has `NNN-` filenames and should move to date ids | `minerva:migrate-fix` (mutating — gated; `minerva:migrate` reports whether it is needed) |
 | On the **default branch**, build a theme-grouped overview of the knowledge corpus | `minerva:synthesize` (read-mostly; `minerva:cleanup` runs it during reconciliation) |
+| Orienting: where things stand, what to do next | `minerva:status` (read-only) |
 | A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are judgment calls done by hand) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates (consensus panels — delegated to `minerva:round-table` — replace decisions; small low-risk decisions skip the panel via a fail-closed skip predicate) | `minerva:propose-ship-auto` |
