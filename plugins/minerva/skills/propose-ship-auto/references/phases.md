@@ -12,7 +12,7 @@ This phase replaces the user-interactive intake in `minerva:propose`.
 
 3. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
 
-4. **Scope-check panel.** Dispatch panel with artifact = "is this a single work unit, or should it decompose into multiple?". On `≤1/3 accept` after revision, escalate with the sub-units the Skeptic identified as options. If user picks "decompose", abort the auto run cleanly: "scope check escalated to decomposition — re-run with one sub-unit at a time."
+4. **Scope-check panel.** Dispatch panel with artifact = "is this one work unit shipped in one PR, one unit shipped in ordered **phases**, or genuinely separate units?". **Too big for one PR is a reason to phase, not to decompose** — the panel's default for oversized-but-coherent work is a `## Phases` section (soft ceiling ~3), which keeps one proposal, one record and one promote; see `plugins/minerva/skills/propose/references/phasing.md`. Frame the cost of splitting explicitly for the panel: each extra unit re-pays propose, worktree, review, promote, knowledge reconciliation and ship, and re-derives the context the last unit just built. Decomposition survives only for genuinely independent subsystems. On `≤1/3 accept` after revision, escalate with the sub-units the Skeptic identified as options. If user picks "decompose", abort the auto run cleanly: "scope check escalated to decomposition — re-run with one sub-unit at a time."
 
 5. **Approach-selection panel.** Dispatch panel with artifact = the 2-3 candidate approaches + the recommended one. On consensus, the picked approach replaces the draft's `## Approach` section. On escalation, ask the user to pick.
 
@@ -141,6 +141,7 @@ Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.
 6. **No PR found** → exit silently (ship must have bailed before opening one — already reported above).
+7. **Phased unit — not done yet.** Before reporting on a `MERGED` phase, re-derive `phase_progress()` (`scripts/work_status.py`). If `complete` is false, **loop back to Phase 6 and ship `next_branch`**, cut from the freshly fetched default branch — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `plugins/minerva/skills/propose/references/phasing.md`. No-op for unphased units.
 
 When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase directly.
 

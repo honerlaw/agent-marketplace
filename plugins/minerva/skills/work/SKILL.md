@@ -107,6 +107,8 @@ Implementation is **done** when every item in `## Success criteria` (as amended 
 3. If any item is not met, do not suggest promote — keep working or trigger `minerva:replan` if the criterion itself is wrong.
 4. If every item is met, surface this checklist to the user and recommend `minerva:promote` as the next step. Do not run promote automatically — that's the user's call.
 
+**On a unit declaring `## Phases`,** a phase is done when *its own* criteria are met: recommend `minerva:ship`, not promote. Mode A waits for the final phase — use promote's **Mode B** meanwhile, so each phase's PR carries its own knowledge instead of stranding it if the unit stalls (`plugins/minerva/skills/propose/references/phasing.md`).
+
 If the proposal has no `## Success criteria` section (e.g. it was authored before that section existed), fall back to the proposal's `## Goal` paragraph as the implicit criterion and note the gap to the user.
 
 ## Out of scope

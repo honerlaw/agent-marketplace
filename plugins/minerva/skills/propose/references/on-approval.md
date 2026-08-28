@@ -8,7 +8,9 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
 1. **Derive the slug silently** from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
 
-2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.minerva/worktrees/<date-slug>/`, and any branch named `*-<slug>` (`git branch --list "*-<slug>"`, `git branch -r --list "*-<slug>"`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
+2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.minerva/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
+
+   The `-phase-*` pattern is not optional. A phased unit's later phases live on `<date-slug>-phase-N` branches (see [phasing.md](phasing.md)), and `*-<slug>` cannot match them — the slug is no longer the tail. Without the second pattern this check reads clean against a unit that is actively mid-flight on phase 2, which is the exact false-clean this step exists to prevent.
 
 3. **Take today's date as the unit's id** — `date +%F`, giving `YYYY-MM-DD`. The unit is `<YYYY-MM-DD>-<slug>`.
 
@@ -63,9 +65,22 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
    - <concrete, checkable item 2>
    <each item must be objectively answerable yes/no when implementation is "done">
 
+   ## Phases
+   1. **<name>** — what ships in this PR, and its own success criteria.
+   2. **<name>** — what ships in this PR, and its own success criteria.
+   <omit this section entirely for a unit that fits one PR — which is most units>
+
    ## Open Questions
    - <any remaining items>
    ```
+
+   **The `## Phases` section.** Optional, and **absent by default** — omit it unless the work
+   genuinely cannot be reviewed as one pull request. When present it declares an ordered list of
+   independently shippable increments, each shipping as its own PR while the unit keeps a single
+   proposal, scratchpad, promote and knowledge pass. Soft ceiling of about three; more must be
+   argued in the proposal. A unit without the section is unphased and every consumer treats it
+   exactly as before. **Read [phasing.md](phasing.md) before declaring it** — the branch
+   topology, the derived-progress rule, and the Mode B guidance all live there.
 
    **The `**Closes**` field.** Optional, and normally absent at propose time — you rarely
    know the issue numbers before the work is done. It is authored at the **end** of the
@@ -107,7 +122,24 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
     - **Placeholders** — any `TBD`, `TODO`, vague phrasing, or incomplete sections.
     - **Internal consistency** — does `## Approach` actually achieve `## Goal`? Do `## Success criteria` cover what `## Goal` promises?
     - **Ambiguity** — could any requirement be read two different ways? Pick one and make it explicit.
-    - **Scope** — is this still a single work unit, or did the prose drift into multi-unit territory? If the latter, stop and re-decompose with the user.
+    - **Scope** — is this still a single work unit? If the prose grew past what one PR can carry, the answer is almost always to add a `## Phases` section (see [phasing.md](phasing.md)), **not** to re-decompose: the ceremony of a second unit is real and the ceremony of a second phase is not. Re-decompose with the user only when the drift is into genuinely independent subsystems — work that would not share a proposal, a reviewer, or a record.
+    - **Phase numbering** — only if the proposal declares `## Phases`. Ask the parser, not your eyes:
+
+      ```bash
+      ROOT="$(git rev-parse --show-toplevel)"
+      PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+      python3 -c "
+      import sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+      from work_status import read_phases, phase_numbering_gaps, phase_name
+      phases = read_phases(open('$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md').read())
+      print('phases:', [(n, phase_name(t)) for n, t in phases])
+      print('numbering gaps:', phase_numbering_gaps(phases))
+      "
+      ```
+
+      **If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+
+      Any gap means a written ordinal disagrees with the phase's position. **Fix the proposal** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check the printed names: a phase whose name comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
 
     Fix issues inline. No need to re-review — just fix and move on.
 

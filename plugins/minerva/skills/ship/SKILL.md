@@ -23,7 +23,7 @@ Bail with a clear, one-line message on any failure:
 
 ## Protocol
 
-The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree addressing** → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (detached `gh pr checks --watch` plus an armed re-arming `ScheduleWakeup` fallback; bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
+The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree addressing** → **Phase resolution** (a unit declaring `## Phases` ships one PR per phase; unphased units — the normal case — are unaffected) → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (detached `gh pr checks --watch` plus an armed re-arming `ScheduleWakeup` fallback; bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
 
 ## Idempotency
 

@@ -12,7 +12,7 @@ Replaces the user-interactive intake in `minerva:propose`.
 
 3. **Design synthesis.** The main model drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with the 2-3 candidate approaches it considered. Context-grounded inference, not user Q&A. Keep it in conversation; write no file yet.
 
-4. **Scope check.** The main model decides: single work unit, or decompose? Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
+4. **Scope check.** The main model decides: one work unit in one PR, one unit in ordered **phases**, or genuinely separate units? **Too big for one PR means phase it, not decompose it** — a `## Phases` section (soft ceiling ~3) keeps one proposal, one record and one promote, where an extra unit re-pays every per-unit cost and re-derives the context this one just built (`plugins/minerva/skills/propose/references/phasing.md`). Note that a quick run is for *small* changes: work needing phases at all is usually a signal to escalate per the scope-fit escape rather than to phase. Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 
 5. **Approach selection.** The main model picks among its candidates; if no option is dominant, escalate (offer the candidates via `AskUserQuestion`). The chosen approach replaces the draft's `## Approach`.
 
@@ -93,5 +93,6 @@ Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule.
 5. **`CLOSED` (not merged)** → leave the worktree; surface manual instructions.
 6. **No PR found** → exit silently (ship bailed before opening one — already reported).
+7. **Phased unit — not done yet.** Before reporting, re-derive `phase_progress()` (`scripts/work_status.py`). If `complete` is false, **loop back to Phase 6 and ship `next_branch`**, cut from the freshly fetched default branch — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `plugins/minerva/skills/propose/references/phasing.md`. No-op for unphased units.
 
 When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase directly.

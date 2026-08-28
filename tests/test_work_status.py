@@ -10,6 +10,7 @@ units' markers into one phantom line. Enumerating by eye is exactly what keeps f
 here — `test_no_live_unit_is_misread_as_unpromoted` below is the assertion that actually
 holds, because it asks the corpus instead of a human.
 """
+import re
 from pathlib import Path
 
 import pytest
@@ -186,3 +187,186 @@ def test_a_real_marker_outside_a_fence_still_reads_as_promoted():
     t = ("# Scratchpad: x\n\n```\nexample: <!-- post-promote -->\n```\n\n"
          "Summarized at minerva:promote on 2026-08-11 — see archive/.\n")
     assert is_post_promote(t)
+
+
+# --- Phases -------------------------------------------------------------------
+
+from work_status import (  # noqa: E402
+    phase_branch, phase_name, phase_numbering_gaps, phase_progress, read_phases,
+)
+
+SLUG = "2026-08-27-example-unit"
+
+PHASED = """# Proposal: example
+
+**Status**: Draft
+
+## Phases
+
+1. **First thing** — does the first thing.
+   A continuation line that is not a phase.
+2. **Second thing** — does the second thing.
+
+## Open Questions
+
+1. Not a phase — this list lives in another section.
+"""
+
+
+def test_an_unphased_proposal_declares_no_phases():
+    assert read_phases("# Proposal: x\n\n## Goal\nDo a thing.\n") == []
+
+
+def test_a_phased_proposal_reads_its_phases_in_order():
+    assert [phase_name(t) for _, t in read_phases(PHASED)] == ["First thing", "Second thing"]
+
+
+def test_a_wrapped_phase_description_is_kept_whole():
+    """The continuation line belongs to the phase above, not to nobody.
+
+    Reading only the first physical line truncated every non-trivial phase title
+    mid-sentence — both phases of the unit that introduced this parser wrapped. Since
+    `minerva:ship` must NAME outstanding phases in its report, the truncation reached a
+    human as a sentence fragment.
+    """
+    first = read_phases(PHASED)[0][1]
+    assert first.endswith("A continuation line that is not a phase.")
+    assert "does the first thing." in first
+
+
+def test_phase_name_prefers_the_authors_bolded_name():
+    assert phase_name("**Plan-level phasing** — a long description that wraps on and on") \
+        == "Plan-level phasing"
+
+
+def test_phase_name_falls_back_when_the_convention_is_skipped():
+    """Never return something unusable: a missing phase name in a report is the failure
+    the report exists to prevent, so a clumsy name beats none."""
+    assert phase_name("do the thing — with details") == "do the thing"
+    assert phase_name("y" * 80).endswith("\u2026")
+
+
+def test_an_indented_continuation_line_is_not_a_phase():
+    """A wrapped phase description must not read as another phase — a miscount here
+    produces a wrong branch name, and nothing downstream would notice."""
+    assert len(read_phases(PHASED)) == 2
+
+
+def test_the_section_ends_at_the_next_heading():
+    """The numbered list under `## Open Questions` belongs to that section, not Phases."""
+    assert all("Not a phase" not in t for _, t in read_phases(PHASED))
+
+
+def test_an_empty_phases_section_yields_no_phases():
+    assert read_phases("## Phases\n\n## Open Questions\n\n1. a\n2. b\n") == []
+
+
+def test_a_fenced_phases_example_is_not_a_declaration():
+    """Template and skill prose both SHOW `## Phases`; reading one as real would phase a
+    unit that never asked to be phased."""
+    fenced = "# Proposal: x\n\n```markdown\n## Phases\n\n1. Example phase\n```\n"
+    assert read_phases(fenced) == []
+
+
+def test_phase_one_keeps_the_bare_slug_branch():
+    """The property that makes phasing inert for every existing consumer: a phased unit's
+    first phase uses exactly the branch an unphased unit would."""
+    assert phase_branch(SLUG, 1) == SLUG
+
+
+def test_later_phases_get_a_suffixed_branch():
+    assert phase_branch(SLUG, 2) == f"{SLUG}-phase-2"
+    assert phase_branch(SLUG, 3) == f"{SLUG}-phase-3"
+
+
+def test_phase_positions_are_one_based():
+    with pytest.raises(ValueError):
+        phase_branch(SLUG, 0)
+
+
+def test_an_unphased_unit_has_no_phase_progress():
+    state = phase_progress([], [], SLUG)
+    assert state["phased"] is False and state["next_branch"] is None
+
+
+def test_progress_starts_at_phase_one():
+    state = phase_progress(read_phases(PHASED), [], SLUG)
+    assert (state["next_position"], state["next_branch"]) == (1, SLUG)
+    assert state["complete"] is False
+
+
+def test_progress_advances_when_phase_one_merges():
+    state = phase_progress(read_phases(PHASED), [SLUG], SLUG)
+    assert (state["merged"], state["next_position"]) == (1, 2)
+    assert state["next_branch"] == f"{SLUG}-phase-2"
+
+
+def test_a_unit_is_complete_only_when_every_phase_merged():
+    state = phase_progress(read_phases(PHASED), [SLUG, f"{SLUG}-phase-2"], SLUG)
+    assert state["complete"] is True and state["next_position"] is None
+
+
+THREE_PHASED = """# Proposal: example
+
+## Phases
+
+1. **First thing** — does the first thing.
+2. **Second thing** — does the second thing,
+   and its description wraps.
+3. **Third thing** — does the third thing.
+
+## Open Questions
+
+1. Not a phase.
+"""
+
+
+def test_a_gap_resolves_to_the_earliest_unmerged_phase():
+    """Phase 3 merged out of order must not report the unit as being on phase 4 — phases
+    ship in order, so the earliest unmerged one is always next.
+
+    Parsed from a real three-item `## Phases` section rather than a hand-built list. An
+    earlier version of this test constructed the list literally, so the combination that
+    actually runs in production — `read_phases` over real markdown feeding
+    `phase_progress` — was never exercised end-to-end; each half was tested alone.
+    """
+    three = read_phases(THREE_PHASED)
+    assert [n for n, _ in three] == [1, 2, 3]
+    state = phase_progress(three, [SLUG, f"{SLUG}-phase-3"], SLUG)
+    assert state["next_position"] == 2
+    assert state["next_branch"] == f"{SLUG}-phase-2"
+    assert state["complete"] is False
+
+
+def test_mistyped_ordinals_are_reported_not_silently_normalised():
+    """A duplicated `2.` renders fine in markdown and would point two phases at one
+    branch. Position wins downstream; the disagreement still has to be visible."""
+    assert phase_numbering_gaps([(1, "a"), (2, "b"), (2, "c")]) == [(3, 2)]
+    assert phase_numbering_gaps([(1, "a"), (2, "b")]) == []
+
+
+def test_only_units_that_actually_declare_phases_read_as_phased():
+    """The inertness guarantee, asked of the corpus rather than enumerated by eye.
+
+    Phasing is safe to add to every consumer at once ONLY because a unit that does not
+    declare `## Phases` is untouched by it. Stated one-directionally — no heading implies
+    no phases — because that IS the inertness claim. The converse does not hold and must
+    not be asserted: an empty `## Phases` section legitimately yields nothing
+    (`test_an_empty_phases_section_yields_no_phases`).
+
+    Written against the corpus rather than as "no unit is phased", which was true only
+    until this feature's own unit existed and would otherwise have needed a hardcoded
+    exclusion list that rots with every phased unit added. Same reason
+    `test_no_live_unit_is_misread_as_unpromoted` above asks the corpus instead of a
+    human: 52 real proposals contain more prose shapes than anyone enumerates correctly,
+    and a false positive here phases a unit that never asked to be.
+    """
+    proposals = sorted(WORK.glob("*/proposal.md"))
+    assert proposals, "no work units found — the guarantee would be vacuous"
+    heading = re.compile(r"^##\s+Phases\s*$", re.IGNORECASE)
+    for p in proposals:
+        text = p.read_text()
+        if any(heading.match(line) for line in text.splitlines()):
+            continue
+        assert read_phases(text) == [], (
+            f"{p.parent.name} declares no `## Phases` heading but read_phases found some")
