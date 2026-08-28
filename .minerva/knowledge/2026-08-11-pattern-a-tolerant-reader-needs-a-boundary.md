@@ -72,3 +72,4 @@ Two rules that fall out:
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — builds on
 - [[2026-06-11-constraint-fence-scans-import-fence-re]] — see also
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also
+- [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — see also

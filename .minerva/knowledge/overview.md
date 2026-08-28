@@ -427,6 +427,22 @@ format** ([[2026-05-19-bug-promote-idempotency-check-misses-old-marker]]), and t
 the **post-promote scratchpad's one-line marker is the canonical empty state** downstream
 skills expect ([[2026-05-19-constraint-post-promote-scratchpad-canonical-empty]]).
 
+Three later entries turn the same lore into rules about *what a worktree is*, and each was
+found by a tool reading one and meaning the other. A path that reaches **into**
+`.minerva/worktrees/` must anchor on the **primary checkout** — `git rev-parse
+--show-toplevel` returns the *linked* worktree from inside one, and the `--git-common-dir`
+replacement prints a relative `.` from the primary checkout unless wrapped in
+`cd … && pwd` ([[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]]).
+The complementary trap is scope rather than anchoring: because `.minerva/work/` is
+*committed*, every linked worktree carries the whole history, so a glob through
+`.minerva/worktrees/*/` sees every unit in the project — reachability through a worktree is
+evidence about the repository, never about that worktree
+([[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]]). And the branch side has
+its own two-directional hazard: `git branch --merged` misses a squash-merged branch *and*
+counts a freshly created zero-commit branch as merged, so shipped-ness comes from the
+merged-PR query with the git check as a fallback, never a union of the two
+([[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]]).
+
 ## Silent success: when a tool reports done and did nothing
 
 The corpus's newest entries share a shape distinct from the concurrency cluster. There the
@@ -607,6 +623,27 @@ if it is violated**; if the answer is "a reviewer might notice", it is a wish, n
 constraint. And when the enforcement is finally written, expect it to find something —
 a gate that passes on its first run has not yet been shown capable of failing, which is why
 the fixture proving it *fires* matters more than the one proving it passes.
+
+The newest entries sharpen that test into questions about the assertion itself. A presence
+check must be **scoped to the region that does the work**: surrounding prose explaining a
+requirement keeps a whole-file `assert "X" in doc` green long after the enforcement was
+deleted ([[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]]). An
+assertion phrased about the corpus's current contents — *nothing does X yet* — expires the
+moment the feature it guards is first used, and the tempting exclusion list gets weaker as
+adoption grows, so state the invariant about the property instead
+([[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]]). Who looks
+matters too: an author self-reviewing finds rule violations they can look up, and reliably
+misses orphaned code and toothless tests, which is the reviewer's half
+([[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]]).
+
+Two entries generalise the shape beyond tests. Adopting a shared primitive means importing
+the **grammar** and re-deriving the **conclusion**: this corpus's fence scan answers "where
+are the fences", and a reader asking whether any content exists at all needs the same
+grammar with the opposite handling from every declaration-reading sibling
+([[2026-08-28-pattern-import-the-grammar-not-its-conclusion]]). And a new state's **decider**
+and its **executors** are separate surfaces — teaching the one that chooses without teaching
+the ones that act leaves the others silently wrong
+([[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]]).
 
 ## Limitations
 

@@ -54,3 +54,4 @@ distinction is whether the path reaches *across* worktrees or stays *within* the
 ## Related
 - [[2026-06-03-constraint-skill-wraps-script-via-importable-api]] — builds on: it documented the `--show-toplevel` hazard and forbade CWD-relative paths; this names the concrete replacement and the relative-`.` trap in it
 - [[2026-05-20-constraint-enter-worktree-absolute-paths]] — see also: the sibling rule for addressing a worktree rather than entering it
+- [[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]] — see also
