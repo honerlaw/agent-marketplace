@@ -80,3 +80,6 @@ Three practical consequences:
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also
 - [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — see also
 - [[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]] — see also
+- [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also
+- [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also
+- [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — see also

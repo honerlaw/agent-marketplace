@@ -61,3 +61,4 @@ entry at all. The pair brackets the real behaviour.
 - [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — see also
 - [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — see also
 - [[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]] — see also
+- [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — see also

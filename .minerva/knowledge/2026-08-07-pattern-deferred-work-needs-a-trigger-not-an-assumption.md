@@ -64,3 +64,4 @@ The tell that this class is present: a comment or doc that says *"the next run"*
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — see also
 - [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — see also
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also
+- [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also

@@ -37,6 +37,36 @@ guards grows independently of the list. Enumerate the safe set whenever the unsa
 open-ended or belongs to someone else
 ([[2026-08-22-pattern-a-denylist-safety-guard-fails-open]]).
 
+The most recent pass turns those questions on the checks themselves, and finds the failure more
+common than any single rule predicts. Requiring that every new assertion be verified **by
+deletion** — remove what it guards, watch the suite go red, restore — caught five vacuous checks
+in one work unit, three of them inside tests written specifically to prevent that defect. Two
+causes sit outside the scoping rule, and both quietly turn a *per-item* check into an *any-item*
+one: a discriminator **shared** across items, so any single occurrence satisfies all of them; and
+a check accepting a **union of spellings** where each item declares exactly one. The inverse
+failure looks identical from outside — a regex too *narrow* matches nothing and is equally green
+([[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]]).
+
+Coverage claims inherit the problem one level up. Deriving a consumer set from the corpus beats
+enumerating by eye, but the derivation has a **horizon**. A migration that asked the orchestrators'
+phase protocols which skills they run found six and migrated all six, while a seventh — reached at
+two hops, through a skill one of them invokes — kept the very construction being removed, and the
+suite reported full coverage throughout. The complementary check searches for the **construction**
+rather than for a list of consumers, so it has no notion of hops
+([[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]]). A registry shaped
+one-per-site does the same thing in miniature: its arity asserts there *is* one site per file, so
+a missing second is invisible at every layer at once
+([[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]]).
+
+Two constraints mark the gap between a rule being *written* and being *in force*. A skill snippet
+resolves `PLUGIN_SCRIPTS` through a symlink to the primary checkout, so a worktree's edits are not
+what runs — the loud version raises `ImportError`, the quiet version simply behaves like the old
+code ([[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]]). And the dispatch
+pin that fixed backgrounded subagents assumes the `Agent` tool exposes the parameter; where it does
+not, the pin is unsatisfiable text, every reviewer gate parks the run mid-gate, and the enforcing
+test stays green because it checks that the pin is *written*, never that it is *accepted*
+([[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]]).
+
 ## Limitations` for what the
 synthesis watermark does and does not attest.
 
