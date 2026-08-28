@@ -43,6 +43,7 @@ that owns the topology — never infer it from the branch name:
 # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" work_status || exit 1; }
 python3 -c "
 import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
 from work_status import read_phases, phase_progress
