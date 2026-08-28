@@ -62,6 +62,8 @@
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — exercising a documented mutating command against the live repo leaves real artifacts behind
 - [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — name the resource an atomic primitive protects, not just the ref — a slug lock does not serialize two sessions working the same goal
 - [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — after extracting a repeated block, byte-identity is right for the shared half and wrong for the rung-specific half; test both
+- [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — "Nothing does X yet" expires on first adoption; assert the property, not the corpus's current contents
+- [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — A new state's decider and its executors are separate surfaces; updating one leaves the others silently wrong
 
 ## Constraints
 

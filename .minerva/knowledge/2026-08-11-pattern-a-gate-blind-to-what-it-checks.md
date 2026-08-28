@@ -77,3 +77,4 @@ Three practical consequences:
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — see also
 - [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — see also
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — see also
+- [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also

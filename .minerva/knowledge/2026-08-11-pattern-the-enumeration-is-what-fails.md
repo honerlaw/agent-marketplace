@@ -87,3 +87,5 @@ because it does not hold a list of phrasings.
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also
+- [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — see also
+- [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also

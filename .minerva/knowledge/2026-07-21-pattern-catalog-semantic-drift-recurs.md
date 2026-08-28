@@ -30,3 +30,4 @@ semantic check is a followup seed in unit 046.
 ## Related
 - [[2026-05-21-constraint-minerva-skill-catalog-sync]] — builds on
 - [[2026-06-10-constraint-site-fourth-catalog-surface]] — see also
+- [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also

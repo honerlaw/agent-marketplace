@@ -73,3 +73,4 @@ a false sense of one.
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — see also
 - [[2026-08-22-pattern-a-value-written-before-its-evidence-needs-re-verifying]] — see also
+- [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — see also
