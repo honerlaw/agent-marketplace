@@ -64,6 +64,8 @@
 - [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — after extracting a repeated block, byte-identity is right for the shared half and wrong for the rung-specific half; test both
 - [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — "Nothing does X yet" expires on first adoption; assert the property, not the corpus's current contents
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — A new state's decider and its executors are separate surfaces; updating one leaves the others silently wrong
+- [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — Prose explaining a requirement keeps a whole-file presence check green after the enforcement is deleted
+- [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — Self-review finds lookup-able rule violations and misses orphaned code and toothless tests
 
 ## Constraints
 
@@ -92,6 +94,7 @@
 - [[2026-08-05-constraint-reconciliation-state-is-not-a-scalar]] — a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
 - [[2026-08-14-constraint-a-ref-lock-binds-only-writers-that-share-the-ref]] — an atomic-push lock excludes nothing from a second writer that pushes a different branch name
 - [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — the pointer gate resolves any `references/<file>.md` substring against the citing skill only
+- [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — `--show-toplevel` yields the linked worktree; use `cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd`
 
 ## References
 

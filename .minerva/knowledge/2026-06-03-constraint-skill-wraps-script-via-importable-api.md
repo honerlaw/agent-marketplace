@@ -56,3 +56,4 @@ A prose skill that wraps a sibling Python tool should:
 - [[2026-06-03-decision-minerva-lint-read-only]] — see also
 - [[2026-05-19-constraint-skills-must-call-tools-not-prose]] — see also
 - [[2026-06-11-constraint-fence-scans-import-fence-re]] — see also
+- [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — see also

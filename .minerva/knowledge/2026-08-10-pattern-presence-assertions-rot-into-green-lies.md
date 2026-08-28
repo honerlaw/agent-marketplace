@@ -59,3 +59,4 @@ entry at all. The pair brackets the real behaviour.
 - [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — see also
 - [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — see also
 - [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — see also
+- [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — see also
