@@ -1,7 +1,7 @@
 # Proposal: workstream-status-skill
 
 **Date**: 2026-08-28
-**Status**: Draft
+**Status**: Shipped (2026-08-28)
 
 ## Goal
 
@@ -33,124 +33,97 @@ work as handled without separating decided-and-done from decided-to-wait buries 
 ## Approach
 
 A hermetic aggregator script wrapped by a prose skill that layers opportunistic `git`/`gh`
-enrichment — the same split `work_status.phase_progress()` already uses, where the module
-is a pure reader and the caller passes in the `git branch --merged` result.
+enrichment — the same split `work_status.phase_progress()` already uses, where the module is
+a pure reader and the caller passes the `git`-derived facts in.
 
-### 1. `plugins/minerva/scripts/workstream_status.py` (+ a `scripts/` symlink)
+### What shipped
 
-`scripts/*.py` in this repo are **symlinks** into `plugins/minerva/scripts/`, not copies —
-verified via `git ls-tree` (mode `120000`). The real file lands in the plugin; `scripts/`
-gains one symlink, matching every sibling module.
+**`plugins/minerva/scripts/workstream_status.py`**, with `scripts/workstream_status.py` as a
+**symlink** to it. The `scripts/` entries in this repo are symlinks (git mode `120000`), not
+copies — `diff -q` follows them and reports IDENTICAL, which is what made an earlier draft of
+this proposal specify a "mirrored copy" deliverable.
 
-Public API: `workstream_status(root, merged_branches=()) -> dict`. Pure filesystem reads —
-no subprocess, no network — so its tests need no repo, no auth and no fixtures.
+`workstream_status(root, merged_branches=()) -> {units, counts, knowledge}`. Pure filesystem
+reads: no subprocess, no network, no git, so its tests need no repo, auth or fixtures.
 
-- **Walk.** `<root>/.minerva/work/*/` **and** `<root>/.minerva/worktrees/*/.minerva/work/*/`.
-  Deduped by slug: the main-tree record wins (it is the authoritative post-merge copy) and
-  the unit is additionally flagged `worktree_present`.
-- **Per unit.** `slug`, every key `unit_state()` already returns (imported, never
-  re-derived), `worktree_present`, `stage`, and — for a unit declaring `## Phases` —
-  `phase_progress(read_phases(...), merged_branches, slug)` verbatim.
-- **`stage`** is a filesystem-only 4-value vocabulary with an explicitly named
-  discriminator for each boundary:
-  | Stage | Discriminator |
-  |---|---|
-  | `shipped` | `unit_state()["status"]` starts with `Shipped` |
-  | `promoted` | `unit_state()["promoted"]` is true (the tolerant marker read) |
-  | `in-progress` | not promoted, and `scratchpad.md` has content past the header block |
-  | `draft` | not promoted, and the scratchpad is header-only or absent |
-  The `draft`/`in-progress` boundary is the one the corpus does not already expose, so its
-  signal is named here rather than left to the implementation: `minerva:propose` writes a
-  header-only scratchpad and `minerva:work` appends to it, which makes "has a body" the
-  authored declaration that work started. It is unit-tested in both directions.
-- **Knowledge block.** Entry count by type, `synthesis_status()` (`unsynthesized` /
-  `link_rot` / `overview_exists`), and the `lint_knowledge()` finding count — each via its
-  existing importable API.
-- A `main()` CLI prints the dict as JSON; the skill consumes the importable API.
+- **Walk.** `<root>/.minerva/work/*/` then `<root>/.minerva/worktrees/*/.minerva/work/*/`,
+  deduped by slug with the main-tree record winning by glob order. The second glob is what
+  finds a unit that exists only on an unmerged branch.
+- **Per unit.** `slug`, every key `unit_state()` returns (imported, never re-derived),
+  `worktree_present`, `stage`, `phases`, and `phase_progress(...)` verbatim. Every phase branch
+  name is resolved through `phase_branch()`.
+- **`stage`** — `draft` / `in-progress` / `promoted` / `shipped`, a ladder whose rung order is
+  load-bearing. `shipped` requires **both** the declared Status and the promote marker: those
+  are written in two non-atomic steps, and reading Status alone renders a half-promoted unit as
+  done while `in_flight` still counts it live.
+- **Knowledge block** via `synthesis_status()` and `lint_knowledge()`.
 
-### 2. `plugins/minerva/skills/status/SKILL.md` (+ one `references/` file)
+**`plugins/minerva/skills/status/SKILL.md`** (7.8 KB) **+ `references/tables.md`**, carrying
+the three table shapes and the phase-aware **Next step** mapping. It resolves two roots
+separately: `PLUGIN_SCRIPTS` plugin-cache-first for the module, and `WORK_ROOT` as the
+**primary checkout** for the corpus.
 
-Resolves two **separate** roots, because they answer different questions:
+**Tests** — `tests/test_workstream_status.py`, 24 cases. `evals/status/contract.json`, and the
+four catalog surfaces.
 
-```bash
-WORK_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
-```
+### What changed from the plan
 
-**`WORK_ROOT` deliberately does not use `git rev-parse --show-toplevel`**, and the skill
-says so in prose so a later editor cannot "correct" it back
-(`2026-06-06-pattern-rejected-alternative-reinvented-at-runtime`). Every other minerva
-skill anchors on `--show-toplevel` for *per-branch* semantics, which is right when the
-target is the worktree-local `.minerva/knowledge/`. It is wrong here: inside a linked
-worktree `--show-toplevel` returns the worktree, which contains no `.minerva/worktrees/`
-directory at all, so a status walk invoked from a worktree — where `minerva:work` sessions
-live, and exactly the "resuming agent" case in the Goal — would silently report every
-sibling unit as absent. A falsely-clean status table renders as "nothing in flight", which
-is the worst failure available to this skill.
+- **The phase column shipped in the first cut.** The plan was to defer it while PR #101 was
+  unmerged; #101 merged mid-intake, so `read_phases` / `phase_progress` / `phase_branch` were
+  available and a table that misreports a phased unit was never shipped.
+- **Merged-branch sourcing became precedence, not a list of commands.** The plan named
+  `git branch --merged` among the enrichment reads. The live smoke run showed it reports a
+  squash-merged phase as unmerged, and it also counts a freshly created zero-commit branch as
+  merged. Settled on `minerva:cleanup`'s documented order — merged-PR query first, `git branch
+  --merged` only as a fallback, never a union. Promoted as
+  `2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions`.
+- **The root-resolution rationale is cited, not restated.** The `2026-08-27-deferral-cost-model`
+  unit promoted `2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout`
+  while this work was in flight, covering the same `--show-toplevel` trap and the relative-`.`
+  wrapper. The skill points at it rather than duplicating it.
 
-The `cd … && pwd` wrapper is not decoration: bare `dirname "$(git rev-parse
---git-common-dir)"` returns `.` from the primary checkout and `../../..` from a
-subdirectory, absolute only from inside a linked worktree. Verified from all three.
+### What the smoke run and review changed
 
-`PLUGIN_SCRIPTS` follows the plugin-cache-first rule from
-`2026-06-03-constraint-skill-wraps-script-via-importable-api` verbatim, `find -L` included.
+Two defects only the live corpus could show, both found before review:
 
-The skill then runs three **read-only** enrichment commands behind the capability probe
-`minerva:promote` owns — `git branch --list`, `git branch --merged <default>`, and
-`gh pr list --state all --json number,state,headRefName` — and joins them to units.
+- **`worktree_present` read `true` for all 65 units.** It was set from the worktree glob, and
+  every linked worktree carries the whole committed `.minerva/work/` history, so one worktree
+  makes every unit reachable. It is now a directory test. Promoted as
+  `2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project`.
+- **`git branch --merged` alone misreported phase 1 as unmerged** (above).
 
-**The join resolves branch names through `phase_branch()`, never string equality.** A
-phased unit ships one PR per phase: phase 1 on the bare `<date-slug>`, phases 2+ on
-`<date-slug>-phase-N`. `cleanup/references/phased-units.md` is explicit that merge
-detection is exact-match on `<date-slug>` and "can never match a `-phase-N` branch", and
-that the topology must be asked of the module, never inferred from the name.
+Review returned six findings — four fixed, two declined:
 
-### 3. Ownership split for **Next step**
+- **(high) `_has_scratchpad_body` tested line shapes, not a header prefix**, so a scratchpad
+  whose notes are written as blockquotes read as an untouched draft — under-reporting arriving
+  through the check written to prevent it. Header is now the leading H1 plus the first
+  contiguous blockquote run.
+- **(medium) `_stage` read `shipped` off Status alone** — fixed as described above.
+- **(medium) a vacuous `isinstance(lint_errors, int)` assertion**, replaced with a corpus that
+  produces a real dangling `## Related` link and a real broken overview link.
+- **(low) no coverage for the blockquote-body case** — added.
 
-The script owns the coarse, always-available `stage` and the phase arithmetic. The skill
-layer refines them into the action using the enrichment facts when present. When `gh` is
-unavailable the PR column renders `—` and Next step falls back to the stage-only mapping:
-coarser, never wrong.
+All three fixes were mutation-tested: each revert turns CI red.
 
-The mapping is phase-aware, because the naive rule is falsified by the live corpus:
-
-- `phased` and not `complete` → **`minerva:work` on phase N+1** — *not* cleanup. A
-  phase-1-merged unit keeps its worktree **by design**; `phased-units.md` defers teardown
-  until the final phase because removing the worktree between phases destroys the
-  workspace the remaining phases are cut in. `worktree_present` therefore does **not** mean
-  cleanup is overdue.
-- `promoted`, no open PR → `minerva:ship`
-- PR `MERGED`, worktree present, unphased or `complete` → `minerva:cleanup`
-- `in-progress`, not promoted → `minerva:review` then `minerva:promote`
-- `draft` → `minerva:work`
-
-### 4. Tables
-
-Three, in one screen: **Active units** (the units that are not finished — slug, stage,
-phase, branch, PR, next step), a **rollup** (totals, worktrees present, open followup
-issues), and **knowledge health** (entries, lint findings, unsynthesized, link rot).
-Finished units are counted in the rollup, not listed — a 64-row table is not consumable.
-
-### 5. Supporting surfaces
-
-`tests/test_workstream_status.py` (CI runs the whole `tests/` dir, so no enumeration step),
-`evals/status/contract.json`, and the four catalog surfaces that tests and convention
-force: root `README.md`, `plugins/minerva/README.md`, `pages/index.md` between the
-`skills-catalog` markers (under *The utilities*), and `using-minerva/SKILL.md`.
+Declined, with reasons recorded: knowledge entries are parsed twice per call (85 files; the
+alternative contradicts `2026-08-09-pattern-read-authored-metadata-from-where-it-is`), and
+`read_text` is unguarded (a crash is loud, and this module's stated enemy is a *silently*
+falsely-clean table — a per-file `try/except` would convert a visible abort into the invisible
+failure being guarded).
 
 **Rejected alternatives.**
-*Everything in the script, including subprocess `git`/`gh`* — no minerva reader module
-shells out; it is what lets their tests run with no repo, network or fixtures, and it would
-re-implement in Python the `gh` capability probe that already exists as prose. The newest
-code in this exact area (`phase_progress`) takes the merged set as an argument for
-precisely this reason.
-*Skill-only, no new script* — the walk, the dedup rule and the stage mapping would live
-only in prose: untestable, and the shape
-`2026-08-11-pattern-an-unenforced-constraint-is-aspirational` names. A 64-unit corpus
-formatted by eyeball is where a silent miscount lands.
-*Deferring the phase column until #101 merged* — moot; #101 merged mid-intake, so the
-column ships in the first cut rather than shipping a table that misreports the one unit
-currently in flight.
+*Everything in the script, including subprocess `git`/`gh`* — no minerva reader module shells
+out; that is what lets their tests run with no repo, network or fixtures, and it would
+re-implement in Python the `gh` capability probe that already exists as prose.
+*Skill-only, no new script* — the walk, the dedupe rule and the stage mapping would live only
+in prose: untestable, and the shape
+`2026-08-11-pattern-an-unenforced-constraint-is-aspirational` names.
+
+## Deferred work
+
+- Reclaim byte budget in `using-minerva/SKILL.md` (9198 / 9216) so the next skill added can
+  carry a real catalog row — filed as
+  [#107](https://github.com/honerlaw/agent-marketplace/issues/107) (`priority: medium`).
 
 ## Success criteria
 
@@ -180,7 +153,10 @@ currently in flight.
   `pages/index.md` between the `skills-catalog` markers, and `using-minerva/SKILL.md`;
   `tests/test_site_catalog.py` passes.
 - Running the skill's own command against this repo prints the three tables and correctly
-  reports the in-flight `2026-08-27-deferral-cost-model` unit's phase state.
+  reports the phased `2026-08-27-deferral-cost-model` unit's phase state. (That unit's
+  phase 2 merged mid-run, so the verified reading is `merged 2 of 2, complete: true` with
+  both branch names resolved through `phase_branch()`, and its correct exclusion from the
+  active-units table — rather than the mid-progress reading the criterion anticipated.)
 
 ## Open Questions
 

@@ -39,7 +39,7 @@ One line per fact, so it stays readable in a terminal.
 | Worktrees on disk | 2 |
 | Phased units incomplete | 1 |
 | Checkout | `main` at `b4c8b65` (origin/main `c58e319` — **2 behind**) |
-| Open followups | 2 (`priority: medium` 1, `priority: low` 1) |
+| Open followups | 2 (`priority: high` 1, `priority: medium` 1) |
 
 - **in flight** is `counts.in_flight` — the imported `work_status` predicate (`Status is
   Draft` **or** not promoted), deliberately wider than any single stage. Do not recompute
