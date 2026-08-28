@@ -37,6 +37,26 @@ guards grows independently of the list. Enumerate the safe set whenever the unsa
 open-ended or belongs to someone else
 ([[2026-08-22-pattern-a-denylist-safety-guard-fails-open]]).
 
+Three later entries turn that cluster from a set of cautions into a **procedure**. Reading an
+assertion cannot establish that it can fail — only removing its subject can, so the discipline is
+a deletion pass **per assertion**, not per file. Two contract tests written by an author who had
+just read the scoping rule still contained five vacuous assertions, three of them inside tests
+written specifically to prevent this class, one guarding a finding a reviewer had raised minutes
+earlier; all five read correctly by eye and were caught only by deletion, and four sat beside
+assertions that were sound ([[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]]).
+
+The other two are about the *shape* of a check rather than its strength. Deriving a set from the
+corpus is grounded and still **bounded**: a test that enumerated affected skills from the three
+orchestrators' phase protocols reported complete coverage while missing `minerva:synthesize`,
+which is reached at two hops and therefore named by no protocol — "I asked the corpus" is not "I
+asked the whole corpus", and a coverage claim inherits its derivation's horizon
+([[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]]). Worse than a bounded
+registry is one whose **arity** is wrong: pairing each site with a single attribute does not
+merely miss a second, it asserts there isn't one, so the code, the test and the reader all agree
+on an incomplete picture. The repair that holds is deleting the dimension rather than adding the
+row — making the wrong state unrepresentable instead of recording one more true fact
+([[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]]).
+
 ## Limitations` for what the
 synthesis watermark does and does not attest.
 
@@ -298,6 +318,14 @@ branch present but uncatalogued while the run that skipped them reported success
 work needs a trigger, not an assumption**: name the thing that will actually pick it up, or
 report it as outstanding so a person can ([[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]]).
 
+One automation premise turned out to be false on the build it ran on. The remedy for backgrounded
+dispatches was to pin `run_in_background: false` in every dispatch instruction, enforced over five
+registered sites — but that rests on the `Agent` tool accepting the parameter, and its schema
+exposes only `description` / `isolation` / `model` / `prompt` / `subagent_type`. Reviewer gates
+dispatched with the pin still backgrounded and still parked the run, while the enforcing test went
+on passing: the test checks that the instruction says the words, not that the platform honours
+them ([[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]]).
+
 ## Concurrency: what shared state costs, and what hides in it
 
 The newest arc runs orthogonally to the others. Everything above assumes one work unit at
@@ -442,6 +470,17 @@ its own two-directional hazard: `git branch --merged` misses a squash-merged bra
 counts a freshly created zero-commit branch as merged, so shipped-ness comes from the
 merged-PR query with the git check as a fallback, never a union of the two
 ([[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]]).
+
+The sharpest worktree hazard is that minerva, developing itself, **loads itself from the wrong
+tree**. `~/.claude/plugins/minerva` symlinks to the primary checkout, so every skill snippet's
+script resolution — and the harness's own loading of `SKILL.md` prose — reaches that checkout's
+current branch rather than the worktree being edited. Adding a function fails loudly with an
+`ImportError`; *modifying* one imports cleanly and runs the old behavior, so a change gets
+"verified" against code nobody wrote. A guard now refuses rather than warns, comparing the whole
+scripts directory because naming one module left both sibling scripts and transitive imports
+unchecked. Note this entry anchors to the **current** tree where its neighbour anchors to the
+primary one: the two answer different questions, and reading either alone produces the wrong
+anchor half the time ([[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]]).
 
 ## Silent success: when a tool reports done and did nothing
 
