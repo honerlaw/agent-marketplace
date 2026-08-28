@@ -118,7 +118,7 @@ Only if `git status --porcelain` is non-empty:
    In bare mode, use the diff and recent commit messages as the source.
 
    If `work_status.is_post_promote(scratchpad_text)` is true, the unit is in its post-`minerva:promote` state and there is nothing to skim — fall back to `## Goal` + filenames only. Use that predicate rather than comparing against the canonical marker string: the marker has had at least nine spellings, and a string match reads a validly-promoted unit as un-promoted.
-2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept. (When an invoking skill or the user has pre-authorized non-interactive shipping, accept the draft without prompting — this applies to gate #2 as well.)
+2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept. (Under `--auto=<orchestrator>`, or when the user has pre-authorized non-interactive shipping, accept the draft without prompting — this applies to gate #2 as well.)
 3. `git add` with **specific file paths** (never `-A` or `.`) for tracked changes and untracked files the user wants included.
 4. `git commit -m "$(cat <<'EOF' ... EOF)"` using a HEREDOC for clean formatting. Honor the project's git footer conventions if any are visible in recent commits.
 
@@ -201,8 +201,13 @@ Steps 3 and 4 are **complements, not alternatives** — arm both.
 4. **Durable fallback (always armed).** Also schedule one `ScheduleWakeup` at **1800s** with the prompt pinned as:
 
    ```
-   minerva:ship <date-slug> --watch-iteration=<N>
+   minerva:ship <date-slug> --watch-iteration=<N> [--auto=<orchestrator>]
    ```
+
+   **Carry `--auto=<orchestrator>` verbatim when it was passed.** The caller is run-level state that
+   only this prompt preserves: a wake-up that drops it resumes a bare `minerva:ship`, which finishes,
+   prints a report addressed to a human, and never returns to the orchestrator's Phase 7. The run then
+   stalls while reporting success.
 
    Carrying `--watch-iteration` is what keeps the 3-iteration bound below intact across a resume; a prose "re-invoke ship" loses it. The interval is deliberately long and **not** tuned to CI duration: step 3 already handles the normal case, so this exists only for a watcher that died, a check wedged in `pending`, or a session that ended — the "can end and be re-entered" property this section's opening sentence promises.
 
@@ -242,7 +247,7 @@ Once checks are no longer pending:
 
 ### Track iteration count across wakes
 
-Persist the iteration count in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2`) so the loop bound holds across wake-ups. Reset on a fresh `minerva:ship` invocation.
+Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-balanced`) so both the loop bound and the caller hold across wake-ups. Reset the iteration count on a fresh `minerva:ship` invocation.
 
 ## Auto-merge
 
@@ -285,6 +290,20 @@ The recommendation:
 - Auto-merge declined by repo → "Merge manually when ready: `gh pr merge <pr-number>`. Run `minerva:cleanup` after merge."
 - CI failed after 3 fix iterations → "Investigate the failure manually; the fix loop bailed."
 - CI still pending → "Next watch wake scheduled."
+
+**Under `--auto=<orchestrator>`, the report may not be the end of the run** — and which of the two
+paths applies is decided by an observable fact, not a guess:
+
+- **Resumed from a CI-watch wake-up** (this invocation carried `--watch-iteration`): the orchestrator's
+  turn ended when the watch was armed, so its Phase 6 will never resume. Hand back by invoking
+  `minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool — the re-entry all four
+  orchestrators document, which skips phases 1-6 and runs their cleanup gate.
+- **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
+  invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate
+  twice — a second `minerva:cleanup`, and potentially a second knowledge-reconciliation PR.
+
+Either way, do not print the "Run `minerva:cleanup` afterward" recommendation: it addresses a human
+who is not driving this run.
 
 ## Lifecycle nudges
 

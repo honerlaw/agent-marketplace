@@ -4,6 +4,23 @@ Read each phase's section before executing that phase. These mirror `minerva:pro
 
 Each reviewer gate dispatches with a gate-specific **ARTIFACT + CONTEXT** (below), `subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false` (the critique is arbitrated inline in the same turn), at most **one** dispatch per gate (no re-dispatch). CONTEXT is bounded to the run's proposal/diff, `CLAUDE.md`/`AGENTS.md`, and `.minerva/knowledge/` entries already cited this session — never a fresh corpus scan.
 
+## Delegated skills
+
+Every minerva skill this orchestrator runs, and the **observable mode argument** it passes. A skill
+marked `inlined` has its protocol restated in the phases below, so this file's own gate policy
+governs it; a skill marked `invoked` is run through the `Skill` tool and must receive its argument
+on the invocation line. Never infer orchestrated mode from context — pass the argument
+(`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+
+| Skill | How | Mode argument |
+|---|---|---|
+| `minerva:work` | inlined | `--auto=propose-ship-balanced` |
+| `minerva:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
+| `minerva:review` | inlined | `--auto=propose-ship-balanced` |
+| `minerva:promote` | inlined | `--auto=propose-ship-balanced` |
+| `minerva:ship` | invoked | `--auto=propose-ship-balanced` |
+| `minerva:cleanup` | invoked | `--yes` |
+
 ## Phase 1 — Propose (inline)
 
 Replaces the user-interactive intake in `minerva:propose`.
@@ -25,9 +42,11 @@ Replaces the user-interactive intake in `minerva:propose`.
 Replaces the user-interactive setup and completion signal in `minerva:work`. Implementation itself is unchanged — the main model writes code as normal, maintaining `scratchpad.md` per `minerva:work`'s implementation protocol.
 
 1. **Setup.** Already inside the worktree. Read `proposal.md` and any `replan.md`. Open questions that survived Phase 1 surface in the final report.
-2. **Implementation loop.** Implement per `minerva:work`'s "Implementation protocol". No upper bound on implementation time, but the [scope-fit escape](verify-protocol.md) applies — if the change proves large, escalate.
+2. **Implementation loop.** Implement per `minerva:work`'s "Implementation protocol" in `--auto=propose-ship-balanced` mode. No upper bound on implementation time, but the [scope-fit escape](verify-protocol.md) applies — if the change proves large, escalate.
 3. **Divergence detection — reviewer gate (when triggered).** When a load-bearing divergence is suspected, the main model decides whether it warrants a replan, then dispatches a Skeptic. ARTIFACT = the suspected divergence + the main model's call (replan vs. routine choice); CONTEXT = the proposal's `## Approach`. On confirm → Phase 2.5; otherwise continue. Escalate if unsure.
 4. **Completion verification — reviewer gate.** When every `## Success criteria` item appears met, build the checklist (criterion → claimed evidence → yes/no) and dispatch the **Verifier** per the Verifier brief in verify-protocol.md. ARTIFACT = the checklist + `git diff <default>...HEAD` + the proposal's `## Success criteria`. On a `revise`/`reject` naming an unmet criterion, treat it as a success-criteria divergence → auto-trigger Phase 2.5 (replan) to clarify, then resume. This gate is **never** skipped.
+
+5. Continue to Phase 3.
 
 ## Phase 2.5 — Replan (inline, if triggered)
 
@@ -41,7 +60,7 @@ Mirrors `minerva:replan` with reviewer-gated acceptance.
 
 ## Phase 3 — Review (inline)
 
-Replaces the user-interactive triage in `minerva:review`.
+Replaces the user-interactive triage in `minerva:review`, whose protocol is read in `--auto=propose-ship-balanced` mode.
 
 1. **Read context.** `proposal.md`, all `replan.md`, current `scratchpad.md` (including prior `## Review triage` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), relevant `.minerva/knowledge/`.
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution".
@@ -53,7 +72,7 @@ Replaces the user-interactive triage in `minerva:review`.
 
 ## Phase 4 — Promote (inline)
 
-Replaces the user-interactive partition in `minerva:promote` Mode A. All gates here are **solo**.
+Replaces the user-interactive partition in `minerva:promote` Mode A, whose protocol is read in `--auto=propose-ship-balanced` mode. All gates here are **solo**.
 
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5.
@@ -69,13 +88,19 @@ Replaces the user-interactive partition in `minerva:promote` Mode A. All gates h
 
 No gate: silent advancement. If the global escalation counter has reached 3, halt instead of shipping (see `references/governance.md`).
 
+Otherwise continue to Phase 6.
+
 ## Phase 6 — Ship (delegated)
 
-Invoke `minerva:ship` via the `Skill` tool, leading with:
+Invoke `minerva:ship <date-slug> --auto=propose-ship-balanced` via the `Skill` tool, leading with:
 
 > "You are running inside `minerva:propose-ship-balanced`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
 
 These two gates are operational tier — the main model's draft from `proposal.md` is good enough by definition. If `minerva:ship`'s CI auto-fix classifier marks a failure `other` or bails on a non-trivial test/build, **escalate to the user with the failing job log** — a hardcoded trigger, never silently decided.
+
+When `minerva:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
+turn on its CI watch, it re-enters this gate itself via `--cleanup-only` when checks settle — exactly
+one of the two paths runs, never both.
 
 ## Phase 7 — Cleanup gate
 

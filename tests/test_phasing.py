@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parent.parent
 SKILLS = REPO / "plugins" / "minerva" / "skills"
 PHASING = SKILLS / "propose" / "references" / "phasing.md"
 
-ORCHESTRATORS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+from tests.skills_corpus import AUTONOMOUS_ORCHESTRATORS as ORCHESTRATORS
 
 
 def _cleanup_gate(skill):

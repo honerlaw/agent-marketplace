@@ -2,6 +2,23 @@
 
 Read each phase's section before executing that phase.
 
+## Delegated skills
+
+Every minerva skill this orchestrator runs, and the **observable mode argument** it passes. A skill
+marked `inlined` has its protocol restated in the phases below, so this file's own gate policy
+governs it; a skill marked `invoked` is run through the `Skill` tool and must receive its argument
+on the invocation line. Never infer orchestrated mode from context — pass the argument
+(`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+
+| Skill | How | Mode argument |
+|---|---|---|
+| `minerva:work` | inlined | `--auto=propose-ship-auto` |
+| `minerva:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
+| `minerva:review` | inlined | `--auto=propose-ship-auto` |
+| `minerva:promote` | inlined | `--auto=propose-ship-auto` |
+| `minerva:ship` | invoked | `--auto=propose-ship-auto` |
+| `minerva:cleanup` | invoked | `--yes` |
+
 ## Phase 1 — Propose (inline)
 
 This phase replaces the user-interactive intake in `minerva:propose`.
@@ -42,7 +59,7 @@ This phase replaces the user-interactive setup and completion signal in `minerva
 
 1. **Setup.** Already inside the worktree from Phase 1. Read `proposal.md` and any `replan.md` entries (none on first pass). Skip the user-facing "resolve open questions" step — the proposal-acceptance panel already addressed open questions during whole-proposal review; any that remain are deferred deliberately and surface in the final report.
 
-2. **Implementation loop.** Main LLM implements per `minerva:work`'s "Implementation protocol" section: scratchpad maintenance, divergence detection. **No upper bound on implementation time** — the auto skill doesn't cap coding work.
+2. **Implementation loop.** Main LLM implements per `minerva:work`'s "Implementation protocol" section in `--auto=propose-ship-auto` mode: scratchpad maintenance, divergence detection. **No upper bound on implementation time** — the auto skill doesn't cap coding work.
 
 3. **Divergence detection.** When the main LLM notices what looks like a load-bearing divergence (a core assumption broke, the approach is shifting, scope is shifting), trigger the **divergence panel**: artifact = "is this divergence load-bearing enough to warrant a replan?". On `2/3 accept`, proceed to replan ([Phase 2.5](#phase-25--replan-inline-if-triggered)). On `≤1/3 accept`, continue implementing without replan — the panel determined the divergence was a routine choice. On escalation, ask the user.
 
@@ -69,7 +86,7 @@ Mirrors `minerva:replan`'s protocol with panel-based acceptance.
 
 ## Phase 3 — Review (inline)
 
-Replaces the user-interactive triage in `minerva:review`. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
+Replaces the user-interactive triage in `minerva:review`, whose protocol is read in `--auto=propose-ship-auto` mode. Diff resolution and finding generation can still delegate to `code-review:code-review` for PR-mode, but the triage is panel-driven.
 
 1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), and relevant `.minerva/knowledge/` entries.
 
@@ -89,7 +106,7 @@ Replaces the user-interactive triage in `minerva:review`. Diff resolution and fi
 
 ## Phase 4 — Promote (inline)
 
-Replaces the user-interactive partition in `minerva:promote` Mode A.
+Replaces the user-interactive partition in `minerva:promote` Mode A, whose protocol is read in `--auto=propose-ship-auto` mode.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
@@ -121,15 +138,21 @@ There is no gate. The `promote → ship` confirmation that `minerva:propose-ship
 
 If the global escalation counter has reached 3 by this point, halt instead of shipping (see the failure-modes caps in `references/governance.md`).
 
+Otherwise continue to Phase 6.
+
 ## Phase 6 — Ship (delegated)
 
-Invoke `minerva:ship` via the `Skill` tool. Before invoking, lead with this auto-mode instruction:
+Invoke `minerva:ship <date-slug> --auto=propose-ship-auto` via the `Skill` tool. Before invoking, lead with this auto-mode instruction:
 
 > "You are running inside `minerva:propose-ship-auto`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
 
 These two gates are operational tier and don't warrant panel calls — the main LLM's draft from `proposal.md` is good enough by definition.
 
 If `minerva:ship`'s CI auto-fix classifier marks a failure as `other` or bails on a non-trivial test/build, **do not panel-vote on the bail** — escalate to the user with the failing job log. This is a hard escalation trigger.
+
+When `minerva:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
+turn on its CI watch, it re-enters this gate itself via `--cleanup-only` when checks settle — exactly
+one of the two paths runs, never both.
 
 ## Phase 7 — Cleanup gate
 

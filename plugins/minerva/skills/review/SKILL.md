@@ -9,6 +9,18 @@ Review the active changeset for both design compliance and code quality. Works a
 
 - `minerva:review` — audits the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous; falls back to a plain code review if no work unit is found
 - `minerva:review 005-add-payments` — audit the named unit explicitly
+- `minerva:review <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
+
+## Orchestrated mode (`--auto`)
+
+**Mode argument**: `--auto`
+
+`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
+substituted its own adjudication for this skill's user gates. Act on the argument — never on a
+judgment about who is calling (`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+Absent it, every gate behaves exactly as written.
+
+It satisfies the triage hard gate in `references/protocol.md`.
 
 ## Protocol
 
