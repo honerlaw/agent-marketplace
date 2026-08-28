@@ -8,7 +8,7 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
 1. **Derive the slug silently** from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
 
-2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.minerva/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" --list "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
+2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.minerva/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
 
    The `-phase-*` pattern is not optional. A phased unit's later phases live on `<date-slug>-phase-N` branches (see [phasing.md](phasing.md)), and `*-<slug>` cannot match them — the slug is no longer the tail. Without the second pattern this check reads clean against a unit that is actively mid-flight on phase 2, which is the exact false-clean this step exists to prevent.
 

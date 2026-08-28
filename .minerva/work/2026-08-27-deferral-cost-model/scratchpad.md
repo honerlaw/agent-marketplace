@@ -58,3 +58,27 @@ every invocation) is invisible at authoring time.
 Also tripped it on `work/SKILL.md` — committed a 19-byte overflow because I ran the suite
 BEFORE the final edit rather than after. Order matters: run the gate after the last write, not
 after the last write you happened to be thinking about.
+
+## Verified my own work with an eye-enumerated grep, and it false-negatived
+
+Checking that all five decomposition triggers carried the cost-of-splitting text, I grepped for
+phrasings I remembered writing — "not to decompose", "reason to phase, not". Two of the five
+files reported missing. Both actually had the content; the prose said "not** to re-decompose"
+and "not decompose it", neither of which my pattern matched.
+
+This is `2026-08-11-pattern-the-enumeration-is-what-fails` recurring, and recurring in the
+verification step of a unit that cites that very entry three times. The pattern's own warning is
+that enumerating variants by eye fails repeatedly in one sitting — it took three attempts there
+too. What fixed it here is the same fix: grep for a STRUCTURAL marker (`phasing.md`, which every
+trigger must cite by construction) rather than for prose I was trying to recall.
+
+Generalizes past greps: when verifying that N sites carry a policy, assert on the thing the
+policy REQUIRES them to contain — a pointer, an import, a call — never on how the sentence
+around it was worded. Prose has variants; a required reference does not.
+
+## `git branch --list` takes multiple patterns positionally
+
+Wrote `--list pat1 --list pat2` first. Both that and `--list pat1 pat2` work, but the positional
+form is git's documented shape. Verified empirically with a throwaway branch that `*-<slug>`
+genuinely does NOT match `<date>-<slug>-phase-2` — which is the false-clean the widened glob
+exists to close, confirmed rather than assumed.
