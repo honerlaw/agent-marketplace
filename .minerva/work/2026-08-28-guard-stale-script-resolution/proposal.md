@@ -1,7 +1,7 @@
 # Proposal: guard-stale-script-resolution
 
 **Date**: 2026-08-28
-**Status**: Draft
+**Status**: Shipped (2026-08-28)
 **Closes**: #104
 
 ## Goal
@@ -81,6 +81,23 @@ is rejected on cost, not impossibility: the symlink is global per-user while min
 concurrent worktrees, so repointing for one session corrupts a sibling's. Two such sessions were
 live when this was diagnosed.
 
+## What shipped beyond the plan
+
+The guard was designed per-module and shipped whole-directory. The completion Verifier found two
+holes in the per-module form: `cleanup/references/reconciliation.md` invokes `knowledge_lint` *and*
+`synthesis_status`, with only the first named; and every module imports siblings, so a named module
+being current never implied the code that would run was current. Comparing the directory makes both
+unrepresentable and deletes the argument that could name the wrong module.
+
+`REGISTERED_SITES` was the vehicle for the first hole rather than its detector — pairing each file
+with one module *asserted* there was only one. The registration is now files only, and the test
+counts guards against resolutions per file.
+
+Two placement facts were discovered by breaking things: the guard cannot carry a `$ROOT` fallback
+(`tests/test_skill_snippets.py` asserts none survives its substitution), and at the seven sites
+where the assignment shares a line with the call it feeds, the guard must be injected inline
+before that call — a next-line insertion lands inside the program's continuation lines.
+
 ## Success criteria
 
 - `scripts/plugin_guard.py` exists and exits non-zero when the resolved scripts directory differs
@@ -106,3 +123,7 @@ live when this was diagnosed.
 
 None. Both reviewer gates (scope, approach) returned `revise`; every load-bearing point is folded
 into the Approach and Success criteria above.
+
+## Deferred work
+
+None. Every finding from the three reviewer gates was folded into this unit rather than filed.
