@@ -52,6 +52,7 @@ are wanted — `minerva:lint` deliberately audits the corpus of the branch you a
 distinction is whether the path reaches *across* worktrees or stays *within* the current one.
 
 ## Related
+- [[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]] — the complementary half: this entry anchors to the primary checkout for paths reaching ACROSS worktrees; that one anchors to the current tree to identify the code being edited, which is why `plugin_guard.py` uses `--show-toplevel` and is right to
 - [[2026-06-03-constraint-skill-wraps-script-via-importable-api]] — builds on: it documented the `--show-toplevel` hazard and forbade CWD-relative paths; this names the concrete replacement and the relative-`.` trap in it
 - [[2026-05-20-constraint-enter-worktree-absolute-paths]] — see also: the sibling rule for addressing a worktree rather than entering it
 - [[2026-08-28-bug-a-worktree-glob-sees-every-unit-in-the-project]] — see also

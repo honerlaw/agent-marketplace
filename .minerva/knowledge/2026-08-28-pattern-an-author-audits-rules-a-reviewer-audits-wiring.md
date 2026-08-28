@@ -58,3 +58,4 @@ because a checklist is a list of rules.
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also: the orphaned-function finding is that pattern at function scope, and it took a reviewer to see it
 - [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — see also: the toothless-test finding, generalised
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also: the orchestrator rung that spends exactly one independent reviewer at the high-signal gates; this is evidence for which gates those are
+- [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — see also
