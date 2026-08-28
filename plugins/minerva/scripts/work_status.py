@@ -160,3 +160,122 @@ def unit_state(unit_dir) -> dict:
         "archived": archived,
         "in_flight": (status or "").startswith("Draft") or not promoted,
     }
+
+
+# --- Phases ------------------------------------------------------------------
+#
+# A work unit that is too big for one PR declares an ordered `## Phases` section and
+# ships as one PR per phase, keeping a SINGLE record — one proposal, one scratchpad, one
+# promote. The alternative minerva used before this was to decompose into N work units,
+# which multiplies every per-unit cost (proposal, worktree, review, promote, knowledge
+# reconciliation) by N and was judged one-sidedly: the prose stated a cost of NOT
+# splitting and none for splitting.
+#
+# **A unit with no `## Phases` section is unphased and nothing here applies to it.** That
+# inertness is the property that made this safe to add to every consumer at once, the
+# same argument `2026-08-09-decision-reference-is-a-fifth-entry-type` made for appending
+# an empty index section.
+
+_PHASES_HEADING_RE = re.compile(r"^##\s+Phases\s*$", re.IGNORECASE)
+# A top-level ordered-list item inside that section. Anchored with NO leading whitespace
+# so an indented continuation line under a phase cannot read as another phase — the same
+# boundary discipline `_STATUS_HEADING_RE`'s reader uses, and for the same reason: a
+# miscounted phase list produces a wrong branch name, which is silent.
+_PHASE_ITEM_RE = re.compile(r"^(\d+)\.\s+(.*\S)\s*$")
+
+
+def read_phases(proposal_text: str) -> list:
+    """The unit's declared phases, in order, as `(written_ordinal, title)` pairs.
+
+    Empty list for an unphased unit — the common case, and the one every existing unit
+    is in. The scan is fence-aware via `_nonfenced` because the proposal TEMPLATE and
+    this project's own skill prose both show fenced `## Phases` examples; reading one as
+    a real declaration would phase a unit that never asked to be phased
+    (`2026-06-11-constraint-fence-scans-import-fence-re`).
+
+    The section ends at the next `#` line, not at the first blank — an empty `## Phases`
+    followed by `## Open Questions` must yield no phases rather than swallowing the next
+    section's bullets.
+    """
+    lines = list(_nonfenced(proposal_text))
+    for i, line in enumerate(lines):
+        if not _PHASES_HEADING_RE.match(line):
+            continue
+        phases = []
+        for nxt in lines[i + 1:]:
+            if nxt.startswith("#"):
+                break
+            m = _PHASE_ITEM_RE.match(nxt)
+            if m:
+                phases.append((int(m.group(1)), m.group(2)))
+        return phases
+    return []
+
+
+def phase_numbering_gaps(phases: list) -> list:
+    """Written ordinals that disagree with position, as `(position, written)` pairs.
+
+    Position is what everything downstream uses — a branch name is derived from where a
+    phase SITS in the list, never from a hand-typed digit, because a duplicated `2.` in
+    markdown renders fine and would silently point two phases at one branch. But a
+    disagreement is still worth reporting rather than quietly normalising: the author
+    typed something, and the concordance between the two is exactly what
+    `2026-08-09-pattern-read-authored-metadata-from-where-it-is` says to MEASURE before
+    trusting the derived value as a stand-in for the declared one.
+    """
+    return [(pos, written) for pos, (written, _) in enumerate(phases, start=1) if pos != written]
+
+
+def phase_branch(date_slug: str, position: int) -> str:
+    """The branch name for a phase, single-sourced.
+
+    Phase 1 keeps the BARE `<date-slug>` branch that every unphased unit uses. That is
+    not cosmetic: it leaves the worktree directory and the phase-1 branch matched, so all
+    six `Target resolution` blocks, the duplicate-slug check, and `minerva:cleanup`'s
+    merge detection keep working on a phased unit's first phase with no change at all.
+    Only phases 2+ introduce a new name.
+
+    Callers must not rebuild this string. Two derivations plus a comment asking them to
+    agree is the shape `2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant`
+    is about — `ship`, `cleanup` and the tests all resolve names through here.
+    """
+    if position < 1:
+        raise ValueError(f"phase positions are 1-based, got {position}")
+    return date_slug if position == 1 else f"{date_slug}-phase-{position}"
+
+
+def phase_progress(phases: list, merged_branches, date_slug: str) -> dict:
+    """Derive how far a phased unit has got, from which of its branches have merged.
+
+    Deliberately takes the merged set as an ARGUMENT rather than shelling out to git.
+    This module is a pure reader of declarations, which is what lets its tests run with
+    no repo, no network and no fixtures; the caller (`minerva:ship`, `minerva:cleanup`)
+    already has the `git branch --merged` / `gh pr list` result in hand.
+
+    Derived, never written. A phased unit records its phases ONCE, in the proposal, and
+    its progress is read off the merge history — there is no checkbox to update and
+    therefore none to drift. The marker this module already exists to work around grew
+    eight spellings and misread 16 of 51 units; a second hand-maintained progress marker
+    would be the same bug with a new name
+    (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+
+    Returns `{phased, total, merged, next_position, next_branch, complete}`.
+    `next_position` is the first phase whose branch has NOT merged, so a gap (phase 3
+    merged while 2 is open) resolves to 2 — phases ship in order, and the earliest
+    unmerged one is always what comes next.
+    """
+    merged = set(merged_branches)
+    if not phases:
+        return {"phased": False, "total": 0, "merged": 0, "next_position": None,
+                "next_branch": None, "complete": False}
+    done = [p for p in range(1, len(phases) + 1) if phase_branch(date_slug, p) in merged]
+    pending = [p for p in range(1, len(phases) + 1) if phase_branch(date_slug, p) not in merged]
+    nxt = pending[0] if pending else None
+    return {
+        "phased": True,
+        "total": len(phases),
+        "merged": len(done),
+        "next_position": nxt,
+        "next_branch": phase_branch(date_slug, nxt) if nxt else None,
+        "complete": not pending,
+    }
