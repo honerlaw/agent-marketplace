@@ -9,6 +9,20 @@ Append a dated replan entry to the current work unit when reality has diverged f
 
 - `minerva:replan` — operates on the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
 - `minerva:replan 005-add-payments` — operate on the named unit explicitly (slug or path)
+- `minerva:replan <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
+
+## Orchestrated mode (`--auto`)
+
+**Mode argument**: `--auto`
+
+`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
+substituted its own adjudication for this skill's user gates. Act on the argument — never on a
+judgment about who is calling (`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+Absent it, every gate behaves exactly as written.
+
+It satisfies steps 3, 5 and 7 below: the orchestrator supplies the clarifying answers,
+`minerva:grill-plan` is **not** invoked (it is a one-question-at-a-time user interview), and the
+orchestrator's acceptance stands in for the hard gate.
 
 ## When to use
 
@@ -48,7 +62,8 @@ Same brainstorming pattern as `minerva:propose`, but framed around divergence:
 4. **Propose 2–3 alternative new plans** if the path forward isn't already settled. Iterate.
 5. **Draft the replan entry internally**, then **stress-test it before showing it for approval.** Assemble the Original plan / What changed / New plan triple in conversation (do not write to disk yet) and invoke the `minerva:grill-plan` skill via the `Skill` tool against it (no argument needed — it reads the draft from conversation). Let grill-plan walk the decision tree, edit affected pieces in place as answers surface, and return only once shared understanding is reached. The entry that exits grilling is what step 6 presents.
 6. **Present the resulting entry** for approval before writing.
-7. **Hard gate:** do not append to the file until the user has approved the entry.
+7. **Hard gate:** do not append to the file until the user — or, under `--auto=<orchestrator>`, that
+   orchestrator's new-plan acceptance — has approved the entry.
 
 ## On approval — file write
 

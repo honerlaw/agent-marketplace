@@ -31,6 +31,17 @@ After resolving the target and before reading or writing any files:
 
 Knowledge files written by promote (`.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md`) must use the same prefix — written to `.minerva/worktrees/<date-slug>/.minerva/knowledge/…` so they're committed on the work-unit branch and merged into the default branch via the PR.
 
+## Orchestrated mode (`--auto`)
+
+**Mode argument**: `--auto`
+
+`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
+substituted its own adjudication for this skill's user gates. Act on the argument — never on a
+judgment about who is calling (`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+Absent it, every gate behaves exactly as written.
+
+It satisfies the Mode A and Mode B hard gates in `references/modes.md`.
+
 ## Two modes
 
 The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Summary**` field), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any `.minerva/knowledge/` entry.** **What may be deferred at all — the correctness bar, its three outlets (tracker issue / `.minerva/knowledge/` `reference` entry / neither, for documentation), and why the bar exists — lives in `references/deferral-bar.md`. Read it before disposing of any forward-looking item.** It is the single statement of that rule; `minerva:review` and the four `propose-ship-*` orchestrators point at the same file rather than restating it. The mechanics of the issue path — the capability probe, the `critical`/`high`/`medium` priority vocabulary, the required `**Failure scenario**:` body line, label bootstrap, the duplicate check, and the per-item fail-soft to `followups.md` — live in `references/github-issues.md`. **Read it before filing anything.**

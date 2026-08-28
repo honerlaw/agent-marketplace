@@ -122,7 +122,7 @@ and apply it here rather than passing the judgment downstream:
 - **Documentation for behavior this diff touched is always FIX.** It is not deferrable work —
   it is part of the change that has not been finished. Never SUGGEST it.
 
-The user can batch ("fix 1-3, ignore 4, suggest 5") or go one at a time. **Hard gate:** do not write any files until the user has confirmed dispositions. (When invoked by an orchestrator that substitutes its own adjudication for human gates, that orchestrator's decision satisfies this gate.)
+The user can batch ("fix 1-3, ignore 4, suggest 5") or go one at a time. **Hard gate:** do not write any files until the user has confirmed dispositions. (Under `--auto=<orchestrator>` that orchestrator's adjudication satisfies this gate — act on the argument, never on a judgment about who is calling.)
 
 ## Triage persistence
 

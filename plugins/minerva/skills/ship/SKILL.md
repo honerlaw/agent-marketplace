@@ -9,6 +9,25 @@ Close the minerva lifecycle by committing outstanding work to a branch, opening 
 
 - `minerva:ship` — ships the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous, or runs in **bare mode** if no work unit is found
 - `minerva:ship 005-add-payments` — ship the named unit explicitly
+- `minerva:ship <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
+
+## Orchestrated mode (`--auto`)
+
+**Mode argument**: `--auto`
+
+`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator is driving this
+run. Act on the argument — never on a judgment about who is calling
+(`2026-06-07-decision-phase-handoff-rides-observable-intake`). It does three things:
+
+- **Hard gates #1 and #2** (commit message, PR title + body) accept their drafts without prompting.
+- **The CI-watch wake-up carries the caller**, so the orchestrator survives the wait.
+- **The final report hands control back to `<orchestrator>`'s Phase 7** by invoking
+  `minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool, instead of printing a
+  recommendation addressed to a human. Without this the run ends inside ship and the orchestrator's
+  cleanup gate never fires — the failure `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption`
+  describes.
+
+Absent the argument every gate behaves exactly as written.
 
 ## Pre-flight checks
 

@@ -2,6 +2,23 @@
 
 Read each phase's section before executing that phase. These mirror `minerva:propose-ship-auto`'s phases 1-to-1; the only change is that every panel-dispatch / skip-predicate / revision-round step is replaced by **the main model decides per `references/solo-decision-protocol.md`; escalate on genuine uncertainty**. No phase is removed.
 
+## Delegated skills
+
+Every minerva skill this orchestrator runs, and the **observable mode argument** it passes. A skill
+marked `inlined` has its protocol restated in the phases below, so this file's own gate policy
+governs it; a skill marked `invoked` is run through the `Skill` tool and must receive its argument
+on the invocation line. Never infer orchestrated mode from context — pass the argument
+(`2026-06-07-decision-phase-handoff-rides-observable-intake`).
+
+| Skill | How | Mode argument |
+|---|---|---|
+| `minerva:work` | inlined | `--auto=propose-ship-quick` |
+| `minerva:replan` | inlined | `--auto=propose-ship-quick` |
+| `minerva:review` | inlined | `--auto=propose-ship-quick` |
+| `minerva:promote` | inlined | `--auto=propose-ship-quick` |
+| `minerva:ship` | invoked | `--auto=propose-ship-quick` |
+| `minerva:cleanup` | invoked | `--yes` |
+
 ## Phase 1 — Propose (inline)
 
 Replaces the user-interactive intake in `minerva:propose`.
@@ -31,9 +48,11 @@ Replaces the user-interactive intake in `minerva:propose`.
 Replaces the user-interactive setup and completion signal in `minerva:work`. Implementation itself is unchanged — the main model writes code as normal, maintaining `scratchpad.md` per `minerva:work`'s implementation protocol.
 
 1. **Setup.** Already inside the worktree. Read `proposal.md` and any `replan.md`. Open questions that survived Phase 1 surface in the final report.
-2. **Implementation loop.** Implement per `minerva:work`'s "Implementation protocol". No upper bound on implementation time, but the [scope-fit escape](solo-decision-protocol.md) applies — if the change proves large, escalate.
+2. **Implementation loop.** Implement per `minerva:work`'s "Implementation protocol" in `--auto=propose-ship-quick` mode. No upper bound on implementation time, but the [scope-fit escape](solo-decision-protocol.md) applies — if the change proves large, escalate.
 3. **Divergence detection.** When a load-bearing divergence is suspected, the main model **confirms** whether it warrants a replan (Phase 2.5). Escalate if unsure. A routine choice continues without a replan.
 4. **Completion verification.** When every `## Success criteria` item appears met, build the checklist (criterion → evidence → yes/no) and honestly verify it against `git diff <default>...HEAD`. If a criterion is not cleanly met, auto-trigger Phase 2.5 (replan) to clarify, then resume. This self-check is **never** skipped.
+
+5. Continue to Phase 3.
 
 ## Phase 2.5 — Replan (inline, if triggered)
 
@@ -75,13 +94,17 @@ Replaces the user-interactive partition in `minerva:promote` Mode A.
 
 No gate: silent advancement. If the global escalation counter has reached 3, halt instead of shipping (see `references/governance.md`).
 
+Otherwise continue to Phase 6.
+
 ## Phase 6 — Ship (delegated)
 
-Invoke `minerva:ship` via the `Skill` tool, leading with:
+Invoke `minerva:ship <date-slug> --auto=propose-ship-quick` via the `Skill` tool, leading with:
 
 > "You are running inside `minerva:propose-ship-quick`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
 
 These two gates are operational tier — the main model's draft from `proposal.md` is good enough by definition. If `minerva:ship`'s CI auto-fix classifier marks a failure `other` or bails on a non-trivial test/build, **escalate to the user with the failing job log** — a hardcoded trigger, never silently decided.
+
+When `minerva:ship` returns, continue to Phase 7.
 
 ## Phase 7 — Cleanup gate
 

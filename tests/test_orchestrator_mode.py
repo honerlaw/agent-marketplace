@@ -1,0 +1,176 @@
+"""The orchestrated-mode contract.
+
+A minerva skill that an autonomous orchestrator runs must have its user gates bypassed by an
+**observable argument**, never by the skill judging for itself whether an orchestrator is calling.
+That rule is `2026-06-07-decision-phase-handoff-rides-observable-intake`: *"'An inline argument was
+passed' is observable; 'the prior phase converged' is an opinion."*
+
+Before this contract existed the rule was prose, applied unevenly — `review`, `promote` and `ship`
+carried a carve-out clause, `cleanup` used an observable `--yes`, and `work` and `replan` had
+nothing at all. `work` governs the longest phase of every run, so an autonomous run reaching its
+divergence trigger followed `work` -> `minerva:replan` -> `minerva:grill-plan` into a
+one-question-at-a-time user interview.
+
+Two halves, because either alone reads clean while the other rots:
+
+* **Declaration** — each skill states its mode argument in a machine-readable form.
+* **Coverage + use** — each orchestrator inventories the skills it runs, the inventory is checked
+  against the corpus rather than hand-maintained, and every `Skill`-tool invocation carries the
+  argument.
+
+The coverage half is what keeps this from being a presence assertion
+(`2026-08-10-pattern-presence-assertions-rot-into-green-lies`): a newly inlined gated skill fails
+the suite until it is inventoried.
+"""
+
+import re
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
+
+# The three orchestrators that replace human gates with their own adjudication.
+# `propose-ship` is deliberately absent: its identity is a human at every gate, so it must
+# NOT pass a mode argument. Excluding it is part of the contract, not an oversight.
+AUTONOMOUS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+
+# ``**Mode argument**: `--auto` `` — the skill's own declaration of how it is put into
+# orchestrated mode. Read the declaration; never assume a spelling. `cleanup` declares
+# `--yes`, and a test that assumed `--auto` would fail the one skill that already got this right.
+MODE_DECL_RE = re.compile(r"^\*\*Mode argument\*\*:\s*`(--[a-z-]+)`\s*$", re.M)
+
+# A row of an orchestrator's `## Delegated skills` table.
+INVENTORY_ROW_RE = re.compile(
+    r"^\|\s*`minerva:([a-z-]+)`\s*\|\s*(inlined|invoked)\s*\|\s*`(--[a-z-]+)(?:=[^`]*)?`\s*\|",
+    re.M,
+)
+
+# Opening backtick + name, with NO closing-backtick requirement. An invocation is written
+# ``Invoke `minerva:ship <date-slug> --auto=X` via the `Skill` tool``, so the skill name is not
+# followed by a backtick — a regex demanding one silently matched nothing on the single line the
+# use-half exists to check, and the test passed while the argument was absent. Found by deleting
+# the argument and watching the suite stay green, which is the only way this class of blindness
+# surfaces (`2026-08-11-pattern-a-gate-blind-to-what-it-checks`).
+SKILL_MENTION_RE = re.compile(r"`minerva:([a-z-]+)")
+
+# A line that runs another skill through the Skill tool. This is the ONLY mention shape that
+# must carry the argument. A citation — "Same as `minerva:review`'s Diff resolution", "Mirrors
+# `minerva:replan`" — names a section as the source of a format and must NOT be required to
+# carry it; requiring it everywhere would force nonsense edits, and the predictable response is
+# to weaken the check until it passes (`2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
+INVOCATION_MARKER = "via the `Skill` tool"
+
+
+def phases_text(orch: str) -> str:
+    return (SKILLS / orch / "references" / "phases.md").read_text()
+
+
+def declared_mode_argument(skill: str) -> str | None:
+    p = SKILLS / skill / "SKILL.md"
+    if not p.is_file():
+        return None
+    m = MODE_DECL_RE.search(p.read_text())
+    return m.group(1) if m else None
+
+
+def inventory(orch: str) -> dict[str, tuple[str, str]]:
+    """skill -> (how, flag) from the orchestrator's `## Delegated skills` table."""
+    return {m.group(1): (m.group(2), m.group(3)) for m in INVENTORY_ROW_RE.finditer(phases_text(orch))}
+
+
+def invocation_lines(text: str) -> list[str]:
+    return [l for l in text.splitlines() if INVOCATION_MARKER in l]
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_orchestrator_declares_a_delegated_skills_inventory(orch):
+    inv = inventory(orch)
+    assert inv, f"{orch}/references/phases.md has no `## Delegated skills` table"
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_every_inventoried_skill_declares_the_same_mode_argument(orch):
+    """The orchestrator's claim and the skill's own declaration must agree.
+
+    Two derivations of one fact plus a comment asserting they match will drift
+    (`2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant`); this asserts it.
+    """
+    mismatches = []
+    for skill, (_how, flag) in sorted(inventory(orch).items()):
+        declared = declared_mode_argument(skill)
+        if declared != flag:
+            mismatches.append(f"{skill}: orchestrator passes {flag}, skill declares {declared!r}")
+    assert not mismatches, f"{orch} inventory disagrees with the skills:\n  " + "\n  ".join(mismatches)
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_inventory_covers_every_gated_skill_the_orchestrator_mentions(orch):
+    """Ask the corpus which skills are in play, rather than trusting a hand-kept list.
+
+    Any `minerva:<skill>` named in the phase protocols that declares a mode argument is a gated
+    skill this orchestrator touches, and must appear in the inventory. Inlining a gated skill
+    without inventorying it fails here — which is the whole point
+    (`2026-08-11-pattern-the-enumeration-is-what-fails`: the assertion that holds asks the corpus).
+    """
+    text = phases_text(orch)
+    inv = inventory(orch)
+    missing = sorted(
+        {
+            s
+            for s in SKILL_MENTION_RE.findall(text)
+            if declared_mode_argument(s) is not None and s not in inv
+        }
+    )
+    assert not missing, (
+        f"{orch} mentions gated skill(s) absent from its `## Delegated skills` table: {missing}"
+    )
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_every_skill_tool_invocation_carries_its_mode_argument(orch):
+    """The use half: a skill run through the Skill tool must receive its argument on that line."""
+    inv = inventory(orch)
+    bad = []
+    for line in invocation_lines(phases_text(orch)):
+        for skill in SKILL_MENTION_RE.findall(line):
+            how_flag = inv.get(skill)
+            if how_flag is None or how_flag[0] != "invoked":
+                continue
+            if how_flag[1] not in line:
+                bad.append(f"{skill} ({how_flag[1]} missing): {line.strip()[:110]}")
+    assert not bad, f"{orch} invokes a skill without its mode argument:\n  " + "\n  ".join(bad)
+
+
+@pytest.mark.parametrize("orch", AUTONOMOUS)
+def test_inlined_skills_name_their_mode_argument_somewhere(orch):
+    """An inlined skill's protocol is restated in the phases, so the mode must still be stated
+    there — otherwise the orchestrator reads the skill's interactive gate text with nothing
+    signalling otherwise, which is the original defect."""
+    text = phases_text(orch)
+    bad = [
+        skill
+        for skill, (how, flag) in sorted(inventory(orch).items())
+        if how == "inlined" and f"{flag}={orch}" not in text
+    ]
+    assert not bad, f"{orch} inlines {bad} without naming its mode argument in the phase protocols"
+
+
+def test_the_human_gated_orchestrator_passes_no_mode_argument():
+    """`propose-ship`'s identity is a human decision at every phase transition. If it ever grows a
+    mode argument, the ladder has collapsed and this contract is being applied where it must not be."""
+    p = SKILLS / "propose-ship" / "references" / "phases.md"
+    text = p.read_text()
+    assert "--auto=" not in text, "propose-ship must not pass an orchestrated-mode argument"
+
+
+def test_a_citation_is_not_treated_as_an_invocation():
+    """The boundary, asserted in the green direction.
+
+    Naming a skill to cite its format must not trip the invocation check. Without this, the
+    natural fix for a false positive is to weaken the check until the suite passes.
+    """
+    citation = 'Append the entry to `replan.md` per `minerva:replan`\'s "On approval — file write".'
+    assert INVOCATION_MARKER not in citation
+    assert invocation_lines(citation) == []
