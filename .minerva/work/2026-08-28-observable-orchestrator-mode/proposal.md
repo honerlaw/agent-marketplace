@@ -1,7 +1,7 @@
 # Proposal: observable-orchestrator-mode
 
 **Date**: 2026-08-28
-**Status**: Draft
+**Status**: Shipped (2026-08-28)
 
 ## Goal
 
@@ -71,59 +71,48 @@ definition site. Neither enforces anything —
 
 ## Approach
 
-1. **One observable argument.** Orchestrators invoke every inlined skill with an explicit
-   `--auto` argument, following `cleanup --yes`'s precedent. Each inlined skill documents it and
-   states which of its gates the argument satisfies.
+*(Rewritten at promote to describe what shipped.)*
 
-2. **Migrate the three prose carve-outs** (`review/references/protocol.md:125`,
-   `promote/references/modes.md:31`, `ship/references/protocol.md:160`) to the flag, so one
-   mechanism covers the corpus. `cleanup`'s `--yes` stays as-is — it means something narrower
-   (skip a destructive-action confirmation) and already satisfies the observability rule.
+1. **One observable argument, declared machine-readably.** Each affected skill carries a
+   `**Mode argument**:` line — `--auto` for `work`, `replan`, `review`, `promote`, `ship` and
+   `synthesize`; `--yes` for `cleanup`, unchanged. Orchestrators pass `--auto=<orchestrator>`, whose
+   value names the caller, because `ship` needs the caller's identity to hand back to the right
+   Phase 7 and a boolean would have needed a second channel.
 
-3. **Give `work` a `references/` directory.** It is the only one of the six with none, which is
-   why its gates stayed inline: at 9147 bytes against the 9216-byte budget
-   (`tests/test_skill_budget.py:32`) it has 69 bytes of headroom and no escape hatch. Move prose
-   out to buy budget, and document the flag there.
+2. **The three prose carve-outs migrated** (`review/references/protocol.md`,
+   `promote/references/modes.md`, `ship/references/protocol.md`), and `work` and `replan` — which
+   had none — gained one. `work`'s divergence trigger now returns to the orchestrator's Phase 2.5
+   instead of invoking `minerva:replan`, which reached `minerva:grill-plan`, a user interview.
 
-4. **Redirect `work:99`.** Under `--auto`, a suspected load-bearing divergence returns to the
-   orchestrator's Phase 2.5 instead of invoking `minerva:replan` (and thence `grill-plan`).
+3. **A seventh skill, beyond the original six.** `minerva:synthesize` kept the carve-out at two hops
+   (orchestrator -> `cleanup --yes` -> synthesize) where a contract derived from orchestrator phase
+   protocols cannot see it. `cleanup` now passes `--auto=cleanup` on the invocation line when it is
+   itself orchestrated.
 
-5. **Contract test**, modeled on `tests/test_deferral_bar.py` (single source + `CONSUMERS` +
-   parametrized consumer check). Derive the consumer set by scanning
-   `propose-ship-*/references/phases.md` for `minerva:<skill>` rather than hardcoding it, then
-   assert both halves:
-   - every named skill documents an observable mode argument;
-   - every **invocation site** for that skill also carries the argument.
+4. **Each orchestrator declares a `## Delegated skills` inventory** — skill, how it is run
+   (`invoked` through the `Skill` tool / `inlined` from its own prose / `cited` for format only),
+   and the argument passed. This draws the invocation-vs-citation boundary explicitly rather than by
+   classifying prose, which could not separate a real delegation from
+   "per `minerva:replan`'s 'On approval - file write'" without a brittle verb list.
 
-   The second half is what keeps this from going vacuous
-   (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`): pairing the argument to each
-   invocation means a newly added site cannot pass unflagged.
+5. **Two contract tests, positive and negative.** `tests/test_orchestrator_mode.py` derives the
+   gated set from the orchestrators' own phase protocols and checks declaration, inventory coverage
+   and use; `tests/test_phase_continuation.py` asserts every phase names its successor. The negative
+   check — no skill anywhere gates on a judgment about its caller — is hop-independent, and is what
+   would have caught `synthesize` on day one.
 
-   **Two boundaries have to be explicit, or the test is wrong in a way that reads clean.**
+6. **The phase hand-offs.** `-quick` and `-balanced` Phase 2 gained the missing continuation to
+   Phase 3; Phases 5 and 6 gained one in all three. `ship` carries its caller across its own
+   `ScheduleWakeup` and, **only when resumed from that wake-up**, hands back via the `--cleanup-only`
+   re-entry all four orchestrators already documented — the synchronous path is excluded on both
+   sides so the cleanup gate cannot run twice.
 
-   - *Which mentions count.* An **invocation site** directs the model to run the skill — a
-     `Skill`-tool call, or a "per `minerva:<skill>`'s <protocol>" delegation the orchestrator
-     then executes. A **citation site** merely names a section as the source of a template or
-     format (auto Phase 2.5 step 4 cites `minerva:replan`'s "On approval — file write"; several
-     steps cite `minerva:propose`'s worktree-setup section). Citations must **not** require the
-     argument. Requiring it everywhere would force nonsense edits, and the predictable response
-     is to weaken the test until it passes — so the boundary is asserted too, not just applied
-     (`2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
-   - *Which argument counts.* The invariant is "an observable argument the orchestrator passes",
-     not the literal string `--auto`. `cleanup` satisfies it today with `--yes`, so the test
-     reads each skill's own declared mode argument rather than assuming one spelling — otherwise
-     it false-positives on the one skill that already got this right, and a false positive on a
-     correct skill is how a gate gets weakened.
+7. **Budget accommodation.** `work` had no `references/` directory at all, which is why its gates
+   stayed inline at 9147 of 9216 bytes; its worktree-addressing section moved out. `cleanup` shed
+   its merge-detection section for the same reason.
 
-6. **Phase-continuation test.** Assert every `## Phase N` section in each orchestrator's
-   `phases.md` names its successor, and add the missing continuation to `-quick` and
-   `-balanced` Phase 2.
-
-7. **Close the ship -> Phase 7 hand-off.** `ship` carries its caller across its own
-   `ScheduleWakeup`, and at final report — when a caller is present — invokes
-   `minerva:<caller> --cleanup-only <date-slug>` via the `Skill` tool instead of printing the
-   human-facing recommendation. No new vocabulary is needed: all four orchestrators already
-   document `--cleanup-only <date-slug>`, and it already skips phases 1-6 and runs Phase 7.
+8. **Shared test locators.** `tests/skills_corpus.py` states the orchestrator list and the
+   phase-section parser once, replacing three copies across two new modules and `test_phasing.py`.
 
 ## Success criteria
 
@@ -142,7 +131,15 @@ definition site. Neither enforces anything —
   caller is present; the caller survives a `ScheduleWakeup` round trip.
 - `pytest` passes in full.
 
+## Deferred work
+
+- **#113** — reviewer-gate protocols mandate a synchronous `Agent` dispatch the tool schema may not
+  expose. Observed twice during this run: both reviewer dispatches backgrounded and parked the run,
+  while `tests/test_skill_dispatch.py` stayed green because it checks that the pin is *written*, not
+  that it is *accepted*. Out of scope here; see
+  `.minerva/knowledge/2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch.md`.
+
 ## Open Questions
 
 - None outstanding. Flag spelling resolved to `--auto`; `cleanup`'s `--yes` is deliberately left
-  unrenamed.
+  unrenamed because it skips one destructive-action confirmation, not a set of strategic gates.
