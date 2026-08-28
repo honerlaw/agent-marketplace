@@ -29,3 +29,4 @@ Practical consequence: when a skill operates inside a worktree, every file path 
 - [[2026-05-19-decision-gitignore-before-worktree]] — see also
 - [[2026-05-19-constraint-skills-must-call-tools-not-prose]] — see also
 - [[2026-06-27-decision-worktree-addressing-no-enterworktree]] — see also
+- [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — see also

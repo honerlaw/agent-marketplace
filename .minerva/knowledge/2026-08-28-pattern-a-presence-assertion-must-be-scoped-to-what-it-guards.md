@@ -55,3 +55,4 @@ file still talks about it, does my test fail?
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — builds on: the general form; this is the variant where the file's own explanatory prose is what sustains the false green
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also: a check whose model of its subject is wider than the subject, rather than narrower
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also: the same definition-site / use-site distinction, here inside a single file
+- [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — see also
