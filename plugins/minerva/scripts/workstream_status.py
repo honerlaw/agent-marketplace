@@ -71,16 +71,34 @@ def _has_scratchpad_body(text: str) -> bool:
     Deliberately reached ONLY after `unit_state()["promoted"]` says no. A post-promote
     scratchpad is a marker line, which is a body by this rule; ordering the stage ladder
     promoted-first is what keeps that from reading as live work.
+
+    Header is a PREFIX, not a set of line shapes: an H1, and the first contiguous
+    blockquote run after it. A later blockquote is body. Testing shapes line-by-line
+    instead — "skip every `>` line wherever it appears" — reads a scratchpad whose notes
+    are written as blockquotes as an untouched draft, and quoting is a natural way to log
+    an error or a quotation (the propose-written header models the style). That is the
+    under-reporting failure this module exists to prevent, arriving through the check
+    meant to catch it.
     """
     lines = text.splitlines()
     outside = {i for i, _ in unfenced(lines)}
+    seen_h1 = False
+    in_leading_quote = False
+    quote_done = False
     for i, line in enumerate(lines):
         s = line.strip()
         if not s:
+            # A blank ends the leading blockquote run; anything quoted after it is body.
+            if in_leading_quote:
+                in_leading_quote, quote_done = False, True
             continue
         if i not in outside:
             return True
-        if s.startswith(">") or s.startswith("# "):
+        if s.startswith("# ") and not seen_h1 and not in_leading_quote and not quote_done:
+            seen_h1 = True
+            continue
+        if s.startswith(">") and not quote_done:
+            in_leading_quote = True
             continue
         return True
     return False
@@ -121,8 +139,14 @@ def _stage(state: dict, has_scratchpad_body: bool) -> str:
     `promoted` because a shipped unit is also promoted, and `promoted` before the
     scratchpad test because a post-promote scratchpad holds a marker that would otherwise
     read as a body. Reordering these silently reclassifies finished work as live.
+
+    `shipped` requires BOTH the declared Status and the promote marker, because
+    `minerva:promote` writes them in two non-atomic steps and an interrupted run leaves
+    `Shipped` with no marker. Reading Status alone there renders the unit as done while
+    `in_flight` — which trips on exactly that partial state — still counts it as live: one
+    row of the table contradicting another, with "done" as the visible half.
     """
-    if (state.get("status") or "").startswith("Shipped"):
+    if (state.get("status") or "").startswith("Shipped") and state.get("promoted"):
         return "shipped"
     if state.get("promoted"):
         return "promoted"

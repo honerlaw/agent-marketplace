@@ -92,6 +92,42 @@ def test_a_fenced_header_example_does_not_hide_the_body_under_it():
     assert _has_scratchpad_body(text)
 
 
+def test_a_blockquote_styled_log_is_a_body_not_more_header(tmp_path):
+    """Regression: header is a PREFIX, not a set of line shapes.
+
+    Skipping every `>` line wherever it appeared read a scratchpad whose notes are
+    written as blockquotes — a natural way to log an error, and the style the
+    propose-written header itself models — as an untouched draft. Under-reporting
+    arriving through the check meant to prevent it.
+    """
+    body = HEADER_ONLY + "\n> Investigated the failing test; root cause is a race.\n> Fix in progress.\n"
+    assert _has_scratchpad_body(body)
+
+    write_unit(tmp_path, "2026-06-01-quoted", scratchpad=body)
+    (unit,) = workstream_status(tmp_path)["units"]
+    assert unit["stage"] == "in-progress"
+
+
+def test_an_h1_after_the_header_block_is_a_body(tmp_path):
+    """The H1 exemption is spent on the FIRST one; a later `# ` heading is content."""
+    assert _has_scratchpad_body(HEADER_ONLY + "\n# Findings\n")
+
+
+def test_an_interrupted_promote_is_not_reported_as_shipped(tmp_path):
+    """`minerva:promote` writes Status and archives the scratchpad in two non-atomic
+    steps. A run interrupted between them leaves `Shipped` with no marker; reading
+    Status alone renders that unit as done while `in_flight` still counts it live —
+    one row of the table contradicting another, with "done" as the visible half."""
+    assert _stage({"status": "Shipped (2026-06-02)", "promoted": False},
+                  has_scratchpad_body=True) == "in-progress"
+
+    write_unit(tmp_path, "2026-06-02-half", status="Shipped (2026-06-02)",
+               scratchpad=HEADER_ONLY + "\n## Notes\nwork\n")
+    (unit,) = workstream_status(tmp_path)["units"]
+    assert unit["stage"] != "shipped"
+    assert unit["in_flight"], "the two signals must agree that this unit is not done"
+
+
 # --- the two roots, and the dedupe --------------------------------------------
 
 
@@ -264,7 +300,32 @@ def test_knowledge_health_is_reported_for_a_real_corpus(tmp_path):
     assert k["by_type"] == {"pattern": 1}
     assert k["overview_exists"] is False
     assert k["unsynthesized"] == 1
-    assert isinstance(k["lint_errors"], int)
+    assert k["link_rot"] == 0
+
+
+def test_lint_and_link_rot_counts_are_wired_to_real_findings(tmp_path):
+    """Asserts the VALUES, not their types.
+
+    `assert isinstance(lint_errors, int)` passes against an implementation that always
+    returns 0, or one that files every error under `warnings` —
+    `2026-08-10-pattern-presence-assertions-rot-into-green-lies`. This corpus is built to
+    produce a real finding and a real broken overview link, so a swapped severity filter
+    or a dropped `link_rot` goes red.
+    """
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    (kd / "2026-01-01-pattern-a-thing.md").write_text(
+        "# A thing\n\n**Type**: pattern\n\nBody.\n\n"
+        "## Related\n\n- [[2026-01-02-pattern-does-not-exist]] — dangling\n")
+    (kd / "index.md").write_text("# Knowledge index\n\n## Patterns\n")
+    (kd / "overview.md").write_text(
+        "# Overview\n\nSee [[2026-09-09-pattern-also-missing]].\n")
+
+    k = workstream_status(tmp_path)["knowledge"]
+    assert k["link_rot"] == 1, "overview links a stem with no entry"
+    assert k["lint_errors"] + k["lint_warnings"] > 0, (
+        "a dangling ## Related link and an uncatalogued entry must surface as findings")
+    assert k["overview_exists"] is True
 
 
 # --- the live corpus ----------------------------------------------------------
