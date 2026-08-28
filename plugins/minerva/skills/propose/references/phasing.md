@@ -126,6 +126,33 @@ This is the direct application of
 trigger, reported by a step that omits it, is undetectable. Both halves have to be closed — the
 trigger is the next phase, and the report is what makes its absence noticeable.
 
+## The orchestrator loop
+
+`minerva:propose-ship`, `-quick`, `-balanced` and `-auto` all end with: ship → poll the PR → on
+`MERGED`, run `minerva:cleanup` → report and exit. **On a phased unit that last step is wrong**,
+and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
+reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.
+
+So every orchestrator's cleanup gate gains one branch, before it reports:
+
+> After `minerva:cleanup` returns on a `MERGED` phase, re-derive `phase_progress()`. If
+> `complete` is false, **loop back to the ship phase** for `next_branch` — cut it from the
+> freshly fetched default branch and ship it. Only when `complete` is true does the run report
+> and exit.
+
+Two rules ride with the loop:
+
+- **Promote Mode A runs before the FINAL phase's ship**, not before phase 1's. Its output — the
+  knowledge entries, the `## Approach` rewrite, the `**Closes**` field, the archived scratchpad —
+  belongs in the last PR, because until then the unit is not finished. Use **Mode B** during the
+  earlier phases so each phase's PR still carries what it learned.
+- **The review phase re-runs per phase**, against that phase's own diff. A phase is its own
+  reviewable increment; reviewing phase 1's diff tells you nothing about phase 3's.
+
+**Every phase transition is a place a run can die**, so the report at each one names the
+outstanding phases (see [Reporting](#reporting-never-let-a-pending-phase-be-silent) above). A
+loop whose exit is silent is indistinguishable from a loop that completed.
+
 ## Cleanup: reconcile every phase, tear down once
 
 `minerva:cleanup` does two unrelated jobs, and phasing separates them:
