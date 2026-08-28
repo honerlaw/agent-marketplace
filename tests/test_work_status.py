@@ -192,7 +192,7 @@ def test_a_real_marker_outside_a_fence_still_reads_as_promoted():
 # --- Phases -------------------------------------------------------------------
 
 from work_status import (  # noqa: E402
-    phase_branch, phase_numbering_gaps, phase_progress, read_phases,
+    phase_branch, phase_name, phase_numbering_gaps, phase_progress, read_phases,
 )
 
 SLUG = "2026-08-27-example-unit"
@@ -218,10 +218,32 @@ def test_an_unphased_proposal_declares_no_phases():
 
 
 def test_a_phased_proposal_reads_its_phases_in_order():
-    assert [t for _, t in read_phases(PHASED)] == [
-        "**First thing** — does the first thing.",
-        "**Second thing** — does the second thing.",
-    ]
+    assert [phase_name(t) for _, t in read_phases(PHASED)] == ["First thing", "Second thing"]
+
+
+def test_a_wrapped_phase_description_is_kept_whole():
+    """The continuation line belongs to the phase above, not to nobody.
+
+    Reading only the first physical line truncated every non-trivial phase title
+    mid-sentence — both phases of the unit that introduced this parser wrapped. Since
+    `minerva:ship` must NAME outstanding phases in its report, the truncation reached a
+    human as a sentence fragment.
+    """
+    first = read_phases(PHASED)[0][1]
+    assert first.endswith("A continuation line that is not a phase.")
+    assert "does the first thing." in first
+
+
+def test_phase_name_prefers_the_authors_bolded_name():
+    assert phase_name("**Plan-level phasing** — a long description that wraps on and on") \
+        == "Plan-level phasing"
+
+
+def test_phase_name_falls_back_when_the_convention_is_skipped():
+    """Never return something unusable: a missing phase name in a report is the failure
+    the report exists to prevent, so a clumsy name beats none."""
+    assert phase_name("do the thing — with details") == "do the thing"
+    assert phase_name("y" * 80).endswith("\u2026")
 
 
 def test_an_indented_continuation_line_is_not_a_phase():
@@ -284,14 +306,36 @@ def test_a_unit_is_complete_only_when_every_phase_merged():
     assert state["complete"] is True and state["next_position"] is None
 
 
+THREE_PHASED = """# Proposal: example
+
+## Phases
+
+1. **First thing** — does the first thing.
+2. **Second thing** — does the second thing,
+   and its description wraps.
+3. **Third thing** — does the third thing.
+
+## Open Questions
+
+1. Not a phase.
+"""
+
+
 def test_a_gap_resolves_to_the_earliest_unmerged_phase():
     """Phase 3 merged out of order must not report the unit as being on phase 4 — phases
-    ship in order, so the earliest unmerged one is always next."""
-    three = read_phases(PHASED + "3. **Third thing** — later.\n")
-    # `3.` sits after `## Open Questions`, so build the list explicitly instead.
-    three = [(1, "a"), (2, "b"), (3, "c")]
+    ship in order, so the earliest unmerged one is always next.
+
+    Parsed from a real three-item `## Phases` section rather than a hand-built list. An
+    earlier version of this test constructed the list literally, so the combination that
+    actually runs in production — `read_phases` over real markdown feeding
+    `phase_progress` — was never exercised end-to-end; each half was tested alone.
+    """
+    three = read_phases(THREE_PHASED)
+    assert [n for n, _ in three] == [1, 2, 3]
     state = phase_progress(three, [SLUG, f"{SLUG}-phase-3"], SLUG)
     assert state["next_position"] == 2
+    assert state["next_branch"] == f"{SLUG}-phase-2"
+    assert state["complete"] is False
 
 
 def test_mistyped_ordinals_are_reported_not_silently_normalised():

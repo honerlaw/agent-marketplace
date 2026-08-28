@@ -13,6 +13,7 @@ orchestrator against the very unit that introduced phasing.
 The generalisation these tests encode: **a decider and an executor are different surfaces**, and
 adding a concept to one says nothing about the other.
 """
+import re
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,30 @@ def test_the_loop_rules_live_in_exactly_one_place():
 
 def test_promote_mode_a_is_documented_as_waiting_for_the_final_phase():
     """The ordering rule that makes one-record-per-unit work: Mode A's output belongs in the last
-    PR. Getting this wrong archives the scratchpad while later phases still need it."""
-    body = PHASING.read_text()
-    assert "Mode B" in body and "final phase" in body
+    PR. Getting this wrong archives the scratchpad while later phases still need it.
+
+    Asserted as a RELATION between the two modes, not as the presence of two substrings. The
+    first version of this test checked only that "Mode B" and "final phase" both appeared
+    somewhere in the file — which would have passed with the rule stated backwards ("Mode A runs
+    every phase; Mode B is for the final phase"), because both phrases still occur. That is the
+    presence-over-prose trap (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`), and
+    it was caught by an independent reviewer rather than by the test.
+    """
+    body = " ".join(PHASING.read_text().split())      # normalise wrapping and emphasis spacing
+
+    def _near(anchor, target, window=140):
+        """True iff `target` appears within `window` chars after some `anchor` occurrence."""
+        return any(
+            re.search(target, body[m.end():m.end() + window], re.IGNORECASE)
+            for m in re.finditer(anchor, body, re.IGNORECASE)
+        )
+
+    assert _near(r"Mode A", r"final phase"), (
+        "phasing.md does not tie Mode A to the final phase"
+    )
+    # Mode B is the DURING-the-unit mechanism. If IT is the one bound to the final phase, the
+    # ordering has been stated backwards — which the substring version of this test allowed.
+    assert not _near(r"Mode B", r"only .{0,40}final phase"), (
+        "phasing.md states the Mode A / Mode B ordering backwards"
+    )
+    assert re.search(r"\bMode B\b", body), "phasing.md never names the mid-unit mechanism"

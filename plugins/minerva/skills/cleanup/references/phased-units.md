@@ -39,15 +39,25 @@ A merged phase-1 branch means *that phase* shipped, not that the unit is done. A
 that owns the topology — never infer it from the branch name:
 
 ```bash
+ROOT="$(git rev-parse --show-toplevel)"
+PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
 python3 -c "
-import subprocess, sys; sys.path.insert(0, 'scripts')
+import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
 from work_status import read_phases, phase_progress
 merged = subprocess.run(['git','branch','--merged','<default>','--format=%(refname:short)'],
                         capture_output=True, text=True).stdout.split()
-proposal = '.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md'
+proposal = '$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md'
 print(phase_progress(read_phases(open(proposal).read()), merged, '<date-slug>'))
 "
 ```
+
+**If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+
+The scripts path resolves plugin-cache-first and falls back to `$ROOT/scripts`, per
+`2026-06-03-constraint-skill-wraps-script-via-importable-api` — a bare
+`sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory. Cleanup
+always runs from the parent repo (it removes worktrees, so it must never be inside one), which
+is why the proposal path is anchored at `$ROOT` and reaches *into* the worktree.
 
 - **`complete: False`** → skip teardown. Report the unit as `phase N of M — teardown deferred`.
 - **`complete: True`** → tear down, and prune the unit's merged phase branches too (below).

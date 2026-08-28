@@ -112,3 +112,47 @@ is DECIDED does not teach it at the points where the state is CONSUMED. Deciders
 are different surfaces. Same family as the definition-site/use-site split that let `priority: low`
 survive its own retirement earlier in this unit — twice in one work unit is not a coincidence,
 it is the shape of adding a concept to an existing system.
+
+## Review triage 2026-08-28 (phase 1)
+
+Minerva audit (main model) + code quality (fresh-context reviewer, local-diff mode). All FIX.
+
+- [FIX] #1 high `ship/references/protocol.md` — snippet read `proposal.md` unprefixed and used
+  CWD-relative `sys.path`. Found independently by both lenses. Anchored both paths.
+- [FIX] #2 med `work_status.phase_numbering_gaps` was implemented and unit-tested but called by
+  no workflow step — the safety property was unreachable. Wired into propose's self-review.
+- [FIX] #3 med `read_phases` truncated a phase title at its first physical line. Live in this
+  unit's own proposal. Now joins continuations; added `phase_name()` for short report names.
+- [FIX] #4 low `test_promote_mode_a_...` asserted two substrings and would have passed with the
+  rule stated backwards. Rewritten as a windowed relation; mutation-tested both ways.
+- [FIX] #5 low the gap test hand-built its phase list, so `read_phases` + `phase_progress` were
+  never exercised together. Now parses a real three-phase section.
+- [IGNORE] `read_phases` matches one spelling of `## Phases`. The read-metadata-tolerantly pattern
+  earns its force from a measured corpus of variants; `## Phases` has zero instances predating
+  this change. Revisit if variants appear.
+
+## TODO: a new script function is invisible to skill prose until the plugin redeploys
+
+Running the new self-review snippet for real resolved `PLUGIN_SCRIPTS` to the installed plugin at
+`~/.claude/plugins/minerva/scripts/work_status.py`, which predates these functions, and raised
+`ImportError: cannot import name 'read_phases'`. Forcing `$ROOT/scripts` works.
+
+Failure scenario: any skill snippet that calls a function added in the same change throws
+ImportError for every user whose installed plugin is older than the change, until they reinstall.
+Not specific to phasing — it is a property of the documented plugin-cache-first resolution rule
+(`2026-06-03-constraint-skill-wraps-script-via-importable-api`) and will recur for every future
+script function. Clears the deferral bar; file it rather than widening this unit.
+
+Mitigated here by naming the exact ImportError and its cause in all three snippets, so the
+failure is diagnosable rather than mysterious.
+
+## The reviewer found what the author's own audit could not
+
+My minerva audit caught the path bug (a documented-constraint violation — the lens I was using).
+It did NOT catch: an orphaned function I had just written and tested, a truncation bug live in my
+own proposal, or a weak assertion in a test I wrote three hours earlier. The reviewer found all
+three with no context.
+
+The pattern is not "reviews are good". It is specific: the author's audit is strong on
+"does this violate a rule I can look up" and weak on "is this thing I just built actually wired
+to anything, and does the test I wrote actually test it". Those need someone who did not write it.

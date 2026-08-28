@@ -123,6 +123,23 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
     - **Internal consistency** — does `## Approach` actually achieve `## Goal`? Do `## Success criteria` cover what `## Goal` promises?
     - **Ambiguity** — could any requirement be read two different ways? Pick one and make it explicit.
     - **Scope** — is this still a single work unit? If the prose grew past what one PR can carry, the answer is almost always to add a `## Phases` section (see [phasing.md](phasing.md)), **not** to re-decompose: the ceremony of a second unit is real and the ceremony of a second phase is not. Re-decompose with the user only when the drift is into genuinely independent subsystems — work that would not share a proposal, a reviewer, or a record.
+    - **Phase numbering** — only if the proposal declares `## Phases`. Ask the parser, not your eyes:
+
+      ```bash
+      ROOT="$(git rev-parse --show-toplevel)"
+      PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+      python3 -c "
+      import sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+      from work_status import read_phases, phase_numbering_gaps, phase_name
+      phases = read_phases(open('$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md').read())
+      print('phases:', [(n, phase_name(t)) for n, t in phases])
+      print('numbering gaps:', phase_numbering_gaps(phases))
+      "
+      ```
+
+      **If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+
+      Any gap means a written ordinal disagrees with the phase's position. **Fix the proposal** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check the printed names: a phase whose name comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
 
     Fix issues inline. No need to re-review — just fix and move on.
 

@@ -30,16 +30,36 @@ If it *is* phased, resolve which phase this run is shipping. Never rebuild the b
 hand; ask the module that owns them:
 
 ```bash
+ROOT="$(git rev-parse --show-toplevel)"
+PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+WT=".minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
 python3 -c "
-import subprocess, sys; sys.path.insert(0, 'scripts')
-from work_status import read_phases, phase_progress
+import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+from work_status import read_phases, phase_progress, phase_name
 slug = '<date-slug>'
-merged = subprocess.run(['git','branch','--merged','<default-branch>','--format=%(refname:short)'],
+merged = subprocess.run(['git','-C','$WT','branch','--merged','<default-branch>',
+                         '--format=%(refname:short)'],
                         capture_output=True, text=True).stdout.split()
-phases = read_phases(open('.minerva/work/<date-slug>/proposal.md').read())
-print(phase_progress(phases, merged, slug))
+phases = read_phases(open('$WT/.minerva/work/<date-slug>/proposal.md').read())
+state = phase_progress(phases, merged, slug)
+print(state, [phase_name(t) for n, t in phases if n >= (state['next_position'] or 1)])
 "
 ```
+
+**Both paths are anchored, not CWD-relative**, and that is load-bearing twice over:
+
+- The scripts path follows the plugin-cache-then-`$ROOT` rule every other script-wrapping skill
+  uses (`minerva:lint`, `minerva:migrate-fix`, `minerva:cleanup`'s reconciliation). A bare
+  `sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory
+  (`2026-06-03-constraint-skill-wraps-script-via-importable-api`).
+- The proposal path carries the `$WT` prefix because **ship never enters the worktree** — the
+  session's CWD stays the parent repo. Unprefixed, `.minerva/work/<date-slug>/proposal.md`
+  either does not exist there yet (phase 1 of a new unit: the file lives only on the branch) or
+  is a *stale merged copy* from an earlier phase. The stale-copy branch is the dangerous one:
+  `read_phases` succeeds, `phase_progress` returns a wrong `next_branch`, and ship targets the
+  wrong phase without erroring.
+
+**If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
 
 Use `--merged <default-branch>` against a **freshly fetched** default branch; a stale local ref
 reports a phase as unmerged after its PR landed, which would try to re-ship it.

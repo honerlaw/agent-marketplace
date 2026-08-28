@@ -207,9 +207,38 @@ def read_phases(proposal_text: str) -> list:
                 break
             m = _PHASE_ITEM_RE.match(nxt)
             if m:
-                phases.append((int(m.group(1)), m.group(2)))
-        return phases
+                phases.append([int(m.group(1)), m.group(2)])
+            elif phases and nxt.strip():
+                # A CONTINUATION of the phase above, not a new phase. Any phase
+                # description longer than one line wraps, and every non-trivial one does
+                # — including both phases of the unit that introduced this parser. Taking
+                # only the first physical line silently truncates the title mid-sentence,
+                # and `minerva:ship` is required to NAME the outstanding phases in its
+                # report, so the truncation surfaces to a human as a sentence fragment.
+                phases[-1][1] += " " + nxt.strip()
+        return [(n, t) for n, t in phases]
     return []
+
+
+# The conventional `**Name** — description` opening of a phase item. The name is what a
+# report shows; the description is context nobody wants in a one-line status.
+_PHASE_NAME_RE = re.compile(r"^\*\*(.+?)\*\*")
+
+
+def phase_name(title: str, limit: int = 60) -> str:
+    """A phase's short name, for reports and branch-adjacent prose.
+
+    Prefers the bolded prefix the template asks authors to write (`**Plan-level phasing**
+    — …`), because that is the author's own name for the phase rather than a guess. Falls
+    back to a truncated first clause when an author skipped the convention, so this never
+    returns something unusable — a report that omits a pending phase is the failure this
+    whole reporting path exists to prevent, and a clumsy name beats a missing one.
+    """
+    m = _PHASE_NAME_RE.match(title.strip())
+    if m:
+        return m.group(1).strip()
+    head = title.strip().split(" — ")[0].split(". ")[0]
+    return head if len(head) <= limit else head[:limit - 1].rstrip() + "…"
 
 
 def phase_numbering_gaps(phases: list) -> list:
