@@ -82,3 +82,33 @@ Wrote `--list pat1 --list pat2` first. Both that and `--list pat1 pat2` work, bu
 form is git's documented shape. Verified empirically with a throwaway branch that `*-<slug>`
 genuinely does NOT match `<date>-<slug>-phase-2` — which is the false-clean the widened glob
 exists to close, confirmed rather than assumed.
+
+## Quick decisions 2026-08-28
+
+- [escalated to user] Scope-fit escape fired on `minerva:propose-ship-quick`: 19 files, 5 commits,
+  two phases, a new public mechanism. Not the small low-risk change quick is for. User chose
+  `minerva:propose-ship-balanced` for the remaining lifecycle (review → promote → ship ×2).
+- [decided] The orchestrator phase-loop gap is fixed inside phase 1 rather than filed as an issue.
+  It is a defect in the mechanism phase 1 delivers, phase 1 is unmerged, and filing it would be
+  the deferral reflex this unit exists to cure.
+
+## The orchestrators ship phase 1 and then silently stop
+
+Found while running propose-ship-quick against this very unit. All three autonomous orchestrators
+were taught about phasing at the SCOPE CHECK — where phases are decided — and nowhere else. Their
+Phase 5/6/7 (ship gate, ship, cleanup gate) contain zero phase-awareness.
+
+Failure scenario: hand any orchestrator a unit declaring `## Phases`. Phase 6 ships phase 1's
+branch. Phase 7 polls, sees MERGED, invokes `minerva:cleanup` — which correctly defers teardown
+because it IS phase-aware — and then reports success and exits. Phase 2 never ships. The unit
+stalls at a report that says it finished.
+
+This is `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` reproduced by the
+unit that cites it three times: the next phase had no trigger, and the report omitted what it
+skipped. Both halves, again.
+
+The general shape worth keeping: teaching a system about a new state at the point where the state
+is DECIDED does not teach it at the points where the state is CONSUMED. Deciders and executors
+are different surfaces. Same family as the definition-site/use-site split that let `priority: low`
+survive its own retirement earlier in this unit — twice in one work unit is not a coincidence,
+it is the shape of adding a concept to an existing system.
