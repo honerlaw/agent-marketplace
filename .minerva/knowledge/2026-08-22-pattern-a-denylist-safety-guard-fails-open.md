@@ -46,3 +46,4 @@ mutating verbs qualify; another tool's subcommands do not.
 ## Related
 - [[2026-08-22-pattern-verifying-a-side-effecting-snippet-mutates-real-state]] — builds on
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also
+- [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also

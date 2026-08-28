@@ -64,9 +64,11 @@
 - [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — name the resource an atomic primitive protects, not just the ref — a slug lock does not serialize two sessions working the same goal
 - [[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]] — after extracting a repeated block, byte-identity is right for the shared half and wrong for the rung-specific half; test both
 - [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — "Nothing does X yet" expires on first adoption; assert the property, not the corpus's current contents
+- [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — Deriving consumers from a definition site finds only what that site names; search for the construction instead
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — A new state's decider and its executors are separate surfaces; updating one leaves the others silently wrong
 - [[2026-08-28-pattern-a-presence-assertion-must-be-scoped-to-what-it-guards]] — Prose explaining a requirement keeps a whole-file presence check green after the enforcement is deleted
 - [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — A one-per-site registry asserts there is one; the missing second is invisible at every layer at once
+- [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — Budget a deletion pass per assertion; five vacuous checks in one unit all read clean
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — Self-review finds lookup-able rule violations and misses orphaned code and toothless tests
 - [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — A fence-scan primitive answers "where are the fences", not "what should I do about them"
 
@@ -99,6 +101,7 @@
 - [[2026-08-22-constraint-a-skill-cannot-path-reference-a-sibling-skills-reference-file]] — the pointer gate resolves any `references/<file>.md` substring against the citing skill only
 - [[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]] — PLUGIN_SCRIPTS symlinks to the primary checkout, so a worktree's edits are not what runs
 - [[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]] — It misses squash merges and counts a zero-commit branch as merged; a union inherits both errors
+- [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — Dispatch pin can be absent from the Agent tool schema, so gates park despite the enforcing test passing
 - [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — `--show-toplevel` yields the linked worktree; use `cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd`
 
 ## References

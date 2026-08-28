@@ -70,3 +70,4 @@ the concept is *read* — and note that the answer is rarely the same file.
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — see also
 - [[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]] — see also
 - [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — see also
+- [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also
