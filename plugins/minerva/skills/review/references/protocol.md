@@ -106,6 +106,22 @@ Present findings as a numbered list. For each finding, propose a default disposi
 - **SUGGEST** — append a note to `scratchpad.md` so the next `minerva:promote` decides whether it's durable knowledge.
 - **IGNORE** — explicitly accept. Optionally log rationale to scratchpad as a `→ accepted` line.
 
+**SUGGEST is not the safe default, and it used to behave like one.** It is the lowest-friction
+option on this list — FIX costs work and IGNORE feels like dropping something — so it absorbed
+everything the reviewer was unsure about, and each note it wrote became a TODO at promote and
+then an issue. That is the upstream half of the backlog described in
+`plugins/minerva/skills/promote/references/deferral-bar.md`. **Read that file before triaging**,
+and apply it here rather than passing the judgment downstream:
+
+- A finding with a **writable failure scenario** — specific inputs or state producing a wrong
+  output, a crash, data loss, or an exposure — is FIX if it belongs to this diff, and SUGGEST
+  only if it genuinely does not.
+- A finding without one is a **standing fact about the system**, not a defect. SUGGEST it phrased
+  as what *is* rather than what someone should do, so promote can route it to a `reference`
+  knowledge entry; or IGNORE it.
+- **Documentation for behavior this diff touched is always FIX.** It is not deferrable work —
+  it is part of the change that has not been finished. Never SUGGEST it.
+
 The user can batch ("fix 1-3, ignore 4, suggest 5") or go one at a time. **Hard gate:** do not write any files until the user has confirmed dispositions. (When invoked by an orchestrator that substitutes its own adjudication for human gates, that orchestrator's decision satisfies this gate.)
 
 ## Triage persistence

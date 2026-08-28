@@ -33,6 +33,10 @@ remotes with the parent repo, so `gh` resolves the same `nameWithOwner` from ins
 
 ## Step 2 — Priority
 
+Every item reaching this step has already cleared the bar in
+[deferral-bar.md](deferral-bar.md), so it is a **defect with a writable failure scenario**.
+Priority therefore denotes *how urgent this defect is* — never whether it is worth having.
+
 Propose exactly one level per kept item. These definitions are the whole vocabulary; use
 them verbatim so two runs on the same item agree:
 
@@ -41,7 +45,13 @@ them verbatim so two runs on the same item agree:
 | `critical` | We absolutely should do this before anything else. |
 | `high` | We should do this as soon as possible. |
 | `medium` | We should eventually do this. |
-| `low` | It does not matter whether we do it. |
+
+**There are three levels, and there is deliberately no `low`.** It used to exist, defined as
+"It does not matter whether we do it" — a level that files a labelled issue with a back-link
+for work it simultaneously declares pointless. Once every filed item is a defect, that level
+is incoherent: a defect whose fix does not matter is an item that should have gone to a
+knowledge entry instead. An item that feels like it wants `low` is telling you it is below the
+bar; send it to outlet 2.
 
 The level is a **proposal**, not a fact. Show it alongside the item at Mode A's step-6 hard
 gate — that gate is where a wrong level gets corrected, before anything is created.
@@ -75,8 +85,8 @@ ensure_label "priority: $LEVEL"   "$COLOUR" "$DEFINITION" \
 ```
 
 Colour and definition per level — `critical` `B60205`, `high` `D93F0B`, `medium` `FBCA04`,
-`low` `0E8A16`, each described by its row in the step-2 table. Ensure only the level a given
-item actually uses; there is no reason to create all four on a repo that needs one.
+each described by its row in the step-2 table. Ensure only the level a given item actually
+uses; there is no reason to create all three on a repo that needs one.
 
 If a label cannot be created — the caller can open issues but not manage labels, or the
 repo already runs its own `P0`-style taxonomy — **do not fail and do not force it**. Carry
@@ -104,6 +114,30 @@ Source 3 alone is **not** sufficient: GitHub's search index is not synchronous w
 creation, so an issue filed seconds ago may not be searchable yet. That is exactly the
 window a retry-after-partial-failure lands in, which is why sources 1 and 2 come first.
 
+### Bar conformance on the live tracker (fail-soft)
+
+The source-3 query is already talking to the tracker, so ask it one more thing at zero extra
+cost — add `body` to its `--json` list and note any **open** `minerva:followup` issue with no
+`**Failure scenario**:` line:
+
+```bash
+gh issue list --label "minerva:followup" --state open --limit 200 --json number,title,body \
+  --jq '.[] | select(.body | test("\\*\\*Failure scenario\\*\\*:") | not) | "\(.number)\t\(.title)"'
+```
+
+Report them as a single line — `N open followup issues predate the failure-scenario bar` —
+and **do nothing else**. Specifically:
+
+- **Never fail a run over this.** The query is best-effort; a non-zero exit, a rate limit, or
+  no `gh` at all means skip it silently, exactly like every other step in this file.
+- **Never close or edit those issues automatically.** They are somebody's records, and the bar
+  is not retroactive ([deferral-bar.md](deferral-bar.md)).
+
+This is deliberately **not** a CI test. A check that shells out to `gh` would make the suite
+non-hermetic — broken offline, broken without auth, broken on a rate limit — and would make the
+build depend on a mutable external backlog. The hermetic half of the enforcement lives in the
+test suite against the template above; this half rides a call the run was making anyway.
+
 ## Step 4 — Create the issue
 
 One issue per kept item. The **headline** is the item's one-line summary; the body carries
@@ -116,12 +150,21 @@ gh issue create \
   --body "$(cat <<'MINERVA_ISSUE_BODY'
 <the item's full prose, verbatim from the scratchpad>
 
+**Failure scenario**: <specific inputs or state → wrong output, crash, data loss, or exposure>
+
 **Priority**: <level> — <that level's definition from step 2>
 
 Deferred from `.minerva/work/<date-slug>/` by `minerva:promote`.
 MINERVA_ISSUE_BODY
 )"
 ```
+
+**The `**Failure scenario**:` line is mandatory and must not be padded to satisfy the
+template.** It is the bar from [deferral-bar.md](deferral-bar.md) made structural: an item for
+which that sentence cannot be written honestly is not a defect, and the correct response is to
+stop and send it to outlet 2 (a knowledge entry) rather than to soften the sentence until it
+fits. Writing "could cause problems later" here defeats the entire mechanism — that phrase is
+what the bar exists to refuse.
 
 Two substitution rules, because the item's text is copied verbatim and you do not control it:
 
@@ -152,8 +195,8 @@ Write the created issues into the unit's `proposal.md` under a `## Deferred work
 ```markdown
 ## Deferred work
 
-- #12 — cross-link the eval fixtures (priority: high)
-- #13 — retire the legacy id resolver (priority: low)
+- #12 — retry handler drops the last item when the queue empties mid-flush (priority: high)
+- #13 — legacy id resolver returns None for dated slugs, crashing the index writer (priority: medium)
 ```
 
 This is a historical fact — *this unit deferred that item to that issue* — so it cannot go

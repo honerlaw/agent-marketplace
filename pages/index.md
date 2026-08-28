@@ -131,9 +131,6 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 **`minerva:migrate-fix`**
 : The mutating companion to `minerva:migrate` — behind a confirmation gate, renames legacy `NNN-`prefixed entries and work units to date ids, deriving each date from git and retargeting every reference. Refuses the whole batch before moving anything if two entries would collide.
 
-**`minerva:backfill-followups`**
-: One-time migration of an existing project's `followups.md` backlog into prioritized GitHub issues, triaging each item for whether it is still relevant first. Read-only through a batched confirmation gate; an item it cannot judge with evidence is filed rather than dropped.
-
 **`minerva:init`**
 : One-time scaffolding of the `.minerva/` directory layout. Idempotent — re-runs report per-piece status without rewriting anything in place.
 
