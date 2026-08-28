@@ -41,9 +41,8 @@ Use the resolved value for all merge checks.
 A worktree is safe to remove only once its branch has merged into the default branch. The full
 detection protocol — including the squash-merge case a plain `git branch --merged` misses —
 lives in `references/merge-detection.md`. **Read it before removing anything.**
-On a unit declaring `## Phases`, a merged phase-1 branch means that *phase* shipped, not the unit:
-teardown waits for the final phase while reconciliation never does.
-**Read `references/phased-units.md`** before tearing anything down. No-op for unphased units.
+On a phased unit teardown and reconciliation diverge — **read `references/phased-units.md`** before
+tearing anything down. The rule itself is stated once, in `references/merge-detection.md`.
 
 ## Orchestrated mode (`--yes`)
 

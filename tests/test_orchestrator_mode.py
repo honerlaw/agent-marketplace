@@ -28,13 +28,13 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
-
-# The three orchestrators that replace human gates with their own adjudication.
-# `propose-ship` is deliberately absent: its identity is a human at every gate, so it must
-# NOT pass a mode argument. Excluding it is part of the contract, not an oversight.
-AUTONOMOUS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+from tests.skills_corpus import (
+    AUTONOMOUS_ORCHESTRATORS as AUTONOMOUS,
+    SKILLS,
+    phase_body,
+    phases_text,
+    slice_between,
+)
 
 # ``**Mode argument**: `--auto` `` — the skill's own declaration of how it is put into
 # orchestrated mode. Read the declaration; never assume a spelling. `cleanup` declares
@@ -66,10 +66,6 @@ SKILL_MENTION_RE = re.compile(r"`minerva:([a-z-]+)")
 INVOCATION_MARKER = "via the `Skill` tool"
 
 
-def phases_text(orch: str) -> str:
-    return (SKILLS / orch / "references" / "phases.md").read_text()
-
-
 def declared_mode_argument(skill: str) -> str | None:
     p = SKILLS / skill / "SKILL.md"
     if not p.is_file():
@@ -95,9 +91,8 @@ def phases_text_outside_inventory(orch: str) -> str:
     a Verifier that blanked a phase body's mode mention and watched the suite stay green.
     """
     text = phases_text(orch)
-    start = text.index(INVENTORY_HEADING)
-    end = text.index("\n## ", start + len(INVENTORY_HEADING))
-    return text[:start] + text[end:]
+    table = slice_between(text, INVENTORY_HEADING, "\n## ", f"{orch} delegated-skills table")
+    return text.replace(table, "")
 
 
 def invocation_lines(text: str) -> list[str]:
@@ -224,9 +219,12 @@ def hand_back_block() -> str:
     elsewhere in 22KB of prose, which is how the first version of this test read clean while the
     exclusion clause was deleted.
     """
-    text = SHIP_PROTOCOL.read_text()
-    start = text.index("**Under `--auto=<orchestrator>`")
-    return text[start : text.index("\n## ", start)]
+    return slice_between(
+        SHIP_PROTOCOL.read_text(),
+        "**Under `--auto=<orchestrator>`",
+        "\n## ",
+        "ship hand-back block",
+    )
 
 
 def test_ship_hand_back_states_the_synchronous_exclusion():
@@ -244,10 +242,72 @@ def test_ship_hand_back_states_the_synchronous_exclusion():
 
 @pytest.mark.parametrize("orch", AUTONOMOUS)
 def test_phase_six_states_that_exactly_one_path_runs(orch):
-    text = phases_text(orch)
-    i = text.index("## Phase 6")
-    body = text[i : text.index("\n## ", i + 5)]
+    body = phase_body(orch, "6")
     assert "same turn" in body and "never both" in body, (
         f"{orch} Phase 6 continues to Phase 7 without excluding ship's own `--cleanup-only` "
         "re-entry; on the wake-up path both would run the cleanup gate"
+    )
+
+
+# --- No self-judgment carve-out survives anywhere in the corpus ----------------------
+#
+# The inventory checks above derive their set from the orchestrators' phase protocols, so they
+# see one hop. `minerva:synthesize` sat two hops out — an orchestrator invokes `minerva:cleanup
+# --yes`, which invokes synthesize during reconciliation — and kept a prose carve-out reading
+# "(When invoked by an autonomous orchestrator, its adjudication mechanism provides this
+# confirmation.)" long after the one-hop skills were migrated. The suite reported full coverage
+# the whole time, because its model of "a gated skill" was narrower than the corpus's
+# (`2026-08-11-pattern-a-gate-blind-to-what-it-checks`).
+#
+# This check is hop-independent by construction: it asks the corpus for the *construction* the
+# migration removed, rather than for a list of skills someone remembered to enumerate
+# (`2026-08-11-pattern-the-enumeration-is-what-fails`).
+
+SELF_JUDGMENT_RE = re.compile(
+    r"[Ww]hen (?:an? |the )?invok(?:ed|ing)(?: by)? (?:an? )?(?:autonomous )?(?:orchestrator|skill)"
+)
+
+
+def all_skill_prose() -> list[tuple[Path, str]]:
+    return [(p, p.read_text()) for p in sorted(SKILLS.rglob("*.md"))]
+
+
+def test_no_skill_gates_on_a_judgment_about_its_caller():
+    """A gate must be bypassed by an argument that was passed, never by the skill deciding for
+    itself who is calling. "An inline argument was passed" is observable; "an orchestrator is
+    calling me" is an opinion (`2026-06-07-decision-phase-handoff-rides-observable-intake`)."""
+    offenders = []
+    for path, text in all_skill_prose():
+        for m in SELF_JUDGMENT_RE.finditer(text):
+            line = text[: m.start()].count("\n") + 1
+            offenders.append(f"{path.relative_to(SKILLS)}:{line}: {m.group(0)!r}")
+    assert not offenders, (
+        "skill prose gates on a judgment about the caller instead of an observable argument:\n  "
+        + "\n  ".join(offenders)
+    )
+
+
+def test_every_skill_declaring_a_mode_argument_is_reachable_from_an_orchestrator():
+    """Guards the check above from the opposite direction: a declaration nobody passes is dead
+    prose, and would let a skill claim orchestrated support it never receives."""
+    corpus = "\n".join(t for _p, t in all_skill_prose())
+    unreachable = []
+    for path in sorted(SKILLS.glob("*/SKILL.md")):
+        skill = path.parent.name
+        flag = declared_mode_argument(skill)
+        if flag is None:
+            continue
+        # The skill's OWN flag, not "either known flag". Accepting --auto or --yes for every
+        # skill let a line naming minerva:synthesize alongside an unrelated --yes satisfy
+        # synthesize, whose flag is --auto — the same assume-a-spelling defect this module
+        # exists to prevent, caught by deleting the argument and watching the check stay green.
+        passed = re.escape(flag) + ("=" if flag == "--auto" else r"\b")
+        if not re.search(
+            rf"`minerva:{re.escape(skill)}[` ][^\n]*{passed}"
+            rf"|{passed}[^\n]*`minerva:{re.escape(skill)}`",
+            corpus,
+        ):
+            unreachable.append(skill)
+    assert not unreachable, (
+        f"these skills declare a mode argument that nothing ever passes: {unreachable}"
     )

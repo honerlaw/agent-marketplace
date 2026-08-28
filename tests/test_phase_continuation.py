@@ -17,28 +17,14 @@ gate), and a human drives each of its transitions, so a missing continuation can
 strand a run. That exclusion is asserted below so it cannot quietly become a blind spot.
 """
 
-import re
-from pathlib import Path
-
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
-
-AUTONOMOUS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
-
-PHASE_HEADER_RE = re.compile(r"^## Phase (\d+(?:\.\d+)?)\s*[—-].*$", re.M)
-
-
-def phase_sections(orch: str) -> list[tuple[str, str]]:
-    """[(label, body)] for each `## Phase X` section, in document order."""
-    text = (SKILLS / orch / "references" / "phases.md").read_text()
-    hits = [(m.group(1), m.start()) for m in PHASE_HEADER_RE.finditer(text)]
-    out = []
-    for i, (label, start) in enumerate(hits):
-        end = hits[i + 1][1] if i + 1 < len(hits) else len(text)
-        out.append((label, text[start:end]))
-    return out
+from tests.skills_corpus import (
+    AUTONOMOUS_ORCHESTRATORS as AUTONOMOUS,
+    PHASE_HEADER_RE,
+    SKILLS,
+    phase_sections,
+)
 
 
 @pytest.mark.parametrize("orch", AUTONOMOUS)

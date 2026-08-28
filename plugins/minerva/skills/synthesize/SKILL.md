@@ -20,6 +20,19 @@ IF synthesis is warranted, and writes `overview.md` only after you confirm.
 > read-only. The overview's content is **advisory** — only ever a navigation aid,
 > never a CI-gated artifact (knowledge 013).
 
+## Orchestrated mode (`--auto`)
+
+**Mode argument**: `--auto`
+
+`--auto=<caller>` is an **observable** signal that an autonomous caller has substituted its own
+adjudication for the Step-4 write gate. Act on the argument — never on a judgment about who is
+calling (`2026-06-07-decision-phase-handoff-rides-observable-intake`). `minerva:cleanup` passes it
+when it is itself running orchestrated; absent it, the gate behaves exactly as written.
+
+Reaching this skill takes two hops — an orchestrator invokes `minerva:cleanup --yes`, which invokes
+`minerva:synthesize` during reconciliation — which is why the carve-out here outlived the ones a
+single hop out.
+
 ## Target
 
 The `.minerva/knowledge/` corpus of the **current working tree**, resolved from
@@ -103,8 +116,7 @@ helper reads the *committed* `overview.md`, so it can only confirm `link_rot` is
 ## Step 4 — Gate, then write
 
 Show the drafted `overview.md` to the user and **wait for explicit confirmation** before
-writing. (When invoked by an autonomous orchestrator, its adjudication mechanism
-provides this confirmation.) On confirmation, `Write` the file to `$ROOT/.minerva/knowledge/overview.md` and
+writing — or, under `--auto=<caller>`, take that caller's adjudication as the confirmation. On confirmation, `Write` the file to `$ROOT/.minerva/knowledge/overview.md` and
 report the themes and how many entries moved out of `unsynthesized`.
 
 ## Advisory, not gated

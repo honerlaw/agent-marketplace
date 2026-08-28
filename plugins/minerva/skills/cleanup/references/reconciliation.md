@@ -156,8 +156,10 @@ the throwaway leaves no trace. Address it by prefix — every path gets
    an unresolvable target (nothing is written for it).
 
 2. **Refresh the overview, if warranted.** When `synthesis_status` reported
-   un-synthesized entries, invoke the `minerva:synthesize` skill via the `Skill` tool,
-   pointing it at the throwaway worktree's corpus. Its own Step-2 self-gate decides
+   un-synthesized entries, invoke the `minerva:synthesize` skill via the `Skill` tool — as
+   `minerva:synthesize --auto=cleanup` when this cleanup run was itself invoked with `--yes`, so
+   its write gate is satisfied by the same adjudication instead of stopping to ask a user who is
+   not driving the run. Point it at the throwaway worktree's corpus. Its own Step-2 self-gate decides
    whether the scope justifies a rewrite — do not second-guess it, and do not run it
    at all when the signal was empty.
 
