@@ -105,7 +105,7 @@ repointing for one session corrupts a sibling's. Two such sessions were live whe
 diagnosed.
 
 ## Related
-- [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — the complementary half: it anchors to the primary checkout for paths reaching ACROSS worktrees, this one anchors to the current tree for identifying the code being edited. Not a contradiction — the table above is the boundary, and reading either without the other produces the wrong anchor half the time
+- [[2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout]] — the complementary half: it anchors to the primary checkout for paths reaching ACROSS worktrees, this one anchors to the current tree for identifying the code being edited. The two answer different questions; the table above is the boundary, and reading either without the other produces the wrong anchor half the time
 - [[2026-06-03-constraint-skill-wraps-script-via-importable-api]] — builds on: it set the plugin-cache-first precedence this leaves intact, and forbade CWD-relative paths
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — see also: why the guard exits non-zero instead of printing
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also: the twelve sites are consumers of one resolution rule, and adding the rule did not add them
