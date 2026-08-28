@@ -42,3 +42,19 @@ means the worktree dir and phase-1 branch stay matched, so all six `Target resol
 the duplicate-slug check and `cleanup`'s merge detection work unchanged on a phased unit's
 first phase. Only phases 2+ are new. Also removed the bootstrapping problem — this unit needed
 no manual deviation to create itself.
+
+## The 9KB skill budget forced a refactor, and that was the right call
+
+`cleanup/SKILL.md` sat at 9204 of 9216 bytes on main — twelve bytes of headroom. Any change to
+that skill was going to hit the wall; phasing just happened to be the one that did. Moving the
+`## Removal` protocol verbatim into `references/removal.md` and leaving a read-directive pointer
+is exactly the progressive-disclosure pattern unit 035 established, so the gate did its job:
+it converted "add prose to a full file" into "split the file", which is what should happen.
+
+Worth noting the budget test is the only thing that would have caught this. Nothing else in the
+suite cares how long a SKILL.md is, and the cost of an over-long one (silent context bloat at
+every invocation) is invisible at authoring time.
+
+Also tripped it on `work/SKILL.md` — committed a 19-byte overflow because I ran the suite
+BEFORE the final edit rather than after. Order matters: run the gate after the last write, not
+after the last write you happened to be thinking about.
