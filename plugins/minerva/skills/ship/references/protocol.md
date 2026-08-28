@@ -18,6 +18,51 @@ After resolving the target and before running any git commands:
 - If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<date-slug> …` and prefix any file path with `.minerva/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
+## Phase resolution
+
+Run this immediately after worktree addressing, and **skip it entirely in bare mode**.
+
+Read the resolved unit's `proposal.md`. If it has **no `## Phases` section the unit is unphased**
+— which is the normal case — and nothing in this section applies: ship exactly as before. Do not
+invent phases for a unit that did not declare them.
+
+If it *is* phased, resolve which phase this run is shipping. Never rebuild the branch names by
+hand; ask the module that owns them:
+
+```bash
+python3 -c "
+import subprocess, sys; sys.path.insert(0, 'scripts')
+from work_status import read_phases, phase_progress
+slug = '<date-slug>'
+merged = subprocess.run(['git','branch','--merged','<default-branch>','--format=%(refname:short)'],
+                        capture_output=True, text=True).stdout.split()
+phases = read_phases(open('.minerva/work/<date-slug>/proposal.md').read())
+print(phase_progress(phases, merged, slug))
+"
+```
+
+Use `--merged <default-branch>` against a **freshly fetched** default branch; a stale local ref
+reports a phase as unmerged after its PR landed, which would try to re-ship it.
+
+- `next_branch` is the branch this run ships. If the worktree is on a different branch, say so
+  and stop rather than guessing — the user may be mid-phase deliberately.
+- `complete` is true → every phase has merged. There is nothing to ship; report that and stop.
+- Carry `merged`, `total` and the outstanding phase names into the [Final report](#final-report).
+
+To **start** phase N (N≥2), cut its branch from the freshly fetched default branch inside the
+unit's existing worktree — `proposal.md` and `scratchpad.md` arrive with it, because they merged
+there with the previous phase:
+
+```bash
+git -C .minerva/worktrees/<date-slug> fetch origin <default-branch>
+git -C .minerva/worktrees/<date-slug> checkout -b <date-slug>-phase-N origin/<default-branch>
+```
+
+Full rules — the soft ceiling, why phase 1 keeps the bare slug, and why progress is derived
+rather than written — are in
+`plugins/minerva/skills/propose/references/phasing.md`. **Read it before shipping any phase
+other than the first.**
+
 ## Default-branch detection
 
 Several steps below reference "the default branch". Resolve it **once** at the start of the run using this sequence and reuse the result:
@@ -33,7 +78,7 @@ Use the same resolved value in pre-flight, branch creation, and the branch-vs-de
 Only if currently on the default branch:
 
 1. Derive the branch name:
-   - Work-unit mode: `<YYYY-MM-DD>-<slug>` (e.g. `006-add-ship-skill`).
+   - Work-unit mode: `<YYYY-MM-DD>-<slug>` (e.g. `006-add-ship-skill`). For a **phased** unit take `next_branch` from [Phase resolution](#phase-resolution) instead — phase 1 resolves to exactly this same bare name, so the two agree by construction rather than by coincidence.
    - Bare mode: `<git-user>/<slug-from-recent-commit-or-timestamp>`, where `<git-user>` is taken from `git config user.email` (local part before `@`) or `git config user.name` lowercased; fall back to `work` if neither is set. Avoids hardcoding any single agent identity into branch names.
 2. `git checkout -b <branch>`.
 
@@ -199,11 +244,20 @@ Branch:        <branch name>
 PR:            <url>
 CI:            green | failing | pending (will re-check at <timestamp>)
 Auto-merge:    enabled | declined by repo | not attempted (CI not green)
+Phase:         2 of 3 — outstanding: 3. <name>        <- phased units only; omit the line entirely when unphased
 Next:          <recommendation>
 ```
 
+**The `Phase:` line is not optional on a phased unit, and it must name the outstanding phases,
+not just count them.** A unit that stalls after phase 1 has to be visible as a unit that
+stalled. A report that omits work it deferred lies by omission, and deferred work whose trigger
+is never named is undetectable — both halves of
+`2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption`, which was logged six times
+in two days on this project, every one found by accident.
+
 The recommendation:
 
+- **Phased unit with phases outstanding** → "Phase N merged. Run `minerva:ship` again to start phase N+1 (`<next branch>`); `minerva:promote` waits for the final phase — use its Mode B for durable knowledge found meanwhile."
 - Auto-merge enabled and CI green → "GitHub will merge when checks pass. Run `minerva:cleanup` afterward to remove the worktree."
 - Auto-merge declined by repo → "Merge manually when ready: `gh pr merge <pr-number>`. Run `minerva:cleanup` after merge."
 - CI failed after 3 fix iterations → "Investigate the failure manually; the fix loop bailed."
@@ -223,4 +277,6 @@ Surface both nudges as part of the initial summary, then proceed. The user can s
 The [Worktree addressing](#worktree-addressing) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `minerva:propose`, so the rest of ship works against the correct state automatically.
 
 After merge, the worktree and its branch should be cleaned up via `minerva:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
+
+On a **phased** unit the worktree survives between phases: `minerva:cleanup` defers teardown while any declared phase is unmerged, and phase N+1 is cut inside that same worktree. Running cleanup between phases is still correct and still worth doing — it reconciles the knowledge wiki for anything `minerva:promote`'s Mode B landed in the phase that just merged.
 

@@ -44,6 +44,7 @@ For each `.minerva/worktrees/<date-slug>/` candidate, determine if its branch (`
 2. **Merged via PR (preferred)** — `gh pr list --head <date-slug> --state merged --json number,mergedAt --limit 1`. If a merged PR exists, the work is shipped.
 3. **Merged locally** — `git branch --merged <default> | grep -q "^[* ] <date-slug>$"`. Catches the case where the branch was merged locally or where `gh` isn't available.
 4. **Neither** — branch is **not** merged. Skip. Do not remove an unmerged worktree (the user's in-progress work would be lost).
+5. **Phased unit?** If the candidate's `proposal.md` declares `## Phases`, a merged phase-1 branch means that *phase* shipped, not the unit. Teardown waits for the final phase; reconciliation never does. **Read [references/phased-units.md](references/phased-units.md)** before tearing anything down. No-op for unphased units.
 
 Report each candidate's state. For `--dry-run`, stop here.
 
@@ -68,13 +69,8 @@ Skip this gate when `--dry-run` is set (nothing destructive happens) or when the
 
 ## Removal
 
-For each confirmed worktree:
-
-1. `git worktree remove .minerva/worktrees/<date-slug>` — if this fails because the worktree has uncommitted changes, surface the error and skip (do not force-remove without explicit user direction; uncommitted changes in a "merged" worktree are a red flag worth surfacing).
-2. `git branch -d <date-slug>` — uses `-d` (safe delete), not `-D` (force). If `-d` refuses because git thinks the branch isn't merged (rare after PR merge — usually a squash-merge artifact), fall back to `git branch -D <date-slug>` **only** if the merged-PR check in step 2 of Merge detection passed. Squash-merges leave a different commit hash on default, so local `git branch -d` is conservative and needs an override.
-3. `git worktree prune` — cleans up any stale worktree metadata.
-
-After all removals: `git worktree list` to show the final state.
+Conservative by design — each step prefers to refuse and surface rather than force, because
+cleanup's failure mode is destroying unmerged work. **Read [references/removal.md](references/removal.md) before removing anything**; it carries the worktree removal, the `-d`/`-D` branch-delete rule and its squash-merge rationale, the phased-unit branch prune, and the metadata prune.
 
 ## Final report
 

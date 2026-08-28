@@ -38,6 +38,9 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 **"We just decided the queue retry policy should be exponential backoff capped at 5 minutes."**
 → Mid-work durable decision. Run `minerva:promote "exponential backoff capped at 5 minutes for queue retries"`. The scratchpad entry gets marked so the end-of-work pass doesn't re-promote it.
 
+**"This is too big for one PR."**
+→ Not a reason to split into several work units. Declare an ordered `## Phases` section in the proposal: one unit, one record, one promote, shipping one PR per phase (`minerva:ship` runs once per phase, `minerva:cleanup` defers teardown until the last one merges). Soft ceiling of about three phases. Separate work units are for genuinely independent subsystems only — each one re-pays propose, worktree, review, promote, reconciliation and ship. See `plugins/minerva/skills/propose/references/phasing.md`.
+
 **"Before I open the PR, let's check the code actually matches what we designed."**
 → `minerva:review`. The skill reads the proposal + replans, audits the branch-vs-default diff (or the uncommitted diff if the tree is dirty), runs `code-review:code-review` (or a structured inline check if no PR exists yet), and walks you through each finding. Triage state is persisted to scratchpad so re-runs pre-fill prior dispositions. Run review **before** promote so review-derived notes flow through promote's partition.
 

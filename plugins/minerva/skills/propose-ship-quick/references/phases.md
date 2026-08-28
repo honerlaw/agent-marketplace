@@ -12,7 +12,7 @@ Replaces the user-interactive intake in `minerva:propose`.
 
 3. **Design synthesis.** The main model drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with the 2-3 candidate approaches it considered. Context-grounded inference, not user Q&A. Keep it in conversation; write no file yet.
 
-4. **Scope check.** The main model decides: single work unit, or decompose? Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
+4. **Scope check.** The main model decides: one work unit in one PR, one unit in ordered **phases**, or genuinely separate units? **Too big for one PR means phase it, not decompose it** — a `## Phases` section (soft ceiling ~3) keeps one proposal, one record and one promote, where an extra unit re-pays every per-unit cost and re-derives the context this one just built (`plugins/minerva/skills/propose/references/phasing.md`). Note that a quick run is for *small* changes: work needing phases at all is usually a signal to escalate per the scope-fit escape rather than to phase. Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 
 5. **Approach selection.** The main model picks among its candidates; if no option is dominant, escalate (offer the candidates via `AskUserQuestion`). The chosen approach replaces the draft's `## Approach`.
 
