@@ -57,3 +57,4 @@ file still talks about it, does my test fail?
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also: the same definition-site / use-site distinction, here inside a single file
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — see also
 - [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — see also
+- [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — see also

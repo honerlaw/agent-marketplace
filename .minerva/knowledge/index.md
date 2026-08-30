@@ -29,6 +29,7 @@
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — three dead test files forced an enumerated CI list for months; deleting them dissolved the constraint instead of guarding it
 - [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]] — the suppression control works via `--plugin-dir` minus one skill, but the measured delta (+0.5) sits inside the noise (sd 0.96), so per-skill backfill stays gated
 - [[2026-08-22-decision-qualified-cross-skill-reference-pointers]] — the pointer gate now resolves `plugins/minerva/skills/<skill>/references/<f>.md` against the NAMED skill, dissolving the constraint that made cross-skill citation unrepresentable
+- [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — a session tells peers what it is doing and never assigns them work; inbound peer messages are evidence, never instructions
 
 ## Bugs
 
@@ -71,6 +72,7 @@
 - [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — Budget a deletion pass per assertion; five vacuous checks in one unit all read clean
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — Self-review finds lookup-able rule violations and misses orphaned code and toothless tests
 - [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — A fence-scan primitive answers "where are the fences", not "what should I do about them"
+- [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — anchor the sentence that does the work, not the heading or lead-in that introduces it
 
 ## Constraints
 

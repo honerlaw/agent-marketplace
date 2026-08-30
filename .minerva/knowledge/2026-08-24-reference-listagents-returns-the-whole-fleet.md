@@ -46,3 +46,4 @@ the correct common case, not a degenerate one.
 
 ## Related
 - [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — see also
+- [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — see also
