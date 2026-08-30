@@ -68,3 +68,4 @@ the identical symptom — a green suite — and neither is visible by reading.
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also
+- [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — see also

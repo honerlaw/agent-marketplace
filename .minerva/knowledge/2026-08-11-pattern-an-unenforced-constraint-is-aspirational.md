@@ -76,3 +76,5 @@ a false sense of one.
 - [[2026-08-28-pattern-a-corpus-assertion-must-survive-its-own-first-instance]] — see also
 - [[2026-08-28-constraint-a-skill-snippet-runs-the-primary-checkouts-code]] — see also
 - [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — see also
+- [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — see also
+- [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — see also

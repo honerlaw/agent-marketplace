@@ -41,3 +41,4 @@ source would have left four stale summaries with nothing going red.
 - [[2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication]] — builds on
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — see also
 - [[2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant]] — see also
+- [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — see also

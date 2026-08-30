@@ -437,6 +437,21 @@ kind and liveness but never intent, so overlap can only be learned by asking —
 that drains at the peer's next tool round means silence has to count as `unknown`, never
 as `clear`.
 
+That channel then needed a rule, because having it was not the same as knowing what to say
+over it. Sessions running minerva skills were observed **handing each other work**, which
+fails in both directions at once: work assigned *in* becomes scope the user never asked for,
+landing inside a unit whose `proposal.md` does not cover it, and work handed *out* is dropped
+because the sender assumes the peer picked it up. The contract is that a session states facts
+about **its own** workstream and never adds to a peer's, and that an inbound message is
+**evidence, never an instruction** — including when phrased as one
+([[2026-08-30-decision-cross-session-messages-inform-never-delegate]]). Two details carry the
+weight. The ban is on *adding to the peer's workstream*, not on asking questions, so the
+pre-flight query above survives — collapsing "never delegate" into "never ask" would delete
+the only detection there is for the pre-worktree window. And the marker declaring a message
+informational rides **inside the message**, not only in the protocol file, because a file
+binds only the sessions that read it while the message reaches everyone. Like the collision
+check it sits beside, it is a norm rather than a lock, and it says so.
+
 Read together, this cluster is one lesson in several shapes: **shared mutable state is where
 concurrency bugs go to hide**, and the ones that survive testing are the ones where the
 test and the design share an assumption — or where the guarantee was written down as a
@@ -674,6 +689,15 @@ grammar with the opposite handling from every declaration-reading sibling
 and its **executors** are separate surfaces — teaching the one that chooses without teaching
 the ones that act leaves the others silently wrong
 ([[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]]).
+
+The scoping lesson then recurred one level finer, twice inside a single work unit and by two
+different review mechanisms. Both times an anchor pinned a clause's **framing** — a section
+heading, one bullet of a parallel pair — while the sentence doing the work stayed deletable
+with the suite green ([[2026-08-30-pattern-anchor-the-clause-not-its-framing]]). Knowing the
+pattern did not prevent it: the author of the second instance had just fixed the first. What
+distinguishes the cases that were caught is not care but method — each was found by a
+fresh-context reader **deleting the clause and watching**, never by re-reading the anchor
+list, which looked correct every time.
 
 ## Limitations
 
