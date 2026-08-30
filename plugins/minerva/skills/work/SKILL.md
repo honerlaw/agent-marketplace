@@ -79,6 +79,8 @@ As you work, log to `scratchpad.md`. The bar for an entry is: **a future-self mi
 
 The scratchpad is **ephemeral working memory**. `minerva:promote` will later partition it into "promote / merge into proposal / discard." Keep signal-to-noise high.
 
+When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+
 ### Divergence detection
 
 Continuously check: does the approach I'm taking still match `proposal.md` (as superseded by the latest `replan.md`)?

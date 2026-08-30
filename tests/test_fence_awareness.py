@@ -120,6 +120,10 @@ FENCE_LOOP_EXEMPT = {
         "filtering it, so dropping lines would corrupt the file",
     "tests/test_skill_dispatch.py":
         "measures the fence's run length for pairing, which the shared regex does not expose",
+    "tests/test_cross_session_contract.py":
+        "collects the content INSIDE each fence — the exact inverse of `unfenced`, which drops "
+        "it; the peer-message template it guards is fenced content, so a filtered-out subset is "
+        "precisely what it cannot use",
 }
 
 

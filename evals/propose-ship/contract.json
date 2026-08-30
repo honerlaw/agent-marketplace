@@ -30,7 +30,8 @@
       ],
       "ignore_case": true,
       "file": "references/phases.md"
-    }
+    },
+    "plugins/minerva/skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

@@ -117,7 +117,8 @@
       "any_of": [
         "only mandatory pre-run user interaction"
       ]
-    }
+    },
+    "plugins/minerva/skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

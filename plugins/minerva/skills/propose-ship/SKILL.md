@@ -25,6 +25,8 @@ The `minerva:propose` phase creates the work unit's branch + worktree at `.miner
 The full step protocols live verbatim in `references/phases.md` — **read it now, before executing**:
 
 - **Pre-flight: detect in-flight work** — the collision check that runs before `minerva:propose`, including the runnable `work_status.unit_state(...)["in_flight"]` invocation. Call the predicate; never restate it as a string comparison.
+
+When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
 - **Handoff rules** — what advances each phase, and the work → review signal list.
 - **Entry point** — always start at `minerva:propose`; do not resume mid-lifecycle state.
 - **Execution** — the eight numbered steps.
