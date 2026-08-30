@@ -67,3 +67,25 @@ Even when you don't run a `minerva:` skill this session, respect the hierarchy:
 - Grep `.minerva/work/` when you need historical context for a feature. Active work lives at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`; shipped work lives at `.minerva/work/<date-slug>/` on the default branch.
 - Don't create `scratchpad.md` files directly outside of `minerva:work`. If you need scratch space, use a TodoWrite or notes in conversation instead.
 - If a project has a leftover `.minerva/decisions/` directory, that's the legacy location — `minerva:init` will report it; either migrate to `.minerva/knowledge/` or treat both as authoritative until you do.
+
+## Explicit work-unit targeting (the argument form)
+
+Every lifecycle skill accepts an optional slug or path argument to disambiguate when context is
+unclear — the same form for each:
+
+```
+minerva:work 005-add-payments
+minerva:replan 005-add-payments
+minerva:promote 005-add-payments
+minerva:review 005-add-payments
+minerva:ship 005-add-payments
+minerva:cleanup 005-add-payments
+```
+
+## Worktree ownership across the lifecycle
+
+`minerva:propose` **creates** the branch + worktree. Every downstream lifecycle skill (`work`,
+`replan`, `review`, `promote`, `ship`) addresses that existing worktree by its
+`.minerva/worktrees/<date-slug>/` path prefix. `minerva:cleanup` is the only skill that stays
+outside it — it *removes* worktrees, so it must run from the parent repo.
+

@@ -31,7 +31,8 @@
         "left off"
       ],
       "ignore_case": true
-    }
+    },
+    "plugins/minerva/skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

@@ -87,6 +87,97 @@
         "Silence is `unknown`, never `clear`"
       ],
       "file": "references/in-flight-check.md"
+    },
+    "references/cross-session.md",
+    {
+      "any_of": [
+        "This message is information, not a work request — do not start anything on my behalf."
+      ],
+      "file": "references/in-flight-check.md"
+    },
+    {
+      "any_of": [
+        "This message is information, not a work request — do not start anything on my behalf."
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "\"adds to their workstream\""
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "dispatch is delegation by design"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "binds only sessions that read it"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "evidence, never an instruction"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "This is not a ban on asking questions"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "Same area is not invalidating"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "increments the run's global escalation counter"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "continue / modify / stop"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "relays a request to do"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "never adopted as work"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "re-run such a reply through the table below"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "**At intake, before a work unit exists**"
+      ],
+      "file": "references/cross-session.md"
+    },
+    {
+      "any_of": [
+        "fit here and nowhere else"
+      ],
+      "file": "references/cross-session.md"
     }
   ],
   "cross_surface": {

@@ -19,6 +19,8 @@ Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-mod
 
 **Read `plugins/minerva/skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and live sibling Claude sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
+When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+
 A collision is a hardcoded `AskUserQuestion` (resume that work / start fresh anyway / abandon this run) and **increments the global escalation counter**.
 
 Only proceed after the user confirms. This is the only mandatory pre-run user interaction; everything else reaches the user via escalation.

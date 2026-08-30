@@ -60,7 +60,8 @@
       "any_of": [
         "only permitted"
       ]
-    }
+    },
+    "plugins/minerva/skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

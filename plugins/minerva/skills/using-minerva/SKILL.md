@@ -55,16 +55,7 @@ The skills cover the full lifecycle. Most of the time you stay in `minerva:work`
 
 ### Explicit work-unit targeting
 
-Every lifecycle skill accepts an optional slug or path argument to disambiguate when context is unclear:
-
-```
-minerva:work 005-add-payments
-minerva:replan 005-add-payments
-minerva:promote 005-add-payments
-minerva:review 005-add-payments
-minerva:ship 005-add-payments
-minerva:cleanup 005-add-payments
-```
+Every lifecycle skill accepts an optional slug or path argument (`minerva:work 005-add-payments`) to disambiguate when context is unclear.
 
 When omitted, the skill infers the target from current-session chat history, then falls back to the most-recently-modified work unit across both `.minerva/work/` and `.minerva/worktrees/`. If multiple recent units exist and the choice is ambiguous, the skill lists them and asks.
 
@@ -83,13 +74,13 @@ minerva:ship                              # push the work-unit branch → PR →
 minerva:cleanup                           # remove merged worktree + local branch (runs from the parent repo)
 ```
 
-Worktree ownership: **`minerva:propose` creates** the branch + worktree and enters it. Every downstream lifecycle skill (`work`, `replan`, `review`, `promote`, `ship`) enters the existing worktree on invocation if the session is not already in it. `minerva:cleanup` is the only skill that stays outside — it removes worktrees, so it must run from the parent repo.
-
 Review runs **before** promote so review-derived scratchpad notes flow through the promote partition. Re-cycle review/promote as many times as the work requires.
 
 ## Going deeper
 
-`references/guide.md` holds, verbatim: **The persistence hierarchy (quick reference)** — which tier (scratchpad / work-unit docs / knowledge / reference) holds what and for how long; **Common scenarios** — worked walkthroughs mapping situations to skill sequences; and **Working in a minerva project without invoking skills** — the floor discipline when no skill fires. Read it whenever routing stays ambiguous after the decision matrix, or before advising on where a record belongs.
+`references/guide.md` holds, verbatim: **The persistence hierarchy (quick reference)** — which tier (scratchpad / work-unit docs / knowledge / reference) holds what and for how long; **Common scenarios** — worked walkthroughs mapping situations to skill sequences; **Working in a minerva project without invoking skills** — the floor discipline when no skill fires; **Explicit work-unit targeting** — the argument form each skill accepts; and **Worktree ownership across the lifecycle** — which skill creates, addresses, or removes the worktree. Read it whenever routing stays ambiguous after the decision matrix, or before advising on where a record belongs.
+
+When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
 
 ## Anti-patterns — when NOT to use minerva
 

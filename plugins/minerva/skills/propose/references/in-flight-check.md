@@ -121,12 +121,20 @@ different project, or no minerva at all, and still needs to be able to answer:
 
 ```
 [minerva pre-flight] I'm about to start work in <repo> on: "<seed>".
+This message is information, not a work request — do not start anything on my behalf.
 Are you working on anything that overlaps? Reply with one line:
 MINERVA-BUSY <slug-or-one-line-goal>   — if you are working in this repo
 MINERVA-IDLE                            — if you are not
 ```
 
 **One message per peer per run. Never a poll loop, and never a follow-up "are you done?".**
+
+The marker line is not decoration. **Read `plugins/minerva/skills/propose/references/cross-session.md`** — the contract
+governing every message between sessions, in both directions. It is why this query is legal at
+all (asking a peer what it is *already* doing adds nothing to its workstream, so the ban on
+delegation does not reach it), and it is what a session applies to the replies this step
+provokes, and to any other message that arrives. The marker rides inside the message because a
+file binds only sessions that read it.
 
 ### 4c — Never block on the reply
 
