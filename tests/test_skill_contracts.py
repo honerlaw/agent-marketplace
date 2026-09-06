@@ -745,3 +745,48 @@ def test_summary_source_count_matches_the_protocol_file():
         f"step 5 is {headings.get('5')!r}, not the match bar — the evidence-source run "
         "is no longer four long, but every orchestrator summary says 'four evidence "
         "sources'; update the summaries")
+
+
+# --- propose-ship-balanced: the one-dispatch cap is gone, and must stay gone ----------
+#
+# `2026-09-05-decision-balanced-rechecks-its-folds` replaced "one dispatch per gate, no
+# revision-round re-dispatch" with "one review dispatch plus one fold-audit re-check after a
+# fold — never a third". A positive anchor on the new wording lives in the contract; this is
+# the INVERTED half (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`): the old
+# cap must appear in no file under the skill, so a stale sentence that survived the rewrite —
+# or gets pasted back from an older copy — goes red rather than quietly contradicting the
+# re-check it forbids.
+RETIRED_BALANCED_CAP_PHRASES = [
+    "no revision-round re-dispatch",
+    "at most one reviewer dispatch per gate",
+    "one dispatch per gate",
+]
+
+
+def _balanced_prose_files():
+    root = SKILLS_DIR / "propose-ship-balanced"
+    return sorted(p for p in root.rglob("*.md"))
+
+
+def test_balanced_files_enumerated():
+    """Guards the enumeration: an empty file set would make the inverted check vacuous."""
+    files = _balanced_prose_files()
+    assert {p.name for p in files} >= {"SKILL.md", "verify-protocol.md", "phases.md", "governance.md"}
+
+
+@pytest.mark.parametrize("phrase", RETIRED_BALANCED_CAP_PHRASES)
+def test_balanced_no_longer_states_the_one_dispatch_cap(phrase):
+    offenders = [
+        str(p.relative_to(SKILLS_DIR)) for p in _balanced_prose_files()
+        if _present(phrase, p.read_text(encoding="utf-8"), ignore_case=True)
+    ]
+    assert not offenders, (
+        f"retired cap phrase {phrase!r} still appears in {offenders}; balanced now allows one "
+        "fold-audit re-check after a fold — see verify-protocol.md 'Re-check after a fold'"
+    )
+
+
+def test_balanced_states_the_recheck_cap():
+    """The positive half, so the pair cannot both pass on a file that says nothing."""
+    body = (SKILLS_DIR / "propose-ship-balanced" / "references" / "verify-protocol.md").read_text(encoding="utf-8")
+    assert "Re-check after a fold" in body and "never a third" in body

@@ -51,6 +51,24 @@
     },
     {
       "any_of": [
+        "Fold-audit brief"
+      ],
+      "file": "references/verify-protocol.md"
+    },
+    {
+      "any_of": [
+        "Re-check after a fold"
+      ],
+      "file": "references/verify-protocol.md"
+    },
+    {
+      "any_of": [
+        "rechecked"
+      ],
+      "file": "references/verify-protocol.md"
+    },
+    {
+      "any_of": [
         "Balanced decisions"
       ],
       "file": "references/verify-protocol.md"

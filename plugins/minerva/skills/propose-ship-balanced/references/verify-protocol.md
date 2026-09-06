@@ -2,7 +2,7 @@
 
 Read once, in full, before the run's first strategic/tactical decision point. Its rules then apply to every decision that follows.
 
-This is `propose-ship-balanced`'s analog of `propose-ship-quick`'s solo-decision protocol and `propose-ship-auto`'s panel protocol. The default is **the main model decides** (exactly as `propose-ship-quick`), with **one** addition: at a fixed set of high-signal gates the main model dispatches a **single fresh-context advisory reviewer** and arbitrates its critique inline. It never convenes a 3-agent `minerva:round-table` panel — that is `propose-ship-auto`'s mechanism.
+This is `propose-ship-balanced`'s analog of `propose-ship-quick`'s solo-decision protocol and `propose-ship-auto`'s panel protocol. The default is **the main model decides** (exactly as `propose-ship-quick`), with **one** addition: at a fixed set of high-signal gates the main model dispatches a **single fresh-context advisory reviewer** and arbitrates its critique inline — and when it **folds** that critique, it sends **one** more single reviewer to audit the fold (the [fold-audit re-check](#re-check-after-a-fold)), never a third. It never convenes a 3-agent `minerva:round-table` panel — that is `propose-ship-auto`'s mechanism.
 
 ## Default — the main model decides
 
@@ -12,21 +12,22 @@ At each strategic/tactical decision point (see the [Decision taxonomy](#decision
 
 A **single reviewer** fires only at the fixed gates below — never at the solo gates. This is a per-decision-**type** policy (which *kinds* of decision warrant an independent look), not an up-front whole-run sizing classifier; that distinction preserves the gate-per-decision, fail-closed design rule.
 
-**Fire on every run:** scope check, approach selection, completion-verification.
+**Fire on every run:** scope check, approach selection, whole-proposal soundness, completion-verification.
 
 **Fire only when that decision point is reached** (rare): mid-work divergence confirmation, new-plan acceptance (replan), replan-vs-FIX.
 
-**Always solo (main model decides, quick-style):** whole-proposal soundness, review triage, promote partition, TODO disposition.
+**Always solo (main model decides, quick-style):** review triage, promote partition, TODO disposition.
 
-The gate selection is evidence-grounded in past run logs: independent scrutiny is spent only where it demonstrably changes outcomes (approach selection), independently reproduces claims (completion verification), or averts rare-but-expensive misses (scope check). If a solo gate is later shown to miss real defects, revisit the taxonomy via `minerva:replan`.
+The gate selection is evidence-grounded in past run logs: independent scrutiny is spent only where it demonstrably changes outcomes (approach selection), independently reproduces claims (completion verification), or averts rare-but-expensive misses (scope check). Whole-proposal soundness joined the list on the same evidence: across 26 `propose-ship-auto` runs, 13 of its 27 panel calls went to a revision round — second only to approach selection (17 of 25), which balanced already reviews, and far ahead of scope (7 of 22) and completion (0 of 18) — including HIGH gaps a solo read had passed. If a solo gate is later shown to miss real defects — or a reviewer gate never changes an outcome — re-measure with `scripts/decision_telemetry.py` and revisit the taxonomy via `minerva:replan`.
 
 ## Single-reviewer mechanism
 
 At a reviewer gate:
 
 1. **Decide first.** The main model makes its decision exactly as it would solo, and writes it down (the proposed scope cut / chosen approach / completion checklist). Decide-first-then-review is intentional: a fresh-context reviewer that reads the *committed* decision carries no confirmation bias from the main model's reasoning, and this is cheaper than a parallel re-derivation (no second agent to generate the decision).
-2. **Dispatch one reviewer.** Spawn **one** subagent via the `Agent` tool, fresh context, `subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false`. The dispatch is synchronous because the gate arbitrates the critique **inline, in this same turn**: a backgrounded dispatch returns only a handle, which parks the run instead of deciding the gate. The reviewer is a **Skeptic** at scope / approach / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass it the gate's ARTIFACT + CONTEXT per `references/phases.md`. The model is pinned to `sonnet` regardless of the main session's tier: an independent critique/verification is a structured-judgment task Sonnet handles well (the same cost-determinism call made for round-table's panelists), and pinning it keeps cost deterministic.
-3. **Arbitrate inline.** The main model reads the reviewer's critique and acts as the Arbiter — **no revision-round re-dispatch; at most one reviewer dispatch per gate**. It folds load-bearing points, proceeds past non-load-bearing ones, or escalates (see below).
+2. **Dispatch one reviewer.** Spawn **one** subagent via the `Agent` tool, fresh context, `subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false`. The dispatch is synchronous because the gate arbitrates the critique **inline, in this same turn**: a backgrounded dispatch returns only a handle, which parks the run instead of deciding the gate. The reviewer is a **Skeptic** at scope / approach / whole-proposal soundness / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass it the gate's ARTIFACT + CONTEXT per `references/phases.md`. The model is pinned to `sonnet` regardless of the main session's tier: an independent critique/verification is a structured-judgment task Sonnet handles well (the same cost-determinism call made for round-table's panelists), and pinning it keeps cost deterministic.
+3. **Arbitrate inline.** The main model reads the reviewer's critique and acts as the Arbiter. It folds load-bearing points, proceeds past non-load-bearing ones, or escalates (see below). **At most two dispatches per gate**: the review, plus the re-check in step 4 when — and only when — step 3 folded. Never a third, and never a panel vote.
+4. **Re-check after a fold (Skeptic gates only).** See [Re-check after a fold](#re-check-after-a-fold). Not at the Verifier gate: a completion `revise` already loops through Phase 2.5 → new-plan acceptance → a second Verifier pass, which is its re-check.
 
 ### What "load-bearing critique" means
 
@@ -44,6 +45,24 @@ A critique is **not** load-bearing if it is stylistic disagreement, or a re-weig
 - **Not load-bearing → proceed.** Log `[reviewed — clean]` (record any noted-but-dismissed concern so a later `minerva:review`/`minerva:promote` pass can audit the call).
 - **Anti-circularity escape.** If folding the critique would require a **materially different decision** *and* the main model **cannot confidently tell** whether the reviewer is right, that is genuine ambiguity → **escalate to the user** (per the [escalation predicate](#escalation-predicate)). The main model must not self-confirm its way past a critique it cannot honestly adjudicate.
 
+### Re-check after a fold
+
+Thirteen balanced runs logged 30 `[reviewed — folded]` lines against 5 `[reviewed — clean]` and **zero** anti-circularity escalations: the main model folds almost every critique, and nothing independently checked the fold. The re-check closes that gap with a second **single** reviewer — not a panel, not a Proponent or Arbiter, not a vote.
+
+**Trigger.** Step 3 logged `[reviewed — folded]` at a **Skeptic** gate (scope check, approach selection, whole-proposal soundness, mid-work divergence, new-plan acceptance, replan-vs-FIX). A `[reviewed — clean]` outcome dispatches nothing more; the Verifier gate is excluded (see step 4).
+
+**Dispatch.** Write the revised decision down first. Then dispatch **one** more fresh-context agent via the `Agent` tool (`subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false`) carrying the [Fold-audit brief](#fold-audit-brief). ARTIFACT = the original decision as first written, the Skeptic's critique **verbatim**, and the revised decision; CONTEXT = exactly the CONTEXT the gate gave the Skeptic. The re-check reviewer must not be the same agent and must not see the main model's arbitration reasoning — only the three artifacts.
+
+**Arbitrating the re-check — strict.** The re-check exists to take the second look out of the main model's hands, so its arbitration has no discretionary branch:
+
+- `accept` → proceed. Log `[rechecked — clean]`.
+- `partially` on an item whose residual is **not** load-bearing (falls outside categories (a)–(e) above) → fold the residual, proceed. Log `[rechecked — residual folded]` naming the residual.
+- Anything else — a load-bearing item marked `partially`, `not addressed` or `regressed`, or a new load-bearing concern under `## New concerns` — → **escalate to the user** via the anti-circularity escape. There is **no** self-confirmation path here: the main model may not decide the re-check is mistaken and proceed, and there is **no third dispatch**. Log `[rechecked — escalated]` with the question and the user's answer on that same line (no separate `[escalated to user]` line — escalations are counted once). The escalation increments the global escalation counter like every other.
+
+The per-item `## Disposition` lines govern; the `## Verdict` line is their summary. If the two disagree — an `accept` verdict above a load-bearing item marked `partially` — the dispositions win and the gate escalates. The brief permits that output, so the precedence is stated rather than assumed.
+
+A rejected alternative, so it is not re-invented at runtime: letting the main model proceed past a re-check `revise` on cited "mechanical" evidence. What counts as mechanical is itself a judgment, and the re-check's whole value is that the second look is not the main model's.
+
 ### Verifier brief (completion gate)
 
 The completion reviewer is a **Verifier**, not a Skeptic-of-prose. Dispatch it with:
@@ -54,9 +73,35 @@ The completion reviewer is a **Verifier**, not a Skeptic-of-prose. Dispatch it w
 
 A `revise`/`reject` verdict that names an unmet criterion is load-bearing category (e); the main model treats it as a success-criteria divergence and triggers Phase 2.5 (replan) to close the gap, rather than shipping.
 
+### Fold-audit brief
+
+The re-check brief. It audits a **fold**, not the decision — a reviewer that re-litigates the decision produces new concerns indistinguishable from the first review and invites a third dispatch.
+
+```
+YOUR ROLE: You are an independent reviewer auditing a REVISION. The ARTIFACT
+above has three parts: (1) the ORIGINAL decision, (2) a Skeptic's CRITIQUE of
+it, numbered, and (3) the REVISED decision written in response. You did not
+write any of them and you have not seen the reasoning behind the revision.
+
+For EACH numbered concern in the CRITIQUE, decide whether the REVISED decision
+addressed it. Read the revision; do not take its word for it. Then, and only
+then, look for load-bearing problems the REVISION itself introduced — a newly
+violated constraint or criterion, a newly missed dependency, a scope surface the
+revision dropped, a regression against the original. Do not re-argue the
+original decision and do not restyle it.
+
+Output format:
+## Disposition
+<one line per critique item: `N. addressed | partially | not addressed | regressed — <evidence>`>
+## New concerns
+<numbered, each with severity high/medium/low; only concerns INTRODUCED by the revision; "none" is a valid answer>
+## Verdict
+<accept | revise>: <one-sentence reason>
+```
+
 ### Skeptic brief
 
-The Skeptic brief (scope / approach / divergence / replan gates), adapted from `plugins/minerva/skills/round-table/references/briefs.md`:
+The Skeptic brief (scope / approach / whole-proposal / divergence / replan gates), adapted from `plugins/minerva/skills/round-table/references/briefs.md`:
 
 ```
 YOUR ROLE: You are an independent Skeptic reviewing the decision in the ARTIFACT
@@ -113,13 +158,17 @@ Maintain one counter across the run — per-run state owned by the main orchestr
 
 ## Per-decision logging
 
-After every decision point, append a one-line entry to the work unit's `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header — a distinct heading that does not collide with `minerva:work`'s sections:
+After every decision point, append a one-line entry to the work unit's `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header — a distinct heading that does not collide with `minerva:work`'s sections. Append **inside that block**, not at the end of the file: a decision line that lands under a later header (`## Work notes`, `## Review triage`) is invisible to `scripts/decision_telemetry.py`, which reads only the decisions sections — the dogfood run of this protocol misplaced two lines exactly that way.
 
 ```
 ## Balanced decisions 2026-06-29
-- [decided] whole-proposal soundness: single-surface, no public interface (solo gate)
+- [decided] review triage: 3 FIX / 1 SUGGEST / 0 IGNORE, none contested (solo gate)
 - [reviewed — clean] scope check: single unit (Skeptic accept; flagged nothing load-bearing)
 - [reviewed — folded] approach: option B (Skeptic surfaced a dominant alternative C — folded; rejected A duplicates orchestration)
+- [rechecked — clean] approach: fold-audit confirmed C addresses items 1–3; no new concerns
+- [reviewed — folded] whole-proposal soundness: Skeptic revise — criterion 4 unsatisfiable under the lifecycle's own writes; reworded
+- [rechecked — residual folded] whole-proposal soundness: item 2 partially addressed (example block still named the old field) — non-load-bearing, folded
+- [rechecked — escalated] scope check: fold-audit found item 1 not addressed (README surface still missing) — asked; user chose to include the README
 - [reviewed — folded] completion verification: criterion #3 unmet per Verifier (no test in diff) → replan to close
 - [escalated to user] approach: Skeptic critique I could not confidently adjudicate — user picked option B
 - [synthesis] refreshed overview.md (watermark 044→045; 1 entry)
@@ -127,6 +176,7 @@ After every decision point, append a one-line entry to the work unit's `scratchp
 
 - `[decided]` — a solo gate; record the one-line rationale (approach decisions also record the rejected alternatives).
 - `[reviewed — folded]` / `[reviewed — clean]` — a reviewer gate; record what the reviewer flagged and whether it was folded.
+- `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check; written **immediately after** its `[reviewed — folded]` line, naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` carries the question and the answer itself and is the only escalation line for that gate.
 - `[escalated to user]` — record what was asked and the answer.
 
 These are scratchpad data — `minerva:promote` treats them as routine noise unless a decision reveals a durable pattern, in which case it goes through the standard PROMOTE/MERGE/DISCARD partition.
@@ -141,7 +191,7 @@ The `Reviewer?` column marks which gates dispatch the single reviewer. Every oth
 | Propose | Open-issue match at intake | Hardcoded user escalation on a match | No (hardcoded) |
 | Propose | Scope check (single unit vs. decompose) | Main model decides | **Yes — Skeptic** |
 | Propose | Approach selection | Main model decides | **Yes — Skeptic** |
-| Propose | Whole-proposal soundness | Main model decides | No (solo) |
+| Propose | Whole-proposal soundness | Main model decides | **Yes — Skeptic** |
 | Work | Mid-work load-bearing divergence | Main model confirms | **Yes — Skeptic** (when triggered) |
 | Replan | New-plan acceptance | Main model accepts | **Yes — Skeptic** (when triggered) |
 | Work | Completion verification | Main model self-checks | **Yes — Verifier** |
