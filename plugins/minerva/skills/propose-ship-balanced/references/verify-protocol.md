@@ -160,7 +160,7 @@ After every decision point, append a one-line entry to the work unit's `scratchp
 
 ```
 ## Balanced decisions 2026-06-29
-- [decided] whole-proposal soundness: single-surface, no public interface (solo gate)
+- [decided] review triage: 3 FIX / 1 SUGGEST / 0 IGNORE, none contested (solo gate)
 - [reviewed — clean] scope check: single unit (Skeptic accept; flagged nothing load-bearing)
 - [reviewed — folded] approach: option B (Skeptic surfaced a dominant alternative C — folded; rejected A duplicates orchestration)
 - [rechecked — clean] approach: fold-audit confirmed C addresses items 1–3; no new concerns
