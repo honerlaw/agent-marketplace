@@ -76,7 +76,8 @@ EXECUTION_MODE_KEY = "run_in_background"
 REGISTERED_SITES = {
     "propose-ship-balanced/SKILL.md": 1,
     "propose-ship-balanced/references/phases.md": 1,
-    "propose-ship-balanced/references/verify-protocol.md": 1,
+    # 2: the Skeptic/Verifier review, and the fold-audit re-check after a fold.
+    "propose-ship-balanced/references/verify-protocol.md": 2,
     "review/references/protocol.md": 1,
     "round-table/SKILL.md": 1,
 }

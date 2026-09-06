@@ -2,7 +2,7 @@
 
 ## Failure modes, escalation, budget caps
 
-**Reviewer budget.** Each reviewer gate dispatches **one** subagent and the main model arbitrates inline — there is **no** revision-round re-dispatch and no panel vote. A reviewer gate's critique is either folded, proceeded past, or escalated to the user per the [escalation predicate](verify-protocol.md). The solo gates dispatch nothing.
+**Reviewer budget.** Each reviewer gate dispatches **one** subagent for the review and the main model arbitrates inline; when that arbitration **folds** a Skeptic critique, the gate sends **one** more single reviewer to audit the fold (the fold-audit re-check in [verify-protocol.md](verify-protocol.md)) — **never a third**, and no panel vote at any point. A reviewer gate's critique is either folded (and then re-checked), proceeded past, or escalated to the user per the [escalation predicate](verify-protocol.md); a re-check that finds a load-bearing miss always escalates. The solo gates dispatch nothing.
 
 **Per-phase abort triggers.**
 - Propose phase: if the propose-phase decisions (scope, approach, whole-proposal) escalate to the point the strategic intent is too ambiguous for the main model to resolve even with the user's answers, abort the balanced run. Recommend: "switch to manual `minerva:propose`," or `minerva:propose-ship-auto` if independent panel review is wanted across the board.
@@ -26,14 +26,14 @@
 
 ## Observability
 
-- Every decision logs one line to `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header per `references/verify-protocol.md`, with the `[decided]` / `[reviewed — folded]` / `[reviewed — clean]` / `[escalated to user]` prefixes.
+- Every decision logs one line to `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header per `references/verify-protocol.md`, with the `[decided]` / `[reviewed — folded]` / `[reviewed — clean]` / `[escalated to user]` prefixes; every `[reviewed — folded]` line is immediately followed by its `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` line, so a later telemetry pass (`plugins/minerva/scripts/decision_telemetry.py`) can pair them.
 - Reviewer gates record what the reviewer flagged and whether it was folded, so a later `minerva:review` / `minerva:promote` pass can audit the call.
 - The final report (success or bail) lists total decisions, total reviewer gates, and total escalations for the run.
 
 ## Out of scope
 
 - **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
-- **Convening a `minerva:round-table` panel.** That is `minerva:propose-ship-auto`'s mechanism. This skill's independent review is a **single advisory reviewer** arbitrated by the main model — never a 3-agent consensus panel. If full panel review is wanted at every gate, the user should run `minerva:propose-ship-auto`.
+- **Convening a `minerva:round-table` panel.** That is `minerva:propose-ship-auto`'s mechanism. This skill's independent review is a **single advisory reviewer** arbitrated by the main model — and, after a fold, a second single reviewer auditing that fold — never a 3-agent consensus panel, never a Proponent or Arbiter, never a vote. If full panel review is wanted at every gate, the user should run `minerva:propose-ship-auto`.
 - **Auto-cascading into new work units.** Phase 4 TODOs marked "seed new proposal" are reported as suggestions — this skill does not invoke itself recursively in the same run.
 - **Capping implementation time.** Phase 2's loop has no time or token bound; the scope-fit escape is the relief valve, not a hard cap.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.

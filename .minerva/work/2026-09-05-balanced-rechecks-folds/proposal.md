@@ -42,11 +42,14 @@ what does the panel actually buy over balanced's single Skeptic?
   behaviorally (the "load-bearing critique" definition) and cannot bound structurally.
 - **26 auto runs** (~96 panel calls, 19 skips): roughly half went to a revision round, and the
   revision is driven by the **Skeptic** nearly every time. The Proponent accepts almost always;
-  the Arbiter overruled the Skeptic as *mistaken* once in 96. **Whole-proposal acceptance was the
-  #1 revision site** — ~19 revision-involved lines vs ~15 approach, ~8 scope, 3 promote-partition
-  — including HIGH gaps ("a 532-occurrence rewrite with no documented mechanism", "an
-  unsatisfiable success criterion"). Balanced runs that gate solo; the 06-29 entry's telemetry
-  justified completion-as-Verifier and never examined this gate.
+  the Arbiter overruled the Skeptic as *mistaken* once in 96. **Whole-proposal acceptance is the only
+  heavy-revision gate balanced runs solo** — 13 of its 27 panel calls went to a revision round,
+  second only to approach selection (17 of 25, which balanced already reviews) and far ahead of
+  scope (7 of 22) and completion (0 of 18; the Verifier choice holds) — including HIGH gaps
+  ("a 532-occurrence rewrite with no documented mechanism", "an unsatisfiable success
+  criterion"). The 06-29 entry's telemetry justified completion-as-Verifier and never
+  examined this gate. (A hand `grep revis` count had ranked whole-proposal first; the
+  reproducible reader corrected it.)
 - So the panel's marginal value over one Skeptic, in this corpus, is **round-2 re-verification
   of the revised artifact** — not the three-agent shape. One extra Sonnet dispatch after a fold
   buys most of that at a third of the cost: ~+4 dispatches per run (2.7 → ~6.7 sequential),
