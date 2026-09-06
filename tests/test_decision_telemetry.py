@@ -22,6 +22,9 @@ from decision_telemetry import (
     UNKNOWN,
     classify_tag,
     collect,
+    main,
+    outcome_totals,
+    split_gate,
     normalize_gate,
     parse_scratchpad,
     problems,
@@ -74,8 +77,8 @@ def test_parses_balanced_section_and_stops_at_next_heading():
 
 def test_rechecks_pair_by_adjacency_and_same_gate():
     recs = parse_scratchpad(BALANCED, "u", "u/scratchpad.md")
-    assert recs[3].paired_with == 2 and recs[2].rechecked == "rechecked-clean"
-    assert recs[5].paired_with == 4 and recs[4].rechecked == "rechecked-escalated"
+    assert recs[3].paired_with_lineno == recs[2].lineno and recs[2].rechecked == "rechecked-clean"
+    assert recs[5].paired_with_lineno == recs[4].lineno and recs[4].rechecked == "rechecked-escalated"
     assert problems(recs) == []
     summary = recheck_summary(recs)
     assert summary["folded"] == 2 and summary["folded-and-rechecked"] == 2
@@ -184,6 +187,78 @@ def test_render_lists_problems_and_totals():
     assert "== Balanced decisions" in out and "re-checks:" in out
     assert "== Problems — 1 ==" in out and "unknown tag [weird]" in out
     assert tally(recs)["Balanced"]["approach"]["reviewed-folded"] == 1
+
+
+def test_pairing_is_by_line_across_multiple_sections():
+    """`paired_with_lineno` names the partner by line, not by index into a per-section list
+    that the caller never sees — the second section's re-check must not point at the first
+    section's first line."""
+    text = ("## Balanced decisions 2026-01-01\n- [decided] scope check: a\n- [decided] approach: b\n"
+            "## Balanced decisions 2026-01-02\n- [reviewed — folded] approach: c\n- [rechecked — clean] approach: d\n")
+    recs = parse_scratchpad(text, "u", "p")
+    assert recs[3].paired_with_lineno == recs[2].lineno == 5
+    assert recs[2].rechecked == "rechecked-clean" and problems(recs) == []
+    assert [r.date for r in recs] == ["2026-01-01", "2026-01-01", "2026-01-02", "2026-01-02"]
+
+
+def test_header_without_a_date_still_opens_a_section():
+    recs = parse_scratchpad("## Quick decisions\n- [decided] approach: x\n", "u", "p")
+    assert len(recs) == 1 and recs[0].date is None and recs[0].orchestrator == "Quick"
+
+
+def test_rechecked_with_the_prose_hyphen_classifies():
+    assert classify_tag("Balanced", "re-checked — clean") == "rechecked-clean"
+    assert classify_tag("Balanced", "Re-checked - residual folded") == "rechecked-residual-folded"
+
+
+def test_bare_below_quorum_vote_is_a_revision():
+    assert classify_tag("Panel", "1/3 accept") == "panel-revised"
+    assert classify_tag("Panel", "0/3 accept") == "panel-revised"
+    assert classify_tag("Panel", "3/3 reject") == "panel-revised"
+    assert classify_tag("Panel", "2/3 accept") == "panel-accept"
+
+
+def test_gate_split_ignores_colons_inside_backticks():
+    assert split_gate("`minerva:ship` mode: pass --auto") == "`minerva:ship` mode"
+    assert split_gate("scope check: single unit") == "scope check"
+    assert split_gate("approach r2 (X′): rationale") == "approach r2"
+    assert split_gate("whole-proposal — folded") == "whole-proposal"
+    assert split_gate("a sentence with no separator at all") == "a sentence with no separator at all"
+
+
+def test_bespoke_gate_pairs_case_insensitively():
+    text = "## Balanced decisions 2026-01-01\n- [reviewed — folded] Foo Gate: a\n- [rechecked — clean] foo gate: b\n"
+    recs = parse_scratchpad(text, "u", "p")
+    assert recs[0].gate == recs[1].gate == "other:foo gate" and recs[0].gate_raw == "Foo Gate"
+    assert problems(recs) == []
+
+
+def test_unreadable_file_is_reported_not_fatal(tmp_path):
+    (tmp_path / ".minerva/work/u1").mkdir(parents=True)
+    (tmp_path / ".minerva/work/u1/scratchpad.md").write_bytes(b"## Quick decisions 2026-01-01\n- [decided] approach: \xff\xfe\n")
+    (tmp_path / ".minerva/work/u2").mkdir()
+    (tmp_path / ".minerva/work/u2/scratchpad.md").write_text("## Quick decisions 2026-01-01\n- [decided] approach: ok\n")
+    file_problems: list = []
+    recs = collect(tmp_path, file_problems)
+    assert [r.unit for r in recs] == ["u2"]
+    assert file_problems == [".minerva/work/u1/scratchpad.md: unreadable (UnicodeDecodeError) — skipped"]
+    assert "unreadable (UnicodeDecodeError)" in render(recs, file_problems)
+
+
+def test_outcome_totals_and_main(tmp_path, capsys):
+    recs = parse_scratchpad(BALANCED, "u", "p")
+    assert outcome_totals(recs)["Balanced"]["reviewed-folded"] == 2
+    (tmp_path / ".minerva/work/u").mkdir(parents=True)
+    (tmp_path / ".minerva/work/u/scratchpad.md").write_text(BALANCED)
+    assert main(["decision_telemetry.py", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "== Balanced decisions — 8 lines across 1 units ==" in out and "== Problems — 0 ==" in out
+
+
+def test_long_other_gates_are_truncated_for_display():
+    text = "## Quick decisions 2026-01-01\n- [decided] " + "x" * 80 + "\n"
+    out = render(parse_scratchpad(text, "u", "p"))
+    assert "other:" + "x" * 33 + "…" in out and "x" * 60 not in out  # 40 chars total, incl. "other:"
 
 
 # --- live corpus -----------------------------------------------------------------------

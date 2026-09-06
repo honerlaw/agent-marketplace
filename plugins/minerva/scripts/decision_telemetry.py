@@ -53,9 +53,6 @@ HEADER_RE = re.compile(
 )
 SECTION_END_RE = re.compile(r"^##\s")
 LINE_RE = re.compile(r"^\s*[-*]\s+\[(?P<tag>[^\]]+)\]\s*(?P<rest>.*)$")
-# The gate is the text before the first ':' , ' — ', ' – ' or '(' — whatever the author used
-# to separate the decision's name from its rationale.
-GATE_SPLIT_RE = re.compile(r"\s*(?::|\s[—–]\s|\()")
 
 UNKNOWN = "unknown"
 
@@ -91,7 +88,7 @@ GATE_RULES = (
 )
 
 PANEL_REVISION_RE = re.compile(r"revis|→|vote\s*2|rev\s*2|round\s*2", re.IGNORECASE)
-PANEL_VOTE_RE = re.compile(r"\b\d\s*/\s*3\b")
+PANEL_VOTE_RE = re.compile(r"\b(\d)\s*/\s*3\b")
 
 
 @dataclass
@@ -106,7 +103,7 @@ class Record:
     rest: str
     path: str
     lineno: int
-    paired_with: int | None = None  # index into the same section's records, for re-checks
+    paired_with_lineno: int | None = None  # the [reviewed — folded] line this re-check audits
     rechecked: str | None = None    # set on a folded record when a re-check paired with it
     problems: list[str] = field(default_factory=list)
 
@@ -116,7 +113,7 @@ class Record:
 
 
 def normalize_tag(tag: str) -> str:
-    key = tag.strip().lower()
+    key = tag.strip().lower().replace("re-checked", "rechecked")  # the prose's own spelling
     key = re.sub(r"\s*[—–-]+\s*", " - ", key)
     return re.sub(r"\s+", " ", key).strip()
 
@@ -126,7 +123,8 @@ def normalize_gate(raw: str) -> str:
     for canonical, needles in GATE_RULES:
         if any(n in low for n in needles):
             return canonical
-    return f"other:{raw.strip()}" if raw.strip() else "other:"
+    # Lower-cased so a fold and its re-check on a bespoke gate still pair; `gate_raw` keeps the case.
+    return f"other:{low}" if low else "other:"
 
 
 def classify_tag(orchestrator: str, tag: str) -> str:
@@ -149,17 +147,34 @@ def classify_tag(orchestrator: str, tag: str) -> str:
             return "user-directed"
         if "synthesis" in low:
             return "synthesis"
-        if PANEL_REVISION_RE.search(tag):
+        if PANEL_REVISION_RE.search(tag) or "reject" in low:
             return "panel-revised"
-        if PANEL_VOTE_RE.search(tag) or "accept" in low:
+        vote = PANEL_VOTE_RE.search(tag)
+        if vote and int(vote.group(1)) <= 1:
+            # ≤1/3 fails every quorum; round-table's protocol answers that with a revision
+            # round, so a bare `1/3 accept` is a revision even when the author omitted the arrow.
+            return "panel-revised"
+        if vote or "accept" in low:
             return "panel-accept"
         return UNKNOWN
     return UNKNOWN
 
 
 def split_gate(rest: str) -> str:
-    m = GATE_SPLIT_RE.search(rest)
-    return rest[: m.start()] if m else rest
+    """The gate name: the text before the first `:`, `(`, or spaced dash that is NOT inside
+    backticks — so `minerva:ship` in a gate name does not end it at the colon."""
+    in_tick = False
+    for i, ch in enumerate(rest):
+        if ch == "`":
+            in_tick = not in_tick
+            continue
+        if in_tick:
+            continue
+        if ch in ":(":
+            return rest[:i].rstrip()
+        if ch in "—–" and 0 < i < len(rest) - 1 and rest[i - 1] == " " and rest[i + 1] == " ":
+            return rest[:i].rstrip()
+    return rest.strip()
 
 
 def parse_scratchpad(text: str, unit: str, path: str) -> list[Record]:
@@ -207,7 +222,7 @@ def _pair_rechecks(section: list[Record]) -> None:
             continue
         prev = section[i - 1] if i else None
         if prev is not None and prev.outcome == "reviewed-folded" and prev.gate == rec.gate:
-            rec.paired_with = i - 1
+            rec.paired_with_lineno = prev.lineno
             prev.rechecked = rec.outcome
         else:
             rec.problems.append("orphan re-check: no [reviewed — folded] line for the same gate immediately before it")
@@ -229,12 +244,21 @@ def scratchpad_files(root: Path) -> list[Path]:
     return files
 
 
-def collect(root: Path) -> list[Record]:
+def collect(root: Path, file_problems: list[str] | None = None) -> list[Record]:
+    """Every record under `<root>/.minerva/work/`. A file that cannot be read is reported
+    into `file_problems` (when given) and skipped — one bad archive must not abort the tally."""
     root = Path(root)
     out: list[Record] = []
     for f in scratchpad_files(root):
         unit = f.parent.name if f.parent.name != "archive" else f.parent.parent.name
-        out.extend(parse_scratchpad(f.read_text(encoding="utf-8"), unit, str(f.relative_to(root))))
+        rel = str(f.relative_to(root))
+        try:
+            text = f.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            if file_problems is not None:
+                file_problems.append(f"{rel}: unreadable ({e.__class__.__name__}) — skipped")
+            continue
+        out.extend(parse_scratchpad(text, unit, rel))
     return out
 
 
@@ -271,7 +295,15 @@ def units_with(records: list[Record], orchestrator: str) -> set[str]:
     return {r.unit for r in records if r.orchestrator == orchestrator}
 
 
-def render(records: list[Record]) -> str:
+GATE_DISPLAY_WIDTH = 40
+
+
+def _display_gate(gate: str) -> str:
+    """`other:` payloads can be whole rationale sentences; keep the table readable."""
+    return gate if len(gate) <= GATE_DISPLAY_WIDTH else gate[: GATE_DISPLAY_WIDTH - 1] + "…"
+
+
+def render(records: list[Record], file_problems: list[str] = ()) -> str:
     lines: list[str] = []
     by_orch = tally(records)
     totals = outcome_totals(records)
@@ -284,12 +316,12 @@ def render(records: list[Record]) -> str:
         lines.append("  totals: " + ", ".join(f"{o} {c}" for o, c in totals[orch].most_common()))
         for gate in sorted(by_orch[orch], key=lambda g: (g.startswith("other:"), g)):
             row = ", ".join(f"{o} {c}" for o, c in by_orch[orch][gate].most_common())
-            lines.append(f"  {gate:<22} {row}")
+            lines.append(f"  {_display_gate(gate):<{GATE_DISPLAY_WIDTH}} {row}")
         if orch == "Balanced":
             rs = recheck_summary([r for r in records if r.orchestrator == orch])
             lines.append("  re-checks: " + ", ".join(f"{k} {v}" for k, v in rs.items()))
         lines.append("")
-    probs = problems(records)
+    probs = list(file_problems) + problems(records)
     lines.append(f"== Problems — {len(probs)} ==")
     lines.extend(f"  {p}" for p in probs)
     return "\n".join(lines)
@@ -297,7 +329,9 @@ def render(records: list[Record]) -> str:
 
 def main(argv: list[str]) -> int:
     root = Path(argv[1]) if len(argv) > 1 else Path.cwd()
-    print(render(collect(root)))
+    file_problems: list[str] = []
+    records = collect(root, file_problems)
+    print(render(records, file_problems))
     return 0  # a reader, not a gate
 
 

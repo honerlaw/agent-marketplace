@@ -788,5 +788,5 @@ def test_balanced_no_longer_states_the_one_dispatch_cap(phrase):
 
 def test_balanced_states_the_recheck_cap():
     """The positive half, so the pair cannot both pass on a file that says nothing."""
-    body = (SKILLS_DIR / "propose-ship-balanced" / "references" / "verify-protocol.md").read_text()
+    body = (SKILLS_DIR / "propose-ship-balanced" / "references" / "verify-protocol.md").read_text(encoding="utf-8")
     assert "Re-check after a fold" in body and "never a third" in body

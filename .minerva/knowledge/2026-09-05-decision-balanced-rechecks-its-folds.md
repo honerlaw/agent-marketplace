@@ -80,7 +80,7 @@ sequential Arbiter in each. Every added dispatch lands exactly where the logs sa
 - The `[rechecked — clean | residual folded | escalated]` line is written **immediately after** its
   `[reviewed — folded]` line, naming the same gate; the tally pairs them by adjacency and reports an
   orphan as a problem. `[rechecked — escalated]` is the only escalation line for that gate.
-- **Re-measure before re-tuning.** `python3 plugins/minerva/scripts/decision_telemetry.py <root>`
+- **Re-measure before re-tuning.** `python3 scripts/decision_telemetry.py <root>`
   tallies `## Balanced/Panel/Quick decisions` lines by orchestrator × gate × outcome across
   `.minerva/work/` (never through worktrees), fence-aware, reporting every unknown tag verbatim.
   `tests/test_decision_telemetry.py` reads each orchestrator's fenced logging example and fails if

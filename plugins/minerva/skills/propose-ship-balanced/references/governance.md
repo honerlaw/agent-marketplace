@@ -26,7 +26,7 @@
 
 ## Observability
 
-- Every decision logs one line to `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header per `references/verify-protocol.md`, with the `[decided]` / `[reviewed — folded]` / `[reviewed — clean]` / `[escalated to user]` prefixes; every `[reviewed — folded]` line is immediately followed by its `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` line, so a later telemetry pass (`plugins/minerva/scripts/decision_telemetry.py`) can pair them.
+- Every decision logs one line to `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header per `references/verify-protocol.md`, with the `[decided]` / `[reviewed — folded]` / `[reviewed — clean]` / `[escalated to user]` prefixes; every `[reviewed — folded]` line at a **Skeptic** gate (never the Verifier's — a completion fold is re-checked by the replan loop instead) is immediately followed by its `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` line, so a later telemetry pass (`scripts/decision_telemetry.py`) can pair them.
 - Reviewer gates record what the reviewer flagged and whether it was folded, so a later `minerva:review` / `minerva:promote` pass can audit the call.
 - The final report (success or bail) lists total decisions, total reviewer gates, and total escalations for the run.
 
