@@ -158,7 +158,7 @@ Maintain one counter across the run — per-run state owned by the main orchestr
 
 ## Per-decision logging
 
-After every decision point, append a one-line entry to the work unit's `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header — a distinct heading that does not collide with `minerva:work`'s sections:
+After every decision point, append a one-line entry to the work unit's `scratchpad.md` under a `## Balanced decisions YYYY-MM-DD` header — a distinct heading that does not collide with `minerva:work`'s sections. Append **inside that block**, not at the end of the file: a decision line that lands under a later header (`## Work notes`, `## Review triage`) is invisible to `scripts/decision_telemetry.py`, which reads only the decisions sections — the dogfood run of this protocol misplaced two lines exactly that way.
 
 ```
 ## Balanced decisions 2026-06-29
