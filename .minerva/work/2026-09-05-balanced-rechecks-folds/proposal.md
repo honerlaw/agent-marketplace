@@ -1,7 +1,7 @@
 # Proposal: balanced-rechecks-folds
 
 **Date**: 2026-09-05
-**Status**: Draft
+**Status**: Shipped (2026-09-05)
 
 ## Goal
 
@@ -81,6 +81,11 @@ what does the panel actually buy over balanced's single Skeptic?
 
 ## Approach
 
+Shipped as planned; the review pass (14 findings, 13 fixed, 1 noted) refined the details marked
+**(shipped)** below. The unit ran under `propose-ship-balanced` itself — the pre-change protocol,
+so it is the last balanced run whose folds went unre-checked; its own scratchpad is the first the
+new reader tallies.
+
 ### 1. Protocol changes in `plugins/minerva/skills/propose-ship-balanced/`
 
 **`references/verify-protocol.md`**
@@ -105,12 +110,17 @@ what does the panel actually buy over balanced's single Skeptic?
   load-bearing item `partially` / `not addressed` / `regressed`, or a new load-bearing concern —
   → **escalate** via the anti-circularity escape. There is **no** self-confirmation path (the
   main model may not decide the re-check is mistaken) and **no third dispatch**. The escalation
-  counts toward the global escalation counter like every other.
+  counts toward the global escalation counter like every other. **(shipped)** Per-item
+  `## Disposition` lines govern; the `## Verdict` line is their summary — if they disagree, the
+  dispositions win and the gate escalates.
 - *Per-decision logging*: a `[rechecked — clean]` / `[rechecked — residual folded]` /
   `[rechecked — escalated]` line written **immediately after** its `[reviewed — folded]` line.
   `[rechecked — escalated]` records what was asked and the user's answer on that same line; no
   separate `[escalated to user]` line, so escalations are not double-counted. The worked example
-  block gains the three lines.
+  block gains the three lines. **(shipped)** The promise is scoped to Skeptic gates — a Verifier
+  fold is re-checked by the replan loop, not by a `[rechecked]` line — and the logging section
+  says to append inside the decisions block, not at end-of-file (the dogfood run misplaced two
+  lines under `## Work notes`, and the tally's count being two short is how they were found).
 - The "at most one dispatch per gate / no revision-round re-dispatch" wording is replaced
   everywhere it occurs by the new cap.
 
@@ -175,7 +185,14 @@ failure it exists for; `sys.path` anchored to its own directory).
   `unknown`, **reported verbatim with `path:lineno`, never dropped**
   (`2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
 - **Re-check pairing** by adjacency: a `[rechecked — …]` record attaches to the immediately
-  preceding `[reviewed — folded]` record of the same section. An orphan is reported as unknown.
+  preceding `[reviewed — folded]` record of the same section, recorded as the partner's **line
+  number** **(shipped** — the first cut stored a per-section index the caller never saw). An
+  orphan is reported as a problem.
+- **(shipped)** Review hardening: the gate split ignores colons inside backticks (`minerva:ship`);
+  `other:` gates compare lower-cased so a bespoke fold and its re-check still pair; the prose
+  spelling `re-checked` classifies; a bare `≤1/3` Panel vote is a revision (consensus failure
+  always triggers one); an unreadable scratchpad is reported and skipped rather than aborting the
+  tally; `other:` payloads are truncated for display.
 - **CLI**: `python3 plugins/minerva/scripts/decision_telemetry.py <root>` prints, per
   orchestrator, a `gate × outcome` count table, the fold→re-check pairing counts, and the
   unknown list. Exit 0 always — it is a reader, not a gate.
@@ -195,8 +212,15 @@ failure it exists for; `sys.path` anchored to its own directory).
 - **Live-corpus test** on this repository: ≥13 units with a Balanced section are parsed, and the
   unknown list is empty for Balanced and Quick sections. Panel sections are free-form
   round-table output; their unknowns are reported, not asserted.
+- **(shipped)** Both new assertions were mutation-tested: reinserting the retired cap phrase
+  reddened exactly the inverted test; dropping one tag from `EXACT_TAGS` reddened the
+  vocabulary and recheck-outcome tests.
 
 ### 4. Knowledge
+
+**(shipped)** Two entries, not one: the decision below, plus
+`2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it` — the tool's first
+run demoted the proposal's headline finding from #1 to #2 (see the corrected `## Why`).
 
 `.minerva/knowledge/2026-09-05-decision-balanced-rechecks-its-folds.md` (`Type: decision`):
 records the telemetry above, the fold-audit design, the strict arbitration rule and the rejected
@@ -234,6 +258,8 @@ add-only; the index, reciprocals and overview reconcile on the default branch vi
 
 ## Open Questions
 
-- None blocking. For the record: the dispatch-parking risk in
+- None. `propose-ship-balanced/SKILL.md` shipped at 9211 of its 9216 budget bytes; the next core
+  edit must move prose to `references/` first.
+- For the record: the dispatch-parking risk in
   `2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch` (#113) now applies to
   ~2.5× as many dispatches per balanced run. This unit does not address it; #113 does.
