@@ -276,8 +276,23 @@ only where past-run logs showed it changes outcomes, and a behavioral "load-bear
 critique" definition plus an anti-circularity escape (can't-confidently-adjudicate →
 escalate, never self-confirm) keep the inline arbitration honest
 ([[2026-06-29-decision-propose-ship-balanced-single-reviewer]]). The four orchestrators now form
-a full ladder — human gates · main model · one reviewer · panels. And the
-project is honest about how much it trusts its own measurements: **behavioral skill-value
+a full ladder — human gates · main model · one reviewer · panels.
+
+The ladder's middle rung was then **re-tuned by its own logs**. Thirteen balanced runs had
+folded 30 of 35 Skeptic critiques with the anti-circularity escape firing zero times — the
+main model folded almost everything and nothing checked the fold — while twenty-six auto runs
+showed the panel's marginal value over a single Skeptic was round-2 re-verification, not the
+three-agent shape (the Proponent nearly always accepted; the Arbiter overruled the Skeptic
+once). So rather than bolt a panel arm onto balanced, which the data gave no honest trigger
+for, a folded critique now gets **one fold-audit re-check** by a second single reviewer,
+arbitrated strictly — a load-bearing miss escalates, never self-confirms, never a third
+dispatch — and whole-proposal soundness, the only heavy-revision gate balanced ran solo (13 of
+27 auto panels went to a revision round there), became a Skeptic gate. A
+`decision_telemetry.py` reader now tallies every orchestrator's decision log so the taxonomy
+can be re-measured in one command instead of an afternoon
+([[2026-09-05-decision-balanced-rechecks-its-folds]]).
+
+The project is also honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[2026-05-31-decision-behavioral-evals-provisional]]).
 
@@ -662,6 +677,18 @@ divergent half, so a fifth evidence source would have left four stale summaries 
 passing build ([[2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves]]).
 Mutation-testing each new guard is what separates this from a presence assertion that
 cannot fail.
+
+The claim-before-evidence entry acquired a sibling the day a measuring tool shipped. The unit
+that added the decision-log tally was motivated by a hand telemetry pass — grep and awk over
+archived scratchpads — and its headline claim, that whole-proposal acceptance was auto's
+*most*-revised gate, was written into the proposal, the skill prose and a draft knowledge
+entry before the tool existed. The tool's first run demoted it to second: the hand pass had
+grepped `revis` through free text, so any rationale that *discussed* a revision counted as
+one. **A hand-derived number is a claim with the same standing as any authored-before-evidence
+field**, and when the unit ships the consumer, the consumer's first job is the unit's own
+motivation. The same run found two decision-log lines appended under the wrong header only
+because the tally's count came up two short
+([[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]]).
 
 That yields the cluster's governing test. For any rule this corpus records, ask **what fails
 if it is violated**; if the answer is "a reviewer might notice", it is a wish, not a

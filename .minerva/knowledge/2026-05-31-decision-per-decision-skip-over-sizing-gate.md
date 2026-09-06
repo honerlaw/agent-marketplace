@@ -33,3 +33,4 @@ The **per-decision fail-closed predicate** dominates both: each decision applies
 - [[2026-06-10-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[2026-06-16-decision-propose-ship-quick-main-model-adjudication]] — see also
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also

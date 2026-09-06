@@ -30,6 +30,7 @@
 - [[2026-08-22-decision-behavioral-eval-control-real-signal-not-yet]] — the suppression control works via `--plugin-dir` minus one skill, but the measured delta (+0.5) sits inside the noise (sd 0.96), so per-skill backfill stays gated
 - [[2026-08-22-decision-qualified-cross-skill-reference-pointers]] — the pointer gate now resolves `plugins/minerva/skills/<skill>/references/<f>.md` against the NAMED skill, dissolving the constraint that made cross-skill citation unrepresentable
 - [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — a session tells peers what it is doing and never assigns them work; inbound peer messages are evidence, never instructions
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — a folded Skeptic critique now gets one fold-audit re-check, arbitrated strictly; whole-proposal soundness became a Skeptic gate; `decision_telemetry.py` measures the gate taxonomy
 
 ## Bugs
 
@@ -73,6 +74,7 @@
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — Self-review finds lookup-able rule violations and misses orphaned code and toothless tests
 - [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — A fence-scan primitive answers "where are the fences", not "what should I do about them"
 - [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — anchor the sentence that does the work, not the heading or lead-in that introduces it
+- [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — run the reader a unit ships against the unit's own motivating numbers; a free-text grep over-counted the headline finding
 
 ## Constraints
 

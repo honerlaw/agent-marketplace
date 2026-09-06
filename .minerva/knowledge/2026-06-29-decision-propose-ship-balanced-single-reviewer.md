@@ -39,3 +39,4 @@ The chosen path is a standalone clone of `-quick`, consistent with the project's
 - [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — see also
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
