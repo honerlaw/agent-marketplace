@@ -29,3 +29,4 @@ A knowledge entry recording a rejected alternative informs humans and planning-t
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
 - [[2026-07-29-pattern-wait-shape-matches-what-is-awaited]] — see also
 - [[2026-08-10-pattern-presence-assertions-rot-into-green-lies]] — see also
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also

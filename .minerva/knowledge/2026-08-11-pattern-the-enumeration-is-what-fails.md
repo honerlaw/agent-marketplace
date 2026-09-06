@@ -91,3 +91,5 @@ because it does not hold a list of phrasings.
 - [[2026-08-28-pattern-a-decider-and-an-executor-are-different-surfaces]] — see also
 - [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — see also
 - [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
+- [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also

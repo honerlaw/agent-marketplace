@@ -47,3 +47,4 @@ The unit began from a stated belief that "46 entries are typed `reference`". The
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-22-pattern-a-distinguished-state-inferred-from-outputs-is-the-steady-state]] — see also
+- [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also

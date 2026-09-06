@@ -64,3 +64,4 @@ cheap failure. A stale-open issue lingers; a wrong auto-close destroys a record.
 - [[2026-08-11-pattern-an-unenforced-constraint-is-aspirational]] — a rule living only in the skippable consumer enforces nothing
 - [[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]] — a record marking work handled must distinguish decided-and-done from decided-to-wait
 - [[2026-08-28-constraint-git-branch-merged-is-wrong-in-both-directions]] — see also
+- [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also

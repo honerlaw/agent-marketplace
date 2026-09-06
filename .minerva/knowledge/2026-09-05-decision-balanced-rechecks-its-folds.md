@@ -96,3 +96,4 @@ sequential Arbiter in each. Every added dispatch lands exactly where the logs sa
 - [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
+- [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also

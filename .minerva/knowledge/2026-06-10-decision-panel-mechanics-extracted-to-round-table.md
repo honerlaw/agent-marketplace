@@ -32,3 +32,4 @@ Caller mode is a composition device distinct from the [[2026-06-07-decision-phas
 - [[2026-06-16-decision-propose-ship-quick-main-model-adjudication]] — see also
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also
 - [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also
+- [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
