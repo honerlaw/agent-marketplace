@@ -28,10 +28,10 @@ The heuristic for what to keep: **would a new engineer (or new agent) joining th
 | `minerva:round-table ["decision"]` | Convene a 3-agent Proponent/Skeptic/Arbiter consensus panel of fresh-context subagents over a decision or drafted artifact: accept votes are counted against a caller-specified quorum (default 2/3), with at most one revision round, then escalation to the user when consensus fails twice. A pure extraction of the panel protocol formerly inlined in `minerva:propose-ship-auto`, which now delegates its panel calls here; usable standalone for any decision. |
 | `minerva:work` | Enter implementation mode in an isolated git worktree. Reads the proposal + replans, surfaces any unresolved Open Questions, maintains `scratchpad.md`, auto-triggers `minerva:replan` on load-bearing divergence, and verifies Success criteria before suggesting promote. |
 | `minerva:promote [item]` | No-arg: end-of-work full pass (promote concrete past-tense knowledge → `.minerva/knowledge/`, rewrite proposal to match reality, archive scratchpad, dispose of TODOs explicitly — kept ones filed as prioritized GitHub issues where the repo can host them, else `followups.md`; or new proposal; or discard). With arg: single-item mid-work promote. Idempotent. |
-| `minerva:review` | Audit the implementation against the proposal (and `.minerva/knowledge/` invariants) by reviewing the local diff. Runs `code-review:code-review` when a PR exists, else does a structured inline check using the same finding format. Triage state persisted to scratchpad for resume. Runs **before** `minerva:promote` so findings flow through the partition. |
-| `minerva:ship` | Close the lifecycle: commit outstanding work to a branch (creating one if on the default branch), open a PR titled and described from `proposal.md`, watch CI without blocking the agent (a detached `gh pr checks --watch` that resumes the run when checks settle, with a long `ScheduleWakeup` armed underneath), bounded auto-fix loop (3 iterations), enable auto-merge when permissions allow. Bare mode for routine work outside a tracked unit. |
+| `minerva:review` | Audit the implementation against the proposal and knowledge invariants through an independent reviewer. Uses optional `code-review:code-review` for an OPEN PR when installed; otherwise reviews fetched PR or local diffs through the host adapter. Preserves finding format and triage state for resume. Runs before promote. |
+| `minerva:ship` | Commit outstanding work, open or reuse a PR, observe CI through a tracked watcher, attempt at most 3 fixes, and enable auto-merge when permissions allow. Checkpointed scheduled re-entry is used only when available; otherwise reports pending with an exact manual resume prompt. Also supports bare shipping. |
 | `minerva:cleanup [slug]` | Remove `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the matching local branches. Conservative — never touches unmerged work without explicit override. Idempotent. |
-| `minerva:propose-ship ["description"]` | Thin conductor that runs the full lifecycle end-to-end (propose → work → review → promote → ship → cleanup). Refuses to start if in-flight work would collide; advances out of the work phase on explicit user trigger words; gates on user confirmation before shipping; runs cleanup only after the PR actually merges (ScheduleWakeup-polled for up to ~1 hour while auto-merge is pending). |
+| `minerva:propose-ship ["description"]` | Thin conductor that runs the full lifecycle with user gates and collision checks. Runs cleanup only after the PR merges; merge waits retain a 12-retry / one-hour bound across supported scheduled or manual resumes. |
 | `minerva:propose-ship-auto ["description"]` | Same lifecycle as `minerva:propose-ship`, but replaces each human-facing decision gate with a 3-agent Proponent/Skeptic/Arbiter consensus panel of fresh-context subagents (the panel mechanics are delegated to `minerva:round-table`). Human input is only a fallback when the panel fails to agree after one revision round. Strategic decisions need 3/3 consensus; tactical decisions need 2/3; operational decisions (commit messages, PR bodies) bypass the panel. Bails to manual mode on consensus failures (≥3 user escalations or 2 of 3 propose-phase escalations). Small, low-risk decisions skip the panel via a fail-closed skip predicate (never the completion-verification or post-divergence panels), so a genuinely small task runs effectively panel-free. |
 | `minerva:propose-ship-quick ["description"]` | The lightweight fast-path sibling of `minerva:propose-ship-auto`: same lifecycle (propose → work → review → promote → synthesize → ship → cleanup), no scheduled human gates, but the **main model adjudicates every decision directly** instead of convening a `minerva:round-table` panel. Optimized for small, low-risk changes (small UI fixes, bug fixes) the user wants done quickly. User input is only an exceptional fallback: a fail-closed escalation predicate sends genuinely-undecidable decisions (real ambiguity, high blast-radius, an unfamiliar public interface, a knowledge constraint) to the user, and a scope-fit escape recommends `propose-ship-auto`/`propose-ship` if the change turns out not to be small. Never elides the completion-verification or post-divergence self-checks; halts at 3 escalations. |
 | `minerva:propose-ship-balanced ["description"]` | The middle rung between `minerva:propose-ship-quick` (main model decides every gate solo) and `minerva:propose-ship-auto` (a 3-agent `minerva:round-table` panel at every gate): same lifecycle (propose → work → review → promote → synthesize → ship → cleanup), no scheduled human gates, the main model decides each point directly — but at the high-signal gates (scope check, approach selection, whole-proposal soundness, completion-verification, plus the rare never-elide divergence/replan gates) it dispatches a **single** fresh-context advisory reviewer (a Skeptic, or a Verifier at completion) and arbitrates the critique inline — no sequential Arbiter, no panel; a folded critique gets one fold-audit re-check by a second single reviewer, never a third dispatch. Built for medium changes that want an independent second opinion on the load-bearing calls without paying for a full panel at every gate. Same fail-closed escalation predicate and scope-fit escape as `propose-ship-quick`; halts at 3 escalations. |
@@ -83,10 +83,30 @@ Both layers are named `<YYYY-MM-DD>-<slug>`, dated independently — a knowledge
 
 ## Setup
 
-This plugin is pure markdown — no Python dependencies, no Playwright. The standard installer handles registration:
+Both hosts load the same Markdown skills and standard-library Python helpers.
+Minerva requires Git, Python 3.11+, and a POSIX shell; no pip packages or Playwright
+are required. PR workflows also need authenticated `gh` and permissions. Install
+for one or both hosts:
 
 ```bash
-./install.sh minerva
+./install.sh minerva --host both
 ```
 
-Restart Claude Code (or run `/reload-plugins`). Then in any project you want to track with minerva, run `minerva:init` once to scaffold the directory layout and wire the Routing section.
+Reload Claude Code with `/reload-plugins` and start a new Codex conversation.
+Run `minerva:init --host both` in a consumer project to scaffold `.minerva/` and
+append routing to `CLAUDE.md` and `AGENTS.md`, preserving existing content. A
+customized existing routing section is refreshed only after an approved diff.
+
+Read [compatibility and validation](COMPATIBILITY.md) for capability fallbacks,
+durable resume state, and the required regression checks.
+
+### Wire Codex manually
+
+From the cloned repository, register the local marketplace and install Minerva:
+
+```bash
+codex plugin marketplace add /absolute/path/to/agent-marketplace
+codex plugin add minerva@agent-marketplace
+```
+
+Start a new Codex app, CLI, or IDE conversation and select `$minerva:using-minerva` (or invoke a specific skill such as `$minerva:init`). In the consumer project, run `minerva:init --host both` once to create `.minerva/` and add shared `CLAUDE.md`/`AGENTS.md` routing. The repository installer performs these same registration commands with `./install.sh minerva --host codex` or `--host both`.

@@ -51,7 +51,7 @@ FLAG_RE = re.compile(r"`(--[a-z-]+)")
 INVENTORY_HEADING = "## Delegated skills"
 
 # Opening backtick + name, with NO closing-backtick requirement. An invocation is written
-# ``Invoke `minerva:ship <date-slug> --auto=X` via the `Skill` tool``, so the skill name is not
+# ``Invoke `minerva:ship <date-slug> --auto=X` via the skill loader``, so the skill name is not
 # followed by a backtick — a regex demanding one silently matched nothing on the single line the
 # use-half exists to check, and the test passed while the argument was absent. Found by deleting
 # the argument and watching the suite stay green, which is the only way this class of blindness
@@ -63,7 +63,7 @@ SKILL_MENTION_RE = re.compile(r"`minerva:([a-z-]+)")
 # `minerva:replan`" — names a section as the source of a format and must NOT be required to
 # carry it; requiring it everywhere would force nonsense edits, and the predictable response is
 # to weaken the check until it passes (`2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
-INVOCATION_MARKER = "via the `Skill` tool"
+INVOCATION_MARKER = "via the skill loader"
 
 
 def declared_mode_argument(skill: str) -> str | None:

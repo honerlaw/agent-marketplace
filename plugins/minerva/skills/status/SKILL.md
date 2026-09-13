@@ -8,13 +8,17 @@ allowed-tools:
   - Glob
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Answer **"where does everything stand, and what should I do next?"** in one screen.
 `minerva:status` aggregates the records that already exist — every work unit's declared
 state, its phase topology, the knowledge wiki's health, the deferred backlog — and renders
 them as three markdown tables.
 
-> **Read-only contract.** This skill must not modify any file. Its `allowed-tools` omits
-> `Edit` / `Write` / `MultiEdit` by design, and every command below is a read. It reports;
+> **Read-only contract.** This skill must not modify any file. Its `allowed-tools` is
+> host metadata; the read-only protocol applies regardless of available tools. Every command below is a read. It reports;
 > it never advances the lifecycle. The **Next step** column *names* the skill to run next
 > and stops there — running it is the user's call.
 
@@ -30,7 +34,7 @@ They answer different questions and are resolved differently. Do not collapse th
 
 ```bash
 WORK_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 ```
 
@@ -50,9 +54,8 @@ and its three-position test are
 `2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout`; this skill
 is one of its cases, not a second statement of it.
 
-`PLUGIN_SCRIPTS` follows the plugin-cache-first rule in
-`2026-06-03-constraint-skill-wraps-script-via-importable-api` — `find -L` included, because
-the local install path is a symlink and `find` without it stops at the symlink.
+`PLUGIN_SCRIPTS` resolves from the installed skill through the shared runtime
+contract, including symlink handling, explicit overrides, and stale-code checks.
 
 ## Step 2 — Collect the merged branches
 
@@ -75,9 +78,9 @@ commits yet, which would report an unstarted phase as shipped.
 ## Step 3 — Run the aggregator
 
 ```bash
-python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$WORK_ROOT/scripts}'); \
+python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
 from workstream_status import workstream_status; \
-print(json.dumps(workstream_status('$WORK_ROOT', '''$MERGED'''.split()), indent=2))"
+print(json.dumps(workstream_status(sys.argv[3], sys.argv[2].split()), indent=2))" "$PLUGIN_SCRIPTS" "$MERGED" "$WORK_ROOT"
 ```
 
 Returns `{units, counts, knowledge}`. Per unit: `slug`, the `work_status.unit_state()`

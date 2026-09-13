@@ -18,6 +18,22 @@ After resolving the target and before running any git commands:
 - If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<date-slug> …` and prefix any file path with `.minerva/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
+## Checkpoint entry
+
+Before advancing this shipping run, read its checkpoint using the runtime
+contract. Resolve the unit working tree and live branch/PR first. Validate any
+saved caller against explicit `--auto`; restore counters from this run without
+resetting them. An explicit `--watch-iteration` cannot lower the saved count.
+Missing legacy state uses the existing PR and explicit retry/log evidence;
+unknown budget usage requires recovery. Bare mode uses the runtime contract's
+branch-derived key and never interprets it as a work unit.
+
+After creating/reusing a PR, write phase `ship`, status `pending`, its PR number,
+branch, caller, and current counters. Checkpoint each attempted fix before
+performing it and before every wait/yield. Before returning to cleanup, write
+phase `cleanup`; only confirmed completion/reconciliation marks this run done.
+Never include checkpoint files in `git add` or commit messages.
+
 ## Phase resolution
 
 Run this immediately after worktree addressing, and **skip it entirely in bare mode**.
@@ -33,26 +49,26 @@ hand; ask the module that owns them:
 # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
 # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-WT=".minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
+WT="$ROOT/.minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
 python3 -c "
-import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+import subprocess, sys; sys.path.insert(0, sys.argv[1])
 from work_status import read_phases, phase_progress, phase_name
 slug = '<date-slug>'
-merged = subprocess.run(['git','-C','$WT','branch','--merged','<default-branch>',
+merged = subprocess.run(['git','-C',sys.argv[2],'branch','--merged','<default-branch>',
                          '--format=%(refname:short)'],
                         capture_output=True, text=True).stdout.split()
-phases = read_phases(open('$WT/.minerva/work/<date-slug>/proposal.md').read())
+phases = read_phases(open(sys.argv[3]).read())
 state = phase_progress(phases, merged, slug)
 print(state, [phase_name(t) for n, t in phases if n >= (state['next_position'] or 1)])
-"
+" "$PLUGIN_SCRIPTS" "$WT" "$WT/.minerva/work/<date-slug>/proposal.md"
 ```
 
 **Both paths are anchored, not CWD-relative**, and that is load-bearing twice over:
 
-- The scripts path follows the plugin-cache-then-`$ROOT` rule every other script-wrapping skill
-  uses (`minerva:lint`, `minerva:migrate-fix`, `minerva:cleanup`'s reconciliation). A bare
+- The scripts path uses the installed plugin runtime resolver (`minerva:lint`,
+  `minerva:migrate-fix`, and `minerva:cleanup` use the same resolver). A bare
   `sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory
   (`2026-06-03-constraint-skill-wraps-script-via-importable-api`).
 - The proposal path carries the `$WT` prefix because **ship never enters the worktree** — the
@@ -62,7 +78,7 @@ print(state, [phase_name(t) for n, t in phases if n >= (state['next_position'] o
   `read_phases` succeeds, `phase_progress` returns a wrong `next_branch`, and ship targets the
   wrong phase without erroring.
 
-**If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
 
 Use `--merged <default-branch>` against a **freshly fetched** default branch; a stale local ref
 reports a phase as unmerged after its PR landed, which would try to re-ship it.
@@ -83,7 +99,7 @@ git -C .minerva/worktrees/<date-slug> checkout -b <date-slug>-phase-N origin/<de
 
 Full rules — the soft ceiling, why phase 1 keeps the bare slug, and why progress is derived
 rather than written — are in
-`plugins/minerva/skills/propose/references/phasing.md`. **Read it before shipping any phase
+`skills/propose/references/phasing.md`. **Read it before shipping any phase
 other than the first.**
 
 ## Default-branch detection
@@ -156,7 +172,7 @@ If nothing is uncommitted, skip this step entirely.
 
    **Re-verify each entry against the diff before emitting it.** The field may have been written
    at intake, when the user adopted an open issue and no diff existed yet
-   (`plugins/minerva/skills/propose/references/issue-match.md`), and ship is reached without
+   (`skills/propose/references/issue-match.md`), and ship is reached without
    `minerva:promote` often enough for that to matter — this skill nudges, it does not enforce
    ordering, and an autonomous orchestrator auto-accepts the PR-body gate below, so this is the
    last point anything checks. Drop an entry the diff does not resolve and say which, in the
@@ -172,13 +188,13 @@ If nothing is uncommitted, skip this step entirely.
    Bare-mode body is built from `git log` of branch-vs-default (no footer, no `Closes`
    lines — bare mode has no proposal to read the field from).
 5. **Hard gate #2 (PR title + body).** Show the proposed title and body block and prompt the user to redirect or accept. The user can edit either in place. Routine work can accept with one word ("ok"); bigger changes get a real preview.
-6. `gh pr create --title "<title>" --body "$(cat <<'EOF' ... EOF)"`. Capture the returned PR URL.
+6. Write the exact approved PR body to a temporary file, then run `gh pr create --title "<title>" --body-file <absolute-body-file>`. Capture the returned PR URL.
 
 ## CI watch & auto-fix loop (tracked watcher + durable fallback)
 
-Bounded at **3 fix iterations**. The loop does **not** block the agent — between checks, the session can do other work or end and be re-entered.
+Bounded at **3 fix iterations**. The host adapter observes a tracked watcher while the session remains active. Before ending the session, checkpoint and arrange a supported scheduled resume or report an exact manual resume prompt.
 
-The old fixed cadence (a wake-up every 270s) was wrong in both directions — measured CI runs ~10-26s in a docs/tests-only repo and ~1000s for a full suite — so it idled minutes on one and burned wake-ups on the other. Neither number is knowable in advance, so **do not guess an interval**: let `gh` tell you when checks settle, and keep one long wake-up armed underneath in case it never does.
+The old fixed cadence (a wake-up every 270s) was wrong in both directions — measured CI runs ~10-26s in a docs/tests-only repo and ~1000s for a full suite — so it idled minutes on one and burned wake-ups on the other. Neither number is knowable in advance, so **do not guess an interval**: let `gh` tell you when checks settle, and keep one supported scheduled fallback underneath, or checkpoint for manual resumption.
 
 **Check state with `bucket`, not `state`.** `gh pr checks --json` exposes `bucket`, which normalizes every check into `pass` / `fail` / `pending` / `skipping` / `cancel`. There is no `conclusion` field (requesting it is a hard error), and `state` carries values like `SUCCESS`, never `COMPLETED`. "Still running" means **some check has `bucket == "pending"`** — that phrasing, and only it, is used throughout this section.
 
@@ -187,41 +203,47 @@ The old fixed cadence (a wake-up every 270s) was wrong in both directions — me
 
 ### Waiting
 
-Steps 3 and 4 are **complements, not alternatives** — arm both.
-
-3. **Tracked watcher (resume-when-settled).** Start `gh`'s own blocking watch, detached, via `Bash` with `run_in_background: true`:
+3. **Tracked watcher.** Use the tracked watcher operation in the host adapter:
 
    ```bash
    gh pr checks <pr> --watch --fail-fast
    ```
 
-   `--watch` blocks until the checks finish and `--fail-fast` returns on the first failure, so the process exits exactly when there is something to react to. The harness re-invokes you on exit — the run resumes when CI genuinely settles rather than at an arbitrary poll boundary. Prefer this over a hand-rolled poll loop: no interval to pick, no rate-limit exposure, and no edge case on a PR with zero checks. (Verified on `gh` 2.92.0 against a live run: the detached watcher held from `QUEUED` through `pending` to `pass` and exited on settle; `gh` refreshes internally every 10s, so there is no interval for you to set. If a much older `gh` rejects `--watch`, fall back to step 4 alone — the fallback is sufficient on its own, just slower to resume.)
+   In a live Codex session, observe the returned process through the available
+   polling tool, keeping waits at or below 60 seconds. In Claude retain its
+   background completion path where supported. Requery buckets on completion;
+   the watch exit code is not a verdict. Never start a second concurrent watcher
+   for the same wait. If an older `gh` rejects `--watch`, use an available scheduled
+   fallback or checkpoint and report pending with a manual resume prompt.
 
-   This does *not* make CI itself harness-tracked; only the watcher process is. The benefit is resume latency, nothing more.
-4. **Durable fallback (always armed).** Also schedule one `ScheduleWakeup` at **1800s** with the prompt pinned as:
+4. **Resume fallback.** Save the checkpoint before waiting. If the host supports
+   automatic re-entry, arm the scheduled resume operation at **1800s** with:
 
    ```
    minerva:ship <date-slug> --watch-iteration=<N> [--auto=<orchestrator>]
    ```
 
-   **Carry `--auto=<orchestrator>` verbatim when it was passed.** The caller is run-level state that
-   only this prompt preserves: a wake-up that drops it resumes a bare `minerva:ship`, which finishes,
-   prints a report addressed to a human, and never returns to the orchestrator's Phase 7. The run then
-   stalls while reporting success.
+   **Carry `--auto=<orchestrator>` verbatim when it was passed.** Preserve
+   `--watch-iteration` and all run counters. The long fallback complements a
+   completion watcher; it is a re-arming keep-alive, not a CI-duration budget.
+   If scheduling is unavailable and this session must end, report **pending**,
+   render the exact host-correct resume prompt from the checkpoint, and stop.
+   A detached process alone cannot resume an ended session.
 
-   Carrying `--watch-iteration` is what keeps the 3-iteration bound below intact across a resume; a prose "re-invoke ship" loses it. The interval is deliberately long and **not** tuned to CI duration: step 3 already handles the normal case, so this exists only for a watcher that died, a check wedged in `pending`, or a session that ended — the "can end and be re-entered" property this section's opening sentence promises.
-
-   It is a **re-arming keep-alive, not a budget**: each firing that still finds work pending schedules the next one (step 5). So 1800s is not a ceiling on how long ship will wait, and a repo whose CI runs longer than 30 minutes is not cut off — it simply wakes, sees `pending`, and re-arms. Only the auto-fix loop below is capped, and it counts *fixes*, not waits.
-
-5. **On resume, whichever path woke you:** re-run `gh pr checks <pr> --json name,state,bucket` once.
-   - **Nothing pending** → result handling below. The other path's signal is now stale: if a watcher is still running, it is finished with; if a wake-up later fires on already-shipped work, step 2 of *Push & open PR* sees the merged/closed PR and this run exits without re-opening one.
-   - **Still pending** → re-arm: start a fresh watcher and schedule the next fallback, exactly as in steps 3-4. Never run two watchers for the same wait concurrently — re-arm only after a resume, never alongside a live one.
+5. **On resume, whichever path resumed you:** reread the checkpoint and live
+   `gh pr checks <pr> --json name,state,bucket` once. Reuse existing PRs and check
+   whether they merged or closed before taking any action.
+   - **Nothing pending** → result handling below. Ignore already-completed stale
+     signals; do not duplicate watchers, fixes or orchestrator handoffs.
+   - **Still pending** → observe the existing live watcher, or start a new one
+     only if none is live. Re-arm a supported scheduler; otherwise preserve the
+     explicit pending/manual-resume fallback. Checkpoint before yielding.
 
 ### Result handling per fix iteration
 
 Once checks are no longer pending:
 
-1. **All green** → exit the watch loop, proceed to auto-merge.
+1. **All green** (every bucket is `pass` or `skipping`, or no checks are configured) → exit the watch loop, proceed to auto-merge. `cancel`, unknown buckets, and check-query errors are not green; classify/escalate them rather than enabling auto-merge.
 2. **At least one failed** → fetch failing job logs:
    - `gh run view --log-failed` for the failing run, or
    - `gh pr checks` + `gh run view <run-id> --log-failed` per failing check.
@@ -232,7 +254,9 @@ Once checks are no longer pending:
    - `test` — test failures
    - `build` — compile / bundle errors
    - `other` — anything that doesn't cleanly fit, including infra/auth/network failures
-4. **Attempt fix** per family:
+4. **Attempt fix** per family. Before starting an attempt, increment and save
+   `fix_iteration` in the checkpoint; a failed/interrupted fix consumes the attempt.
+   Never begin a fourth attempt. Then:
    - `format` → re-run the formatter locally, commit the diff.
    - `lint` → patch the specific lint errors cited in the log.
    - `typecheck` → patch the specific type errors cited in the log.
@@ -243,11 +267,11 @@ Once checks are no longer pending:
    - Fix iterations hit the cap (3).
    - The fix itself introduces git conflicts that can't be resolved cleanly.
    - The failure family is `other` or a non-trivial `test`/`build`.
-6. **Commit & push.** Create a **new commit** (never `--amend` — the previous push already published it). Push to the PR branch. Re-enter the watch per **Waiting** above (re-size the estimate — a fix push starts a fresh run) and exit this turn. Whichever path resumes you handles the re-check.
+6. **Commit & push.** Create a **new commit** (never `--amend` — the previous push already published it). Push to the PR branch. Re-enter the watch per **Waiting** above (re-size the estimate — a fix push starts a fresh run) and continue observing the tracked watcher while this session is active. Before ending a turn, save progress and use either a supported scheduled resume or the explicit manual-resume fallback.
 
 ### Track iteration count across wakes
 
-Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-balanced`) so both the loop bound and the caller hold across wake-ups. Reset the iteration count on a fresh `minerva:ship` invocation.
+Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-balanced`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
 
 ## Auto-merge
 
@@ -270,7 +294,7 @@ After all steps, print:
 ```
 Branch:        <branch name>
 PR:            <url>
-CI:            green | failing | pending (will re-check at <timestamp>)
+CI:            green | failing | pending (scheduled at <timestamp> | manual resume required)
 Auto-merge:    enabled | declined by repo | not attempted (CI not green)
 Phase:         2 of 3 — outstanding: 3. <name>        <- phased units only; omit the line entirely when unphased
 Next:          <recommendation>
@@ -289,14 +313,14 @@ The recommendation:
 - Auto-merge enabled and CI green → "GitHub will merge when checks pass. Run `minerva:cleanup` afterward to remove the worktree."
 - Auto-merge declined by repo → "Merge manually when ready: `gh pr merge <pr-number>`. Run `minerva:cleanup` after merge."
 - CI failed after 3 fix iterations → "Investigate the failure manually; the fix loop bailed."
-- CI still pending → "Next watch wake scheduled."
+- CI still pending → state whether automatic re-entry is actually scheduled; otherwise print **pending — manual resume required** and the exact resume prompt.
 
 **Under `--auto=<orchestrator>`, the report may not be the end of the run** — and which of the two
 paths applies is decided by an observable fact, not a guess:
 
 - **Resumed from a CI-watch wake-up** (this invocation carried `--watch-iteration`): the orchestrator's
   turn ended when the watch was armed, so its Phase 6 will never resume. Hand back by invoking
-  `minerva:<orchestrator> --cleanup-only <date-slug>` via the `Skill` tool — the re-entry all four
+  `minerva:<orchestrator> --cleanup-only <date-slug>` via the skill loader — the re-entry all four
   orchestrators document, which skips phases 1-6 and runs their cleanup gate.
 - **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
   invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate

@@ -3,7 +3,11 @@ name: ship
 description: Ships the current work — commits outstanding changes to a branch, opens a pull request, watches CI without blocking (a tracked watcher that resumes when checks settle, backed by a long scheduled fallback), fixes CI failures, and enables auto-merge. Use when the user asks to ship, push, open a PR for, or merge the current work — closing the minerva lifecycle after `minerva:work` / `minerva:promote` / `minerva:review` — or when they invoke `minerva:ship`.
 ---
 
-Close the minerva lifecycle by committing outstanding work to a branch, opening a PR titled and described from the active work unit's `proposal.md`, watching CI to green with a bounded auto-fix loop (3 iterations), and enabling auto-merge when repo permissions allow. The watch never blocks the agent and never guesses a polling interval: a detached `gh pr checks --watch` resumes the run when checks actually settle, and a long re-arming `ScheduleWakeup` stays armed underneath so the watch survives a dead watcher, a wedged check, or an ended session.
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
+Close the minerva lifecycle by committing outstanding work to a branch, opening a PR titled and described from the active work unit's `proposal.md`, watching CI to green with a bounded auto-fix loop (3 iterations), and enabling auto-merge when repo permissions allow. The host adapter observes CI completion; checkpointed progress supports scheduled re-entry where available and explicit manual resumption elsewhere.
 
 ## Usage
 
@@ -43,13 +47,13 @@ Bail with a clear, one-line message on any failure:
 
 ## Protocol
 
-The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree addressing** → **Phase resolution** (a unit declaring `## Phases` ships one PR per phase; unphased units — the normal case — are unaffected) → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (detached `gh pr checks --watch` plus an armed re-arming `ScheduleWakeup` fallback; bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
+The full step protocols live verbatim in `references/protocol.md` — **read it now, before executing**: **Target resolution** → **Worktree addressing** → **Phase resolution** (a unit declaring `## Phases` ships one PR per phase; unphased units — the normal case — are unaffected) → **Default-branch detection** → **Branch creation** → **Commit outstanding changes** (Hard gate #1: commit message confirmation) → **Push & open PR** (Hard gate #2: PR title + body confirmation) → **CI watch & auto-fix loop** (tracked `gh pr checks --watch` plus a capability-dependent scheduled/manual resume fallback; bounded 3-iteration auto-fix) → **Auto-merge** → **Final report**, plus **Lifecycle nudges** and **Worktree handling**.
 
 ## Idempotency
 
-Ship does not write its own metadata file or append a `## Shipped` marker to `scratchpad.md`. The PR URL lives on GitHub; nothing minerva-side needs to remember it. Re-running on a branch that already has an open PR will detect that (`gh pr view`) and pick up at the CI-watch step instead of re-creating.
+Ship keeps untracked runtime checkpoints outside the work-unit records and never appends a `## Shipped` marker to `scratchpad.md`. The checkpoint stores the PR number and retry budget; GitHub remains the source of truth for PR state. Re-running on a branch that already has an open PR will detect that (`gh pr view`) and pick up at the CI-watch step instead of re-creating.
 
-Wake-ups re-invoke `minerva:ship`; the skill detects the existing PR and resumes the watch loop using the iteration count carried in the wake-up prompt.
+Scheduled or manual resumes re-invoke `minerva:ship`; the skill detects the existing PR and resumes using the persisted iteration count, validated against the resume prompt.
 
 ## Out of scope
 

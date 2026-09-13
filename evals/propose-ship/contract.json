@@ -20,7 +20,7 @@
     "minerva:promote",
     {
       "any_of": [
-        "plugins/minerva/skills/propose/references/in-flight-check.md"
+        "skills/propose/references/in-flight-check.md"
       ],
       "file": "references/phases.md"
     },
@@ -31,7 +31,7 @@
       "ignore_case": true,
       "file": "references/phases.md"
     },
-    "plugins/minerva/skills/propose/references/cross-session.md"
+    "skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

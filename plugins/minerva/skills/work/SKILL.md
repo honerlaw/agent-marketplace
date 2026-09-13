@@ -3,6 +3,10 @@ name: work
 description: Implements a minerva work unit — reads the proposal and any replans, maintains a live scratchpad, auto-invokes the `minerva:replan` protocol when reality drifts in a load-bearing way, and checks proposal Open Questions on resume and Success criteria before signaling completion. Use when the user is ready to start coding on a proposed feature, wants to implement or resume a work unit ("pick up where we left off"), or invokes `minerva:work`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Implement the active work unit while maintaining the scratchpad and honoring the persistence hierarchy.
 
 ## Usage
@@ -79,13 +83,13 @@ As you work, log to `scratchpad.md`. The bar for an entry is: **a future-self mi
 
 The scratchpad is **ephemeral working memory**. `minerva:promote` will later partition it into "promote / merge into proposal / discard." Keep signal-to-noise high.
 
-When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 
 ### Divergence detection
 
 Continuously check: does the approach I'm taking still match `proposal.md` (as superseded by the latest `replan.md`)?
 
-**Invoke the `minerva:replan` skill (via the `Skill` tool)** when reality diverges in a load-bearing way:
+**Invoke the `minerva:replan` skill (via the skill loader)** when reality diverges in a load-bearing way:
 - A core assumption from the proposal turns out to be wrong.
 - The approach itself is changing (not just an implementation detail within the approach).
 - Scope is shifting (in or out of the work unit).
@@ -95,7 +99,7 @@ Continuously check: does the approach I'm taking still match `proposal.md` (as s
 - Small refactors along the way.
 - Edge-case handling that wasn't in the proposal but doesn't change the approach.
 
-**On trigger:** pause implementation. **Under `--auto`, hand the divergence to `<orchestrator>`'s Phase 2.5 and let it adjudicate — do not invoke `minerva:replan` or `minerva:grill-plan`.** Otherwise tell the user "this looks like a load-bearing divergence — running the replan protocol", then invoke the `minerva:replan` skill via the `Skill` tool and follow its protocol. Once the replan entry is written, resume implementation with the new plan in context.
+**On trigger:** pause implementation. **Under `--auto`, hand the divergence to `<orchestrator>`'s Phase 2.5 and let it adjudicate — do not invoke `minerva:replan` or `minerva:grill-plan`.** Otherwise tell the user "this looks like a load-bearing divergence — running the replan protocol", then invoke the `minerva:replan` skill via the skill loader and follow its protocol. Once the replan entry is written, resume implementation with the new plan in context.
 
 ### Completion signal
 
@@ -106,7 +110,7 @@ Implementation is **done** when every item in `## Success criteria` (as amended 
 3. If any item is not met, do not suggest promote — keep working or trigger `minerva:replan` if the criterion itself is wrong.
 4. If every item is met, surface this checklist to the user and recommend `minerva:promote` as the next step. Do not run promote automatically — that's the user's call. **Under `--auto`, return the checklist to `<orchestrator>`'s completion-verification gate instead.**
 
-**On a unit declaring `## Phases`,** a phase is done when *its own* criteria are met: recommend `minerva:ship`, not promote. Mode A waits for the final phase — use promote's **Mode B** meanwhile, so each phase's PR carries its own knowledge instead of stranding it if the unit stalls (`plugins/minerva/skills/propose/references/phasing.md`).
+**On a unit declaring `## Phases`,** a phase is done when *its own* criteria are met: recommend `minerva:ship`, not promote. Mode A waits for the final phase — use promote's **Mode B** meanwhile, so each phase's PR carries its own knowledge instead of stranding it if the unit stalls (`skills/propose/references/phasing.md`).
 
 If the proposal has no `## Success criteria` section (e.g. it was authored before that section existed), fall back to the proposal's `## Goal` paragraph as the implicit criterion and note the gap to the user.
 

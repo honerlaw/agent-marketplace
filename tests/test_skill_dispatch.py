@@ -12,7 +12,9 @@ waiting. Measured across 105 real orchestrator runs before this unit, 562 of
 
 The instructions pinned ``subagent_type`` and ``model`` but not the execution
 mode, so the model guessed per dispatch. This module makes the pin structural:
-any skill prose that *instructs* a dispatch must also pin ``run_in_background``.
+canonical skill prose that *instructs* a dispatch must require waiting for
+results. Host adapter tests separately preserve Claude's synchronous parameter
+and model policy and Codex's fresh-context/inherited-settings contract.
 
 **The detector is conjunctive**, because neither single signal works on this
 corpus:
@@ -62,11 +64,11 @@ DISPATCH_VERB_RE = re.compile(r"\b(spawn|dispatch|launch|invoke|create)", re.IGN
 # ``` `Agent tool` ```, or unbackticked) — one site rests on this token alone,
 # so a cosmetic reformat there must not drop it out of detection.
 DISPATCH_TOKEN_RE = re.compile(
-    r"`?Agent`?\s+tool`?|subagent_type|model:\s*\"?sonnet", re.IGNORECASE
+    r"`?Agent`?\s+tool`?|subagent_type|model:\s*\"?sonnet|independent reviewer operation|panel operation", re.IGNORECASE
 )
 
 # The pin this module exists to enforce.
-EXECUTION_MODE_KEY = "run_in_background"
+EXECUTION_MODE_KEY = "wait for results"
 
 # The registered dispatch sites: skill-relative path -> number of dispatch
 # instructions in it. Pinning the set (not just the pins) means a NEW dispatch
@@ -80,6 +82,7 @@ REGISTERED_SITES = {
     "propose-ship-balanced/references/verify-protocol.md": 2,
     "review/references/protocol.md": 1,
     "round-table/SKILL.md": 1,
+    "using-minerva/references/runtime.md": 1,
 }
 
 # Prose that must NOT be detected, as (skill-relative path, distinctive

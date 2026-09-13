@@ -75,7 +75,7 @@ someone else already asked for it, not a correction.
 
 **At the convergent surfaces** — `minerva:propose`, and the inline Phase 1 of
 `minerva:propose-ship-quick` / `-balanced` / `-auto`, where a work unit is about to exist — a
-`match` is a real gate. Ask with `AskUserQuestion`, naming the issue number, its title, and its
+`match` is a real gate. Ask with the user question operation, naming the issue number, its title, and its
 `priority:` label when it has one — a human-filed issue, or one predating the convention, carries
 no priority, and its absence is not a reason to withhold the offer:
 

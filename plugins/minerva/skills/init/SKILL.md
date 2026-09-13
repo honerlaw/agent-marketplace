@@ -3,11 +3,16 @@ name: init
 description: Scaffolds the `.minerva/` directory layout and agent-file Routing section — durable records, knowledge tracking, and project memory for agent work in a project. Idempotent — re-runs report per-piece status without rewriting anything in place, and it warns about legacy `.minerva/decisions/` layouts. Use when adopting minerva or setting up durable record/knowledge discipline for the first time in a project, or when the user invokes `minerva:init`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 One-time scaffolding for a project. Creates the `.minerva/` directory layout, verifies it's not being gitignored, adds a Routing section to the project's agent file, and offers to commit the scaffold.
 
 ## Usage
 
 - `minerva:init` — scaffold the current project root. No arguments.
+- `minerva:init --host claude|codex|both` — also create missing instruction files for the selected host(s). Codex uses `AGENTS.md`, Claude uses `CLAUDE.md`.
 
 ## Pre-flight detection
 

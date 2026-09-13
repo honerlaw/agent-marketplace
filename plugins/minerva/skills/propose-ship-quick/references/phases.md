@@ -6,7 +6,7 @@ Read each phase's section before executing that phase. These mirror `minerva:pro
 
 Every minerva skill this orchestrator runs, and the **observable mode argument** it passes. A skill
 marked `inlined` has its protocol restated in the phases below, so this file's own gate policy
-governs it; a skill marked `invoked` is run through the `Skill` tool and must receive its argument
+governs it; a skill marked `invoked` is run through the skill loader and must receive its argument
 on the invocation line. Never infer orchestrated mode from context — pass the argument
 (`2026-06-07-decision-phase-handoff-rides-observable-intake`).
 
@@ -25,13 +25,13 @@ Replaces the user-interactive intake in `minerva:propose`.
 
 1. **Assemble context.** Read: the inline seed, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone/conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `minerva:promote` files kept TODOs as issues wherever the repo can host them.
 
-2. **Open-issue match.** Before designing anything, check whether an **open** GitHub issue already tracks what the seed asks for, per `plugins/minerva/skills/propose/references/issue-match.md` — read it and run it. A match is a **hardcoded ask** (`AskUserQuestion`: execute the issue instead / proceed as seeded and link it / adopt and extend), fired regardless of this run's decision policy, exactly as the in-flight-work collision is. Like every other escalation this skill counts, it **increments the global escalation counter**; it is not exempt. No match, or no reachable issue tracker, means no user contact at all. On adoption, `**Closes**: #NN` goes into `proposal.md` at creation.
+2. **Open-issue match.** Before designing anything, check whether an **open** GitHub issue already tracks what the seed asks for, per `skills/propose/references/issue-match.md` — read it and run it. A match is a **hardcoded ask** (the user question operation: execute the issue instead / proceed as seeded and link it / adopt and extend), fired regardless of this run's decision policy, exactly as the in-flight-work collision is. Like every other escalation this skill counts, it **increments the global escalation counter**; it is not exempt. No match, or no reachable issue tracker, means no user contact at all. On adoption, `**Closes**: #NN` goes into `proposal.md` at creation.
 
 3. **Design synthesis.** The main model drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with the 2-3 candidate approaches it considered. Context-grounded inference, not user Q&A. Keep it in conversation; write no file yet.
 
-4. **Scope check.** The main model decides: one work unit in one PR, one unit in ordered **phases**, or genuinely separate units? **Too big for one PR means phase it, not decompose it** — a `## Phases` section (soft ceiling ~3) keeps one proposal, one record and one promote, where an extra unit re-pays every per-unit cost and re-derives the context this one just built (`plugins/minerva/skills/propose/references/phasing.md`). Note that a quick run is for *small* changes: work needing phases at all is usually a signal to escalate per the scope-fit escape rather than to phase. Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
+4. **Scope check.** The main model decides: one work unit in one PR, one unit in ordered **phases**, or genuinely separate units? **Too big for one PR means phase it, not decompose it** — a `## Phases` section (soft ceiling ~3) keeps one proposal, one record and one promote, where an extra unit re-pays every per-unit cost and re-derives the context this one just built (`skills/propose/references/phasing.md`). Note that a quick run is for *small* changes: work needing phases at all is usually a signal to escalate per the scope-fit escape rather than to phase. Escalate only if genuinely ambiguous (per the escalation predicate). If the decision is "decompose", abort the quick run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 
-5. **Approach selection.** The main model picks among its candidates; if no option is dominant, escalate (offer the candidates via `AskUserQuestion`). The chosen approach replaces the draft's `## Approach`.
+5. **Approach selection.** The main model picks among its candidates; if no option is dominant, escalate (offer the candidates via the user question operation). The chosen approach replaces the draft's `## Approach`.
 
 6. **Whole-proposal soundness.** The main model reviews the full draft for internal consistency and soundness. Escalate if a public-interface or cross-cutting-contract aspect is one it cannot confidently get right alone.
 
@@ -70,8 +70,8 @@ Replaces the user-interactive triage in `minerva:review`, whose protocol is read
 
 1. **Read context.** `proposal.md`, all `replan.md`, current `scratchpad.md` (including prior `## Review triage` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), relevant `.minerva/knowledge/`.
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution".
-3. **Generate findings.** Two passes — **minerva audit** (spec fidelity + knowledge compliance) and **code review** (if a PR exists, invoke `code-review:code-review` via the `Skill` tool; otherwise the inline structured review per `minerva:review`).
-4. **Triage.** The main model triages the full numbered finding set (default by the deferral bar in `plugins/minerva/skills/promote/references/deferral-bar.md`, not by severity alone: a finding with a writable failure scenario → FIX; documentation for behavior this diff touched → always FIX, never deferred; a standing fact about the system → SUGGEST, phrased as what *is* so promote can route it to a `reference` entry; everything else → IGNORE). Escalate if a finding's disposition is genuinely contested.
+3. **Generate findings.** Two passes — **minerva audit** (spec fidelity + knowledge compliance) and **code review** (use the optional review skill only for an OPEN PR when installed; otherwise use the independent PR/local diff review in `minerva:review`).
+4. **Triage.** The main model triages the full numbered finding set (default by the deferral bar in `skills/promote/references/deferral-bar.md`, not by severity alone: a finding with a writable failure scenario → FIX; documentation for behavior this diff touched → always FIX, never deferred; a standing fact about the system → SUGGEST, phrased as what *is* so promote can route it to a `reference` entry; everything else → IGNORE). Escalate if a finding's disposition is genuinely contested.
 5. **Replan-vs-FIX.** If a FIX finding reveals a load-bearing divergence (per `minerva:review`'s heuristic), the main model decides replan vs. fix-in-place; escalate if unsure. On replan, persist triage state per `minerva:review`'s "Triage persistence", trigger Phase 2.5, then re-run step 4.
 6. **Apply dispositions.** Per `minerva:review`'s "On approval — file writes": FIX edited directly; SUGGEST appended to scratchpad under `## Review finding YYYY-MM-DD`; IGNORE optional.
 7. Continue to Phase 4.
@@ -83,7 +83,7 @@ Replaces the user-interactive partition in `minerva:promote` Mode A, whose proto
 1. Inside the worktree. Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5.
 3. **Partition.** The main model proposes the four-way partition per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already `→ promoted to ...`. Escalate if an entry's bucket is genuinely ambiguous.
-4. **TODO disposition.** Route every TODO through the deferral bar in `plugins/minerva/skills/promote/references/deferral-bar.md` — **read it first**. An item with a writable failure scenario (specific inputs/state → wrong output, crash, data loss, exposure) is filed as a GitHub issue carrying that `**Failure scenario**:` line and a `critical`/`high`/`medium` priority per `plugins/minerva/skills/promote/references/github-issues.md` (or appended to `followups.md` when the repo cannot host issues). An item without one is a standing fact about the system: write it as a `.minerva/knowledge/` `reference` entry, or discard it. Documentation for behavior this diff touched is neither — it is finished now, as part of the work. There is no `low` tier. The main model decides; escalate if unsure.
+4. **TODO disposition.** Route every TODO through the deferral bar in `skills/promote/references/deferral-bar.md` — **read it first**. An item with a writable failure scenario (specific inputs/state → wrong output, crash, data loss, exposure) is filed as a GitHub issue carrying that `**Failure scenario**:` line and a `critical`/`high`/`medium` priority per `skills/promote/references/github-issues.md` (or appended to `followups.md` when the repo cannot host issues). An item without one is a standing fact about the system: write it as a `.minerva/knowledge/` `reference` entry, or discard it. Documentation for behavior this diff touched is neither — it is finished now, as part of the work. There is no `low` tier. The main model decides; escalate if unsure.
 5. **Apply writes.** Per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md`; rewrite `proposal.md`'s `## Approach` and set Status to `Shipped (YYYY-MM-DD)`; apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 6. **TODO seed gate (if any).** Do **not** auto-invoke `minerva:propose` in the same run — surface "seed new proposal" TODOs in the final report as suggested follow-ups.
 7. Continue to Phase 5.
@@ -98,7 +98,7 @@ Otherwise continue to Phase 6.
 
 ## Phase 6 — Ship (delegated)
 
-Invoke `minerva:ship <date-slug> --auto=propose-ship-quick` via the `Skill` tool, leading with:
+Invoke `minerva:ship <date-slug> --auto=propose-ship-quick` via the skill loader, leading with:
 
 > "You are running inside `minerva:propose-ship-quick`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
 
@@ -110,14 +110,25 @@ one of the two paths runs, never both.
 
 ## Phase 7 — Cleanup gate
 
+**Runtime continuation.** Read the saved checkpoint before this gate; preserve
+caller, escalation/decision/reviewer counters, cleanup retries and its absolute
+deadline. Save phase `cleanup` before waiting. The scheduled resume operation is
+conditional on a real re-entry capability: without it, checkpoint and report
+**pending — manual resume required**, with the exact host-correct
+`--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
+cap at 12 or the original one-hour deadline, whichever comes first. Never reset
+these limits when switching sessions. Reconciliation can remain pending after
+merge; preserve phase `reconciliation` and name every uncatalogued entry.
+
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
-1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup` via the `Skill` tool with args `<date-slug> --yes`. Report and exit.
-3. **`OPEN`, auto-merge enabled** → `ScheduleWakeup` with `prompt: minerva:propose-ship-quick --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12; on exhaustion, surface manual instructions.
+1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`. On resume, use the
+   checkpoint's work PR number if its branch has already been pruned.
+2. **`MERGED`** → invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes`. Report and exit.
+3. **`OPEN`, auto-merge enabled** → when a scheduler supports re-entry, use the scheduled resume operation with `prompt: minerva:propose-ship-quick --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12; on exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule.
 5. **`CLOSED` (not merged)** → leave the worktree; surface manual instructions.
 6. **No PR found** → exit silently (ship bailed before opening one — already reported).
-7. **Phased unit — not done yet.** Before reporting, re-derive `phase_progress()` (`scripts/work_status.py`). If `complete` is false, **loop back to Phase 6 and ship `next_branch`**, cut from the freshly fetched default branch — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `plugins/minerva/skills/propose/references/phasing.md`. No-op for unphased units.
+7. **Phased unit — not done yet.** Before reporting, re-derive `phase_progress()` (`scripts/work_status.py`). If `complete` is false, **loop back to Phase 6 and ship `next_branch`**, cut from the freshly fetched default branch — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `skills/propose/references/phasing.md`. No-op for unphased units.
 
 When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase directly.

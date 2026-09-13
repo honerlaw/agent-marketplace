@@ -3,6 +3,10 @@ name: explore
 description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `minerva:propose` to design it. Use `minerva:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a minerva project (`.minerva/` present), use this instead of generic brainstorming skills — it is the minerva-native front-end that hands off to `minerva:propose`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 # Explore an idea
 
 Turn a fuzzy idea into clarity through open-ended, collaborative dialogue — **before** committing to any plan. This is minerva's divergent, exploratory front-end: the phase you reach for when you're not yet sure there's a work unit here at all, or what the real problem even is. It mirrors `superpowers:brainstorming`, adapted to the minerva lifecycle.
@@ -30,7 +34,7 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 3. **Weigh multiple directions.** As understanding forms, surface 2–3 *high-level directions* (not implementation approaches) with their tradeoffs, leading with your reasoning. The goal is to widen the option space and pressure-test whether the idea is worth pursuing at all — not to pick a design.
 
-4. **Surface an open issue that already tracks it.** Once the idea has a nameable shape — here, not while it is still fuzzy, which is too early for the match to mean anything — check the repo's open GitHub issues for one that would be satisfied by substantially the same change. **Read `plugins/minerva/skills/propose/references/issue-match.md`** for the protocol; it fails soft and skips itself where no issue tracker is reachable. At this surface a match is **information, not a gate**: say that #NN looks like the same thing and keep exploring. An adoption question here would ask the user to commit before any direction has been weighed, which is the one thing exploration is for not doing. If they want it, adoption happens at the handoff below.
+4. **Surface an open issue that already tracks it.** Once the idea has a nameable shape — here, not while it is still fuzzy, which is too early for the match to mean anything — check the repo's open GitHub issues for one that would be satisfied by substantially the same change. **Read `skills/propose/references/issue-match.md`** for the protocol; it fails soft and skips itself where no issue tracker is reachable. At this surface a match is **information, not a gate**: say that #NN looks like the same thing and keep exploring. An adoption question here would ask the user to commit before any direction has been weighed, which is the one thing exploration is for not doing. If they want it, adoption happens at the handoff below.
 
 5. **Be willing to land anywhere.** Exploration has three legitimate terminal outcomes, and none is a failure:
    - **Drop** — "this isn't worth building." A clear, well-reasoned *no* is a successful exploration.
@@ -39,7 +43,7 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 ## Handing off to propose
 
-When — and *only* when — the user has converged on a direction and wants to turn it into a real work unit, hand off by invoking the `minerva:propose` skill **via the `Skill` tool**, passing the converged direction as the inline argument:
+When — and *only* when — the user has converged on a direction and wants to turn it into a real work unit, hand off by invoking the `minerva:propose` skill **via the skill loader**, passing the converged direction as the inline argument:
 
 > invoke the `minerva:propose` skill with argument `"<the converged direction, in one phrase>"`
 >

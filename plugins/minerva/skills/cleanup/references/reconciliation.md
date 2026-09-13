@@ -63,9 +63,9 @@ Both signals already exist; neither is a judgment call.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-SCRIPTS="${PLUGIN_SCRIPTS:-$ROOT/scripts}"
+SCRIPTS="$PLUGIN_SCRIPTS"
 python3 "$SCRIPTS/knowledge_lint.py" "$ROOT/.minerva/knowledge"     # pending-reconciliation warnings
 python3 "$SCRIPTS/synthesis_status.py" "$ROOT/.minerva/knowledge"   # un-synthesized entries
 ```
@@ -156,7 +156,7 @@ the throwaway leaves no trace. Address it by prefix — every path gets
    an unresolvable target (nothing is written for it).
 
 2. **Refresh the overview, if warranted.** When `synthesis_status` reported
-   un-synthesized entries, invoke the `minerva:synthesize` skill via the `Skill` tool — as
+   un-synthesized entries, invoke the `minerva:synthesize` skill via the skill loader — as
    `minerva:synthesize --auto=cleanup` when this cleanup run was itself invoked with `--yes`, so
    its write gate is satisfied by the same adjudication instead of stopping to ask a user who is
    not driving the run. Point it at the throwaway worktree's corpus. Its own Step-2 self-gate decides
@@ -250,3 +250,26 @@ Reconciliation:          <nothing pending | owned by CI (<workflow>) | PR #N ope
 non-empty whenever entries exist in the corpus with no catalog line and this run did not
 add one — an open reconciliation PR that never merged, a `REFUSED` item, anything. A run
 that leaves entries invisible must not describe itself as clean.
+
+## Runtime resumption
+
+Before waiting for an existing reconciliation PR, checkpoint phase
+`reconciliation` and report all still-pending stems. Use the host adapter's
+tracked waiting/scheduled resume if available; otherwise save progress and
+provide an exact cleanup resume prompt. Reread pending/unsynthesized signals
+from the default-branch corpus after the other PR merges. Never assume that it
+catalogued later entries. Creation of a reconciliation PR is not completed
+reconciliation; retain its pending checkpoint until live merge evidence confirms
+it. On already-merged re-entry, rederive remaining work before marking done.
+
+## Checkpoint entry
+
+Unless `--dry-run`, read the resolved unit's runtime checkpoint before removal
+or reconciliation. Revalidate merge evidence and explicit mode arguments; a
+checkpoint is not authorization for `--yes`. Save phase `cleanup` before waiting
+and phase `reconciliation` after safe teardown (or phased teardown deferral).
+Mark this shipping pass done only after reconciliation has no pending entries
+or a reconciliation PR is confirmed merged. If blocked, retain pending/blocked
+state, name uncatalogued entries and provide an exact resume prompt. A phased
+unit can finish this shipping pass while keeping its worktree for its next phase.
+For multi-unit cleanup, maintain a checkpoint per unit. Dry-run writes none.

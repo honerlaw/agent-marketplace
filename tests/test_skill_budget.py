@@ -35,14 +35,15 @@ BUDGET_BYTES = 9216
 REF_MENTION_RE = re.compile(r"references/[A-Za-z0-9._-]+\.md")
 
 # A CROSS-SKILL pointer names its owning skill explicitly:
-# ``plugins/minerva/skills/<skill>/references/<name>.md``. Without this form a
+# ``skills/<skill>/references/<name>.md`` relative to the loaded plugin. The old
+# repository-qualified form remains recognized for negative tests. Without this form a
 # skill cannot path-reference a sibling's reference file at all — the bare
 # pattern above matches the *tail* of a qualified path and resolves it against
 # the CITING skill, where it dangles. That was inert while every skill's
 # references were private to it, and stopped being inert once skills began
 # reusing each other's protocols verbatim rather than restating them.
 QUALIFIED_MENTION_RE = re.compile(
-    r"plugins/minerva/skills/([A-Za-z0-9._-]+)/(references/[A-Za-z0-9._-]+\.md)"
+    r"(?:plugins/minerva/)?skills/([A-Za-z0-9._-]+)/(references/[A-Za-z0-9._-]+\.md)"
 )
 
 # Any references/ token at all, canonical or not — superset of REF_MENTION_RE

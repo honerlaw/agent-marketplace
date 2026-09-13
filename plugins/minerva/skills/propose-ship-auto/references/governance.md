@@ -10,8 +10,8 @@
 **Global escalation counter.** Maintain across the run. Increment on every user escalation. If it reaches **3**, halt before the next panel call and report status. Recovery: run individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip the panel entirely).**
-- In-flight work collision (pre-flight) — the check in `plugins/minerva/skills/propose/references/in-flight-check.md`.
-- An open issue matching the seed at intake — the ask in `plugins/minerva/skills/propose/references/issue-match.md`; it counts toward the counter like any other.
+- In-flight work collision (pre-flight) — the check in `skills/propose/references/in-flight-check.md`.
+- An open issue matching the seed at intake — the ask in `skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
 - Global escalation counter reaching 3.
@@ -21,6 +21,12 @@
 - Reason for bail (escalation count / hard trigger / CI failure).
 - Current state of `.minerva/work/<date-slug>/` (proposal status, scratchpad summary, committed state).
 - Exact next manual command (e.g., `minerva:work <date-slug>`, `minerva:ship <date-slug>`).
+
+## Durable counters
+
+Once a unit exists, checkpoint run counters at every phase transition and before
+yielding, per the runtime contract. Carry intake escalations into the first
+checkpoint; restore them on resume. A new session never grants a new budget.
 
 ## Observability
 

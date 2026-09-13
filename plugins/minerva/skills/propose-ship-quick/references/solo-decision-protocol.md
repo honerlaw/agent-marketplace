@@ -21,7 +21,7 @@ Before committing to any decision, the main model applies an explicit test to *t
 - **unfamiliar public interface or cross-cutting contract** — it introduces or changes a public interface, API, or cross-cutting contract you cannot confidently get right alone;
 - **knowledge conflict** — it would violate or sits in tension with a documented `.minerva/knowledge/` constraint.
 
-**Fails closed.** If any of the four named clauses holds, **escalate** — compose a focused, multiple-choice question with `AskUserQuestion`, apply the user's answer as the decision, and continue. The predicate only ever decides *whether to escalate*; deciding directly is never the safe default under doubt. Because deciding-alone requires confidence on every clause, the worst case of a wrong escalation is one extra question; the worst case of a wrong decide-alone is an undetected bad call on an ambiguous or high-blast-radius decision — so the asymmetry favors escalation. Ordinary implementation uncertainty — naming, file placement, test structure — never satisfies a clause and is never grounds for escalation.
+**Fails closed.** If any of the four named clauses holds, **escalate** — compose a focused, multiple-choice question with the user question operation, apply the user's answer as the decision, and continue. The predicate only ever decides *whether to escalate*; deciding directly is never the safe default under doubt. Because deciding-alone requires confidence on every clause, the worst case of a wrong escalation is one extra question; the worst case of a wrong decide-alone is an undetected bad call on an ambiguous or high-blast-radius decision — so the asymmetry favors escalation. Ordinary implementation uncertainty — naming, file placement, test structure — never satisfies a clause and is never grounds for escalation.
 
 This is the inverse posture of `propose-ship-auto`: there, the *panel* is the default and the skip predicate is the (fail-closed) exception; here, *deciding alone* is the default and escalation is the (fail-closed) exception. Both fail toward the more conservative reviewer.
 
@@ -43,15 +43,15 @@ For each, the escalation predicate still applies: if the self-check leaves you g
 
 These reach the user (or halt) regardless of the predicate — see `references/governance.md` for the full list and the bail-report format:
 
-- in-flight work collision (pre-flight, `plugins/minerva/skills/propose/references/in-flight-check.md`);
-- an open issue matching the seed at intake (`plugins/minerva/skills/propose/references/issue-match.md`);
+- in-flight work collision (pre-flight, `skills/propose/references/in-flight-check.md`);
+- an open issue matching the seed at intake (`skills/propose/references/issue-match.md`);
 - worktree-creation failure (git error, missing gitignore, slug collision);
 - ship-phase failures: CI auto-fix classified `other`, push rejection, `gh` auth failure;
 - the global escalation counter reaching 3.
 
 ## Escalation counter
 
-Maintain one counter across the run. It is **per-run** state owned by the main orchestration loop — `Skill`-tool delegations (Phases 4.5 / 6 / 7) run inline in that loop, so the counter persists across them; it is not shared with any other run. Increment it on **every** user escalation (predicate-driven or hardcoded). If it reaches **3**, halt before the next decision point and emit the final-report-on-bail. Recovery: run the individual minerva skills manually from the current state.
+Maintain one counter across the run. It is **per-run** state owned by the main orchestration loop — skill-loader delegations (Phases 4.5 / 6 / 7) run inline in that loop, so the counter persists across them; it is not shared with any other run. Increment it on **every** user escalation (predicate-driven or hardcoded). If it reaches **3**, halt before the next decision point and emit the final-report-on-bail. Recovery: run the individual minerva skills manually from the current state.
 
 ## Per-decision logging
 

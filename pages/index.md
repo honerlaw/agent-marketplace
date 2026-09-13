@@ -3,7 +3,7 @@
 **Durable record discipline for software work done with agents.**
 Artifacts get *promoted, not just accumulated* — decisions become files a future agent reads, proposals are rewritten to match what actually shipped, and everything else is archived out of the way.
 
-minerva is a [Claude Code](https://github.com/honerlaw/agent-marketplace) plugin.
+minerva supports Claude Code and local Codex app, CLI, and IDE conversations from one shared skill tree. Install with `./install.sh minerva --host both` (or choose `claude` / `codex`). Requires Git, Python 3.11+, and a POSIX shell; PR workflows also need authenticated `gh`. Reload Claude plugins and start a new Codex conversation after installation.
 
 ---
 
@@ -52,7 +52,7 @@ The lifecycle is a rail with stations. You can board anywhere, but each skill as
 4. **review** — audit the diff against the spec and the knowledge wiki, then triage findings
 5. **promote** — partition the scratchpad; durable knowledge up, proposal rewritten to match reality, the rest archived
 6. **synthesize** — refresh the wiki's theme-grouped overview when enough new scope accumulated; self-gating
-7. **ship** — commit, open the PR, watch CI by polling, bounded auto-fix, auto-merge where permitted
+7. **ship** — commit, open the PR, observe CI through a tracked watcher; resume through an available scheduler or an exact checkpointed manual prompt, bounded auto-fix, auto-merge where permitted
 8. **cleanup** — after merge: remove the worktree, prune the branch
 
 Four orchestrators run the whole rail end-to-end, differing only in how decisions get adjudicated — from `minerva:propose-ship`'s human gates, through `minerva:propose-ship-quick`'s solo main-model calls and `minerva:propose-ship-balanced`'s single reviewer at the high-signal gates, to `minerva:propose-ship-auto`'s three-agent consensus panels (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
@@ -92,7 +92,7 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 : Reports the deterministic un-synthesized-scope signal, then drafts the theme-grouped `overview.md` and — behind a confirmation gate — writes it and bumps the synthesis watermark. The overview is advisory; only the mechanical link-rot signal is deterministic.
 
 **`minerva:ship`**
-: Commits outstanding changes to a branch, opens a pull request, watches CI, fixes CI failures, and enables auto-merge. CI is watched by polling instead of blocking. Closes the lifecycle after work, promote, and review.
+: Commits outstanding changes to a branch, opens a pull request, watches CI, fixes CI failures, and enables auto-merge. A tracked watcher observes CI while the session is active; an available scheduler or checkpointed manual prompt resumes a later session. Closes the lifecycle after work, promote, and review.
 
 **`minerva:cleanup`**
 : Removes worktrees whose branches have been merged into the default branch, and prunes the corresponding local branches. Idempotent. Never touches the default branch or unmerged work.

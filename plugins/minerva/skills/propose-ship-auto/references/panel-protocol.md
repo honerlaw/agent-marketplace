@@ -33,11 +33,11 @@ Never ask the user — up front or at any point mid-run — to choose a "ceremon
 
 ### Delegation to `minerva:round-table`
 
-The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter agent briefs, vote semantics, the revision round, and escalation composition — live in `minerva:round-table`, a pure extraction of the protocol formerly inlined here (behavior unchanged; only its home moved). When the run's first panel-worthy decision arrives, invoke `minerva:round-table` via the `Skill` tool in its caller mode, leading with this auto-mode instruction:
+The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter agent briefs, vote semantics, the revision round, and escalation composition — live in `minerva:round-table`, a pure extraction of the protocol formerly inlined here (behavior unchanged; only its home moved). When the run's first panel-worthy decision arrives, invoke `minerva:round-table` via the skill loader in its caller mode, leading with this auto-mode instruction:
 
 > "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every decision of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Panel decisions YYYY-MM-DD` header."
 
-Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the `Skill` tool** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode. If the round-table protocol is no longer available in context (e.g. after compaction), re-invoke it via the `Skill` tool before the next panel.
+Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the skill loader** — re-injection adds nothing; each application supplies that decision's artifact, decision context, and taxonomy quorum per round-table's caller mode. If the round-table protocol is no longer available in context (e.g. after compaction), re-invoke it via the skill loader before the next panel.
 
 Orchestrator-owned rules that `minerva:round-table` deliberately does not own:
 

@@ -8,6 +8,10 @@ allowed-tools:
   - Glob
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Health-check the `.minerva/knowledge/` wiki and report its coherence problems.
 `minerva:lint` is **read-only**: it surfaces findings and stops. It is the
 interactive, human-facing companion to the deterministic drift gate
@@ -16,9 +20,9 @@ mechanical failures *actionable* and adds the LLM-judged dimensions the gate
 deliberately can't compute.
 
 > **Read-only contract.** This skill must not modify any file. Its `allowed-tools`
-> omits `Edit` / `Write` / `MultiEdit` by design. It proposes no FIX disposition and
+> is host metadata; the read-only protocol applies regardless of available tools. It proposes no FIX disposition and
 > offers no "apply"/"write" affordance. Durable repairs in the deterministic subset
-> are applied by invoking the `minerva:lint-fix` skill via the `Skill` tool; the
+> are applied by invoking the `minerva:lint-fix` skill via the skill loader; the
 > rest by hand. Index/scratchpad knowledge writes go through
 > `minerva:promote`, never through this skill.
 
@@ -43,9 +47,9 @@ path to the current working tree's root (`git rev-parse --show-toplevel`) so it 
 from any subdirectory and audits the corpus of the tree you're in:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
 from knowledge_lint import lint_knowledge; \
-print(json.dumps([f._asdict() for f in lint_knowledge('$ROOT/.minerva/knowledge')]))"
+print(json.dumps([f._asdict() for f in lint_knowledge(sys.argv[2])]))" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/knowledge"
 ```
 
 Each `Finding` has `family` (`index` / `broken-link` / `reciprocal`), `severity`
@@ -73,12 +77,12 @@ attention, so a clean result is not a guarantee).
   model can't drift from the gated one:
 
   ```bash
-  ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
+  ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
   from pathlib import Path; from knowledge_lint import parse_entry, ENTRY_RE; \
-  E={p.name: parse_entry(p) for p in Path('$ROOT/.minerva/knowledge').glob('*.md') if ENTRY_RE.match(p.name)}; \
+  E={p.name: parse_entry(p) for p in Path(sys.argv[2]).glob('*.md') if ENTRY_RE.match(p.name)}; \
   inbound={e['stem']: set() for e in E.values()}; \
   [inbound[t].add(e['stem']) for e in E.values() for t in e['backlink_stems'] if t in inbound]; \
-  print(json.dumps(sorted(s for s,e in ((v['stem'],v) for v in E.values()) if not e['backlink_stems'] and not inbound[s])))"
+  print(json.dumps(sorted(s for s,e in ((v['stem'],v) for v in E.values()) if not e['backlink_stems'] and not inbound[s])))" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/knowledge"
   ```
 
   Keyed on the entry's **stem**, never on `nnn`. Under date ids `nnn` is the DATE, so an
@@ -125,8 +129,8 @@ apply it:
 - **Mechanical** findings (index drift, broken links, missing reciprocals) are
   repaired within the `## Related` / banner spans per
   `.minerva/knowledge/016-constraint-promote-narrowed-never-overwrite.md`. Findings in the
-  deterministic subset are repaired by invoking `minerva:lint-fix` via the `Skill`
-  tool; the remainder by hand (or re-run `minerva:promote`, which maintains the
+  deterministic subset are repaired by invoking `minerva:lint-fix` via the skill
+  loader; the remainder by hand (or re-run `minerva:promote`, which maintains the
   index + reciprocals when it ingests).
 - **Advisory** findings are suggestions for the user to act on; never auto-apply
   them.

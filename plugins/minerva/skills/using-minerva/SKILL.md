@@ -3,6 +3,12 @@ name: using-minerva
 description: Use when starting work in a project that uses minerva (a `.minerva/` directory exists at the project root, or the user has invoked any `minerva:` skill in this session), or when the user describes starting / continuing / finishing a meaningful unit of work — features, refactors, investigations, spikes. Explains when to invoke each minerva skill and gives common scenarios. Skip for routine bugfixes, trivial edits, and one-shot Q&A.
 ---
 
+## Runtime
+
+Read `references/runtime.md` before executing; follow its host adapter.
+
+Read `references/claude.md` in Claude Code or `references/codex.md` in Codex as directed by the runtime contract; load only the applicable adapter.
+
 # Using minerva
 
 minerva is the durable-record discipline for software work in this project: **artifacts get promoted, not just accumulated** — past-tense knowledge items become `.minerva/knowledge/` entries, proposals get rewritten to describe what shipped, and raw scratchpads are archived.
@@ -21,7 +27,7 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 
 ## Skill decision matrix
 
-<!-- Source of truth: each row's skill text comes from the skill's SKILL.md `description:` frontmatter. When you add a skill to `plugins/minerva/skills/`, add a row here too (unless self-referencing this skill). -->
+<!-- Source of truth: each row's skill text comes from the skill's SKILL.md `description:` frontmatter. When you add a skill to `skills/`, add a row here too (unless self-referencing this skill). -->
 
 | Situation | Skill |
 |---|---|
@@ -80,7 +86,7 @@ Review runs **before** promote so review-derived scratchpad notes flow through t
 
 `references/guide.md` holds, verbatim: **The persistence hierarchy (quick reference)** — which tier (scratchpad / work-unit docs / knowledge / reference) holds what and for how long; **Common scenarios** — worked walkthroughs mapping situations to skill sequences; **Working in a minerva project without invoking skills** — the floor discipline when no skill fires; **Explicit work-unit targeting** — the argument form each skill accepts; and **Worktree ownership across the lifecycle** — which skill creates, addresses, or removes the worktree. Read it whenever routing stays ambiguous after the decision matrix, or before advising on where a record belongs.
 
-When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 
 ## Anti-patterns — when NOT to use minerva
 
@@ -95,5 +101,5 @@ Skip the workflow entirely for:
 The ceremony only pays off when the work is substantial enough that future readers will need the context. Don't impose it on work that ships in a single commit.
 
 When a scenario here names a minerva skill as the next step, invoke it yourself
-via the `Skill` tool (with any argument shown); only suggest the command when
+via the skill loader (with any argument shown); only suggest the command when
 the decision is the user's.

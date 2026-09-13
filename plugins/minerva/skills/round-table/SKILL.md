@@ -3,6 +3,10 @@ name: round-table
 description: Dispatches a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents over a decision or drafted artifact, counts accept votes against a caller-specified quorum (default 2/3), runs at most one revision round, and escalates to the user when consensus fails twice. Use when another skill delegates a decision to the consensus-panel protocol, when the user asks to convene a round table / decision panel / multi-agent consensus on a decision or drafted artifact, or when they invoke `minerva:round-table`. Usable standalone for any decision.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Convene a 3-agent consensus panel — **Proponent**, **Skeptic**, **Arbiter** — of fresh-context subagents over a decision or drafted artifact, and convert their verdicts into a single accept / revise / reject outcome against a quorum.
 
 Three uses:
@@ -19,7 +23,7 @@ Three uses:
 
 ## Dispatch
 
-Spawn 3 subagents via the `Agent` tool with fresh context. Pass `run_in_background: false` in **every** panel `Agent` call — the panel is blocking by construction (votes are counted in the same turn, and the Arbiter needs the Proponent's and Skeptic's outputs), while a backgrounded dispatch returns only a handle and strands the run mid-panel with no legal next step. The pin costs no parallelism: the Proponent and Skeptic still run **in parallel** (single message with two synchronous `Agent` invocations); the Arbiter runs sequentially after both complete, since it needs their outputs. Use `subagent_type: general-purpose` unless a more specialized agent fits the decision. Pass `model: "sonnet"` in each Agent tool call for Proponent, Skeptic, and Arbiter. (A cheaper tier than the orchestrator — the pin keeps panel cost deterministic; update the alias if the model lineup shifts.)
+Spawn 3 fresh-context subagents via the panel operation; **wait for results**. Proponent and Skeptic run in parallel, then Arbiter runs sequentially with both outputs. Use the host adapter for dispatch parameters and model policy. Votes are counted in this run; a background handle is never a verdict.
 
 ### The shared block — cache-aligned prompt prefix
 
@@ -71,7 +75,7 @@ Re-dispatch the panel against the revised artifact. **Two votes maximum per deci
 
 When a decision escalates:
 
-1. Compose a focused, batched question for the user — pull the load-bearing concerns from both vote rounds, phrase them as decisions the user can make (not as "we couldn't decide"). Use the `AskUserQuestion` tool with multiple-choice options when possible.
+1. Compose a focused, batched question for the user — pull the load-bearing concerns from both vote rounds, phrase them as decisions the user can make (not as "we couldn't decide"). Use the user question operation with multiple-choice options when possible.
 2. Apply the user's answer as if the panel had voted to accept that path.
 3. Run-level escalation state is the **caller's**, never this skill's: if the orchestrating skill maintains an escalation counter or abort budget (e.g., `minerva:propose-ship-auto`'s global escalation counter), the caller updates it after the escalation.
 

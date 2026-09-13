@@ -8,12 +8,16 @@ allowed-tools:
   - Glob
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Assess an existing `.minerva/knowledge/` corpus against the current LLM-wiki structure
 and report a **migration checklist**. `minerva:migrate` is **read-only**: it inventories
 what needs migrating and names the skill that closes each gap, then stops.
 
-> **Read-only contract.** This skill must not modify any file. Its `allowed-tools` omits
-> `Edit` / `Write` / `MultiEdit` by design. It performs no renames, authors no
+> **Read-only contract.** This skill must not modify any file. Its `allowed-tools` is
+> host metadata; the read-only protocol applies regardless of available tools. It performs no renames, authors no
 > cross-references, and runs no remediation skill — it only *reports* and *recommends*.
 
 > **This is a SHAPE check, NOT a HEALTH check.** `migration_status` tells you whether the
@@ -48,9 +52,9 @@ Run `migration_status` through its **importable Python API**, anchoring both the
 subdirectory (`scripts/migration_status.py` is read-only — it never writes):
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}'); \
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
 from migration_status import migration_status; \
-print(json.dumps(migration_status('$ROOT/.minerva/knowledge'), indent=2))"
+print(json.dumps(migration_status(sys.argv[2]), indent=2))" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/knowledge"
 ```
 
 The returned dict carries plain-primitive signals:

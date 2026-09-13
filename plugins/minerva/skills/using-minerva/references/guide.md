@@ -2,7 +2,7 @@
 
 ## The persistence hierarchy (quick reference)
 
-| Tier | Files | Read by Claude |
+| Tier | Files | Read by the agent |
 |---|---|---|
 | Always-read | `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog) | Every conversation in this project — decisions, bugs, patterns |
 | Reference (read on demand) | `.minerva/reference/<topic>.md` | Present-tense operational docs — architecture, glossary, conventions: how the system works now |
@@ -39,7 +39,7 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → Mid-work durable decision. Run `minerva:promote "exponential backoff capped at 5 minutes for queue retries"`. The scratchpad entry gets marked so the end-of-work pass doesn't re-promote it.
 
 **"This is too big for one PR."**
-→ Not a reason to split into several work units. Declare an ordered `## Phases` section in the proposal: one unit, one record, one promote, shipping one PR per phase (`minerva:ship` runs once per phase, `minerva:cleanup` defers teardown until the last one merges). Soft ceiling of about three phases. Separate work units are for genuinely independent subsystems only — each one re-pays propose, worktree, review, promote, reconciliation and ship. See `plugins/minerva/skills/propose/references/phasing.md`.
+→ Not a reason to split into several work units. Declare an ordered `## Phases` section in the proposal: one unit, one record, one promote, shipping one PR per phase (`minerva:ship` runs once per phase, `minerva:cleanup` defers teardown until the last one merges). Soft ceiling of about three phases. Separate work units are for genuinely independent subsystems only — each one re-pays propose, worktree, review, promote, reconciliation and ship. See `skills/propose/references/phasing.md`.
 
 **"Before I open the PR, let's check the code actually matches what we designed."**
 → `minerva:review`. The skill reads the proposal + replans, audits the branch-vs-default diff (or the uncommitted diff if the tree is dirty), runs `code-review:code-review` (or a structured inline check if no PR exists yet), and walks you through each finding. Triage state is persisted to scratchpad so re-runs pre-fill prior dispositions. Run review **before** promote so review-derived notes flow through promote's partition.
@@ -48,13 +48,13 @@ When in doubt about whether something belongs in a knowledge file vs. a scratchp
 → `minerva:promote` (no argument). Partitions the scratchpad into promote / merge / discard / TODO. TODOs aren't silently dropped — each is routed through the deferral bar below: a defect with a writable failure scenario becomes a GitHub issue at a `critical`/`high`/`medium` priority (or a `followups.md` bullet where the repo can't host issues), a standing fact becomes a `.minerva/knowledge/` `reference` entry, and the rest is discarded.
 
 **"Should this go on the backlog?"**
-→ Almost always no. The tracker takes an item only if you can write a concrete failure scenario for it — specific inputs or state producing a wrong output, a crash, data loss, or an exposure. Everything else is a standing fact about the system and belongs in `.minerva/knowledge/` as a `reference` entry, where `minerva:review` re-reads it on every future unit and nothing has to be burned down. Documentation for behavior your diff touched is neither: finish it now, as part of the work. The rule lives in `plugins/minerva/skills/promote/references/deferral-bar.md`.
+→ Almost always no. The tracker takes an item only if you can write a concrete failure scenario for it — specific inputs or state producing a wrong output, a crash, data loss, or an exposure. Everything else is a standing fact about the system and belongs in `.minerva/knowledge/` as a `reference` entry, where `minerva:review` re-reads it on every future unit and nothing has to be burned down. Documentation for behavior your diff touched is neither: finish it now, as part of the work. The rule lives in `skills/promote/references/deferral-bar.md`.
 
 An existing `followups.md` backlog is **not** migrated. It stays as it is, still greppable, never re-triaged — re-triaging a legacy pile is the attention cost the bar exists to remove.
 
 
 **"OK, ship it — commit, PR, watch CI, and merge if it goes green."**
-→ `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, watches CI without blocking (a detached `gh pr checks --watch` resumes the run when checks settle, with a long re-arming `ScheduleWakeup` armed underneath), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
+→ `minerva:ship`. Commits outstanding changes (creating a branch if you're on the default), opens a PR titled and described from `proposal.md`, watches CI without blocking (a tracked `gh pr checks --watch` observes checks, with scheduled re-entry where supported and a checkpointed manual resume otherwise), runs a bounded auto-fix loop on CI failures, and enables auto-merge when permissions allow.
 
 **"PR is merged — let's clean up."**
 → `minerva:cleanup`. Removes worktrees whose branches have been merged into the default branch, and prunes the local branches. Idempotent and conservative — never touches unmerged work without explicit override.

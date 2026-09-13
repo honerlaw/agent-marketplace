@@ -3,6 +3,10 @@ name: debug
 description: Investigate a bug end-to-end — gather evidence first, then diagnose root cause grounded in that evidence, and report with a mechanically-derived confidence score. Use this whenever the user reports breakage of any kind. Live-incident framing — "users are reporting", "X is broken in prod", "the cron didn't run", "500s", "timeout", "stuck", "hanging", "queue backed up", "deployment failed", "metrics dropped", or past-tense framing like "we had an outage" — all qualify. Dev-bug framing — "this test fails", "function returns wrong value", "unexpected error", "regression", "TypeError", "why is this failing" — also qualifies. Trigger this even when the user doesn't explicitly say "debug" or "triage" — any reported breakage qualifies. The skill is project-agnostic; it loads project-specific operational facts from `.minerva/reference/` at runtime and cross-references past learnings in `.minerva/knowledge/`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 # Debug
 
 Investigate breakage end-to-end. Gather evidence, then diagnose. Never present a root cause without citing the evidence that supports it. Never mutate state that other users depend on without explicit per-turn confirmation.
