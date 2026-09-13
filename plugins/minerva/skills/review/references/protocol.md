@@ -65,7 +65,7 @@ If a finding reveals that the implementation diverged from the proposal in a way
 - Scope shifted in or out → replan.
 - Routine implementation choice or small edge case → just FIX.
 
-If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and invoke the `minerva:replan` skill via the `Skill` tool. Invoke `minerva:review` again via the `Skill` tool once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
+If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and invoke the `minerva:replan` skill via the skill loader. Invoke `minerva:review` again via the skill loader once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
 
 ## Code review invocation
 
@@ -73,8 +73,8 @@ This always runs — with or without minerva context — on the same diff resolv
 
 **Check for an existing PR first:** run `gh pr view --json url,number,state 2>/dev/null`.
 
-- **PR exists and is OPEN** → invoke the `code-review:code-review` skill (via the Skill tool). It will fetch the PR and run its full review flow.
-- **No PR (or PR is closed/merged)** → dispatch a fresh-context subagent via the `Agent` tool, `subagent_type: general-purpose`, to perform the structured code quality review (fresh eyes outperform reviewing code this context wrote) using the same finding format the minerva audit uses (severity tag + file:line + one-line description). Pass `run_in_background: false`: the findings are presented in this same turn, and a backgrounded dispatch returns only a handle, parking the review. Leave `model` **unpinned** so the reviewer inherits the session's tier — deliberately unlike `minerva:round-table`'s sonnet-pinned panelists, because a code-quality review's yield scales with model capability, where a structured accept/revise vote does not. Local-diff scope covers, at minimum:
+- **PR exists and is OPEN**, and the optional `code-review:code-review` skill is installed → invoke it via the skill loader. Otherwise fetch the PR diff and use the independent reviewer described below; retain the same Minerva audit and finding format.
+- **No PR (or PR is closed/merged), or optional PR review integration unavailable** → dispatch a fresh-context subagent via the independent reviewer operation and **wait for results** to perform the structured code quality review using severity tag + file:line + one-line description. Use the host adapter's ordinary-review model policy. PR fallback reviews the fetched PR diff; local-diff scope covers, at minimum:
   1. **Bugs** — logic errors, off-by-one, null/undefined handling, race conditions visible in the diff.
   2. **CLAUDE.md / AGENTS.md compliance** — read the agent file once and check the diff against any explicit rules it states (style, security, prohibited patterns).
   3. **Test coverage** — does the diff touch behavior without adding or updating tests? Flag, don't assume.
@@ -110,7 +110,7 @@ Present findings as a numbered list. For each finding, propose a default disposi
 option on this list — FIX costs work and IGNORE feels like dropping something — so it absorbed
 everything the reviewer was unsure about, and each note it wrote became a TODO at promote and
 then an issue. That is the upstream half of the backlog described in
-`plugins/minerva/skills/promote/references/deferral-bar.md`. **Read that file before triaging**,
+`skills/promote/references/deferral-bar.md`. **Read that file before triaging**,
 and apply it here rather than passing the judgment downstream:
 
 - A finding with a **writable failure scenario** — specific inputs or state producing a wrong

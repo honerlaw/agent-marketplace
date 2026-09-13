@@ -3,6 +3,10 @@ name: propose-ship-quick
 description: Runs the full minerva lifecycle end-to-end fast for a small, low-risk change — a small UI fix, a bug fix, a one-file tweak ("just ship this small fix", "quick propose and ship", "do the whole thing quickly"). Same lifecycle as `minerva:propose-ship-auto` (propose - work - review - promote - ship - cleanup) with no scheduled human gates, but the main model adjudicates every strategic/tactical decision directly — no panels. User input is an exceptional fail-closed fallback (real ambiguity, high blast radius, an unfamiliar public interface, a knowledge constraint). If the change proves larger than small, it escalates recommending `minerva:propose-ship-balanced` (one reviewer), `minerva:propose-ship-auto` (panels), or `minerva:propose-ship` (human gates). Use for small low-risk end-to-end changes, or when the user invokes `minerva:propose-ship-quick`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Run the full minerva lifecycle end-to-end with **main-model decisions** in place of human gates. This skill is the lightweight fast-path sibling of `minerva:propose-ship-auto`: same phases, same delegations, but where `propose-ship-auto` convenes a consensus panel, **the main model decides directly**. It is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly, and inlines the propose / work / review / promote / replan phases so the main model can adjudicate them inline.
 
 The four orchestrators form a ladder by adjudication cost: `minerva:propose-ship` (human gates) · `minerva:propose-ship-quick` (main model decides) · `minerva:propose-ship-balanced` (one advisory reviewer) · `minerva:propose-ship-auto` (consensus panels). Reach for **quick** when the change is genuinely small and the main model's own judgment is enough; reach for **auto** when the work is ambiguous or high-stakes enough to want independent agents arguing it out.
@@ -19,11 +23,11 @@ The mechanism: at each strategic or tactical decision point, the main model **de
 
 Identical to `minerva:propose-ship`'s pre-flight. This check is **not** main-model-decided — a wrong call here destroys real work, so escalation to the user is hardcoded.
 
-**Read `plugins/minerva/skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and live sibling Claude sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
+**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
-When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 
-A collision is a hardcoded `AskUserQuestion` (resume that work / start fresh anyway / abandon this run) and **increments the global escalation counter**.
+A collision is a hardcoded user question operation (resume that work / start fresh anyway / abandon this run) and **increments the global escalation counter**.
 
 Only proceed after the user confirms. This is the single mandatory — and **only guaranteed** — pre-run user interaction; everything else reaches the user only via the escalation predicate.
 
@@ -46,11 +50,11 @@ Execute the phases in order. The full inline protocols live in `references/phase
 1. **Propose (inline)** — assemble context → design synthesis → the main model decides scope, approach, and whole-proposal soundness (escalating on genuine uncertainty) → worktree + branch + file writes per `minerva:propose` → self-review.
 2. **Work (inline)** — implement per `minerva:work`'s protocol; on a suspected load-bearing divergence the main model confirms it itself (escalate if unsure); completion-verification self-check on the success-criteria checklist + diff.
    - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; the main model accepts the new plan (escalate if unsure); append to `replan.md`.
-3. **Review (inline)** — minerva audit + code review (PR mode delegates to `code-review:code-review`); the main model triages all findings; replan-vs-FIX decided by the main model if a load-bearing finding surfaces.
+3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); the main model triages all findings; replan-vs-FIX decided by the main model if a load-bearing finding surfaces.
 4. **Promote (inline)** — the main model partitions PROMOTE/MERGE/DISCARD/TODO and disposes TODOs; apply writes per `minerva:promote` Mode A; archive scratchpad.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
-6. **Ship (delegated)** — invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never silently decided.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the `Skill` tool with args `<date-slug> --yes`; on `OPEN` with auto-merge, `ScheduleWakeup` re-entry (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+6. **Ship (delegated)** — invoke `minerva:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never silently decided.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes`; on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

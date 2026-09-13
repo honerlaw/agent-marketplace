@@ -3,6 +3,10 @@ name: propose-ship
 description: Runs the full minerva lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `minerva:propose-ship`.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Orchestrate the full minerva lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
 
 ## Phase sequence
@@ -13,7 +17,7 @@ minerva:propose → minerva:work → minerva:review → minerva:promote → mine
 
 `minerva:cleanup` closes the lifecycle by reconciling the knowledge wiki on the default branch — cataloguing the entries promote left pending, writing their reciprocal links, and refreshing `overview.md` when warranted — in a single auto-merging PR. None of that happens on the work-unit branch, which is what keeps concurrent minerva PRs conflict-free.
 
-Invoke each phase via the `Skill` tool in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
+Invoke each phase via the skill loader in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 
 The `minerva:propose` phase creates the work unit's branch + worktree at `.minerva/worktrees/<date-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `minerva:cleanup` is the only phase that runs from outside the worktree — it removes it.
 
@@ -26,7 +30,7 @@ The full step protocols live verbatim in `references/phases.md` — **read it no
 
 - **Pre-flight: detect in-flight work** — the collision check that runs before `minerva:propose`, including the runnable `work_status.unit_state(...)["in_flight"]` invocation. Call the predicate; never restate it as a string comparison.
 
-When a peer session messages you, read `plugins/minerva/skills/propose/references/cross-session.md`: inform, never delegate.
+When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 - **Handoff rules** — what advances each phase, and the work → review signal list.
 - **Entry point** — always start at `minerva:propose`; do not resume mid-lifecycle state.
 - **Execution** — the eight numbered steps.

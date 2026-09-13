@@ -8,12 +8,16 @@ allowed-tools:
   - Glob
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Apply the mechanically-repairable fixes to the `.minerva/knowledge/` wiki, behind a
 confirmation gate. `minerva:lint-fix` is the **mutating** companion to the read-only
 `minerva:lint`: where `minerva:lint` reports drift, this skill repairs the subset
 that is deterministically fixable. **All mutation happens inside the unit-tested
 `scripts/knowledge_fix.py`** — this skill orchestrates and gates; it does not edit
-files itself (its `allowed-tools` omits `Edit`/`Write`).
+files directly; use the helper even if edit tools are available.
 
 > This skill **changes files**. It is not read-only. Every change is shown as a
 > plan and applied only after you confirm.
@@ -49,7 +53,7 @@ safe and useful. The guard gates Step 2 onward.
 Show what would change, via the fixer's `--dry-run`:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_fix.py" --dry-run "$ROOT/.minerva/knowledge"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "$PLUGIN_SCRIPTS/knowledge_fix.py" --dry-run "$ROOT/.minerva/knowledge"
 ```
 
 It re-derives every edit from the detector's structured output (`parse_index` /
@@ -70,7 +74,7 @@ On confirmation, apply (the script **recomputes** the batch from the live corpus
 the plan can't go stale between dry-run and apply):
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_fix.py" "$ROOT/.minerva/knowledge"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "$PLUGIN_SCRIPTS/knowledge_fix.py" "$ROOT/.minerva/knowledge"
 ```
 
 The script applies the batch atomically and then re-runs the detector to verify the

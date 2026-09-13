@@ -39,7 +39,7 @@ REGISTERED_SITES = {
     "synthesize/SKILL.md",
 }
 
-_RESOLVE_RE = re.compile(r"PLUGIN_SCRIPTS=\$\(find")
+_RESOLVE_RE = re.compile(r'PLUGIN_SCRIPTS="\$\(python3 "\$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime\.py" resolve')
 _GUARD_RE = re.compile(r'python3 "\$PLUGIN_SCRIPTS/plugin_guard\.py"')
 
 

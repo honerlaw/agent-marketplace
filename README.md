@@ -14,10 +14,37 @@ cd agent-marketplace
 
 Restart Claude Code — that's it. The installer handles Claude Code settings registration automatically (and Python dependencies / Playwright if the plugin ships any).
 
+Minerva supports Claude Code and local Codex app, CLI, and IDE conversations from
+the same 23 skills. Git, Python 3.11+, and a POSIX shell are required; PR workflows
+also require authenticated `gh` and repository permissions.
+
+```bash
+./install.sh minerva --host both     # or --host claude / --host codex
+./install.sh minerva --host both --dry-run
+```
+
+Codex installation uses `codex plugin marketplace add` and `codex plugin add`;
+install the Codex CLI first. Start a new conversation after installation. The
+default host remains Claude Code, and utils remains a Claude plugin.
+
+To wire Codex manually from the cloned checkout:
+
+```bash
+codex plugin marketplace add /absolute/path/to/agent-marketplace
+codex plugin add minerva@agent-marketplace
+```
+
+Then select `$minerva:using-minerva` in a new Codex conversation and run
+`minerva:init --host both` in each consumer project.
+
+See [Minerva compatibility and validation](plugins/minerva/COMPATIBILITY.md) for
+host capabilities, resume behavior, and the regression checks.
+
 ## Update
 
 ```bash
 git pull  # symlink keeps the plugin live immediately
+./install.sh minerva --host both  # refresh registrations / Codex cache
 ```
 
 ## Plugins

@@ -573,7 +573,7 @@ PREFLIGHT_ADJUDICATORS = {
     "propose-ship-auto": "**not** panel-decided",
 }
 
-SHARED_PREFLIGHT_REF = "plugins/minerva/skills/propose/references/in-flight-check.md"
+SHARED_PREFLIGHT_REF = "skills/propose/references/in-flight-check.md"
 
 
 def block_keeps_qualifier(block: str, qualifier: str) -> bool:

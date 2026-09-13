@@ -4,9 +4,9 @@ Read this file in full before executing the lifecycle; the SKILL.md core names t
 
 ## Pre-flight: detect in-flight work
 
-Before invoking `minerva:propose`, check whether the user's intent is **already in flight** — in this checkout, in another clone, or in a live sibling Claude session.
+Before invoking `minerva:propose`, check whether the user's intent is **already in flight** — in this checkout, in another clone, or in a available live peer session.
 
-**Read `plugins/minerva/skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and live sibling Claude sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
+**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
 A collision stops the run and asks. Only proceed to `minerva:propose` after the user confirms a fresh start.
 
@@ -36,22 +36,33 @@ Always start at `minerva:propose` after the pre-flight check passes. Do not atte
 ## Execution
 
 1. Run pre-flight in-flight detection. Stop or proceed based on user response.
-2. Invoke `minerva:propose` via the `Skill` tool. Wait for it to complete.
-3. Invoke `minerva:work` via the `Skill` tool. Stay engaged through the work phase per the handoff rule above.
-4. Invoke `minerva:review` via the `Skill` tool. Wait for it to complete. If review routes to `minerva:replan`, return to step 3 after the replan lands.
-5. Invoke `minerva:promote` via the `Skill` tool. Wait for it to complete.
+2. Invoke `minerva:propose` via the skill loader. Wait for it to complete.
+3. Invoke `minerva:work` via the skill loader. Stay engaged through the work phase per the handoff rule above.
+4. Invoke `minerva:review` via the skill loader. Wait for it to complete. If review routes to `minerva:replan`, return to step 3 after the replan lands.
+5. Invoke `minerva:promote` via the skill loader. Wait for it to complete.
 6. Apply the promote → ship gate: summarize the promote result, then wait for explicit user confirmation.
-7. Invoke `minerva:ship` via the `Skill` tool.
+7. Invoke `minerva:ship` via the skill loader.
 8. Run the cleanup gate ([Phase 7](#phase-7--cleanup-gate)).
 
 ## Phase 7 — cleanup gate
 
+**Runtime continuation.** Read the saved checkpoint before this gate; preserve
+caller, escalation/decision/reviewer counters, cleanup retries and its absolute
+deadline. Save phase `cleanup` before waiting. The scheduled resume operation is
+conditional on a real re-entry capability: without it, checkpoint and report
+**pending — manual resume required**, with the exact host-correct
+`--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
+cap at 12 or the original one-hour deadline, whichever comes first. Never reset
+these limits when switching sessions. Reconciliation can remain pending after
+merge; preserve phase `reconciliation` and name every uncatalogued entry.
+
+
 After `minerva:ship` returns, check PR merge state and decide what to do with the worktree:
 
 1. Read the PR state for the work-unit branch: `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
-2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the `Skill` tool. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
-3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. Schedule a wake-up:
-   - `ScheduleWakeup` with `delaySeconds: 300` and a `prompt` of `minerva:propose-ship --cleanup-only <date-slug> --retry=N` so the next firing re-enters this gate.
+2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
+3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. When a scheduler supports re-entry, schedule a wake-up:
+   - the scheduled resume operation with `delaySeconds: 300` and a `prompt` of `minerva:propose-ship --cleanup-only <date-slug> --retry=N` so the next firing re-enters this gate.
    - Cap the retries at **12** (~1 hour total). Carry the retry count in the wake-up `prompt`.
 
    **Why a constant here, when `minerva:ship`'s CI watch refuses to guess an interval.**

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Refuse to run a skill snippet against a stale copy of the module it is about to import.
 
-`~/.claude/plugins/minerva` is a **symlink** to the primary checkout on a self-hosting install,
-so every snippet's `PLUGIN_SCRIPTS` resolution lands in `<repo>/plugins/minerva/scripts`
-regardless of which worktree the work is happening in. minerva develops itself in linked
+A loaded Minerva package may be a **symlink** or cached copy of the primary checkout,
+so a snippet may resolve primary-checkout or cached scripts regardless of the
+worktree the work is happening in. minerva develops itself in linked
 worktrees under `.minerva/worktrees/<date-slug>/`, each holding its own copy of these scripts at
 a realpath that resolution never reaches.
 
@@ -76,7 +76,7 @@ def divergence(resolved_dir: Path, tree_root):
 
     - **No working tree** (not a git repo): nothing to compare against.
     - **The tree has no `plugins/minerva/scripts/`**: this is every ordinary consumer project,
-      where minerva is an installed copy and the cache-only resolution cannot skew against a
+      where minerva is an installed copy and installed-package resolution cannot skew against a
       worktree at all. The guard ships in shared skill prose to every install, so a false positive
       here would emit warnings about worktrees and symlinks at users who have neither.
     - **The two paths are the same directory**: running from the primary checkout itself.
@@ -127,9 +127,9 @@ def main(argv):
         f"minerva: refusing to run against a stale scripts directory.\n"
         f"  would import from: {resolved}\n"
         f"  you are editing  : {local}\n"
-        f"These differ. Skill snippets resolve through ~/.claude/plugins/minerva, which on a\n"
-        f"self-hosting checkout symlinks to the PRIMARY checkout — so this would execute that\n"
-        f"checkout's branch, not your worktree's. Merge your change, or set MINERVA_SCRIPTS to\n"
+        f"These differ. The loaded plugin resolves to a separate package, which may be the\n"
+        f"PRIMARY checkout or a cached install. This would execute that package's code rather\n"
+        f"than your worktree's. Update Minerva, or set MINERVA_SCRIPTS to\n"
         f"choose a directory deliberately (see issue #104).",
         file=sys.stderr,
     )

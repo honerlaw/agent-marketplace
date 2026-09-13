@@ -8,12 +8,16 @@ allowed-tools:
   - Glob
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Rename a legacy `NNN`-prefixed corpus to date ids, behind a confirmation gate.
 `minerva:migrate-fix` is the **mutating** companion to the read-only `minerva:migrate`:
 where `minerva:migrate` reports that a corpus is off-convention, this skill performs the
 one rename it can do deterministically. **All mutation happens inside the unit-tested
 `scripts/knowledge_rename.py`** — this skill orchestrates and gates; it does not edit
-files itself (its `allowed-tools` omits `Edit`/`Write`).
+files directly; always use the helper.
 
 > This skill **changes files**, including `git mv` of ~100 paths in a typical corpus. It
 > is not read-only. The full plan is shown and applied only after you confirm.
@@ -32,7 +36,7 @@ path, which git refuses to merge rather than merging silently.
 Run the planner and show the user what would move:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_rename.py"
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 "$PLUGIN_SCRIPTS/knowledge_rename.py"
 ```
 
 It prints every `old -> new` pair and exits without touching anything. Three outcomes
@@ -75,7 +79,7 @@ already become undetectable.
 ## Step 3 — Apply
 
 ```bash
-python3 "${PLUGIN_SCRIPTS:-$ROOT/scripts}/knowledge_rename.py" --apply
+python3 "$PLUGIN_SCRIPTS/knowledge_rename.py" --apply
 ```
 
 Order matters and is handled inside the script: every reference is rewritten **before**

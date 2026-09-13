@@ -37,7 +37,7 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
    Branching explicitly from `<default-branch>` (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the work-unit directory so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch. Legacy branches keep their old `NNN-` names; only new ones are dated.
 
-7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.minerva/worktrees/`, which the `EnterWorktree` tool does not reliably enter (its contract only switches into worktrees under `.claude/worktrees/`), so minerva never uses it. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.minerva/worktrees/<date-slug>/` and run each git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.minerva/worktrees/`, which must be addressed directly in either host, so minerva never uses a host-managed worktree switch. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.minerva/worktrees/<date-slug>/` and run each git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 
 8. **Create the work-unit directory** `.minerva/work/<date-slug>/`, addressed via the step-7 prefix (i.e. `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`).
 
@@ -129,18 +129,18 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
       # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
       # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
       ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-      PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+      PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
       [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
       python3 -c "
-      import sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+      import sys; sys.path.insert(0, sys.argv[1])
       from work_status import read_phases, phase_numbering_gaps, phase_name
-      phases = read_phases(open('$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md').read())
+      phases = read_phases(open(sys.argv[2]).read())
       print('phases:', [(n, phase_name(t)) for n, t in phases])
       print('numbering gaps:', phase_numbering_gaps(phases))
-      "
+      " "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md"
       ```
 
-      **If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+      **If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
 
       Any gap means a written ordinal disagrees with the phase's position. **Fix the proposal** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check the printed names: a phase whose name comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
 

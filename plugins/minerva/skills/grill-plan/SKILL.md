@@ -3,6 +3,10 @@ name: grill-plan
 description: Use when a plan has just been drafted in conversation and needs stress-testing before approval — invoked by `minerva:propose` after approach selection and by `minerva:replan` after the new-plan brainstorm, also usable standalone on any drafted plan. Interviews the user relentlessly about the drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Stress-test a drafted plan by interviewing the user about it until shared understanding is reached. Modeled on mattpocock/skills' `productivity/grill-me`.
 
 ## Inputs

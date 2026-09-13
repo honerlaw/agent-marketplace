@@ -3,6 +3,10 @@ name: promote
 description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; forward-looking TODOs are filed as prioritized GitHub issues when the repo can host them and fall back to `followups.md` when it cannot, never silently discarded. Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Promote durable items from `scratchpad.md` to `.minerva/knowledge/`, and (in the end-of-work pass) reshape the work unit's persistent record to match what shipped.
 
 ## The heuristic

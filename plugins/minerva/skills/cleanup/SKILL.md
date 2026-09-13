@@ -1,7 +1,11 @@
 ---
 name: cleanup
-description: Removes `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
+description: Removes `.minerva/worktrees/YYYY-MM-DD-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
 ---
+
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
 
 Tidy up after shipped work — remove `.minerva/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
 
@@ -18,6 +22,12 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
 2. **No argument** → scan all `.minerva/worktrees/*/` directories and check each branch's merge state. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
+
+## Checkpoint entry
+
+Unless `--dry-run`, read the unit checkpoint before mutation. Read
+`references/reconciliation.md` for checkpoint transitions and resumption rules;
+revalidate live merge evidence and explicit authorization before proceeding.
 
 ## Pre-flight checks
 
@@ -97,7 +107,8 @@ The full protocol — the deterministic pending/un-synthesized signal, the at-mo
 
 ## Idempotency
 
-Cleanup is stateless. Re-running on a fresh tree finds zero candidates and reports zero removed. Reconciliation is likewise idempotent — `knowledge_fix` is a byte-level no-op on an already-reconciled corpus, so a second run reports nothing pending. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
+Cleanup rederives candidates from live Git/PR evidence and retains only untracked
+runtime progress. Re-running on a fresh tree finds zero candidates and reports zero removed. Reconciliation is likewise idempotent — `knowledge_fix` is a byte-level no-op on an already-reconciled corpus, so a second run reports nothing pending. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
 
 If a user manually removed a worktree directory without running `git worktree remove`, the next `minerva:cleanup` call will see stale worktree metadata; `git worktree prune` at the end of the run handles this.
 

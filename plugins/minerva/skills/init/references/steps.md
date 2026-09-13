@@ -80,6 +80,13 @@ Unlike Part A, this entry is appended automatically — it's part of init's idem
 
 Check for the canonical agent files at the project root, in this order: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`.
 
+With explicit `--host claude`, `--host codex`, or `--host both`, create missing
+`CLAUDE.md`, `AGENTS.md`, or both respectively and append the Routing section.
+Do not replace existing content. Without the selector preserve the detection
+and choice behavior below; when files exist but the active host's instruction
+file is absent, offer creation of that missing file and wait for the answer.
+An existing customized Routing section still uses the gated refresh below.
+
 - For **each file that exists**, add a `## minerva` Routing section if one isn't already present. If the section is already present, check it for **staleness** (see "Refreshing a stale Routing section" below): if stale, offer a gated refresh; if current, leave the file alone and report `<file> ✓`.
 - If **none of the three exist**, ask the user which to create:
   - `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, or **Other** (the user supplies a filename).
@@ -100,7 +107,7 @@ This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/m
 - `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
-Active work units live at `.minerva/work/<date-slug>/`. Invoke the `minerva:using-minerva` skill (via the `Skill` tool) for the full methodology.
+Active work units live at `.minerva/work/<date-slug>/`. Load the installed `minerva:using-minerva` skill for the full methodology using your host's skill loader. In Claude Code use `/minerva:using-minerva`; in Codex select `$minerva:using-minerva`. Follow the loaded plugin's runtime contract for tools and installed paths.
 ```
 
 Append the Routing section at the end of the file (don't try to find a "right" spot — end is fine and is easy to detect on re-runs).
@@ -123,6 +130,9 @@ automatic**:
    `.minerva/knowledge/index.md`, `.minerva/reference/`, `.minerva/work/`), check whether
    the detected section contains that substring. If **any** is missing, the section is
    a refresh candidate. (Derive the markers from the template-of-record above, never from a hardcoded list.)
+   Also offer this gated refresh when the routing still requires the Claude-only
+   `Skill` tool or omits the current runtime-contract guidance. Preserve custom
+   routing on decline.
 2. **Gate.** Show the full before/after diff of the section and ask:
    > "Your `## minerva` section doesn't match the current template — it may be from an
    > older template, or **you may have customized it**. Refreshing replaces the whole
@@ -182,4 +192,3 @@ commit                 ✓ committed (or: declined; or: — nothing to commit)
 ```
 
 Suggest `minerva:propose` as the next step if no work units exist yet.
-

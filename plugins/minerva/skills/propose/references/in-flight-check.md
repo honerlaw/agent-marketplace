@@ -1,7 +1,7 @@
 # In-flight work collision — the intake pre-flight
 
 Before a work unit is created, check whether the work is **already in flight** — in this
-checkout, in another clone, or in a live sibling Claude session — and offer to resume it
+checkout, in another clone, or in a available live peer session — and offer to resume it
 instead of starting a second unit.
 
 **Read this file before creating a work unit.** Run the commands; do not paraphrase them.
@@ -82,18 +82,20 @@ gh pr list --state open --json number,title,headRefName,author,updatedAt
 
 An open PR is work that is in flight and already shipped-but-unmerged.
 
-## Step 4 — Live sibling Claude sessions
+## Step 4 — Available live peer sessions
 
 Steps 1–3 read what a session **left behind**. This step asks a session that is **still live**,
 and it is the only source that sees the *pre-worktree window* — a peer still designing its
 proposal has written nothing to disk yet, and that is the longest stretch of any run.
 
 **Skip silently if `ListAgents` or `SendMessage` is unavailable in the running harness**, the
-same way steps 2 and 3 skip without a remote or a tracker. Never fail an intake over it.
+same way steps 2 and 3 skip without a remote or a tracker. Also skip when user
+authorization is absent or the API lists only this task's child agents. Never fail an intake over it.
 
 ### 4a — Enumerate, then filter hard
 
-`ListAgents` is free and read-only, so always run it. It returns the **whole fleet**, not this
+When genuine peer discovery and messaging are available and authorized, run the
+host peer-discovery operation (`ListAgents` in the Claude adapter). It returns the **whole fleet**, not this
 project's sessions — measured on the authoring repo it returned **32 peers**, of which 5 were
 live local sessions and the rest offline Remote Control or idle cloud sessions. Messaging all
 of them would ping unrelated projects on every intake, fleet-wide. Apply all three filters:
@@ -129,7 +131,7 @@ MINERVA-IDLE                            — if you are not
 
 **One message per peer per run. Never a poll loop, and never a follow-up "are you done?".**
 
-The marker line is not decoration. **Read `plugins/minerva/skills/propose/references/cross-session.md`** — the contract
+The marker line is not decoration. **Read `skills/propose/references/cross-session.md`** — the contract
 governing every message between sessions, in both directions. It is why this query is legal at
 all (asking a peer what it is *already* doing adds nothing to its workstream, so the ban on
 delegation does not reach it), and it is what a session applies to the replies this step
@@ -165,10 +167,10 @@ conflict, review, or promote still catches later. Only one of those is recoverab
 
 A **collision** is a **hardcoded ask** at every intake surface. It fires regardless of a run's
 own skip or verify predicate — exactly like the intake open-issue match
-(`plugins/minerva/skills/propose/references/issue-match.md`) — and in the three autonomous
+(`skills/propose/references/issue-match.md`) — and in the three autonomous
 orchestrators it **increments the run's global escalation counter**. It is not exempt.
 
-Ask with `AskUserQuestion`, naming what was found and where it came from (which unit, branch,
+Ask with the user question operation, naming what was found and where it came from (which unit, branch,
 PR, or session):
 
 - **Resume that work** — the existing unit becomes the target; `minerva:work <date-slug>`.

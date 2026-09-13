@@ -1,0 +1,20 @@
+{
+  "name": "agent-marketplace",
+  "interface": {
+    "displayName": "Agent Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "minerva",
+      "source": {
+        "source": "local",
+        "path": "./plugins/minerva"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "minerva",
+  "version": "1.1.0",
+  "description": "Durable record discipline for software work in Claude Code and Codex — promotion, not accumulation.",
+  "author": {"name": "Derek Honerlaw"},
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Minerva",
+    "shortDescription": "Durable records for software work",
+    "longDescription": "Shared proposal, implementation, review, promotion and shipping workflows for Claude Code and local Codex sessions.",
+    "developerName": "Derek Honerlaw",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["Show the current Minerva workstream status."]
+  }
+}

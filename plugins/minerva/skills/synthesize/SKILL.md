@@ -10,6 +10,10 @@ allowed-tools:
   - Edit
 ---
 
+## Runtime
+
+Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+
 Build or refresh the knowledge-wiki **synthesis layer** — a theme-grouped
 `.minerva/knowledge/overview.md` that reads *across* entries to surface themes, the way
 Karpathy's LLM-wiki keeps concept/overview pages over raw sources. This skill is
@@ -46,10 +50,10 @@ and the fixer (`scripts/knowledge_fix.py`) never touch it.
 Run the importable status helper (it never writes):
 
 ```bash
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1); SCRIPTS_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)/scripts"; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$SCRIPTS_ROOT}'); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status('$KNOWLEDGE'), indent=2))"
+PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; KNOWLEDGE="$(git rev-parse --show-toplevel)/.minerva/knowledge"; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); from synthesis_status import synthesis_status; print(json.dumps(synthesis_status(sys.argv[2]), indent=2))" "$PLUGIN_SCRIPTS" "$KNOWLEDGE"
 ```
 
-**Script resolution:** `PLUGIN_SCRIPTS` uses `find -L` (follow symlinks) to locate `scripts/` in the local plugin install (`~/.claude/plugins/minerva` → symlink to the development checkout) first, then in the versioned plugin cache. The `-L` flag is required because the local install path is a symlink; without it, `find` stops at the symlink without descending. `SCRIPTS_ROOT` via `--git-common-dir` is a last-resort fallback that only works inside the agent-marketplace repo itself — it resolves to the wrong path in any other project. `--show-toplevel` still resolves to the current working tree's root, so the knowledge corpus is the worktree-local `.minerva/knowledge/` (correct per-branch semantics).
+**Script resolution:** use the installed skill's runtime resolver, including explicit overrides and stale-code checks. `--show-toplevel` still selects the worktree-local `.minerva/knowledge/` corpus; the plugin's installation root is independent of the consumer project.
 
 **Failure fallback:** If the command exits non-zero for any reason (Python unavailable,
 `synthesis_status` module missing, permission error), treat the result as if it were

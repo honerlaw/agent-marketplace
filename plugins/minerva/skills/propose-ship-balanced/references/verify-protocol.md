@@ -25,7 +25,7 @@ The gate selection is evidence-grounded in past run logs: independent scrutiny i
 At a reviewer gate:
 
 1. **Decide first.** The main model makes its decision exactly as it would solo, and writes it down (the proposed scope cut / chosen approach / completion checklist). Decide-first-then-review is intentional: a fresh-context reviewer that reads the *committed* decision carries no confirmation bias from the main model's reasoning, and this is cheaper than a parallel re-derivation (no second agent to generate the decision).
-2. **Dispatch one reviewer.** Spawn **one** subagent via the `Agent` tool, fresh context, `subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false`. The dispatch is synchronous because the gate arbitrates the critique **inline, in this same turn**: a backgrounded dispatch returns only a handle, which parks the run instead of deciding the gate. The reviewer is a **Skeptic** at scope / approach / whole-proposal soundness / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass it the gate's ARTIFACT + CONTEXT per `references/phases.md`. The model is pinned to `sonnet` regardless of the main session's tier: an independent critique/verification is a structured-judgment task Sonnet handles well (the same cost-determinism call made for round-table's panelists), and pinning it keeps cost deterministic.
+2. **Dispatch one reviewer.** Spawn **one** fresh-context subagent via the independent reviewer operation and **wait for results**. Arbitrate the critique inline in this run. The reviewer is a **Skeptic** at scope / approach / whole-proposal soundness / divergence / replan-acceptance / replan-vs-FIX, and a **Verifier** at completion-verification. Pass only the gate's ARTIFACT + CONTEXT per `references/phases.md`; dispatch parameters and model policy belong to the host adapter.
 3. **Arbitrate inline.** The main model reads the reviewer's critique and acts as the Arbiter. It folds load-bearing points, proceeds past non-load-bearing ones, or escalates (see below). **At most two dispatches per gate**: the review, plus the re-check in step 4 when — and only when — step 3 folded. Never a third, and never a panel vote.
 4. **Re-check after a fold (Skeptic gates only).** See [Re-check after a fold](#re-check-after-a-fold). Not at the Verifier gate: a completion `revise` already loops through Phase 2.5 → new-plan acceptance → a second Verifier pass, which is its re-check.
 
@@ -51,7 +51,7 @@ Thirteen balanced runs logged 30 `[reviewed — folded]` lines against 5 `[revie
 
 **Trigger.** Step 3 logged `[reviewed — folded]` at a **Skeptic** gate (scope check, approach selection, whole-proposal soundness, mid-work divergence, new-plan acceptance, replan-vs-FIX). A `[reviewed — clean]` outcome dispatches nothing more; the Verifier gate is excluded (see step 4).
 
-**Dispatch.** Write the revised decision down first. Then dispatch **one** more fresh-context agent via the `Agent` tool (`subagent_type: general-purpose`, `model: sonnet`, `run_in_background: false`) carrying the [Fold-audit brief](#fold-audit-brief). ARTIFACT = the original decision as first written, the Skeptic's critique **verbatim**, and the revised decision; CONTEXT = exactly the CONTEXT the gate gave the Skeptic. The re-check reviewer must not be the same agent and must not see the main model's arbitration reasoning — only the three artifacts.
+**Dispatch.** Write the revised decision down first. Then dispatch **one** more fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Fold-audit brief](#fold-audit-brief). ARTIFACT = the original decision as first written, the Skeptic's critique **verbatim**, and the revised decision; CONTEXT = exactly the CONTEXT the gate gave the Skeptic. The re-check reviewer must not be the same agent and must not see the main model's arbitration reasoning — only the three artifacts.
 
 **Arbitrating the re-check — strict.** The re-check exists to take the second look out of the main model's hands, so its arbitration has no discretionary branch:
 
@@ -101,7 +101,7 @@ Output format:
 
 ### Skeptic brief
 
-The Skeptic brief (scope / approach / whole-proposal / divergence / replan gates), adapted from `plugins/minerva/skills/round-table/references/briefs.md`:
+The Skeptic brief (scope / approach / whole-proposal / divergence / replan gates), adapted from `skills/round-table/references/briefs.md`:
 
 ```
 YOUR ROLE: You are an independent Skeptic reviewing the decision in the ARTIFACT
@@ -132,7 +132,7 @@ Before committing any decision — solo or post-review — the main model applie
 - **unfamiliar public interface or cross-cutting contract** — introduces/changes a public interface, API, or cross-cutting contract you cannot confidently get right alone;
 - **knowledge conflict** — would violate or sits in tension with a documented `.minerva/knowledge/` constraint.
 
-**Fails closed.** If any named clause holds — or you cannot confidently rule one out — **escalate** — compose a focused multiple-choice question with `AskUserQuestion`, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
+**Fails closed.** If any named clause holds — or you cannot confidently rule one out — **escalate** — compose a focused multiple-choice question with the user question operation, apply the answer as the decision, continue. Deciding alone is never the safe default under doubt; the worst case of a wrong escalation is one extra question, the worst case of a wrong decide-alone is an undetected bad call.
 
 ## Scope-fit escape
 
@@ -146,15 +146,15 @@ Completion verification, mid-work divergence confirmation, and new-plan acceptan
 
 These reach the user (or halt) regardless of the predicate — see `references/governance.md` for the full list and bail-report format:
 
-- in-flight work collision (pre-flight, `plugins/minerva/skills/propose/references/in-flight-check.md`);
-- an open issue matching the seed at intake (`plugins/minerva/skills/propose/references/issue-match.md`);
+- in-flight work collision (pre-flight, `skills/propose/references/in-flight-check.md`);
+- an open issue matching the seed at intake (`skills/propose/references/issue-match.md`);
 - worktree-creation failure (git error, missing gitignore, slug collision);
 - ship-phase failures: CI auto-fix classified `other`, push rejection, `gh` auth failure;
 - the global escalation counter reaching 3.
 
 ## Escalation counter
 
-Maintain one counter across the run — per-run state owned by the main orchestration loop (it survives the inline `Skill`-tool delegations of Phases 4.5 / 6 / 7). Increment on **every** user escalation (predicate-driven or hardcoded). If it reaches **3**, halt before the next decision point and emit the final-report-on-bail. Recovery: run the individual minerva skills manually from the current state.
+Maintain one counter across the run — per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 4.5 / 6 / 7). Increment on **every** user escalation (predicate-driven or hardcoded). If it reaches **3**, halt before the next decision point and emit the final-report-on-bail. Recovery: run the individual minerva skills manually from the current state.
 
 ## Per-decision logging
 

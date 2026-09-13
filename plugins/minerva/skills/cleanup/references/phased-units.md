@@ -8,7 +8,7 @@ the same moment.
 the normal case — and nothing here applies to it.
 
 Background, branch topology and the soft ceiling live in
-`plugins/minerva/skills/propose/references/phasing.md`.
+`skills/propose/references/phasing.md`.
 
 ## The split
 
@@ -42,22 +42,21 @@ that owns the topology — never infer it from the branch name:
 # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
 # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS=$(find -L "${HOME}/.claude/plugins/minerva" "${HOME}/.claude/plugins/cache/agent-marketplace/minerva" -maxdepth 2 -type d -name "scripts" 2>/dev/null | head -1)
+PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 python3 -c "
-import subprocess, sys; sys.path.insert(0, '${PLUGIN_SCRIPTS:-$ROOT/scripts}')
+import subprocess, sys; sys.path.insert(0, sys.argv[1])
 from work_status import read_phases, phase_progress
 merged = subprocess.run(['git','branch','--merged','<default>','--format=%(refname:short)'],
                         capture_output=True, text=True).stdout.split()
-proposal = '$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md'
+proposal = sys.argv[2]
 print(phase_progress(read_phases(open(proposal).read()), merged, '<date-slug>'))
-"
+" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md"
 ```
 
-**If this raises `ImportError: cannot import name 'read_phases'`,** the resolved scripts directory is a *deployed plugin copy* that predates these functions — plugin-cache-first resolution is the documented rule, so the fix is to update the installed minerva plugin, not to edit the path. Re-running against `$ROOT/scripts` confirms the diagnosis.
+**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
 
-The scripts path resolves plugin-cache-first and falls back to `$ROOT/scripts`, per
-`2026-06-03-constraint-skill-wraps-script-via-importable-api` — a bare
+The scripts path uses the installed runtime resolver, never a consumer-project fallback — a bare
 `sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory. Cleanup
 always runs from the parent repo (it removes worktrees, so it must never be inside one), which
 is why the proposal path is anchored at `$ROOT` and reaches *into* the worktree.

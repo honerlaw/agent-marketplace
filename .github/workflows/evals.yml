@@ -20,12 +20,15 @@ on:
 jobs:
   structural:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install test deps
         run: pip install pytest pyyaml
@@ -35,6 +38,9 @@ jobs:
 
       - name: Behavioral runner --dry-run (parse + plan, zero API)
         run: python scripts/run_skill_evals.py --dry-run
+
+      - name: Host conformance runner --dry-run (zero model calls)
+        run: python scripts/run_compatibility_evals.py --host both --dry-run
 
       - name: Knowledge-wiki drift gate (deterministic, read-only)
         run: python scripts/knowledge_lint.py .minerva/knowledge

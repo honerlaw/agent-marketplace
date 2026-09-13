@@ -2,7 +2,7 @@
 
 ## Caller mode (orchestrators)
 
-Another skill can delegate its decision points here. Caller mode rides an observable intake: the caller invokes `minerva:round-table` via the `Skill` tool **once**, when its first panel-worthy decision arrives, leading with a standing instruction that names (a) where each decision's quorum comes from (e.g., the caller's decision taxonomy), (b) where log lines go, and (c) any standing auto-mode behavior. Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the Skill tool** — re-injection adds nothing; each application supplies that decision's artifact, context, and quorum.
+Another skill can delegate its decision points here. Caller mode rides an observable intake: the caller invokes `minerva:round-table` via the skill loader **once**, when its first panel-worthy decision arrives, leading with a standing instruction that names (a) where each decision's quorum comes from (e.g., the caller's decision taxonomy), (b) where log lines go, and (c) any standing auto-mode behavior. Once the protocol is loaded, apply it at each subsequent decision point **without re-invoking the skill loader** — re-injection adds nothing; each application supplies that decision's artifact, context, and quorum.
 
 The caller owns — and this skill never does — the decision *taxonomy* (which decisions get a panel and at what quorum), any skip predicate (whether to convene at all), escalation budgets and abort triggers, and all other run-level state.
 

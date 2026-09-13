@@ -109,7 +109,7 @@
     },
     {
       "any_of": [
-        "plugins/minerva/skills/propose/references/issue-match.md"
+        "skills/propose/references/issue-match.md"
       ],
       "file": "references/phases.md"
     },
@@ -122,7 +122,7 @@
     },
     {
       "any_of": [
-        "plugins/minerva/skills/propose/references/in-flight-check.md"
+        "skills/propose/references/in-flight-check.md"
       ]
     },
     {
@@ -136,7 +136,7 @@
         "only mandatory pre-run user interaction"
       ]
     },
-    "plugins/minerva/skills/propose/references/cross-session.md"
+    "skills/propose/references/cross-session.md"
   ],
   "cross_surface": {
     "root_readme": true,

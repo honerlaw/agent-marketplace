@@ -86,7 +86,7 @@ def assert_read_only(body: str, where: str) -> None:
     )
 
 
-def fenced_blocks(md: Path, lang: str) -> list:
+def fenced_blocks(md: Path, lang: str, contains: str | None = None) -> list:
     """Every ```<lang> fenced block in `md`, dedented, as a list of block bodies.
 
     Fences are matched with a leading-whitespace allowance because a snippet nested in a
@@ -101,6 +101,8 @@ def fenced_blocks(md: Path, lang: str) -> list:
               "".join(ln[len(indent):] if ln.startswith(indent) else ln
                       for ln in body.splitlines(keepends=True))
               for indent, body in blocks]
+    if contains is not None:
+        bodies = [body for body in bodies if contains in body]
     for body in bodies:
         assert_read_only(body, str(md))
     return bodies
@@ -147,23 +149,21 @@ def test_verification_grep_ignores_migrated_date_ids(corpus):
 def orphan_program() -> str:
     """The python program out of lint/SKILL.md's orphan snippet.
 
-    Only the two shell interpolations are substituted (the scripts dir and the corpus
-    dir); the program's own logic is executed exactly as it ships.
+    The scripts and corpus paths are passed as command arguments; the program's
+    own logic is executed exactly as it ships.
     """
     blocks = [b for b in fenced_blocks(SKILLS / "lint" / "SKILL.md", "bash")
               if "inbound=" in b]
     assert len(blocks) == 1, f"expected exactly one orphan block, found {len(blocks)}"
-    m = re.search(r'python3 -c "(.*)"\s*$', blocks[0], re.S)
+    m = re.search(r'python3 -c "(.*?)" "\$PLUGIN_SCRIPTS" "\$ROOT/.minerva/knowledge"\s*$', blocks[0], re.S)
     assert m, "could not locate the python3 -c program in the orphan snippet"
     return m.group(1).replace('\\\n', '\n')
 
 
 def run_orphan_query(knowledge_dir: Path) -> list:
     prog = orphan_program()
-    prog = prog.replace("'${PLUGIN_SCRIPTS:-$ROOT/scripts}'", repr(str(SCRIPTS)))
-    prog = prog.replace("'$ROOT/.minerva/knowledge'", repr(str(knowledge_dir)))
-    assert "$ROOT" not in prog, "an unsubstituted shell interpolation survived"
-    out = subprocess.run([sys.executable, "-c", prog],
+    assert "$ROOT" not in prog, "shell interpolation must not appear in Python source"
+    out = subprocess.run([sys.executable, "-c", prog, str(SCRIPTS), str(knowledge_dir)],
                          capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     import json

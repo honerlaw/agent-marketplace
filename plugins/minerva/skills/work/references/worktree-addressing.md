@@ -1,6 +1,6 @@
 # Worktree addressing — run before Setup
 
-Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs. **minerva never calls `EnterWorktree`** — it only reliably enters worktrees under `.claude/worktrees/`, and minerva's live under `.minerva/worktrees/`. The session's working directory stays the parent repo; you address the worktree by writing every file path with the `.minerva/worktrees/<date-slug>/` prefix and running every git command as `git -C .minerva/worktrees/<date-slug> …`.
+Every active work unit lives in an isolated git worktree created by `minerva:propose`. This section runs **before** reading docs. **minerva never calls `EnterWorktree`** — address its own worktrees by explicit path. The session's working directory stays the parent repo; you address the worktree by writing every file path with the `.minerva/worktrees/<date-slug>/` prefix and running every git command as `git -C .minerva/worktrees/<date-slug> …`.
 
 1. **Determine <date-slug>** from the resolved target (e.g. `005-add-payments`).
 
