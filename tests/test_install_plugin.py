@@ -48,7 +48,7 @@ def test_default_install_registers_claude_manifest_version(repo, config, command
     settings = json.loads((config / "settings.json").read_text())
     assert settings["enabledPlugins"] == {"minerva@agent-marketplace": True}
     installed = json.loads((config / "plugins/installed_plugins.json").read_text())
-    assert installed["plugins"]["minerva@agent-marketplace"][0]["version"] == "1.1.0"
+    assert installed["plugins"]["minerva@agent-marketplace"][0]["version"] == "1.2.0"
     assert (config / "plugins/minerva").resolve() == repo / "plugins/minerva"
     assert (config / "plugins/marketplaces/agent-marketplace").resolve() == repo
     assert not any(command[0] == "codex" for command in commands)

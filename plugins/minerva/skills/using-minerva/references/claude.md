@@ -12,13 +12,25 @@ Read-only behavior comes from the shared contract, not this frontmatter.
 
 ## Independent review and panels
 
-Use the `Agent` tool with fresh context, `subagent_type: general-purpose`, and
-`run_in_background: false`. Always wait for results. Do not reuse an author or
-previous reviewer for a fold-audit. Round-table panelists and balanced reviewers
-use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
-review leaves `model` unpinned. Proponent and Skeptic calls run in parallel;
-Arbiter runs after both outputs are available. If any required capability is
-missing, stop with an actionable recovery report.
+Use the `Agent` tool with fresh context and `run_in_background: false`.
+Always wait for results. Do not reuse an author or previous reviewer for a
+fold-audit.
+Select a Minerva agent by responsibility, never by a concrete provider model:
+
+- `subagent_type: minerva:strategic` for planning, architecture, proposal or
+  replan work, Skeptics, Arbiters, Verifiers, independent review, promotion,
+  and any other high-judgment decision.
+- `subagent_type: minerva:execution` for approved implementation, code and test
+  generation, mechanical refactors, and routine debugging. In a round table,
+  use it for a Proponent only when the brief is a concrete implementation or
+  feasibility case; otherwise the Proponent is strategic.
+
+The plugin's `agents/strategic.md` and `agents/execution.md` bind those semantic
+roles to Claude's `opus` and `sonnet` aliases. Do not add `model:` to a skill dispatch.
+Do not set `CLAUDE_CODE_SUBAGENT_MODEL`: it would flatten the per-agent
+distinction. Proponent and Skeptic calls run in parallel; Arbiter runs
+after both outputs are available. If any required capability is missing, stop
+with an actionable recovery report.
 
 When an OPEN PR exists and `code-review:code-review` is installed, use that skill
 for code quality. Without it, use an independent reviewer with the shared review

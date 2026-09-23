@@ -22,10 +22,19 @@ authorization and sandbox approvals. A fallback answer is not permission.
 Use the actual available subagent API (`collaboration.spawn_agent` with
 `fork_turns: none`, or a native `spawn_agent` exposing its fresh-context option).
 Explicitly request delegation in the skill brief. Pass only the specified
-ARTIFACT, CONTEXT, and role brief. Leave model and reasoning effort unpinned so
-the reviewer inherits the session settings; never pass a Claude model alias.
-If fresh-context delegation is unavailable, stop this workflow with recovery
-instructions. Do not send the full authoring history to an independent reviewer.
+ARTIFACT, CONTEXT, and role brief. Ask the Codex harness to resolve the semantic tier:
+strategic for planning, verification, Skeptics, Arbiters, and independent review;
+execution for approved implementation, tests, mechanical refactors, and routine
+debugging. A Proponent is execution only for a concrete implementation or
+feasibility case; otherwise it is strategic.
+
+Codex has no Claude-compatible `opus` / `sonnet` aliases in Minerva. A harness
+that supports per-agent model configuration should supply its native mapping at
+this boundary; never put a concrete model name or a Claude alias in a Minerva
+skill. When the available Codex subagent API has no configured tier resolver,
+leave `model` and `reasoning_effort` unpinned so existing inherited-session
+behavior is preserved. If fresh-context delegation is unavailable, stop this workflow with recovery instructions.
+Do not send the full authoring history to an independent reviewer.
 
 Wait for results through the available wait/status tools. Parallel Proponent
 and Skeptic agents must both finish before Arbiter starts. Balanced fold-audit

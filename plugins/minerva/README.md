@@ -100,6 +100,109 @@ customized existing routing section is refreshed only after an approved diff.
 Read [compatibility and validation](COMPATIBILITY.md) for capability fallbacks,
 durable resume state, and the required regression checks.
 
+## Model tiers and host configuration
+
+Minerva separates its work from model choice:
+
+| Layer | Owns |
+| --- | --- |
+| Skills | The lifecycle and its protocols: what to do |
+| Agents | The semantic capability needed for a responsibility |
+| Host harness | The model used for that capability |
+| User configuration | Which concrete models the harness resolves |
+
+The two capabilities are deliberately small:
+
+| Tier | Typical Minerva responsibilities |
+| --- | --- |
+| `strategic` | Planning, architecture, proposal and replan design, grill-plan, verification, review, arbitration, knowledge promotion, Skeptic, Arbiter, and Verifier work |
+| `execution` | Approved implementation, code and test generation, mechanical refactors, and routine debugging |
+
+No Minerva skill contains a provider model ID. The Claude plugin supplies two
+agent definitions: `minerva:strategic` uses Claude Code's `opus` alias and
+`minerva:execution` uses its `sonnet` alias. Claude Code resolves those aliases
+outside Minerva, so changing the concrete model never changes a skill or a
+workflow.
+
+### Claude Code
+
+Use the strategic agent for planning and judgment-heavy lifecycle stages, and
+the execution agent for an implementation session:
+
+```bash
+claude --agent minerva:strategic
+claude --agent minerva:execution
+```
+
+The first command is a strategic session; the second is an execution session.
+The strategic agent automatically uses the configured tier for the independent
+reviewers and panel roles it delegates. A skill cannot change the model of the
+already-running main session, so start `minerva:work` from the execution agent
+when the implementation itself must use the execution model.
+
+Do **not** set `CLAUDE_CODE_SUBAGENT_MODEL` for this setup. It is a global
+subagent override and would erase Minerva's per-agent `opus` / `sonnet`
+distinction.
+
+#### Cheap OpenRouter example
+
+OpenRouter is optional. Its Claude Code integration uses the Anthropic-compatible
+endpoint, then maps Claude's aliases at the outer configuration boundary:
+
+```bash
+export OPENROUTER_API_KEY="<your-key>"
+export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
+export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
+export ANTHROPIC_API_KEY=""
+
+# Concrete OpenRouter slugs; Minerva itself still uses only opus / sonnet.
+export ANTHROPIC_DEFAULT_OPUS_MODEL="z-ai/glm-5.3"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4.1-flash"
+```
+
+For example, place those exports in a shell profile fragment such as
+`~/.config/minerva/cheap.zsh`, then use:
+
+```bash
+minerva-cheap() { source ~/.config/minerva/cheap.zsh; claude --agent minerva:strategic "$@"; }
+minerva-cheap-work() { source ~/.config/minerva/cheap.zsh; claude --agent minerva:execution "$@"; }
+```
+
+The two commands share one outer mapping: strategic resolves to GLM 5.3 and
+execution resolves to DeepSeek V4.1 Flash. Replace the two environment values
+to try different providers; do not edit Minerva.
+
+#### Premium Anthropic example
+
+Use Claude Code's normal Anthropic authentication and leave the two
+`ANTHROPIC_DEFAULT_*_MODEL` overrides unset. The same agent definitions then
+resolve to Claude's current Opus and Sonnet defaults:
+
+```bash
+unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN
+unset ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL
+claude --agent minerva:strategic
+```
+
+This is the same Minerva installation and the same skills as the cheap setup.
+Only the outer Claude Code configuration changed.
+
+### Codex
+
+The shared skills use the same semantic tiers, but Codex does not treat
+Claude's `opus` and `sonnet` aliases as portable concepts. A Codex harness that
+supports per-agent configuration should map its native strategic and execution
+agents to the desired models at its own configuration boundary. For a plain
+Codex CLI session without such a tier-aware harness, Minerva preserves the
+existing behavior: subagents inherit the session model.
+
+Codex CLI profiles are useful for starting phase-appropriate sessions, for
+example a `minerva-strategic.config.toml` and an
+`minerva-execution.config.toml` under `$CODEX_HOME`, each with its own native
+`model = "…"`, launched with `codex --profile <name>`. They do not currently
+give a plugin an automatic two-tier subagent router, so Minerva intentionally
+does not emulate one or store concrete Codex model IDs.
+
 ### Wire Codex manually
 
 From the cloned repository, register the local marketplace and install Minerva:

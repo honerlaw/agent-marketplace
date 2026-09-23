@@ -38,7 +38,9 @@ Then select `$minerva:using-minerva` in a new Codex conversation and run
 `minerva:init --host both` in each consumer project.
 
 See [Minerva compatibility and validation](plugins/minerva/COMPATIBILITY.md) for
-host capabilities, resume behavior, and the regression checks.
+host capabilities, resume behavior, and the regression checks. See the
+[Minerva model-tier configuration](plugins/minerva/README.md#model-tiers-and-host-configuration)
+for strategic/execution routing in Claude Code and the Codex boundary.
 
 ## Update
 

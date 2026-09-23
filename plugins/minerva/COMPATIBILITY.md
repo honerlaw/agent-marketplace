@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 1.1.0 packages one canonical `skills/` tree for Claude Code and local
+Version 1.2.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host
@@ -12,7 +12,8 @@ approvals. Skills do not bypass those approvals.
 | --- | --- | --- |
 | Load another skill | `Skill`, original arguments | Available loader, or read the installed skill and references in the current agent |
 | Required user decision | Available question tool | Available question tool in the appropriate mode, or direct question |
-| Panel / balanced reviewer | Fresh `Agent`, synchronous results, `model: sonnet` | Fresh-context native subagent API, inherit session model, await results |
+| Model tiers | Plugin agents: `strategic` → `opus`, `execution` → `sonnet`; concrete models are configured outside Minerva | Native harness mapping when available; otherwise preserve inherited session model |
+| Panel / balanced reviewer | Fresh tiered `Agent`, synchronous results; Skeptic/Arbiter/reviewer are strategic | Fresh-context native subagent API, semantic tier requested; inherit when no native resolver exists |
 | Code review | Optional PR review skill, otherwise independent diff reviewer | Optional PR review skill, otherwise independent fetched-PR/local-diff reviewer |
 | CI watcher | Tracked background completion when supported | Tracked shell process and polling while the session is active |
 | Scheduled re-entry | Only when an actual scheduler is exposed | Only when an actual scheduler is exposed |
@@ -79,7 +80,7 @@ follows; none of their behavioral protections was removed:
 
 | Previous assertion | Replacement |
 | --- | --- |
-| Every dispatcher spells `run_in_background` | Registered canonical sites must wait for results; adapter tests separately pin Claude synchronous `Agent` and sonnet policy, and Codex fresh context / inherited settings |
+| Every dispatcher spells `run_in_background` | Registered canonical sites must wait for results; adapter tests separately pin Claude synchronous tiered `Agent` dispatch and Codex fresh context / tier-or-inheritance policy |
 | Cache-search resolver appears at every registered helper site | Same registered helper/guard sites use the installed runtime resolver; executable fixtures cover consumers, symlinks, overrides, stale installs, and paths with shell metacharacters |
 | Invocation says `via the Skill tool` | Same caller/argument/phase inventory says `via the skill loader`, backed by both adapter contracts |
 | References start `plugins/minerva/skills/` | Canonical references resolve inside the loaded package; negative tests still reject missing and wrong-skill references |

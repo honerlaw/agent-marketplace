@@ -10,8 +10,8 @@ next protocol step unexecutable, so the run ends the turn announcing that it is
 waiting. Measured across 105 real orchestrator runs before this unit, 562 of
 1047 dispatches were backgrounded and 95 runs parked at least once.
 
-The instructions pinned ``subagent_type`` and ``model`` but not the execution
-mode, so the model guessed per dispatch. This module makes the pin structural:
+The instructions pinned the subagent role but not the execution mode, so the
+model guessed per dispatch. This module makes the pin structural:
 canonical skill prose that *instructs* a dispatch must require waiting for
 results. Host adapter tests separately preserve Claude's synchronous parameter
 and model policy and Codex's fresh-context/inherited-settings contract.
@@ -64,7 +64,7 @@ DISPATCH_VERB_RE = re.compile(r"\b(spawn|dispatch|launch|invoke|create)", re.IGN
 # ``` `Agent tool` ```, or unbackticked) — one site rests on this token alone,
 # so a cosmetic reformat there must not drop it out of detection.
 DISPATCH_TOKEN_RE = re.compile(
-    r"`?Agent`?\s+tool`?|subagent_type|model:\s*\"?sonnet|independent reviewer operation|panel operation", re.IGNORECASE
+    r"`?Agent`?\s+tool`?|subagent_type|independent reviewer operation|panel operation", re.IGNORECASE
 )
 
 # The pin this module exists to enforce.
@@ -239,9 +239,9 @@ def test_dispatch_instructions_pin_execution_mode(relpath):
     [
         "Spawn 3 subagents via the `Agent` tool with fresh context.",
         "Launch a fresh-context subagent via the `Agent` tool.",
-        "the main model dispatches one agent (`subagent_type: general-purpose`)",
-        "Dispatch one reviewer, `model: sonnet`, and arbitrate inline.",
-        'Spawn a reviewer with `model: "sonnet"`.',
+        "the main model dispatches one agent (`subagent_type: minerva:strategic`)",
+        "Dispatch one reviewer with `subagent_type: minerva:strategic`, then arbitrate inline.",
+        'Spawn a reviewer with `subagent_type: minerva:execution`.',
         "spawn a subagent via the `Agent tool` (backticks fall differently)",
         "Dispatch a subagent via the Agent tool with no backticks at all.",
     ],
@@ -258,7 +258,7 @@ def test_detector_recall(line):
         "Each reviewer gate dispatches one subagent and the main model arbitrates.",
         "6 subagent dispatches max per decision point.",
         # Dispatch token, no verb — describing the parameters, not calling.
-        "The `subagent_type` default is general-purpose and `model: sonnet` is standard.",
+        "The `subagent_type` default is minerva:strategic.",
         # Neither — the Skill-tool handoff form, which must never be caught.
         "invoke `minerva:ship` via the `Skill` tool with its auto-mode instruction",
     ],

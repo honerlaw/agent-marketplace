@@ -7,6 +7,57 @@ minerva supports Claude Code and local Codex app, CLI, and IDE conversations fro
 
 ---
 
+## Model routing
+
+Minerva keeps the workflow separate from model choice: skills say **what to
+do**, agents name the required capability, and the host configuration selects
+the concrete model. The two capabilities are:
+
+| Tier | Work |
+| --- | --- |
+| `strategic` | Planning, architecture, proposal/replan and grill-plan, review and verification, arbitration, promotion, Skeptic, Arbiter, Verifier |
+| `execution` | Approved implementation, code and tests, mechanical refactors, routine debugging |
+
+Claude Code loads Minerva's two plugin agents: `minerva:strategic` uses the
+`opus` alias and `minerva:execution` uses the `sonnet` alias. The skills do not
+name provider IDs. Start the appropriate main session at a phase boundary:
+
+```bash
+claude --agent minerva:strategic  # plan, review, promote
+claude --agent minerva:execution  # minerva:work and implementation
+```
+
+Independent reviewers and panel roles are selected by tier automatically:
+Skeptic, Arbiter, Verifier, and review use strategic; an implementation or
+feasibility Proponent may use execution. Do not set
+`CLAUDE_CODE_SUBAGENT_MODEL`, because it globally overrides subagents and
+collapses the distinction.
+
+For an optional low-cost OpenRouter profile, configure the aliases outside
+Minerva (the OpenRouter model slugs below are examples):
+
+```bash
+export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
+export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
+export ANTHROPIC_API_KEY=""
+export ANTHROPIC_DEFAULT_OPUS_MODEL="z-ai/glm-5.3"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4.1-flash"
+```
+
+That maps strategic to GLM 5.3 and execution to DeepSeek V4.1 Flash without a
+Minerva edit. Put the exports in a shell-profile fragment and source it from a
+`minerva-cheap` launcher. For the premium Anthropic configuration, use normal
+Claude Code authentication and leave the two `ANTHROPIC_DEFAULT_*_MODEL`
+overrides unset; the same aliases then select Claude Opus and Claude Sonnet.
+
+Codex uses the same semantic tier vocabulary but not Claude aliases. A
+tier-aware Codex harness can map native strategic/execution agents to its own
+models; plain Codex CLI keeps its existing inherited-session behavior. Codex
+profiles are suitable for starting strategic and execution sessions, but
+Minerva does not add a custom provider router.
+
+---
+
 ## I. The problems it solves
 
 Agent-assisted work has a memory problem, and it isn't the agent's context window. It is that nothing the agent learns survives in a form the *next* session can trust.
