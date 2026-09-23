@@ -14,8 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
 
 # The orchestrators that replace human gates with their own adjudication. `propose-ship` is
-# deliberately absent: a human decides at each of its transitions.
-AUTONOMOUS_ORCHESTRATORS = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+# deliberately absent: a human decides at each of its transitions. `propose-ship-quick` and
+# `propose-ship-balanced` were folded into `propose-ship-auto`'s per-decision tiers on 2026-09-23.
+AUTONOMOUS_ORCHESTRATORS = ["propose-ship-auto"]
 
 PHASE_HEADER_RE = re.compile(r"^## Phase (\d+(?:\.\d+)?)\s*[—-].*$", re.M)
 

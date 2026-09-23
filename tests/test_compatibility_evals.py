@@ -123,7 +123,7 @@ def test_timeout_keeps_diagnostic_artifacts(tmp_path, monkeypatch):
 
 def test_dry_run_does_not_launch_hosts_or_make_fixtures(monkeypatch, capsys):
     monkeypatch.setattr(runner, "run", lambda *args: pytest.fail("host launched"))
-    assert runner.main(["--host", "both", "--scenario", "balanced", "--dry-run"]) == 0
+    assert runner.main(["--host", "both", "--scenario", "auto", "--dry-run"]) == 0
     assert len(json.loads(capsys.readouterr().out)) == 2
 
 
@@ -163,29 +163,29 @@ def test_missing_raw_session_or_invalid_thread_never_counts_dispatch(tmp_path):
 
 
 def test_resume_fixture_retains_identity_budgets_and_local_only_remote(tmp_path):
-    directory = tmp_path / "minerva-codex-quick-fixture"
+    directory = tmp_path / "minerva-codex-auto-small-fixture"
     directory.mkdir()
     repo, _, _ = runner.fixture(directory, "manual-resume")
     runtime.write_state("2026-09-12-fixture", dict(revision=0,
-                        branch="2026-09-12-fixture", caller="propose-ship-quick",
+                        branch="2026-09-12-fixture", caller="propose-ship-auto",
                         pr=1, fix_iteration=2, escalations=2), repo)
     before = runner.snapshot(repo)
-    resumed, _, env, request = runner.resume_fixture(directory, "codex", "quick")
+    resumed, _, env, request = runner.resume_fixture(directory, "codex", "auto-small")
     assert resumed == repo.resolve()
-    assert "--watch-iteration=2 --auto=propose-ship-quick" in request
+    assert "--watch-iteration=2 --auto=propose-ship-auto" in request
     assert "Do not restart intake" in request
     assert runner.snapshot(repo) == before
     assert runtime.read_state("2026-09-12-fixture", repo)["escalations"] == 2
     runner.git(repo, "remote", "set-url", "origin", "https://example.invalid/unapproved")
     with pytest.raises(ValueError, match="local bare remote"):
-        runner.resume_fixture(directory, "codex", "quick")
+        runner.resume_fixture(directory, "codex", "auto-small")
 
 
 def test_resume_fixture_rejects_other_host_or_missing_checkpoint(tmp_path):
-    directory = tmp_path / "minerva-codex-quick-fixture"
+    directory = tmp_path / "minerva-codex-auto-small-fixture"
     directory.mkdir()
     runner.fixture(directory, "manual-resume")
     with pytest.raises(ValueError, match="matching runner fixture"):
-        runner.resume_fixture(directory, "claude", "quick")
+        runner.resume_fixture(directory, "claude", "auto-small")
     with pytest.raises(ValueError, match="exactly one"):
-        runner.resume_fixture(directory, "codex", "quick")
+        runner.resume_fixture(directory, "codex", "auto-small")

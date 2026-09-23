@@ -55,7 +55,7 @@ The lifecycle is a rail with stations. You can board anywhere, but each skill as
 7. **ship** — commit, open the PR, observe CI through a tracked watcher; resume through an available scheduler or an exact checkpointed manual prompt, bounded auto-fix, auto-merge where permitted
 8. **cleanup** — after merge: remove the worktree, prune the branch
 
-Four orchestrators run the whole rail end-to-end, differing only in how decisions get adjudicated — from `minerva:propose-ship`'s human gates, through `minerva:propose-ship-quick`'s solo main-model calls and `minerva:propose-ship-balanced`'s single reviewer at the high-signal gates, to `minerva:propose-ship-auto`'s three-agent consensus panels (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
+Two orchestrators run the whole rail end-to-end, differing in who adjudicates decisions — `minerva:propose-ship`'s human gates, or `minerva:propose-ship-auto`, which gives each decision the tier it earns: the main model alone, one fresh-context reviewer, or a three-agent consensus panel (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
 
 ---
 
@@ -103,13 +103,7 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 : Orchestrates propose → work → review → promote → ship → cleanup by delegating to each skill in sequence with no logic duplication. Refuses to start if in-flight work exists for the same intent; waits for the PR to actually merge before invoking cleanup.
 
 **`minerva:propose-ship-auto`**
-: The same lifecycle, but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (the panel mechanics are delegated to `minerva:round-table`). Human input is only a fallback when the panel can't agree after one revision round; small, low-risk decisions skip the panel via a fail-closed skip predicate.
-
-**`minerva:propose-ship-quick`**
-: The lightweight fast-path sibling — the same lifecycle with no scheduled human gates, but the main model adjudicates every decision directly instead of convening a panel. Built for small, low-risk changes (small UI fixes, bug fixes) you want done quickly. A fail-closed escalation predicate sends genuinely-undecidable decisions to the user, and a scope-fit escape recommends `propose-ship-auto`/`propose-ship` if the change turns out not to be small.
-
-**`minerva:propose-ship-balanced`**
-: The middle rung between `propose-ship-quick` (main model decides every gate solo) and `propose-ship-auto` (a panel at every gate). The main model decides each point directly, but at the high-signal gates — scope check, approach selection, whole-proposal soundness, completion-verification (plus the rare divergence/replan gates) — it dispatches a single fresh-context advisory reviewer (a Skeptic, or a Verifier at completion) and arbitrates the critique inline, with no sequential Arbiter and no panel; a folded critique gets one fold-audit re-check by a second single reviewer, never a third dispatch. Built for medium changes that want an independent second opinion on the load-bearing calls without paying for a full panel everywhere.
+: The same lifecycle with no scheduled human gates, for any size of change. Each decision gets the adjudication tier it earns, chosen per decision rather than for the whole run: the main model alone when a strict fail-closed predicate proves it small, one fresh-context reviewer by default (a Skeptic, or a Verifier at completion, with one fold-audit re-check after a fold), and a 3-agent Proponent/Skeptic/Arbiter panel (delegated to `minerva:round-table`) when the decision is ambiguous, high-blast-radius, changes a public interface, or conflicts with recorded knowledge. Uncertainty moves a decision up a tier instead of stopping the run; the user is asked only when a panel can't agree after one revision round, or a hardcoded trigger fires.
 
 ### The utilities
 

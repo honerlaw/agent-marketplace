@@ -22,7 +22,8 @@ After resolving the target and before running any git commands:
 
 Before advancing this shipping run, read its checkpoint using the runtime
 contract. Resolve the unit working tree and live branch/PR first. Validate any
-saved caller against explicit `--auto`; restore counters from this run without
+saved caller against explicit `--auto` (a legacy `propose-ship-quick` or
+`propose-ship-balanced` caller matches `--auto=propose-ship-auto`); restore counters from this run without
 resetting them. An explicit `--watch-iteration` cannot lower the saved count.
 Missing legacy state uses the existing PR and explicit retry/log evidence;
 unknown budget usage requires recovery. Bare mode uses the runtime contract's
@@ -271,7 +272,7 @@ Once checks are no longer pending:
 
 ### Track iteration count across wakes
 
-Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-balanced`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
+Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-auto`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
 
 ## Auto-merge
 

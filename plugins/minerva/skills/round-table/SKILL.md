@@ -13,7 +13,7 @@ Three uses:
 
 1. **Ad-hoc judgment calls** — a decision framed mid-conversation ("refactor X or wrap it?") gets an independent multi-agent verdict.
 2. **Drafted-artifact review** — a concrete draft (plan, doc, design, diff) gets the Proponent/Skeptic/Arbiter treatment before you commit to it.
-3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every strategic/tactical decision; see [Caller mode](#caller-mode-orchestrators)).
+3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every decision that reaches its panel tier; see [Caller mode](#caller-mode-orchestrators)).
 
 ## Usage
 
@@ -52,7 +52,12 @@ The three role briefs — Proponent, Skeptic, Arbiter — live in `references/br
 
 ## Vote semantics
 
-Each agent ends with a verdict of `accept` / `revise` / `reject`. Count `accept` votes against the **required quorum** — specified by the caller, defaulting to **2/3** when none is given:
+Each agent ends with a verdict of `accept` / `accept with fixes` / `revise` / `reject`. **The vote is on the decision, not on the write-up.** `accept with fixes` means *the decision is right; these listed write-up fixes are needed* — a corrected citation, a clarifying sentence, a relabelled number. `revise` is reserved for *the decision should change*.
+
+- **`accept with fixes` counts as `accept`** toward quorum. The main LLM folds the listed fixes without a re-vote and logs each one verbatim under the panel line, so review can audit that none changed the decision.
+- **A fix that would change the decision is a `revise`.** If the main LLM finds one in an `accept with fixes` vote — **or is unsure whether it would** — it counts that vote as `revise`. Fail closed: a wrongly counted `revise` costs a revision round; a wrongly counted `accept` lets a changed decision through unvoted.
+
+Count `accept` votes (including `accept with fixes`) against the **required quorum** — specified by the caller, defaulting to **2/3** when none is given:
 
 - **At or above quorum** → consensus, proceed.
   - 3/3 accepts at a 3/3-quorum decision → strong consensus, proceed silently.
@@ -86,13 +91,15 @@ After every panel call (regardless of outcome), record a one-line entry under a 
 ```
 ## Panel decisions 2026-05-21
 - [3/3 accept] scope check: single unit
+- [3/3 accept, 1 with fixes] whole-proposal: accepted
+    - fix (skeptic): criterion 5 cited test_minerva.py; the check lives in test_skill_contracts.py
 - [2/3 accept, skeptic dissented] approach selection: option B (concerns logged: race risk in step 4)
 - [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
 ```
 
 **Where the line goes rides an observable signal, not a judgment call.** If an in-flight work unit is in context — the working tree contains a `.minerva/work/*/scratchpad.md` that is not the post-promote marker per `work_status.is_post_promote`, or the session has already named the unit — append the entry (and any `## Panel concerns` block) to that unit's `scratchpad.md`. If no work unit is in context, the verdict and its log line live in the conversation only — there is nothing durable to write, which matches ad-hoc use being commitment-free. If multiple in-flight units exist and none is named in session context, ask which one (if any) should carry the log.
 
-Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto`'s `[skipped — small]`, `[user-directed]`, and `[synthesis]` prefixes) — those are caller policy, not part of this protocol.
+Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto` logs under its own `## Decisions YYYY-MM-DD` header with `[solo]`, `[reviewed — …]` and `[user-directed]` lines, and prefixes the vote line with `panel — `) — those are caller policy, not part of this protocol.
 
 ## Caller mode and scope boundaries
 

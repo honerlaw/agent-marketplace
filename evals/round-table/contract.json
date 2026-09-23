@@ -21,7 +21,7 @@
     "Two votes maximum",
     {
       "any_of": [
-        "accept | revise | reject"
+        "accept | accept with fixes | revise | reject"
       ],
       "file": "references/briefs.md"
     },

@@ -25,8 +25,17 @@ COUNTERS = ("fix_iteration", "cleanup_retry", "escalations", "decisions", "revie
 PHASES = {"ship", "cleanup", "reconciliation", "done"}
 FIELDS = {"version", "repository", "unit", "revision", "branch", "caller", "phase",
           "pr", "cleanup_deadline", "status", *COUNTERS}
-CALLERS = {None, "propose-ship", "propose-ship-auto", "propose-ship-balanced",
-           "propose-ship-quick"}
+# `propose-ship-quick` and `propose-ship-balanced` were folded into `propose-ship-auto`
+# (2026-09-23). A checkpoint written by either before then is still valid state — its caller
+# cannot change on resume — but it must resume through a skill that still exists.
+LEGACY_CALLERS = {"propose-ship-quick": "propose-ship-auto",
+                  "propose-ship-balanced": "propose-ship-auto"}
+CALLERS = {None, "propose-ship", "propose-ship-auto", *LEGACY_CALLERS}
+
+
+def canonical_caller(caller):
+    """The live orchestrator a caller resumes through; legacy names map to `propose-ship-auto`."""
+    return LEGACY_CALLERS.get(caller, caller)
 REQUIRED_MODULES = {
     "decision_telemetry.py", "knowledge_fix.py", "knowledge_lint.py",
     "knowledge_rename.py", "knowledge_edits.py", "knowledge_spans.py",
@@ -138,6 +147,9 @@ def write_state(unit: str, payload: dict, cwd: Path | None = None, start_phase=F
         phase_defaults = dict(phase="ship", status="pending", pr=None,
                               fix_iteration=0, cleanup_retry=0, cleanup_deadline=None) if start_phase else {}
         state = {**(previous or initial), **phase_defaults, **payload}
+        if previous is None and state["caller"] in LEGACY_CALLERS:
+            raise ValueError(f"{state['caller']} was folded into propose-ship-auto; "
+                             "start new progress with caller propose-ship-auto")
         state["revision"] = expected + 1
         validate(state, unit, str(common_dir(cwd)))
         if previous:
@@ -153,7 +165,7 @@ def write_state(unit: str, payload: dict, cwd: Path | None = None, start_phase=F
             monotonic = COUNTERS[2:] if start_phase else COUNTERS
             if any(state[k] < previous[k] for k in monotonic):
                 raise ValueError("resume cannot reset checkpoint counters")
-            if state["caller"] != previous["caller"]:
+            if canonical_caller(state["caller"]) != canonical_caller(previous["caller"]):
                 raise ValueError("resume cannot change the original caller")
             if not start_phase and previous["cleanup_deadline"] is not None and state["cleanup_deadline"] != previous["cleanup_deadline"]:
                 raise ValueError("resume cannot extend or remove the cleanup deadline")
@@ -199,11 +211,12 @@ def resume_prompt(state: dict, host: str) -> str:
         return "completed — no resume required"
     prefix = "/" if host == "claude" else "$"
     unit = "" if state["unit"].startswith("bare-") else state["unit"]
+    resume_caller = canonical_caller(state["caller"])
     if state["phase"] in {"cleanup", "reconciliation", "done"}:
-        if state["caller"]:
-            return f"{prefix}minerva:{state['caller']} --cleanup-only {unit} --retry={state['cleanup_retry']}"
+        if resume_caller:
+            return f"{prefix}minerva:{resume_caller} --cleanup-only {unit} --retry={state['cleanup_retry']}"
         return f"{prefix}minerva:cleanup {unit}"  # never invent --yes authorization
-    caller = f" --auto={state['caller']}" if state["caller"] else ""
+    caller = f" --auto={resume_caller}" if resume_caller else ""
     target = f" {unit}" if unit else ""
     return f"{prefix}minerva:ship{target} --watch-iteration={state['fix_iteration']}{caller}"
 

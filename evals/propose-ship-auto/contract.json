@@ -61,7 +61,33 @@
         "only permitted"
       ]
     },
-    "skills/propose/references/cross-session.md"
+    "skills/propose/references/cross-session.md",
+    {
+      "any_of": [
+        "Tier-selection order"
+      ],
+      "file": "references/decision-protocol.md"
+    },
+    {
+      "any_of": [
+        "The Verifier gate (completion) is asymmetric"
+      ],
+      "file": "references/decision-protocol.md"
+    },
+    {
+      "any_of": [
+        "Fold-audit re-check"
+      ],
+      "file": "references/decision-protocol.md"
+    },
+    {
+      "any_of": [
+        "No whole-run sizing"
+      ],
+      "file": "references/decision-protocol.md"
+    },
+    "Verifier",
+    "fold-audit"
   ],
   "cross_surface": {
     "root_readme": true,

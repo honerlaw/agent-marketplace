@@ -1,7 +1,7 @@
 # The deferral bar — what may be deferred, and where it goes
 
 **This file is the single statement of the rule.** `minerva:review`'s triage, `minerva:promote`'s
-TODO disposition, and all four `propose-ship-*` orchestrators point here rather than restating
+TODO disposition, and the `propose-ship-*` orchestrators point here rather than restating
 it. If you are about to write the bar into another skill's prose, don't — add a pointer instead.
 Six copies of a block held together by a plea to keep them in sync is a shape this project
 already carries once, and it took a work unit to discover the copies had silently diverged

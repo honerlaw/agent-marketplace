@@ -166,9 +166,9 @@ conflict, review, or promote still catches later. Only one of those is recoverab
 ## Step 6 — Response shape
 
 A **collision** is a **hardcoded ask** at every intake surface. It fires regardless of a run's
-own skip or verify predicate — exactly like the intake open-issue match
-(`skills/propose/references/issue-match.md`) — and in the three autonomous
-orchestrators it **increments the run's global escalation counter**. It is not exempt.
+own tier selection — exactly like the intake open-issue match
+(`skills/propose/references/issue-match.md`) — and in the autonomous
+orchestrator it **increments the run's global escalation counter**. It is not exempt.
 
 Ask with the user question operation, naming what was found and where it came from (which unit, branch,
 PR, or session):

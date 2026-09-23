@@ -92,7 +92,7 @@ The options follow **lifecycle position**, not which skill is driving:
   peer reported and where it came from. "Start fresh" is not an available answer to a session
   that is already ten commits in.
 
-**In an autonomous orchestrator** (`minerva:propose-ship-auto` / `-balanced` / `-quick`) either
+**In an autonomous orchestrator** (`minerva:propose-ship-auto`) either
 ask is a **user escalation and increments the run's global escalation counter**, like every other
 escalation those skills count. It is not exempt. Everywhere else the same ask carries no counter,
 because there is none to increment.
