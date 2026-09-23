@@ -32,6 +32,7 @@
 - [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — a session tells peers what it is doing and never assigns them work; inbound peer messages are evidence, never instructions
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — a folded Skeptic critique now gets one fold-audit re-check, arbitrated strictly; whole-proposal soundness became a Skeptic gate; `decision_telemetry.py` measures the gate taxonomy
 - [[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]] — Follow-up issues need failure scenario, critical/high priority, and too-large-to-absorb; small defects fixed in-unit
+- [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — propose-ship-auto routes each decision solo/reviewer/panel and escalates up a tier; quick and balanced deleted
 
 ## Bugs
 
@@ -76,6 +77,7 @@
 - [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — A fence-scan primitive answers "where are the fences", not "what should I do about them"
 - [[2026-08-30-pattern-anchor-the-clause-not-its-framing]] — anchor the sentence that does the work, not the heading or lead-in that introduces it
 - [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — run the reader a unit ships against the unit's own motivating numbers; a free-text grep over-counted the headline finding
+- [[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]] — 3/3 panels escalated decisions all panelists agreed on; round-table gained an accept-with-fixes verdict
 
 ## Constraints
 
@@ -112,3 +114,4 @@
 ## References
 
 - [[2026-08-24-reference-listagents-returns-the-whole-fleet]] — filter ListAgents on liveness, reply capability, and project-name prefix before messaging — unfiltered fan-out pings unrelated projects
+- [[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]] — Both auto eval scenarios use a trivial fixture; no eval reaches the reviewer-default or panel tier

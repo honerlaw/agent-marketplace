@@ -57,3 +57,4 @@ Everything logs under one dated `## Decisions YYYY-MM-DD` header, each line nami
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — builds on
 - [[2026-05-31-decision-per-decision-skip-over-sizing-gate]] — builds on
 - [[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]] — the vote rule adopted alongside
+- [[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]] — see also

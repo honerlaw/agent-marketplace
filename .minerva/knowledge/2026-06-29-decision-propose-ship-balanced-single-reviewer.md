@@ -4,6 +4,9 @@
 **Type**: decision
 **Context**: .minerva/work/2026-06-29-add-propose-ship-balanced (see git history if the worktree has been cleaned up)
 
+<!-- superseded-by: 2026-09-23-decision-one-orchestrator-picks-each-decisions-tier -->
+> **Superseded by [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]]** (2026-09-23)
+
 ## Context
 
 The lifecycle orchestrators sat at two extremes of adjudication cost: `minerva:propose-ship-quick` has the main model decide every gate solo (no independent scrutiny), and `minerva:propose-ship-auto` convenes a 3-agent `minerva:round-table` panel at ~9 gates (thorough but structurally slow — Proponent+Skeptic in parallel *then* a sequential Arbiter, each gate possibly doubled by a revision round, even after unit 039 moved the panelists to Sonnet and trimmed CONTEXT). Nothing fit a *medium* change: bigger than a one-file tweak, wanting an independent set of eyes, but not ambiguous/high-stakes enough to justify a panel arguing every gate. Work unit 045 added `minerva:propose-ship-balanced` to fill that gap.
@@ -40,3 +43,4 @@ The chosen path is a standalone clone of `-quick`, consistent with the project's
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — see also
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
+- [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — superseded by
