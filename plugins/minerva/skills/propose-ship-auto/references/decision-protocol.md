@@ -79,7 +79,7 @@ Stylistic disagreement, or a re-weighting of tradeoffs the decision already cons
 
 - **Load-bearing → fold.** Revise the decision to address it. Log `[reviewed — folded]` with what was folded.
 - **Not load-bearing → proceed.** Log `[reviewed — clean]`, recording any noted-but-dismissed concern so review/promote can audit the call.
-- **Anti-circularity escape → panel.** If folding would require a **materially different decision** and the main model **cannot confidently tell** whether the reviewer is right, move the decision up to a panel. Never self-confirm past a critique you cannot honestly adjudicate.
+- **Anti-circularity escape → panel.** If folding would require a **materially different decision** and the main model **cannot confidently tell** whether the reviewer is right, move the decision up to a panel. Log `[reviewed — escalated]` naming where it went. Never self-confirm past a critique you cannot honestly adjudicate.
 
 ### Fold-audit re-check
 
@@ -159,7 +159,7 @@ Output format:
 
 The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter briefs, vote semantics including `accept with fixes`, the revision round and escalation composition — live in `minerva:round-table`. When the run's first panel arrives, invoke `minerva:round-table` via the skill loader in caller mode, leading with:
 
-> "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every panel of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Decisions YYYY-MM-DD` header."
+> "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every panel of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Decisions YYYY-MM-DD` header, prefixing the vote tag with `panel — `."
 
 Once loaded, apply it at each later panel **without re-invoking the skill loader**; re-invoke only if the protocol is no longer in context (for example after compaction).
 
@@ -193,6 +193,8 @@ After every decision, append one line to the work unit's `scratchpad.md` under a
 - [rechecked — escalated] scope check: item 1 not addressed → panel
 - [panel — 3/3 accept, 1 with fixes] scope check: include README (tier: panel — fold-audit escalation)
 - [panel — 2/3 accept, skeptic dissented] approach: option B (tier: panel — public interface change)
+- [reviewed — escalated] whole-proposal: Skeptic says criterion 3 is untestable; cannot adjudicate → panel (tier: reviewer)
+- [panel — 3/3 accept] whole-proposal: criterion 3 reworded (tier: panel — anti-circularity escape)
 - [solo] review triage: 3 FIX / 1 SUGGEST / 0 IGNORE (tier: default-solo row — no item had two defensible dispositions)
 - [reviewed — clean] completion verification: Verifier reproduced all 5 criteria (tier: reviewer floor)
 - [escalated to user] approach: panel split 1/3 twice — user picked option B
@@ -201,8 +203,9 @@ After every decision, append one line to the work unit's `scratchpad.md` under a
 
 - `[solo]` — on a row that could have gone higher, record the **concrete evidence** that satisfied the solo predicate, so review/promote can audit that it was honest. On a default-solo row (triage, partition, TODO), record the disposition counts and why no item met the ambiguity clause. Approach decisions also record the rejected alternatives.
 - `[reviewed — clean]` / `[reviewed — folded]` — a reviewer gate; record what the reviewer flagged and whether it was folded.
+- `[reviewed — escalated]` — the anti-circularity escape; name where the decision went (panel, or user on a capped row). The panel's own line follows it.
 - `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check, written **immediately after** its `[reviewed — folded]` line and naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` names where the decision went (panel, or user on a capped row).
-- `[panel — …]` — round-table's vote line. A vote counted from `accept with fixes` renders as `, N with fixes`, each folded fix on an indented line beneath.
+- `[panel — …]` — round-table's vote line, **prefixed `panel — `** so the tier is explicit (round-table's own standalone format is the bare `[3/3 accept]`; telemetry reads either under this header). A vote counted from `accept with fixes` renders as `, N with fixes`, each folded fix on an indented line beneath.
 - `[escalated to user]` — what was asked and the answer.
 - `[user-directed]` — an unsolicited user directive; the directive is the justification.
 
@@ -225,7 +228,7 @@ Default = the tier when no predicate fires. Floor and ceiling clamp whatever the
 | Propose | Whole-proposal soundness | reviewer | solo | panel | Skeptic | 3/3 |
 | Work | Mid-work load-bearing divergence | panel | **panel** | panel | — | 2/3 |
 | Replan | New-plan acceptance | panel | **panel** | panel | — | 3/3 |
-| Work | Completion verification | reviewer | **reviewer** | panel | **Verifier** (asymmetric) | 3/3 |
+| Work | Completion verification | reviewer | **reviewer** | panel | **Verifier** (asymmetric) | 3/3 — with a deliberate exception: 2/3 proceeds with dissent logged, ≤1/3 replans (`references/phases.md`) |
 | Review | Per-finding triage | solo | solo | **reviewer** | Skeptic | — |
 | Review | Replan-vs-FIX | panel | **panel** | panel | — | 2/3 |
 | Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | solo | solo | **reviewer** | Skeptic | — |

@@ -16,3 +16,15 @@
 - Version bumped 1.1.0 → 2.0.0 (two public skills removed). COMPATIBILITY.md eval commands updated (`balanced` → `auto`, `quick` → `auto-small`).
 - Compatibility evals: `auto-small` replaces `quick`; `balanced` dropped; both auto scenarios require ≥1 independent dispatch (the completion Verifier floor).
 - `phasing.md` line "made phasing safe to add to … four orchestrators at once" left as-is: historical fact about that unit.
+
+## Review triage 2026-09-23
+- [FIXED] #1 med evals/propose-ship-auto/contract.json lacked anchors for the migrated concepts — added Tier-selection order, Verifier asymmetry, Fold-audit re-check, No whole-run sizing, Verifier, fold-audit
+- [SUGGESTED] #2 low both auto compatibility scenarios use the trivial calculator fixture with a ≥1 dispatch floor, so no eval exercises a reviewer-default or panel-tier decision — real, but closing it needs a new non-trivial fixture (too large to absorb) and is not critical/high → standing-fact knowledge entry
+- [FIXED] #3 high round-table's bare `[3/3 accept]` classified `unknown` under `## Decisions` (would red test_live_corpus_properties) — telemetry now reads bare vote lines; protocol asks round-table to prefix `panel — `
+- [FIXED] #4 med anti-circularity escape had no log tag — added `[reviewed — escalated]` (vocab, example, tier)
+- [FIXED] #5 high legacy-caller resume would halt: prompt says --auto=propose-ship-auto but saved caller is legacy → "changed caller" — `canonical_caller()` makes them equal in the write check; ship/runtime prose says so; new progress with a legacy caller is refused; round-trip test added
+- [FIXED] #6 med completion panel "2/3 proceeds" contradicted its 3/3 quorum — made the pre-existing exception explicit in phases.md and the taxonomy row
+- [FIXED] #7 low `tiers:` counted lines, not decisions — relabelled `tier lines:` with a comment
+- [FIXED] #8 low round-table prose still named `[skipped — small]` and "every strategic/tactical decision"
+- [FIXED] #9 med host adapters still said "balanced reviewers" / "Balanced fold-audit" — now reviewer-tier (Skeptic, fold-audit, Verifier) on `model: sonnet`
+- [solo] review triage: 8 FIX / 1 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario; only #2 fails the absorb condition, and it is not urgent)

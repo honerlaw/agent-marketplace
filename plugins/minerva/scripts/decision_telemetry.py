@@ -67,6 +67,7 @@ EXACT_TAGS = {
     "decided": "decided",
     "reviewed - clean": "reviewed-clean",
     "reviewed - folded": "reviewed-folded",
+    "reviewed - escalated": "reviewed-escalated",
     "rechecked - clean": "rechecked-clean",
     "rechecked - residual folded": "rechecked-residual-folded",
     "rechecked - escalated": "rechecked-escalated",
@@ -146,8 +147,9 @@ def classify_tag(orchestrator: str, tag: str) -> str:
     if orch in ("Balanced", "Quick"):
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     if orch == "Auto":
-        # Closed vocabulary, plus round-table's vote line under a `panel — ` prefix.
-        if tag.strip().lower().startswith("panel"):
+        # Closed vocabulary, plus round-table's vote line — prefixed `panel — ` as the protocol
+        # asks, or bare (`3/3 accept`) when round-table writes its own standalone format.
+        if tag.strip().lower().startswith("panel") or PANEL_VOTE_RE.search(tag):
             outcome = classify_tag("Panel", tag)
             return outcome if outcome in ("panel-accept", "panel-revised") else UNKNOWN
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
@@ -319,7 +321,7 @@ def _display_gate(gate: str) -> str:
 
 TIERS = {
     "solo": "solo",
-    "reviewed-clean": "reviewer", "reviewed-folded": "reviewer",
+    "reviewed-clean": "reviewer", "reviewed-folded": "reviewer", "reviewed-escalated": "reviewer",
     "rechecked-clean": "reviewer", "rechecked-residual-folded": "reviewer",
     "rechecked-escalated": "reviewer",
     "panel-accept": "panel", "panel-revised": "panel",
@@ -347,7 +349,9 @@ def render(records: list[Record], file_problems: list[str] = ()) -> str:
             lines.append(f"  {_display_gate(gate):<{GATE_DISPLAY_WIDTH}} {row}")
         if orch == "Auto":
             tiers = Counter(tier_of(r.outcome) for r in records if r.orchestrator == orch)
-            lines.append("  tiers: " + ", ".join(f"{k} {v}" for k, v in tiers.most_common()))
+            # Lines, not decisions: a decision that moves up (fold → re-check → panel) logs a
+            # line at each tier it passed through.
+            lines.append("  tier lines: " + ", ".join(f"{k} {v}" for k, v in tiers.most_common()))
         if orch in ("Auto", "Balanced"):
             rs = recheck_summary([r for r in records if r.orchestrator == orch])
             lines.append("  re-checks: " + ", ".join(f"{k} {v}" for k, v in rs.items()))

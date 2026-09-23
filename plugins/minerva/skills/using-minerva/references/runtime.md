@@ -71,7 +71,9 @@ State lives under the Git common directory at `minerva/runtime/<unit>/run.json`.
 It survives worktree removal and stays out of proposals, scratchpads and commits.
 It records progress, not new permission. Existing flags still determine mode.
 Validate branch/PR identity against live Git/GitHub evidence on every resume;
-an unrelated branch or changed caller stops automatic continuation.
+an unrelated branch or changed caller stops automatic continuation. The
+retired `propose-ship-quick` / `propose-ship-balanced` callers are the same
+caller as `propose-ship-auto`; the helper canonicalizes them.
 
 Use `write --unit <slug>` with JSON supplied through stdin. For the first write
 include `revision: 0`, `branch`, `caller` (null or the orchestrator's name), and

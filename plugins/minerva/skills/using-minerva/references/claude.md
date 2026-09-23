@@ -14,8 +14,8 @@ Read-only behavior comes from the shared contract, not this frontmatter.
 
 Use the `Agent` tool with fresh context, `subagent_type: general-purpose`, and
 `run_in_background: false`. Always wait for results. Do not reuse an author or
-previous reviewer for a fold-audit. Round-table panelists and balanced reviewers
-use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
+previous reviewer for a fold-audit. Round-table panelists and reviewer-tier agents
+(Skeptic, fold-audit, Verifier) use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
 review leaves `model` unpinned. Proponent and Skeptic calls run in parallel;
 Arbiter runs after both outputs are available. If any required capability is
 missing, stop with an actionable recovery report.

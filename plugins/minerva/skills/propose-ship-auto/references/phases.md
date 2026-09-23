@@ -69,7 +69,7 @@ This phase replaces the user-interactive setup and completion signal in `minerva
    - Compose a checklist: each criterion, the evidence (test name, file path, behavior observed), and a yes/no.
    - Route it: reviewer floor, so the **Verifier** unless the panel predicate holds (e.g. the diff changes a public interface), in which case a panel. ARTIFACT = the checklist + `git diff <default>...HEAD` + the proposal's `## Success criteria`.
    - **Verifier:** one dispatch — no fold-audit re-check, no upward move (`references/decision-protocol.md`, *The Verifier gate is asymmetric*). On `accept`, advance to Phase 3. On a `revise`/`reject` naming an unmet criterion, treat it as a **success-criteria divergence** — auto-trigger Phase 2.5 (replan) to clarify the criteria, then resume implementation.
-   - **Panel:** on `3/3 accept`, advance. On `≤1/3 accept`, treat it as a success-criteria divergence (Phase 2.5), not a regular consensus failure — skip the standard revise-and-revote. On `2/3 accept`, proceed but log dissent concerns to scratchpad for the review phase to scrutinize.
+   - **Panel:** this gate deliberately does **not** run round-table's revision round, although its quorum is 3/3. On `3/3 accept`, advance. On `2/3 accept`, proceed but log the dissent concerns to scratchpad for the review phase to scrutinize. On `≤1/3 accept`, treat it as a success-criteria divergence (Phase 2.5) — skip the standard revise-and-revote.
    - This gate is **never** skipped.
 
 ## Phase 2.5 — Replan (inline, if triggered)

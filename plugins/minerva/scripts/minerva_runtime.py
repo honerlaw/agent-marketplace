@@ -31,6 +31,11 @@ FIELDS = {"version", "repository", "unit", "revision", "branch", "caller", "phas
 LEGACY_CALLERS = {"propose-ship-quick": "propose-ship-auto",
                   "propose-ship-balanced": "propose-ship-auto"}
 CALLERS = {None, "propose-ship", "propose-ship-auto", *LEGACY_CALLERS}
+
+
+def canonical_caller(caller):
+    """The live orchestrator a caller resumes through; legacy names map to `propose-ship-auto`."""
+    return LEGACY_CALLERS.get(caller, caller)
 REQUIRED_MODULES = {
     "decision_telemetry.py", "knowledge_fix.py", "knowledge_lint.py",
     "knowledge_rename.py", "knowledge_edits.py", "knowledge_spans.py",
@@ -142,6 +147,9 @@ def write_state(unit: str, payload: dict, cwd: Path | None = None, start_phase=F
         phase_defaults = dict(phase="ship", status="pending", pr=None,
                               fix_iteration=0, cleanup_retry=0, cleanup_deadline=None) if start_phase else {}
         state = {**(previous or initial), **phase_defaults, **payload}
+        if previous is None and state["caller"] in LEGACY_CALLERS:
+            raise ValueError(f"{state['caller']} was folded into propose-ship-auto; "
+                             "start new progress with caller propose-ship-auto")
         state["revision"] = expected + 1
         validate(state, unit, str(common_dir(cwd)))
         if previous:
@@ -157,7 +165,7 @@ def write_state(unit: str, payload: dict, cwd: Path | None = None, start_phase=F
             monotonic = COUNTERS[2:] if start_phase else COUNTERS
             if any(state[k] < previous[k] for k in monotonic):
                 raise ValueError("resume cannot reset checkpoint counters")
-            if state["caller"] != previous["caller"]:
+            if canonical_caller(state["caller"]) != canonical_caller(previous["caller"]):
                 raise ValueError("resume cannot change the original caller")
             if not start_phase and previous["cleanup_deadline"] is not None and state["cleanup_deadline"] != previous["cleanup_deadline"]:
                 raise ValueError("resume cannot extend or remove the cleanup deadline")
@@ -203,7 +211,7 @@ def resume_prompt(state: dict, host: str) -> str:
         return "completed — no resume required"
     prefix = "/" if host == "claude" else "$"
     unit = "" if state["unit"].startswith("bare-") else state["unit"]
-    resume_caller = LEGACY_CALLERS.get(state["caller"], state["caller"])
+    resume_caller = canonical_caller(state["caller"])
     if state["phase"] in {"cleanup", "reconciliation", "done"}:
         if resume_caller:
             return f"{prefix}minerva:{resume_caller} --cleanup-only {unit} --retry={state['cleanup_retry']}"

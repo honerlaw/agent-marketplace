@@ -193,6 +193,15 @@ def test_undated_decisions_header_is_prose_not_a_log():
     assert parse_scratchpad(text, "u", "p") == []
 
 
+def test_auto_reads_round_tables_bare_vote_line_and_the_escalation_tag():
+    """Round-table's standalone format is the bare `[3/3 accept]`; if it writes that under
+    auto's header the line must still land in the panel tier, not `unknown`."""
+    assert classify_tag("Auto", "3/3 accept") == "panel-accept"
+    assert classify_tag("Auto", "2/3 accept → revise → 3/3 accept") == "panel-revised"
+    assert classify_tag("Auto", "reviewed — escalated") == "reviewed-escalated"
+    assert tier_of("reviewed-escalated") == "reviewer"
+
+
 def test_auto_panel_prefix_must_carry_a_vote():
     assert classify_tag("Auto", "panel — 2/3 accept, skeptic dissented") == "panel-accept"
     assert classify_tag("Auto", "panel — 1/3 accept → revised") == "panel-revised"

@@ -13,7 +13,7 @@ Three uses:
 
 1. **Ad-hoc judgment calls** — a decision framed mid-conversation ("refactor X or wrap it?") gets an independent multi-agent verdict.
 2. **Drafted-artifact review** — a concrete draft (plan, doc, design, diff) gets the Proponent/Skeptic/Arbiter treatment before you commit to it.
-3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every strategic/tactical decision; see [Caller mode](#caller-mode-orchestrators)).
+3. **A building block for other skills** — orchestrators delegate their decision points here (this is how `minerva:propose-ship-auto` runs every decision that reaches its panel tier; see [Caller mode](#caller-mode-orchestrators)).
 
 ## Usage
 
@@ -99,7 +99,7 @@ After every panel call (regardless of outcome), record a one-line entry under a 
 
 **Where the line goes rides an observable signal, not a judgment call.** If an in-flight work unit is in context — the working tree contains a `.minerva/work/*/scratchpad.md` that is not the post-promote marker per `work_status.is_post_promote`, or the session has already named the unit — append the entry (and any `## Panel concerns` block) to that unit's `scratchpad.md`. If no work unit is in context, the verdict and its log line live in the conversation only — there is nothing durable to write, which matches ad-hoc use being commitment-free. If multiple in-flight units exist and none is named in session context, ask which one (if any) should carry the log.
 
-Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto`'s `[skipped — small]`, `[user-directed]`, and `[synthesis]` prefixes) — those are caller policy, not part of this protocol.
+Callers may add their own policy lines under the same header (e.g., `minerva:propose-ship-auto` logs under its own `## Decisions YYYY-MM-DD` header with `[solo]`, `[reviewed — …]` and `[user-directed]` lines, and prefixes the vote line with `panel — `) — those are caller policy, not part of this protocol.
 
 ## Caller mode and scope boundaries
 

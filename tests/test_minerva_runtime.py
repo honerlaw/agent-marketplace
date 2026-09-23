@@ -234,11 +234,29 @@ def test_a_legacy_caller_resumes_through_the_surviving_orchestrator(consumer, le
     """`-quick` and `-balanced` were folded into `-auto` (2026-09-23). A checkpoint one of them
     wrote is still valid — its caller cannot change on resume — but the prompt must name a skill
     that still exists, or the resume points at nothing."""
-    state = runtime.write_state(UNIT, dict(revision=0, branch=UNIT, caller=legacy, phase=phase,
-                                           fix_iteration=1, cleanup_retry=1), consumer)
+    # Seed a pre-fold checkpoint directly: new progress can no longer be started with a legacy
+    # caller, but one written before the fold is still on disk.
+    runtime.write_state(UNIT, dict(revision=0, branch=UNIT, caller="propose-ship-auto", phase=phase,
+                                   fix_iteration=1, cleanup_retry=1), consumer)
+    path = runtime.state_path(UNIT, consumer)
+    raw = json.loads(path.read_text())
+    raw["caller"] = legacy
+    path.write_text(json.dumps(raw))
+    state = runtime.read_state(UNIT, consumer)
     assert state["caller"] == legacy
     prompt = runtime.resume_prompt(state, "claude")
     assert legacy not in prompt and "propose-ship-auto" in prompt
+    # The resume the prompt asks for must actually be writable: the rendered caller is the
+    # same caller, so advancing the checkpoint under it is not a "changed caller".
+    advanced = runtime.write_state(UNIT, dict(revision=state["revision"], caller="propose-ship-auto",
+                                              fix_iteration=2, cleanup_retry=2), consumer)
+    assert advanced["revision"] == state["revision"] + 1
+
+
+@pytest.mark.parametrize("legacy", ["propose-ship-quick", "propose-ship-balanced"])
+def test_a_legacy_caller_cannot_start_new_progress(consumer, legacy):
+    with pytest.raises(ValueError, match="folded into propose-ship-auto"):
+        runtime.write_state(UNIT, dict(revision=0, branch=UNIT, caller=legacy, phase="ship"), consumer)
 
 
 def test_standalone_cleanup_does_not_invent_authorization(consumer):
