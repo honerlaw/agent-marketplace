@@ -26,14 +26,31 @@ among things that were never going to be done.
 
 ## The bar
 
-> **An item may become a tracker issue only if you can write a concrete failure scenario for
-> it: specific inputs or state producing a wrong output, a crash, data loss, or a security
-> exposure.**
+> **An item may become a tracker issue only if all three hold:**
+>
+> 1. **It is a defect** — you can write a concrete failure scenario for it: specific inputs or
+>    state producing a wrong output, a crash, data loss, or a security exposure.
+> 2. **It is valuable** — it merits `critical` or `high` priority
+>    ([github-issues.md](github-issues.md)). A defect nobody would schedule soon is not worth a
+>    tracker slot.
+> 3. **It is too large to absorb** — fixing it needs its own design or proposal, changes a public
+>    interface or cross-cutting contract, or would materially widen what this PR touches.
 
-If you cannot write that sentence, it is not a defect, and no argument about severity changes
-that. The test is mechanical on purpose — it is the same discipline the `ReportFindings` tool
+**Condition 1** is mechanical on purpose. If you cannot write that sentence, it is not a defect,
+and no argument about severity changes that. It is the same discipline the `ReportFindings` tool
 already enforces with its required `failure_scenario` field ("concrete inputs/state → wrong
-output/crash"), and it refuses the entire *this could be cleaner* class by construction.
+output/crash"), and it refuses the entire *this could be cleaner* class by construction. Latency
+does not matter: a latent bug nobody has hit qualifies; a maintainability hazard that bites every
+week does not. The question is whether a failure can be *described*, not whether it has
+*happened*.
+
+**Conditions 2 and 3 exist because condition 1 alone still filed too much.** After the bar
+first shipped with only condition 1, asking for one unit of work routinely produced two or three
+follow-ups. Each was a real defect, but most were small enough to fix in the same PR, or never
+urgent enough to be scheduled at all. The old `medium` tier ("we should eventually do this")
+filed exactly those, and both open followups on this repo at the time carried it. A real defect
+is not by itself worth a tracker slot. It is either worth doing now, or worth doing soon *and*
+too big to do now.
 
 **The bar states what qualifies, never what is excluded.** That direction is deliberate. A rule
 written as a list of things not worth filing has gaps that are invisible by definition — you
@@ -41,28 +58,48 @@ cannot notice the exclusion you failed to think of — and the surface it govern
 own. An allowlist's refusals are complete
 (`2026-08-22-pattern-a-denylist-safety-guard-fails-open`).
 
-Latency does not matter. A latent bug nobody has hit qualifies; a maintainability hazard that
-bites every week does not. The question is whether a failure can be *described*, not whether it
-has *happened*.
+## The outlets
 
-## The three outlets
+Every forward-looking item lands in exactly one of these, **tried in this order**. There is no
+fifth, and "leave it in the scratchpad" is not a disposition.
 
-Every forward-looking item lands in exactly one of these. There is no fourth, and "leave it in
-the scratchpad" is not a disposition.
+### 0. A defect you can absorb → fix it now
 
-### 1. Clears the bar → a tracker issue
+**Fixing now is the default for a defect.** A defect that clears condition 1 but fails
+condition 3 is part of this unit's work, **even when it sits outside the diff**, whatever its
+priority. "It isn't in my diff" is not a reason to defer a five-minute fix. It is how one
+request turns into three issues.
+
+*Absorbable* is bounded, so fix-now does not become scope creep. The fix must be local, need no
+new design decision, change no public interface or cross-cutting contract, and be small beside
+the unit's own change. A fix that fails any of those fails condition 3 and goes to outlet 1 or 2.
+
+Absorb where the item is found. During work, fix it then. At review triage it is **FIX**. An
+absorbable defect that only surfaces at promote was missed earlier: fix it before ship and log
+it in the scratchpad like any review fix.
+
+### 1. Clears all three conditions → a tracker issue
 
 File it per [github-issues.md](github-issues.md). The issue body carries a required
-`**Failure scenario**:` line — the very sentence the bar asked you to write. An item whose
+`**Failure scenario**:` line — the very sentence condition 1 asked you to write. An item whose
 failure scenario cannot be written cannot be filed by the documented command, which is what
 makes the bar structural rather than advisory.
 
 Priority denotes **how urgent this defect is**, not whether it is worth having. See the
-three-level table in `github-issues.md`.
+two-level table in `github-issues.md`.
+
+**Soft cap: one filed issue per unit.** A second issue from the same unit needs a one-line
+justification recorded in the unit's decision log (or the promote report, outside an
+orchestrator): why it is independent of the first, and why neither could be absorbed. The cap
+is soft because a unit that uncovers two genuine `critical` defects must not drop one. It exists
+to make a flood visible, not to forbid it.
 
 ### 2. Below the bar → a knowledge entry, or nothing
 
-A maintainability hazard, a duplicated block, an inconsistency, a "we should probably" — these
+An item that fails condition 1 or condition 2 and was not absorbed lands here.
+
+A maintainability hazard, a duplicated block, an inconsistency, a "we should probably", a
+real-but-unurgent defect too large to absorb — these
 are **standing facts about the system**, and that is exactly what a `reference` entry in
 `.minerva/knowledge/` is for
 (`2026-08-09-decision-reference-is-a-fifth-entry-type`; one of the four entries that justified

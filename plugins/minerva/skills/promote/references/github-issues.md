@@ -33,8 +33,9 @@ remotes with the parent repo, so `gh` resolves the same `nameWithOwner` from ins
 
 ## Step 2 — Priority
 
-Every item reaching this step has already cleared the bar in
-[deferral-bar.md](deferral-bar.md), so it is a **defect with a writable failure scenario**.
+Every item reaching this step has already cleared all three conditions in
+[deferral-bar.md](deferral-bar.md): it is a **defect with a writable failure scenario**, urgent
+enough to merit one of the levels below, and too large to absorb into the unit that found it.
 Priority therefore denotes *how urgent this defect is* — never whether it is worth having.
 
 Propose exactly one level per kept item. These definitions are the whole vocabulary; use
@@ -44,19 +45,19 @@ them verbatim so two runs on the same item agree:
 |---|---|
 | `critical` | We absolutely should do this before anything else. |
 | `high` | We should do this as soon as possible. |
-| `medium` | We should eventually do this. |
 
-**There are three levels, and there is deliberately no `low`.** It used to exist, defined as
-"It does not matter whether we do it" — a level that files a labelled issue with a back-link
-for work it simultaneously declares pointless. Once every filed item is a defect, that level
-is incoherent: a defect whose fix does not matter is an item that should have gone to a
-knowledge entry instead. An item that feels like it wants `low` is telling you it is below the
-bar; send it to outlet 2.
+**There are two levels, and there is deliberately no `medium` or `low`.** `low` went first,
+defined as "It does not matter whether we do it" — a level that files a labelled issue for work
+it simultaneously declares pointless. `medium` ("We should eventually do this") followed for the
+same reason one step up: *eventually* is not a schedule, and it was the level most of the
+unwanted follow-ups carried. An item that feels like it wants `medium` or `low` fails
+condition 2 of the bar. If it is small, fix it now (outlet 0). Otherwise send it to outlet 2.
 
 The level is a **proposal**, not a fact. Show it alongside the item at Mode A's step-6 hard
 gate — that gate is where a wrong level gets corrected, before anything is created.
-Default to `medium` when an item gives no signal either way; `critical` is for work that
-genuinely blocks everything else, not for emphasis.
+There is no default level. An item that gives no urgency signal either way has not shown it
+merits `high`, so it does not clear condition 2. `critical` is for work that genuinely blocks
+everything else, not for emphasis.
 
 ## Step 3 — Labels, and the duplicate check
 
@@ -84,9 +85,9 @@ ensure_label "priority: $LEVEL"   "$COLOUR" "$DEFINITION" \
   && USABLE+=(--label "priority: $LEVEL")
 ```
 
-Colour and definition per level — `critical` `B60205`, `high` `D93F0B`, `medium` `FBCA04`,
-each described by its row in the step-2 table. Ensure only the level a given item actually
-uses; there is no reason to create all three on a repo that needs one.
+Colour and definition per level — `critical` `B60205`, `high` `D93F0B`, each described by its
+row in the step-2 table. Ensure only the level a given item actually uses; there is no reason to
+create both on a repo that needs one.
 
 If a label cannot be created — the caller can open issues but not manage labels, or the
 repo already runs its own `P0`-style taxonomy — **do not fail and do not force it**. Carry
@@ -196,7 +197,7 @@ Write the created issues into the unit's `proposal.md` under a `## Deferred work
 ## Deferred work
 
 - #12 — retry handler drops the last item when the queue empties mid-flush (priority: high)
-- #13 — legacy id resolver returns None for dated slugs, crashing the index writer (priority: medium)
+- #13 — legacy id resolver returns None for dated slugs, crashing the index writer (priority: critical)
 ```
 
 This is a historical fact — *this unit deferred that item to that issue* — so it cannot go
