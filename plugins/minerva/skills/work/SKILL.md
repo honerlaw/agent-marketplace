@@ -30,7 +30,7 @@ Same pattern used by `minerva:replan`, `minerva:promote`, `minerva:review`, `min
 **Mode argument**: `--auto`
 
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator
-(`minerva:propose-ship-auto`, `-balanced`, `-quick`) is driving this run and has substituted its
+(`minerva:propose-ship-auto`) is driving this run and has substituted its
 own adjudication for the user gates below. Act on the argument — never on a judgment about who
 is calling. Per `2026-06-07-decision-phase-handoff-rides-observable-intake`, *"'An inline
 argument was passed' is observable; 'the prior phase converged' is an opinion."*

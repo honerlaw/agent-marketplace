@@ -21,20 +21,19 @@ REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins" / "minerva"
 SCENARIOS = {
     "read-only": ("Use minerva:status, minerva:lint, minerva:migrate, minerva:debug and minerva:explore to inspect this fixture. Explain the calculator behavior and wiki shape. Do not fix anything, write files, or hand off to proposal authoring.", False),
-    "quick": ("Use minerva:propose-ship-quick to correct calculator.add and ship the full lifecycle. The goal and approach are approved: add returns a+b; tests must pass. No open questions. Local commits, local pushes, fixture PRs, merge and single-unit cleanup are authorized. Do not ask for routine confirmations.", True),
-    "balanced": ("Use minerva:propose-ship-balanced to correct calculator.add and ship the full lifecycle. The goal and approach are approved: add returns a+b; tests must pass. Use its independent reviewer gates. Local commits, local pushes, fixture PRs, merge and single-unit cleanup are authorized.", True),
-    "auto": ("Use minerva:propose-ship-auto to correct calculator.add. Goal, local commits/pushes/fixture PRs/merge/cleanup are authorized. Preserve the strategic and completion panel gates; do not treat preapproval as permission to skip independent verification.", True),
+    "auto-small": ("Use minerva:propose-ship-auto to correct calculator.add and ship the full lifecycle. The goal and approach are approved: add returns a+b; tests must pass. No open questions. Local commits, local pushes, fixture PRs, merge and single-unit cleanup are authorized. Do not ask for routine confirmations.", True),
+    "auto": ("Use minerva:propose-ship-auto to correct calculator.add. Goal, local commits/pushes/fixture PRs/merge/cleanup are authorized. Preserve its per-decision tiers and the completion Verifier gate; do not treat preapproval as permission to skip independent verification.", True),
     "human": ("Use minerva:propose-ship to design an addition fix. Before writing a proposal, present the next unresolved decision using its user gate and stop to await the answer. No implementation or shipping is authorized yet.", False),
     "init": ("Use minerva:init --host both to scaffold missing directories and routing in both host instruction files. Those changes are approved; do not commit them, replace unrelated content, or create duplicate routing sections.", True),
     "replan": ("Use minerva:replan to inspect the fixture proposal. The new direction is not decided: the caller needs a choice between a strict integer-only API and Python operator-compatible addition. Present the next user question and stop before writing a divergence entry.", False),
     "grill": ("Use minerva:grill-plan on the fixture proposal. Present one unresolved design question with your recommended answer and stop for the user; do not write anything or fabricate their answer.", False),
     "phased": ("Use minerva:ship 2026-09-12-fixture to ship the implemented first phase, then invoke cleanup only after its PR merges. Local commit/push/fixture PR/merge/cleanup are approved. Phase 2 is outstanding and must not ship or be marked complete. Keep the worktree for phase 2 and name its resume trigger.", True),
     "reconciliation": ("Use minerva:cleanup 2026-09-12-fixture --yes. The work PR is already merged and the scratchpad promoted. Remove only its merged worktree, reconcile the pending knowledge entry via its separate fixture PR, and preserve the proposal. Local commits/pushes/fixture PRs/merge and cleanup are approved.", True),
-    "cancelled-ci": ("Use minerva:ship 2026-09-12-fixture --watch-iteration=3 --auto=propose-ship-quick. Checks are cancelled: checkpoint blocked, report recovery, do not begin another fix, merge, or mark CI green. All prior fix attempts were consumed.", False),
-    "exhausted-cleanup": ("Use minerva:propose-ship-quick --cleanup-only 2026-09-12-fixture --retry=12. The work PR is still open with auto-merge enabled. The saved deadline has expired. Report exhaustion and manual recovery without scheduling or deleting the worktree. Do not reset the saved budgets.", False),
+    "cancelled-ci": ("Use minerva:ship 2026-09-12-fixture --watch-iteration=3 --auto=propose-ship-auto. Checks are cancelled: checkpoint blocked, report recovery, do not begin another fix, merge, or mark CI green. All prior fix attempts were consumed.", False),
+    "exhausted-cleanup": ("Use minerva:propose-ship-auto --cleanup-only 2026-09-12-fixture --retry=12. The work PR is still open with auto-merge enabled. The saved deadline has expired. Report exhaustion and manual recovery without scheduling or deleting the worktree. Do not reset the saved budgets.", False),
     "panel": ("Use minerva:round-table to decide whether calculator.add should return a+b, supported by the supplied test. Convene its independent panel and report the vote. Do not modify any files.", False),
     "review": ("Use minerva:review to review the current calculator implementation and test as a local changeset. Report findings and suggest dispositions, but do not apply fixes or write triage files without further approval.", False),
-    "manual-resume": ("Use minerva:ship to resume the already-open fixture PR, --watch-iteration=2 --auto=propose-ship-quick. CI is pending. Scheduling is unavailable; checkpoint progress and return pending with an exact Codex/Claude resume prompt. Do not fix, merge, or claim a wake is scheduled.", False),
+    "manual-resume": ("Use minerva:ship to resume the already-open fixture PR, --watch-iteration=2 --auto=propose-ship-auto. CI is pending. Scheduling is unavailable; checkpoint progress and return pending with an exact Codex/Claude resume prompt. Do not fix, merge, or claim a wake is scheduled.", False),
 }
 
 
@@ -103,7 +102,7 @@ def fixture(directory: Path, scenario: str):
             sys.path.insert(0, str(PLUGIN / "scripts"))
             from minerva_runtime import write_state
             write_state("2026-09-12-fixture", dict(revision=0, branch="2026-09-12-fixture",
-                        caller="propose-ship-quick", phase="cleanup", pr=1, cleanup_retry=12,
+                        caller="propose-ship-auto", phase="cleanup", pr=1, cleanup_retry=12,
                         cleanup_deadline=1), repo)
             state_path = repo / ".git/fixture-github.json"
             state = json.loads(state_path.read_text())
@@ -237,7 +236,7 @@ def run(host: str, scenario: str, timeout: int = 600, resume_directory: Path | N
         raise ValueError(f"{host} CLI is unavailable")
     request, mutating = SCENARIOS[scenario]
     if resume_directory:
-        if scenario not in {"quick", "balanced", "auto", "reconciliation"}:
+        if scenario not in {"auto-small", "auto", "reconciliation"}:
             raise ValueError("fixture continuation is supported for lifecycle scenarios only")
         directory = resume_directory.resolve()
         repo, installed, env, request = resume_fixture(directory, host, scenario)
@@ -282,11 +281,11 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
     if result.returncode:
         raise ValueError(f"{host} failed ({result.returncode}); artifacts: {directory}; {result.stderr[-500:]}")
     final, dispatches = transcript_output(host, result.stdout)
-    if host == "codex" and scenario in {"panel", "review", "balanced", "auto"}:
+    if host == "codex" and scenario in {"panel", "review", "auto", "auto-small"}:
         evidence = codex_dispatch_evidence(result.stdout, repo)
         (directory / "dispatch-evidence.json").write_text(json.dumps(evidence, indent=2))
         dispatches = max(dispatches, len(evidence))
-    if resume_directory and scenario in {"balanced", "auto"} and (directory / "stdout.txt").exists():
+    if resume_directory and scenario == "auto" and (directory / "stdout.txt").exists():
         previous_output = (directory / "stdout.txt").read_text()
         _, previous_dispatches = transcript_output(host, previous_output)
         if host == "codex":
@@ -300,7 +299,7 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
     checks["installed_package_unchanged"] = snapshot(installed) == installed_before
     calls_path = repo / ".git/fixture-gh-calls.jsonl"
     calls = [json.loads(line) for line in calls_path.read_text().splitlines()] if calls_path.exists() else []
-    if scenario in {"read-only", "quick", "balanced", "auto", "manual-resume", "phased", "reconciliation", "cancelled-ci", "exhausted-cleanup"}:
+    if scenario in {"read-only", "auto-small", "auto", "manual-resume", "phased", "reconciliation", "cancelled-ci", "exhausted-cleanup"}:
         checks["fixture_gh_observed"] = len(calls) > (1 if scenario in {"manual-resume", "cancelled-ci", "exhausted-cleanup", "phased", "reconciliation"} else 0)
     if not mutating:
         checks["working_tree_unchanged"] = before == after
@@ -315,7 +314,7 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
     if scenario == "manual-resume":
         checkpoints = list((repo / ".git/minerva/runtime").glob("*/run.json"))
         states = [json.loads(p.read_text()) for p in checkpoints]
-        checks["pending_checkpoint"] = any(s["status"] == "pending" and s["fix_iteration"] == 2 and s["caller"] == "propose-ship-quick" for s in states)
+        checks["pending_checkpoint"] = any(s["status"] == "pending" and s["fix_iteration"] == 2 and s["caller"] == "propose-ship-auto" for s in states)
         checks["manual_resume_reported"] = "manual resume" in final.lower() or "manual resumption" in final.lower()
     if scenario == "init":
         checks["both_routing_sections"] = all((repo / name).read_text().count("## minerva") == 1 for name in ("CLAUDE.md", "AGENTS.md"))
@@ -334,8 +333,10 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
         checks["manual_recovery_reported"] = any(word in final.lower() for word in ("manual", "blocked", "exhausted"))
     if scenario in {"human", "replan", "grill"}:
         checks["user_decision_pending"] = "?" in final and not list((repo / ".minerva/work").glob("*/replan.md"))
-    if scenario in {"panel", "review", "balanced", "auto"}:
-        checks["independent_dispatches_observed"] = dispatches >= {"panel": 3, "review": 1, "balanced": 4, "auto": 3}[scenario]
+    if scenario in {"panel", "review", "auto", "auto-small"}:
+        # auto / auto-small: the completion Verifier is a floor, so even a provably small change
+        # dispatches at least one independent reviewer.
+        checks["independent_dispatches_observed"] = dispatches >= {"panel": 3, "review": 1, "auto": 1, "auto-small": 1}[scenario]
     report = dict(host=host, scenario=scenario, passed=all(checks.values()), checks=checks, artifacts=str(directory))
     (directory / f"{prefix}report.json").write_text(json.dumps(report, indent=2))
     return report

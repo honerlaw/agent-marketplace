@@ -271,7 +271,7 @@ Once checks are no longer pending:
 
 ### Track iteration count across wakes
 
-Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-balanced`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
+Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-auto`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
 
 ## Auto-merge
 

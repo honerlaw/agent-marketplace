@@ -128,7 +128,7 @@ trigger is the next phase, and the report is what makes its absence noticeable.
 
 ## The orchestrator loop
 
-`minerva:propose-ship`, `-quick`, `-balanced` and `-auto` all end with: ship → poll the PR → on
+`minerva:propose-ship` and `minerva:propose-ship-auto` both end with: ship → poll the PR → on
 `MERGED`, run `minerva:cleanup` → report and exit. **On a phased unit that last step is wrong**,
 and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
 reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.

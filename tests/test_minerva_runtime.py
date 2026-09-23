@@ -51,7 +51,7 @@ def snapshot(root):
 
 
 def initial(**values):
-    return dict(revision=0, branch=UNIT, caller="propose-ship-balanced", **values)
+    return dict(revision=0, branch=UNIT, caller="propose-ship-auto", **values)
 
 
 def test_missing_read_does_not_create_checkpoint_files(consumer):
@@ -89,7 +89,7 @@ def test_next_phase_retains_aggregate_governance_and_renews_only_phase_budgets(c
     assert runtime.resume_prompt(done, "codex") == "completed — no resume required"
     state = runtime.write_state(UNIT, dict(revision=1, branch=UNIT + "-phase-2"), consumer, start_phase=True)
     assert state["revision"] == 2
-    assert state["caller"] == "propose-ship-balanced"
+    assert state["caller"] == "propose-ship-auto"
     assert (state["escalations"], state["decisions"], state["reviewers"]) == (2, 8, 4)
     assert (state["fix_iteration"], state["cleanup_retry"], state["cleanup_deadline"], state["pr"]) == (0, 0, None, None)
 
@@ -181,7 +181,7 @@ def test_unit_cannot_escape_checkpoint_root(consumer, unit):
 
 @pytest.mark.parametrize("update", [
     {"fix_iteration": 1}, {"cleanup_retry": 1}, {"escalations": 1},
-    {"decisions": 1}, {"reviewers": 1}, {"caller": "propose-ship-quick"},
+    {"decisions": 1}, {"reviewers": 1}, {"caller": "propose-ship"},
     {"cleanup_deadline": 9000}, {"cleanup_deadline": None},
 ])
 def test_resume_preserves_counters_caller_and_deadline(consumer, update):
@@ -222,10 +222,23 @@ def test_resume_prompts_preserve_caller_and_budgets(consumer, host, prefix, phas
     prompt = runtime.resume_prompt(state, host)
     assert prompt.startswith(prefix + "minerva:")
     if phase == "ship":
-        assert "--watch-iteration=2 --auto=propose-ship-balanced" in prompt
+        assert "--watch-iteration=2 --auto=propose-ship-auto" in prompt
     else:
-        assert f"propose-ship-balanced --cleanup-only {UNIT} --retry=5" in prompt
+        assert f"propose-ship-auto --cleanup-only {UNIT} --retry=5" in prompt
     assert "--yes" not in prompt
+
+
+@pytest.mark.parametrize("legacy", ["propose-ship-quick", "propose-ship-balanced"])
+@pytest.mark.parametrize("phase", ["ship", "cleanup"])
+def test_a_legacy_caller_resumes_through_the_surviving_orchestrator(consumer, legacy, phase):
+    """`-quick` and `-balanced` were folded into `-auto` (2026-09-23). A checkpoint one of them
+    wrote is still valid — its caller cannot change on resume — but the prompt must name a skill
+    that still exists, or the resume points at nothing."""
+    state = runtime.write_state(UNIT, dict(revision=0, branch=UNIT, caller=legacy, phase=phase,
+                                           fix_iteration=1, cleanup_retry=1), consumer)
+    assert state["caller"] == legacy
+    prompt = runtime.resume_prompt(state, "claude")
+    assert legacy not in prompt and "propose-ship-auto" in prompt
 
 
 def test_standalone_cleanup_does_not_invent_authorization(consumer):
@@ -294,7 +307,7 @@ def test_cli_stdin_checkpoint_and_resume(consumer, installed):
     assert json.loads(result.stdout)["revision"] == 1
     result = subprocess.run([sys.executable, str(script), "read", "--unit", UNIT, "--host", "codex"],
                             cwd=consumer, capture_output=True, text=True)
-    assert result.stdout.strip() == f"$minerva:ship {UNIT} --watch-iteration=0 --auto=propose-ship-balanced"
+    assert result.stdout.strip() == f"$minerva:ship {UNIT} --watch-iteration=0 --auto=propose-ship-auto"
 
 
 @pytest.mark.parametrize("location", ["root", "nested", "linked"])

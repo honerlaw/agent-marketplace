@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Tally the autonomous orchestrators' decision logs across a project's work units.
 
-`minerva:propose-ship-quick`, `-balanced` and `-auto` each append one line per decision to
-the unit's `scratchpad.md` under `## Quick decisions`, `## Balanced decisions` and
-`## Panel decisions` headers. Those lines are the only evidence of what each rung's
+`minerva:propose-ship-auto` appends one line per decision to the unit's `scratchpad.md` under
+a dated `## Decisions YYYY-MM-DD` header, each line naming the tier the decision reached (solo,
+reviewer, panel). Units shipped before 2026-09-23 carry the three legacy headers of the
+orchestrators that were folded into it — `## Quick decisions`, `## Balanced decisions`, and
+`## Panel decisions` (which `minerva:round-table` still writes when run standalone) — and are
+read the same way. Those lines are the only evidence of what each tier's
 adjudication actually did — how often a reviewer's critique was folded, how often a panel
 went to a revision round, how often anything reached the user — and the reviewer-gate
 taxonomy is documented as "the load-bearing, revisable knob" that this evidence is
@@ -45,10 +48,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from knowledge_spans import unfenced  # noqa: E402
 
-ORCHESTRATORS = ("Balanced", "Panel", "Quick")
+ORCHESTRATORS = ("Auto", "Balanced", "Panel", "Quick")
 
+# The legacy headers take an optional date; the current `## Decisions` header REQUIRES one, because
+# an undated `## Decisions` section is ordinary prose in older scratchpads and proposals.
 HEADER_RE = re.compile(
-    r"^##\s+(?P<orch>Balanced|Panel|Quick)\s+decisions\b(?:\s+(?P<date>\d{4}-\d{2}-\d{2}))?",
+    r"^##\s+(?:(?P<orch>Balanced|Panel|Quick)\s+decisions\b(?:\s+(?P<date>\d{4}-\d{2}-\d{2}))?"
+    r"|decisions\s+(?P<autodate>\d{4}-\d{2}-\d{2})\b)",
     re.IGNORECASE,
 )
 SECTION_END_RE = re.compile(r"^##\s")
@@ -65,6 +71,8 @@ EXACT_TAGS = {
     "rechecked - residual folded": "rechecked-residual-folded",
     "rechecked - escalated": "rechecked-escalated",
     "escalated to user": "escalated",
+    "solo": "solo",
+    "user - directed": "user-directed",
     "process note": "process-note",
     "synthesis": "synthesis",
 }
@@ -137,6 +145,12 @@ def classify_tag(orchestrator: str, tag: str) -> str:
     orch = orchestrator.capitalize()
     if orch in ("Balanced", "Quick"):
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
+    if orch == "Auto":
+        # Closed vocabulary, plus round-table's vote line under a `panel — ` prefix.
+        if tag.strip().lower().startswith("panel"):
+            outcome = classify_tag("Panel", tag)
+            return outcome if outcome in ("panel-accept", "panel-revised") else UNKNOWN
+        return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     if orch == "Panel":
         low = tag.lower()
         if "escalat" in low:
@@ -188,8 +202,8 @@ def parse_scratchpad(text: str, unit: str, path: str) -> list[Record]:
         if h:
             _pair_rechecks(section)
             section = []
-            orch = h.group("orch").capitalize()
-            date = h.group("date")
+            orch = h.group("orch").capitalize() if h.group("orch") else "Auto"
+            date = h.group("date") or h.group("autodate")
             continue
         if SECTION_END_RE.match(line):
             _pair_rechecks(section)
@@ -303,6 +317,20 @@ def _display_gate(gate: str) -> str:
     return gate if len(gate) <= GATE_DISPLAY_WIDTH else gate[: GATE_DISPLAY_WIDTH - 1] + "…"
 
 
+TIERS = {
+    "solo": "solo",
+    "reviewed-clean": "reviewer", "reviewed-folded": "reviewer",
+    "rechecked-clean": "reviewer", "rechecked-residual-folded": "reviewer",
+    "rechecked-escalated": "reviewer",
+    "panel-accept": "panel", "panel-revised": "panel",
+}
+
+
+def tier_of(outcome: str) -> str:
+    """The tier an `Auto` outcome was adjudicated at; escalations and directives are their own."""
+    return TIERS.get(outcome, outcome)
+
+
 def render(records: list[Record], file_problems: list[str] = ()) -> str:
     lines: list[str] = []
     by_orch = tally(records)
@@ -317,7 +345,10 @@ def render(records: list[Record], file_problems: list[str] = ()) -> str:
         for gate in sorted(by_orch[orch], key=lambda g: (g.startswith("other:"), g)):
             row = ", ".join(f"{o} {c}" for o, c in by_orch[orch][gate].most_common())
             lines.append(f"  {_display_gate(gate):<{GATE_DISPLAY_WIDTH}} {row}")
-        if orch == "Balanced":
+        if orch == "Auto":
+            tiers = Counter(tier_of(r.outcome) for r in records if r.orchestrator == orch)
+            lines.append("  tiers: " + ", ".join(f"{k} {v}" for k, v in tiers.most_common()))
+        if orch in ("Auto", "Balanced"):
             rs = recheck_summary([r for r in records if r.orchestrator == orch])
             lines.append("  re-checks: " + ", ".join(f"{k} {v}" for k, v in rs.items()))
         lines.append("")

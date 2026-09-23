@@ -548,8 +548,6 @@ def test_sibling_enumeration_check_fires_on_a_wrong_name():
 # every block still says the thing only it says.
 PREFLIGHT_BLOCKS = {
     "propose-ship": ("references/phases.md", "## Pre-flight: detect in-flight work"),
-    "propose-ship-quick": ("SKILL.md", "## Pre-flight: in-flight work collision"),
-    "propose-ship-balanced": ("SKILL.md", "## Pre-flight: in-flight work collision"),
     "propose-ship-auto": ("SKILL.md", "## Pre-flight: in-flight work collision"),
 }
 
@@ -557,19 +555,15 @@ PREFLIGHT_BLOCKS = {
 # is the sentence that tells a run how much it is allowed to bother the user.
 PREFLIGHT_QUALIFIERS = {
     "propose-ship": "foot-cannon",
-    "propose-ship-quick": "only guaranteed",
-    "propose-ship-balanced": "only mandatory pre-run user interaction",
     "propose-ship-auto": "only permitted",
 }
 
 # The second half of each rung's qualifier: WHO adjudicates the run's other gates.
 # `propose-ship` is human-gated end to end, so it has no adjudicator clause to keep —
-# mapped to None rather than omitted, so the enumeration still covers all four blocks
+# mapped to None rather than omitted, so the enumeration still covers every block
 # and a dropped entry cannot look like an intentional exemption.
 PREFLIGHT_ADJUDICATORS = {
     "propose-ship": None,
-    "propose-ship-quick": "**not** main-model-decided",
-    "propose-ship-balanced": "**not** main-model-decided",
     "propose-ship-auto": "**not** panel-decided",
 }
 
@@ -591,10 +585,11 @@ def preflight_block(skill: str) -> str:
     return m.group(1)
 
 
-def test_all_four_preflight_blocks_exist():
+def test_every_preflight_block_exists():
     """Guards the enumeration itself — a silently-empty locator would make every
-    check below pass vacuously (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`)."""
-    assert len(PREFLIGHT_BLOCKS) == 4
+    check below pass vacuously (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
+    Two blocks since `propose-ship-quick` and `-balanced` were folded into `-auto` (2026-09-23)."""
+    assert len(PREFLIGHT_BLOCKS) == 2
     for skill in PREFLIGHT_BLOCKS:
         assert preflight_block(skill).strip(), f"{skill}: empty pre-flight block"
 
@@ -637,7 +632,7 @@ def test_preflight_block_says_it_is_not_a_lock(skill):
 def test_qualifiers_are_distinct():
     """Negative coverage: if the four qualifiers ever collapse to one string, the
     divergence check above would pass while asserting nothing rung-specific."""
-    assert len(set(PREFLIGHT_QUALIFIERS.values())) == 4
+    assert len(set(PREFLIGHT_QUALIFIERS.values())) == len(PREFLIGHT_QUALIFIERS)
 
 
 def test_preflight_qualifier_check_fires_on_a_flattened_block():
@@ -721,10 +716,10 @@ def test_shared_summary_states_every_marker(skill):
     assert not missing, f"{skill}: shared summary is missing {missing}"
 
 
-def test_shared_summary_is_identical_across_the_autonomous_rungs():
-    """The three autonomous orchestrators paste the same summary; drift between them is
-    always a mistake, so byte-identity is the correct invariant for this half."""
-    rungs = ["propose-ship-quick", "propose-ship-balanced", "propose-ship-auto"]
+def test_shared_summary_is_identical_across_the_orchestrators():
+    """Both orchestrators paste the same summary; drift between them is always a mistake,
+    so byte-identity is the correct invariant for this half."""
+    rungs = ["propose-ship", "propose-ship-auto"]
     summaries = {s: shared_summary(s).strip() for s in rungs}
     first = summaries[rungs[0]]
     for skill, text in summaries.items():
@@ -747,46 +742,65 @@ def test_summary_source_count_matches_the_protocol_file():
         "sources'; update the summaries")
 
 
-# --- propose-ship-balanced: the one-dispatch cap is gone, and must stay gone ----------
+# --- propose-ship-auto: the reviewer tier's one-dispatch cap is gone, and must stay gone ----
 #
 # `2026-09-05-decision-balanced-rechecks-its-folds` replaced "one dispatch per gate, no
 # revision-round re-dispatch" with "one review dispatch plus one fold-audit re-check after a
-# fold — never a third". A positive anchor on the new wording lives in the contract; this is
-# the INVERTED half (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`): the old
-# cap must appear in no file under the skill, so a stale sentence that survived the rewrite —
-# or gets pasted back from an older copy — goes red rather than quietly contradicting the
-# re-check it forbids.
-RETIRED_BALANCED_CAP_PHRASES = [
+# fold — never a third". That reviewer tier moved into `propose-ship-auto` when balanced was
+# folded into it (2026-09-23). This is the INVERTED half
+# (`2026-08-10-pattern-presence-assertions-rot-into-green-lies`): the old cap must appear in no
+# file under the skill, so a stale sentence pasted back from an older copy goes red rather than
+# quietly contradicting the re-check it forbids.
+RETIRED_REVIEWER_CAP_PHRASES = [
     "no revision-round re-dispatch",
     "at most one reviewer dispatch per gate",
     "one dispatch per gate",
 ]
 
 
-def _balanced_prose_files():
-    root = SKILLS_DIR / "propose-ship-balanced"
+def _auto_prose_files():
+    root = SKILLS_DIR / "propose-ship-auto"
     return sorted(p for p in root.rglob("*.md"))
 
 
-def test_balanced_files_enumerated():
+def test_auto_files_enumerated():
     """Guards the enumeration: an empty file set would make the inverted check vacuous."""
-    files = _balanced_prose_files()
-    assert {p.name for p in files} >= {"SKILL.md", "verify-protocol.md", "phases.md", "governance.md"}
+    files = _auto_prose_files()
+    assert {p.name for p in files} >= {"SKILL.md", "decision-protocol.md", "phases.md", "governance.md"}
 
 
-@pytest.mark.parametrize("phrase", RETIRED_BALANCED_CAP_PHRASES)
-def test_balanced_no_longer_states_the_one_dispatch_cap(phrase):
+@pytest.mark.parametrize("phrase", RETIRED_REVIEWER_CAP_PHRASES)
+def test_auto_does_not_state_the_retired_one_dispatch_cap(phrase):
     offenders = [
-        str(p.relative_to(SKILLS_DIR)) for p in _balanced_prose_files()
+        str(p.relative_to(SKILLS_DIR)) for p in _auto_prose_files()
         if _present(phrase, p.read_text(encoding="utf-8"), ignore_case=True)
     ]
     assert not offenders, (
-        f"retired cap phrase {phrase!r} still appears in {offenders}; balanced now allows one "
-        "fold-audit re-check after a fold — see verify-protocol.md 'Re-check after a fold'"
+        f"retired cap phrase {phrase!r} still appears in {offenders}; the reviewer tier allows one "
+        "fold-audit re-check after a fold — see decision-protocol.md 'Fold-audit re-check'"
     )
 
 
-def test_balanced_states_the_recheck_cap():
+def test_auto_states_the_recheck_cap():
     """The positive half, so the pair cannot both pass on a file that says nothing."""
-    body = (SKILLS_DIR / "propose-ship-balanced" / "references" / "verify-protocol.md").read_text(encoding="utf-8")
-    assert "Re-check after a fold" in body and "never a third" in body
+    body = (SKILLS_DIR / "propose-ship-auto" / "references" / "decision-protocol.md").read_text(encoding="utf-8")
+    assert "Fold-audit re-check" in body and "never a third" in body.lower()
+
+
+def test_auto_keeps_the_verifier_asymmetric():
+    """The Verifier gets no fold-audit re-check (`2026-09-05`): its re-check is the replan loop.
+    Folding balanced into auto is exactly the edit that could generalize the Skeptic rules onto it."""
+    body = (SKILLS_DIR / "propose-ship-auto" / "references" / "decision-protocol.md").read_text(encoding="utf-8")
+    assert "The Verifier gate (completion) is asymmetric" in body
+    assert "no fold-audit re-check" in body
+
+
+def test_no_orchestrator_recommends_switching_orchestrators():
+    """The scope-fit escape — "escalate recommending a switch to <sibling>" — is what made
+    medium runs stop and ask to move to auto. It must not come back."""
+    offenders = [
+        str(p.relative_to(SKILLS_DIR)) for p in _auto_prose_files()
+        if _present("scope-fit escape", p.read_text(encoding="utf-8"), ignore_case=True)
+        or _present("recommending a switch", p.read_text(encoding="utf-8"), ignore_case=True)
+    ]
+    assert not offenders, f"a switch-orchestrator escape reappeared in {offenders}"

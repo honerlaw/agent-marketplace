@@ -30,6 +30,7 @@ from decision_telemetry import (
     problems,
     recheck_summary,
     render,
+    tier_of,
     scratchpad_files,
     tally,
     units_with,
@@ -41,9 +42,7 @@ SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 
 # (skill file carrying the fenced logging example, the orchestrator its lines belong to)
 LOGGING_EXAMPLES = {
-    "propose-ship-balanced/references/verify-protocol.md": "Balanced",
-    "propose-ship-quick/references/solo-decision-protocol.md": "Quick",
-    "propose-ship-auto/references/panel-protocol.md": "Panel",
+    "propose-ship-auto/references/decision-protocol.md": "Auto",
     "round-table/SKILL.md": "Panel",
 }
 
@@ -158,12 +157,46 @@ def test_every_documented_tag_classifies(rel, orch):
     assert not unknown, f"{rel}: documented tags the script cannot classify: {unknown}"
 
 
-def test_balanced_examples_document_every_recheck_outcome():
-    """The fold-audit vocabulary is three tags; the skill's own example must show all three,
-    or the vocabulary test above passes without ever exercising them."""
-    text = (SKILLS_DIR / "propose-ship-balanced/references/verify-protocol.md").read_text()
-    tags = {classify_tag("Balanced", tag) for tag in _fenced_decision_tags(text)}
+def test_auto_examples_document_every_tier_and_recheck_outcome():
+    """The fold-audit vocabulary is three tags and there are three tiers; the skill's own
+    example must show all of them, or the vocabulary test above passes without ever
+    exercising them."""
+    text = (SKILLS_DIR / "propose-ship-auto/references/decision-protocol.md").read_text()
+    tags = {classify_tag("Auto", tag) for tag in _fenced_decision_tags(text)}
     assert {"rechecked-clean", "rechecked-residual-folded", "rechecked-escalated"} <= tags
+    assert {tier_of(o) for o in tags} >= {"solo", "reviewer", "panel"}
+
+
+AUTO = """# Scratchpad: x
+
+## Decisions 2026-09-23
+- [solo] scope check: single unit (tier: solo predicate)
+- [reviewed — folded] approach: B → C (tier: reviewer)
+- [rechecked — escalated] approach: item 1 not addressed → panel
+- [panel — 3/3 accept, 1 with fixes] approach: C (tier: panel — fold-audit escalation)
+- [user-directed] review triage: user skipped the reviewer
+"""
+
+
+def test_auto_header_parses_with_tiers():
+    recs = parse_scratchpad(AUTO, "u", "p")
+    assert [r.orchestrator for r in recs] == ["Auto"] * 5
+    assert [tier_of(r.outcome) for r in recs] == ["solo", "reviewer", "reviewer", "panel", "user-directed"]
+    assert all(r.date == "2026-09-23" for r in recs)
+    assert not problems(recs), problems(recs)
+
+
+def test_undated_decisions_header_is_prose_not_a_log():
+    """Older scratchpads and proposals carry an undated `## Decisions` section of ordinary
+    bullets. Only the dated form is the orchestrator's log."""
+    text = "## Decisions\n- [solo] looks like a tag but is prose\n"
+    assert parse_scratchpad(text, "u", "p") == []
+
+
+def test_auto_panel_prefix_must_carry_a_vote():
+    assert classify_tag("Auto", "panel — 2/3 accept, skeptic dissented") == "panel-accept"
+    assert classify_tag("Auto", "panel — 1/3 accept → revised") == "panel-revised"
+    assert classify_tag("Auto", "panel — shrug") == UNKNOWN
 
 
 def test_scan_scope_excludes_worktrees(tmp_path):
@@ -266,6 +299,6 @@ def test_live_corpus_properties():
     recs = collect(REPO_ROOT)
     assert len(units_with(recs, "Balanced")) >= 13, "the corpus that motivated this unit had 13 balanced runs"
     assert len(units_with(recs, "Panel")) >= 20
-    closed = [r for r in recs if r.orchestrator in ("Balanced", "Quick") and r.problems]
+    closed = [r for r in recs if r.orchestrator in ("Auto", "Balanced", "Quick") and r.problems]
     assert not closed, "Balanced/Quick lines the script could not classify or pair:\n" + "\n".join(
         f"{r.where}: {r.problems} [{r.tag}]" for r in closed)

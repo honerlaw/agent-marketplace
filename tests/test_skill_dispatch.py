@@ -4,7 +4,7 @@ Work unit 047. The ``Agent`` tool runs subagents in the **background by
 default**, returning only a handle rather than the agent's output. Every
 minerva protocol that dispatches an agent needs that output *in the same turn*
 — ``round-table`` counts votes then dispatches an Arbiter, ``propose-ship-
-balanced`` arbitrates its reviewer's critique inline, ``review``'s local-diff
+auto`` arbitrates its reviewer's critique inline, ``review``'s local-diff
 mode presents findings in the same turn. A backgrounded dispatch leaves the
 next protocol step unexecutable, so the run ends the turn announcing that it is
 waiting. Measured across 105 real orchestrator runs before this unit, 562 of
@@ -23,7 +23,7 @@ corpus:
   prose framing (``round-table``'s own description "Dispatches a 3-agent …
   panel of fresh-context subagents" instructs nothing);
 * matching the literal ```Agent``` tool phrase alone misses
-  ``propose-ship-balanced/references/phases.md``, which restates the dispatch
+  ``propose-ship-auto/references/phases.md``, which restates the dispatch
   parameters without naming the tool.
 
 So a line counts as a dispatch instruction iff it carries **both** a dispatch
@@ -76,10 +76,9 @@ EXECUTION_MODE_KEY = "wait for results"
 # mode this unit is closing is precisely a site nobody noticed. Paths, not line
 # numbers: line numbers churn whenever text is added above a site.
 REGISTERED_SITES = {
-    "propose-ship-balanced/SKILL.md": 1,
-    "propose-ship-balanced/references/phases.md": 1,
-    # 2: the Skeptic/Verifier review, and the fold-audit re-check after a fold.
-    "propose-ship-balanced/references/verify-protocol.md": 2,
+    # 3: the Skeptic review, the fold-audit re-check after a fold, and the Verifier.
+    "propose-ship-auto/references/decision-protocol.md": 3,
+    "propose-ship-auto/references/phases.md": 1,
     "review/references/protocol.md": 1,
     "round-table/SKILL.md": 1,
     "using-minerva/references/runtime.md": 1,
@@ -91,7 +90,7 @@ REGISTERED_SITES = {
 PROSE_NEAR_MISSES = [
     ("round-table/SKILL.md", "Dispatches a 3-agent Proponent/Skeptic/Arbiter panel"),
     ("propose-ship-auto/SKILL.md", "6 subagent dispatches max"),
-    ("propose-ship-balanced/references/governance.md", "Each reviewer gate dispatches"),
+    ("propose-ship-auto/references/governance.md", "Solo** dispatches nothing"),
 ]
 
 

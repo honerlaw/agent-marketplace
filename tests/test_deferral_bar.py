@@ -124,8 +124,6 @@ CONSUMERS = [
     "promote/references/modes.md",
     "promote/SKILL.md",
     "propose-ship-auto/references/phases.md",
-    "propose-ship-quick/references/phases.md",
-    "propose-ship-balanced/references/phases.md",
 ]
 
 

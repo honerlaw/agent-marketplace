@@ -1,20 +1,20 @@
 ---
 name: propose-ship-auto
-description: Runs the full minerva lifecycle end-to-end with no human gates — fully automated, for unattended runs ("do the whole thing without asking", "handle decisions yourself", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - ship - cleanup, where `minerva:cleanup` reconciles the knowledge wiki on the default branch), but replaces each human-facing decision with a 3-agent Proponent/Skeptic/Arbiter consensus panel (mechanics delegated to `minerva:round-table`). Human input is only a fallback when a panel can't agree after one revision round, and a fail-closed skip predicate lets genuinely small decisions run panel-free. Use for non-trivial changes the user wants shipped autonomously, or when they invoke `minerva:propose-ship-auto`.
+description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - ship - cleanup, where `minerva:cleanup` reconciles the knowledge wiki), but each decision gets the adjudication tier it earns — the main model alone when provably small, one fresh-context reviewer by default, a 3-agent `minerva:round-table` panel when ambiguous, high-blast-radius, interface-changing or in tension with knowledge — and moves up a tier instead of stopping. The user is asked only when a panel cannot agree or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `minerva:propose-ship-auto`.
 ---
 
 ## Runtime
 
 Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
 
-Run the full minerva lifecycle end-to-end with consensus-panel decisions in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can substitute panel calls for hard user gates.
+Run the full minerva lifecycle end-to-end with **per-decision adjudication** in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can adjudicate them itself.
 
-The mechanism: at each strategic or tactical decision point, dispatch a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents — the panel mechanics live in `minerva:round-table`, to which this skill delegates (see the Delegation section of `references/panel-protocol.md`). Operational decisions (commit messages, PR bodies, file paths) bypass the panel entirely — the main LLM executes them. For **small, low-risk decisions**, a Skip predicate (`references/panel-protocol.md`) lets the main LLM decide directly without convening a panel — so a genuinely small task runs effectively panel-free — while it fails closed to the full panel on any uncertainty and never skips the post-divergence or completion-verification panels.
+The mechanism: at each strategic or tactical decision point the main model drafts the decision, then picks its **tier** — **solo** (decide alone, only when a strict conjunctive predicate proves the decision small), **reviewer** (one fresh-context Skeptic, or a Verifier at completion, arbitrated inline; a fold gets one fold-audit re-check), or **panel** (a Proponent/Skeptic/Arbiter `minerva:round-table` vote). Uncertainty moves a decision **up** a tier within the run; there is no whole-run sizing and no recommendation to switch orchestrators. Operational decisions (commit messages, PR bodies, file paths) take no tier.
 
 ## Usage
 
-- `minerva:propose-ship-auto "add rate limiting"` — start a new auto run with the inline description as the strategic seed.
-- `minerva:propose-ship-auto` — start with current-session chat context as the strategic seed (only sensible if the chat already discussed what to build).
+- `minerva:propose-ship-auto "add rate limiting"` — start a new run with the inline description as the strategic seed.
+- `minerva:propose-ship-auto` — start with current-session chat context as the seed (only sensible if the chat already discussed what to build).
 - `minerva:propose-ship-auto --cleanup-only <date-slug> --retry=N` — internal re-entry from the cleanup-gate wake-up loop. Skips phases 1–6 and re-runs Phase 7.
 
 ## Pre-flight: in-flight work collision
@@ -27,36 +27,37 @@ When a peer session messages you, read `skills/propose/references/cross-session.
 
 A collision is a hardcoded user question operation (resume that work / start fresh anyway / abandon this run) and **increments the global escalation counter**.
 
-Only proceed after the user confirms. This is the single mandatory — and **only permitted** — pre-run user interaction (see No ceremony ratification in `references/panel-protocol.md`).
+Only proceed after the user confirms. This is the single mandatory — and **only permitted** — pre-run user interaction (see No ceremony ratification in `references/decision-protocol.md`).
 
-## Panel protocol
+## Decision protocol
 
-The full panel-protocol policy — the **Skip predicate (small decisions)**, **No ceremony ratification**, **Delegation to `minerva:round-table`**, and **Per-decision logging** (formats and worked examples) — lives in `references/panel-protocol.md`. **Read that file once, in full, before this run's first strategic/tactical decision point**; its rules then apply to every decision that follows.
+The full policy — **tier selection** (hardcoded → panel predicate → solo predicate → reviewer), per-row **floors and ceilings**, **upward moves**, the **reviewer tier** (Skeptic, fold-audit re-check, the asymmetric Verifier), delegation of the **panel tier** to `minerva:round-table`, **No ceremony ratification**, **parked dispatches** and **per-decision logging** — lives in `references/decision-protocol.md`. **Read it once, in full, before this run's first strategic/tactical decision point**; its rules then apply to every decision.
 
 Binding floor, even before the reference is read:
 
-- The conjunctive skip predicate is applied silently per-decision, only where the **Decision taxonomy** row (in `references/panel-protocol.md`) is skippable, and **fails closed** to a panel on any uncertainty. It is the only de-ceremony mechanism — never ask the user to pre-ratify skips or pick a "ceremony level".
-- **Never-skippable:** completion verification, mid-work divergence confirmation, new-plan acceptance (replan), Replan-vs-FIX, and every hardcoded escalation trigger.
-- Panel mechanics (dispatch, Proponent/Skeptic/Arbiter briefs, votes, revision round, escalation composition) are delegated to `minerva:round-table` in caller mode; quorums always come from the Decision taxonomy (in `references/panel-protocol.md`), never round-table's standalone default.
-- Every panel call, predicate skip (`[skipped — small]` + evidence), and user-directed bypass (`[user-directed]`) logs one line to `scratchpad.md` under `## Panel decisions YYYY-MM-DD`.
+- **Decide first, then route.** Draft the decision, then choose its tier. Both predicates fail closed: doubt about a panel clause convenes the panel; doubt about a solo clause denies solo.
+- **Never below the floor:** divergence confirmation, new-plan acceptance and replan-vs-FIX are always panels; completion verification is at least a Verifier. Triage, promote partition and TODO disposition never convene a panel.
+- **Up, never sideways.** An unadjudicable critique or a failed fold-audit moves the decision to a panel; a panel that fails quorum twice goes to the user. No step recommends switching to another orchestrator.
+- Panel mechanics are delegated to `minerva:round-table` in caller mode; quorums come from the Decision taxonomy in `references/decision-protocol.md`, never round-table's standalone default.
+- Every decision logs one line to `scratchpad.md` under `## Decisions YYYY-MM-DD`, naming its tier and why.
 
 ## Phases
 
-Execute the phases in order. The full inline protocols — panel artifacts, vote handling, escalation aftermath, and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
+Execute the phases in order. The full inline protocols — per-gate artifacts, tier handling, escalation aftermath and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
 
-1. **Propose (inline)** — assemble context → design synthesis → scope-check panel (3/3) → approach-selection panel (3/3) → whole-proposal-acceptance panel (3/3) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
-2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence panel (2/3) when a load-bearing divergence is suspected; completion-verification panel (3/3) on the success-criteria checklist + diff.
-   - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan-acceptance panel (3/3); append to `replan.md`.
-3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); single triage panel (2/3) over all findings; replan-vs-FIX panel (2/3) if a load-bearing finding surfaces.
-4. **Promote (inline)** — partition panel (2/3); TODO-disposition panel (2/3); apply writes per `minerva:promote` Mode A; archive scratchpad.
+1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
+2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence confirmation (panel) when a load-bearing divergence is suspected; completion verification (Verifier floor) on the success-criteria checklist + diff.
+   - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan acceptance (panel); append to `replan.md`.
+3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); triage (solo, reviewer ceiling); replan-vs-FIX (panel) if a load-bearing finding surfaces.
+4. **Promote (inline)** — partition and TODO disposition (solo, reviewer ceiling); apply writes per `minerva:promote` Mode A; archive scratchpad.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
-6. **Ship (delegated)** — invoke `minerva:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never panel-voted.
+6. **Ship (delegated)** — invoke `minerva:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never tiered.
 7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes` (which also reconciles the knowledge wiki and opens its auto-merging PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 
-Binding caps: **one initial vote + one revision vote per decision** (6 subagent dispatches max); **propose-phase abort** when 2 of its 3 panels escalate; **global escalation counter** halts the run at **3**. Hard escalation triggers that skip the panel entirely: in-flight collision, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), counter at 3. The full trigger list, final-report-on-bail format, and observability requirements live in `references/governance.md` — read it at the first escalation or before reporting any bail.
+Binding caps: a Skeptic gate spends at most **two** reviewer dispatches (review + one fold-audit re-check); a panel spends **one initial vote + one revision vote** (6 subagent dispatches max); **propose-phase abort** when 2 of its 3 decisions reach the user; the **global escalation counter** halts the run at **3**. Hard escalation triggers that skip tier selection entirely: in-flight collision, open-issue match, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), counter at 3. The full trigger list, final-report-on-bail format and observability requirements live in `references/governance.md` — read it at the first escalation or before reporting any bail.
 
 ## Out of scope
 
-Never modify any existing minerva skill at run time (this skill orchestrates by *invocation only*); never auto-cascade into new work units; never cap implementation time; review/promote ordering is fixed; quorums are not configurable. Rationale and detail: `references/governance.md`.
+Never modify any existing minerva skill at run time (this skill orchestrates by *invocation only*); never size the whole run up front; never recommend switching orchestrators mid-run; never auto-cascade into new work units; never cap implementation time; review/promote ordering is fixed; quorums are not configurable. Rationale and detail: `references/governance.md`.

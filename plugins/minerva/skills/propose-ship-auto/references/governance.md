@@ -2,14 +2,21 @@
 
 ## Failure modes, escalation, budget caps
 
-**Per-decision budget.** Hard cap: one initial vote + one revision vote per decision. 6 subagent dispatches max per decision point.
+**Per-decision budget.** Each tier has its own hard cap, from `references/decision-protocol.md`:
+
+- **Solo** dispatches nothing.
+- **Reviewer, Skeptic gate:** at most two dispatches — the review, plus one fold-audit re-check when and only when the main model folded the critique. Never a third reviewer.
+- **Reviewer, Verifier gate (completion):** one dispatch. A `revise` loops through Phase 2.5 rather than re-dispatching.
+- **Panel:** one initial vote + one revision vote. 6 subagent dispatches max per panel.
+
+A decision that moves up from reviewer to panel spends both budgets, so the worst case for one decision is 8 dispatches.
 
 **Per-phase abort triggers.**
-- Propose phase: if 2 of the 3 propose-phase panels (scope, approach, whole-proposal) escalate, abort the auto run. The strategic intent is too ambiguous for panel-driven decisions. Recommend: "switch to manual `minerva:propose`."
+- Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Most escalations now pass through a panel before reaching the user, so this fires less often than it used to; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
-**Global escalation counter.** Maintain across the run. Increment on every user escalation. If it reaches **3**, halt before the next panel call and report status. Recovery: run individual minerva skills manually from the current state.
+**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — a panel that failed quorum twice, an upward move from a capped row, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
 
-**Hard escalation triggers (skip the panel entirely).**
+**Hard escalation triggers (skip tier selection entirely).**
 - In-flight work collision (pre-flight) — the check in `skills/propose/references/in-flight-check.md`.
 - An open issue matching the seed at intake — the ask in `skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
@@ -30,14 +37,16 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 
 ## Observability
 
-- Every panel call logs one line to `scratchpad.md` under a `## Panel decisions YYYY-MM-DD` header per the Per-decision logging format in `references/panel-protocol.md`.
+- Every decision logs one line to `scratchpad.md` under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
+- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, so `scripts/decision_telemetry.py` can pair them.
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
-- The final report (success or bail) lists total panel calls and total escalations for the run.
+- The final report (success or bail) lists decisions per tier (solo / reviewer / panel), total reviewer and panel dispatches, and total escalations for the run.
 
 ## Out of scope
 
 - **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:synthesize`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates, and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
-- **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the auto skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
+- **Sizing the whole run up front, or switching orchestrators mid-run.** Tier is chosen per decision; a change that grows simply makes its later decisions route higher (`2026-05-31-decision-per-decision-skip-over-sizing-gate`). There is no mode flag and no recommendation to hand the run to another skill.
+- **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.
-- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see the Decision taxonomy in `references/panel-protocol.md`); `minerva:round-table`'s standalone 2/3 default never applies inside this skill. If a user wants different thresholds, they fork the skill.
+- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see the Decision taxonomy in `references/decision-protocol.md`); `minerva:round-table`'s standalone 2/3 default never applies inside this skill. If a user wants different thresholds, they fork the skill.

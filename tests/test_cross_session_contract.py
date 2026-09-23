@@ -108,10 +108,10 @@ def test_contract_and_template_carry_the_same_marker():
     )
 
 
-# --- The six pointer copies ---------------------------------------------------
+# --- The four pointer copies --------------------------------------------------
 #
-# The contract is reached from six SKILL.md surfaces: the orientation skill, the
-# implementation skill, and the four orchestrators. Each carries the SAME sentence.
+# The contract is reached from four SKILL.md surfaces: the orientation skill, the
+# implementation skill, and the two orchestrators. Each carries the SAME sentence.
 # `2026-08-24-pattern-extracted-copies-split-into-shared-and-divergent-halves` is explicit
 # that a restated copy is either shortened to a pointer or pinned — this one is already as
 # short as a pointer gets, so it is pinned. Each skill's contract.json anchors the path,
@@ -121,8 +121,6 @@ POINTER_SKILLS = (
     "using-minerva",
     "work",
     "propose-ship",
-    "propose-ship-quick",
-    "propose-ship-balanced",
     "propose-ship-auto",
 )
 
@@ -140,10 +138,10 @@ def test_every_pointer_surface_carries_exactly_one_pointer():
         )
 
 
-def test_the_six_pointers_are_byte_identical():
+def test_the_pointers_are_byte_identical():
     """Drift between the copies is always a mistake, so byte-identity is the invariant.
 
-    Mirrors `test_skill_contracts.test_shared_summary_is_identical_across_the_autonomous_rungs`
+    Mirrors `test_skill_contracts.test_shared_summary_is_identical_across_the_orchestrators`
     — the same reasoning applied to the same kind of restated block.
     """
     sentences = {s: _pointer_lines(s)[0] for s in POINTER_SKILLS}
@@ -157,7 +155,8 @@ def test_the_six_pointers_are_byte_identical():
 
 
 def test_the_pointer_fits_the_tightest_budget():
-    """The binding ceiling named in the replan: propose-ship-balanced's headroom.
+    """The binding ceiling named in the replan was propose-ship-balanced's headroom; since it
+    was folded into propose-ship-auto (2026-09-23), the tightest surface is whichever is largest.
 
     A future edit that lengthens the shared sentence must not silently rely on a roomier
     file — the tightest surface is what the wording has to fit.

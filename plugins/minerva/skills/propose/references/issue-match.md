@@ -74,7 +74,7 @@ someone else already asked for it, not a correction.
 ## Step 5 — Response shape, graded by surface
 
 **At the convergent surfaces** — `minerva:propose`, and the inline Phase 1 of
-`minerva:propose-ship-quick` / `-balanced` / `-auto`, where a work unit is about to exist — a
+`minerva:propose-ship-auto`, where a work unit is about to exist — a
 `match` is a real gate. Ask with the user question operation, naming the issue number, its title, and its
 `priority:` label when it has one — a human-filed issue, or one predating the convention, carries
 no priority, and its absence is not a reason to withhold the offer:

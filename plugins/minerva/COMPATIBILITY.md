@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 1.1.0 packages one canonical `skills/` tree for Claude Code and local
+Version 2.0.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host
@@ -12,7 +12,7 @@ approvals. Skills do not bypass those approvals.
 | --- | --- | --- |
 | Load another skill | `Skill`, original arguments | Available loader, or read the installed skill and references in the current agent |
 | Required user decision | Available question tool | Available question tool in the appropriate mode, or direct question |
-| Panel / balanced reviewer | Fresh `Agent`, synchronous results, `model: sonnet` | Fresh-context native subagent API, inherit session model, await results |
+| Panel / single reviewer | Fresh `Agent`, synchronous results, `model: sonnet` | Fresh-context native subagent API, inherit session model, await results |
 | Code review | Optional PR review skill, otherwise independent diff reviewer | Optional PR review skill, otherwise independent fetched-PR/local-diff reviewer |
 | CI watcher | Tracked background completion when supported | Tracked shell process and polling while the session is active |
 | Scheduled re-entry | Only when an actual scheduler is exposed | Only when an actual scheduler is exposed |
@@ -105,11 +105,11 @@ session tool records and exports call identities/settings, excluding prompts.
 ```bash
 python3 scripts/run_compatibility_evals.py --host both --scenario read-only
 python3 scripts/run_compatibility_evals.py --host both --scenario manual-resume
-python3 scripts/run_compatibility_evals.py --host both --scenario balanced
+python3 scripts/run_compatibility_evals.py --host both --scenario auto
 ```
 
 Scenarios cover read-only readers, init, human gates, grill/replan, standalone
-panels/review, all autonomous modes, phased shipping, reconciliation, manual
+panels/review, the autonomous orchestrator at two change sizes, phased shipping, reconciliation, manual
 resume, cancelled CI, and exhausted cleanup. Acceptance checks inspect artifacts,
 fixture actions, checkpoints, and actual structured dispatch events rather than
 scoring final prose alone. Live conformance results and any remaining app/IDE
@@ -118,8 +118,8 @@ manual validation are recorded in the PR; a dry-run is not host acceptance.
 A timed-out lifecycle fixture can continue from its existing checkpoint:
 
 ```bash
-python3 scripts/run_compatibility_evals.py --host codex --scenario quick \
-  --resume-fixture /absolute/path/to/minerva-codex-quick-fixture --timeout 900
+python3 scripts/run_compatibility_evals.py --host codex --scenario auto-small \
+  --resume-fixture /absolute/path/to/minerva-codex-auto-small-fixture --timeout 900
 ```
 
 Continuation validates the temporary fixture and its local remote, retains the
