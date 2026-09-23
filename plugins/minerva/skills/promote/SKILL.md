@@ -1,6 +1,6 @@
 ---
 name: promote
-description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; forward-looking TODOs are filed as prioritized GitHub issues when the repo can host them and fall back to `followups.md` when it cannot, never silently discarded. Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
+description: Finalizes a minerva work unit's record — promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad; every forward-looking TODO gets an explicit disposition — a small defect is fixed in this unit, and only an urgent defect too large to absorb is filed as a GitHub issue (`followups.md` when the repo cannot host issues). Also captures a significant mid-work decision/bug/pattern immediately. Use when implementation is done and the record needs finalizing, when a review has completed and the scratchpad holds unpromoted notes, or when the user invokes `minerva:promote`. Idempotent.
 ---
 
 ## Runtime

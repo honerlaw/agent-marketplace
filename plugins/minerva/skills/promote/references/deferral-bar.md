@@ -60,8 +60,10 @@ own. An allowlist's refusals are complete
 
 ## The outlets
 
-Every forward-looking item lands in exactly one of these, **tried in this order**. There is no
-fifth, and "leave it in the scratchpad" is not a disposition.
+Every forward-looking item lands in exactly one of these, **tried in this order**. The only
+other disposition is to seed a new proposal (the TODO gate in `minerva:promote`'s "Mode A — no argument (end-of-work full pass)"), which a user may
+choose for any item they want designed rather than recorded. "Leave it in the scratchpad" is not
+a disposition.
 
 ### 0. A defect you can absorb → fix it now
 
@@ -75,8 +77,16 @@ new design decision, change no public interface or cross-cutting contract, and b
 the unit's own change. A fix that fails any of those fails condition 3 and goes to outlet 1 or 2.
 
 Absorb where the item is found. During work, fix it then. At review triage it is **FIX**. An
-absorbable defect that only surfaces at promote was missed earlier: fix it before ship and log
-it in the scratchpad like any review fix.
+absorbable defect that only surfaces at promote was missed earlier, and **it does not get fixed
+inside promote**. Code written after review would ship without a reviewer seeing it. Stop the
+promote pass before it writes anything, fix the defect, log it in the scratchpad as a review
+fix, and send the new commits back through review. An orchestrator returns to its review phase
+and then re-runs promote. Run standalone, promote stops and recommends `minerva:review`, then a
+fresh `minerva:promote`.
+
+An absorbed fix is **in scope, not scope creep**. Log it in the scratchpad as
+`- Absorbed fix: <file> — <failure scenario it closes>` so review's spec-fidelity lens and
+promote's `## Approach` rewrite both see it as part of the unit.
 
 ### 1. Clears all three conditions → a tracker issue
 
@@ -89,8 +99,9 @@ Priority denotes **how urgent this defect is**, not whether it is worth having. 
 two-level table in `github-issues.md`.
 
 **Soft cap: one filed issue per unit.** A second issue from the same unit needs a one-line
-justification recorded in the unit's decision log (or the promote report, outside an
-orchestrator): why it is independent of the first, and why neither could be absorbed. The cap
+justification: why it is independent of the first, and why neither could be absorbed. Put it
+in the second issue's body, and repeat it in the promote report. An orchestrator also logs it
+under its own decisions header. The cap
 is soft because a unit that uncovers two genuine `critical` defects must not drop one. It exists
 to make a flood visible, not to forbid it.
 

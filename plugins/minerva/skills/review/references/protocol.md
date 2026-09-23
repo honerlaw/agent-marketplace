@@ -51,7 +51,7 @@ Before generating findings, read:
 
 Audit the diff through two lenses (general code quality is owned by `code-review:code-review` — not duplicated here):
 
-- **Spec fidelity** — does the code do what `## Goal`, `## Approach`, and `## Success criteria` (as superseded by the latest replan) promised? Flag missing pieces, scope creep, and approach drift. Treat unmet success criteria as `high` severity.
+- **Spec fidelity** — does the code do what `## Goal`, `## Approach`, and `## Success criteria` (as superseded by the latest replan) promised? Flag missing pieces, scope creep, and approach drift. A change logged in the scratchpad as `- Absorbed fix:` is in scope by the deferral bar's outlet 0 (`skills/promote/references/deferral-bar.md`). Audit that fix like any other code, but never flag it as scope creep. Treat unmet success criteria as `high` severity.
 - **Knowledge compliance** — does the change violate any documented pattern, constraint, or decision in `.minerva/knowledge/`? Cite the specific knowledge file in the finding.
 
 Tag each finding with severity (`high` / `medium` / `low`) and a one-line description. Reference specific files and line numbers.
