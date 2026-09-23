@@ -6,9 +6,11 @@ chose to keep, and nothing anywhere stated a bar. On this repo that produced ~15
 and an entire skill written to excavate the result after it rotted. The old ``low`` priority
 tier was defined as "It does not matter whether we do it" and filed an issue anyway.
 
-The bar now admits an item only if a concrete **failure scenario** can be written for it. These
-tests hold the two halves of that rule which are mechanically checkable: the priority vocabulary
-really has three levels, and the documented ``gh issue create`` command really demands the field.
+The bar now admits an item only if a concrete **failure scenario** can be written for it, it
+merits ``critical``/``high`` priority, and it is too large to absorb into the unit that found it
+(a defect that can be absorbed is fixed now). These tests hold the parts of that rule which are
+mechanically checkable: the priority vocabulary really has two levels, the fix-now outlet is
+stated, and the documented ``gh issue create`` command really demands the field.
 
 Everything here is hermetic — no network, no ``gh``, no repo state. The live-tracker half of the
 enforcement deliberately does NOT live in CI: it rides the ``gh issue list`` call
@@ -55,17 +57,18 @@ def _priority_table_rows():
     pytest.fail("no priority table found in github-issues.md — it is the vocabulary of record")
 
 
-def test_the_priority_vocabulary_has_exactly_three_levels():
-    """`low` retired: once every filed item is a defect, "it does not matter whether we do it"
-    describes an item that should never have been filed."""
+def test_the_priority_vocabulary_has_exactly_two_levels():
+    """`low` retired first ("it does not matter whether we do it"), then `medium` ("we should
+    eventually do this"): the bar's value condition admits only work someone would schedule
+    soon, and `medium` was the level most unwanted follow-ups carried."""
     rows = _priority_table_rows()
-    assert len(rows) == 3, f"expected 3 priority levels, found {len(rows)}: {rows}"
+    assert len(rows) == 2, f"expected 2 priority levels, found {len(rows)}: {rows}"
 
 
-def test_the_retired_level_is_absent_from_the_vocabulary():
+def test_the_retired_levels_are_absent_from_the_vocabulary():
     """Asserted against the TABLE, not against the file's prose — see `_priority_table_rows`."""
     levels = {r.split("|")[1].strip().strip("`") for r in _priority_table_rows()}
-    assert levels == {"critical", "high", "medium"}, levels
+    assert levels == {"critical", "high"}, levels
 
 
 def test_the_issue_template_demands_a_failure_scenario():
@@ -88,11 +91,13 @@ def test_the_failure_scenario_line_is_inside_the_create_command():
     assert "**Failure scenario**:" in text[start:end]
 
 
-def test_the_bar_states_all_three_outlets():
+def test_the_bar_states_every_outlet():
     """The rule is only complete if every item has somewhere to go. Two outlets plus an implicit
-    "leave it in the scratchpad" is how the backlog grew in the first place."""
+    "leave it in the scratchpad" is how the backlog grew in the first place. The fix-now outlet
+    comes first: without it, a real but small defect outside the diff had only the tracker to go
+    to."""
     body = BAR.read_text()
-    for outlet in ("tracker issue", "reference", "Documentation"):
+    for outlet in ("fix it now", "tracker issue", "reference", "Documentation"):
         assert outlet in body, f"deferral-bar.md does not name the {outlet!r} outlet"
 
 
