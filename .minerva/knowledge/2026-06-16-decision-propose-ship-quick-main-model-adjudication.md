@@ -4,6 +4,9 @@
 **Type**: decision
 **Context**: .minerva/work/2026-06-16-add-propose-ship-quick (see git history if the worktree has been cleaned up)
 
+<!-- superseded-by: 2026-09-23-decision-one-orchestrator-picks-each-decisions-tier -->
+> **Superseded by [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]]** (2026-09-23)
+
 ## Context
 
 `minerva:propose-ship` runs the lifecycle with human gates; `minerva:propose-ship-auto` replaces those gates with 3-agent `minerva:round-table` panels. Both are heavy for a small UI fix or bug fix: human gates stall, panels cost subagent dispatches and wall-clock. Work unit 042 added `minerva:propose-ship-quick`, a third orchestrator that runs the same lifecycle (propose → work → review → promote → synthesize → ship → cleanup) but has the **main model adjudicate every strategic/tactical decision directly** — no panel — for changes small enough that its own judgment suffices.
@@ -37,3 +40,4 @@ The chosen path is a standalone clone, mirroring how `-auto` itself is a near-cl
 - [[2026-06-10-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[2026-06-06-pattern-rejected-alternative-reinvented-at-runtime]] — see also
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also
+- [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — superseded by

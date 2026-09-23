@@ -292,6 +292,25 @@ dispatch — and whole-proposal soundness, the only heavy-revision gate balanced
 can be re-measured in one command instead of an afternoon
 ([[2026-09-05-decision-balanced-rechecks-its-folds]]).
 
+That re-check entry named the obvious next step — collapse balanced and auto into one skill with a
+per-decision selector — and parked it as "cleanest end state, largest blast radius". The user then
+asked for it, for a concrete reason: balanced runs kept stopping to recommend switching to auto,
+which was the **scope-fit escape** doing exactly what it was written to do. The ladder is now **one
+autonomous orchestrator**. `propose-ship-auto` drafts each decision and routes it. The panel
+predicate (quick's old user-escalation test) convenes a panel; the strict solo predicate (auto's
+old skip test) allows deciding alone; everything else gets balanced's reviewer. Per-row floors and
+ceilings keep the always-panel divergence and replan rows, keep completion at a Verifier, and keep
+triage and promote dispositions solo. Uncertainty moves a decision **up** a tier, never sideways to
+another skill. Quick and balanced were deleted outright
+([[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]]). The run that designed it
+showed a second source of needless stops. All three of its 3/3 panels escalated to the user on
+decisions every panelist agreed with, because `revise` was the only way to ask for a corrected
+citation or a clarifying sentence. `minerva:round-table` gained an **`accept with fixes`** verdict
+that counts toward quorum and folds its fixes, failing closed when a fix might change the decision
+([[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]]). The compatibility evals,
+meanwhile, only reach the Verifier tier of the new router, so a green run says nothing about tier
+selection ([[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]]).
+
 The project is also honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[2026-05-31-decision-behavioral-evals-provisional]]).
@@ -656,6 +675,16 @@ up, and strictly worse — a ledger invites you to stop looking.** The fix is to
 dispositions rather than count them: terminal ones are skipped, `open — not filed` is
 re-offered every run, and only then does re-running become the trigger that deferral needs
 ([[2026-08-22-pattern-a-ledger-line-is-not-a-resolution]]).
+
+The backlog problem was finally attacked at the source, in two steps. First a deferral bar admitted
+an item to the tracker only if a concrete failure scenario could be written for it. That was not
+enough: one requested unit still routinely produced two or three follow-ups, each a real defect but
+most small enough to fix in the same PR or never urgent enough to be scheduled. The bar now needs
+three conditions — a failure scenario, `critical`/`high` priority (`medium` retired like `low`), and
+too large to absorb — and **fixing now is the first outlet, even outside the diff**. A fix found only
+at promote goes back through review first, so nothing absorbed late ships unreviewed; filing is
+soft-capped at one issue per unit
+([[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]]).
 
 Two later entries show the same failure wearing different clothes. One is about a value
 that looks settled and is not: `proposal.md`'s `**Closes**: #NN` was safe while only
