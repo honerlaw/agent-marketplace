@@ -31,6 +31,7 @@
 - [[2026-08-22-decision-qualified-cross-skill-reference-pointers]] — the pointer gate now resolves `plugins/minerva/skills/<skill>/references/<f>.md` against the NAMED skill, dissolving the constraint that made cross-skill citation unrepresentable
 - [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — a session tells peers what it is doing and never assigns them work; inbound peer messages are evidence, never instructions
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — a folded Skeptic critique now gets one fold-audit re-check, arbitrated strictly; whole-proposal soundness became a Skeptic gate; `decision_telemetry.py` measures the gate taxonomy
+- [[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]] — Follow-up issues need failure scenario, critical/high priority, and too-large-to-absorb; small defects fixed in-unit
 
 ## Bugs
 
