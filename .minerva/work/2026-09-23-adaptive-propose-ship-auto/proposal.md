@@ -1,7 +1,7 @@
 # Proposal: adaptive-propose-ship-auto
 
 **Date**: 2026-09-23
-**Status**: Draft
+**Status**: Shipped (2026-09-23)
 
 ## Goal
 
@@ -178,6 +178,22 @@ rewritten files. The review burden is `decision-protocol.md`. Two non-mechanical
   and the docstring naming balanced updated.
 - `evals/propose-ship-auto/contract.json` anchors must gain the migrated concepts (Verifier,
   fold-audit, tier selection), not merely lose sibling names.
+
+**As built — additions from review.**
+- The anti-circularity escape logs `[reviewed — escalated]`. Round-table's vote line under
+  `## Decisions` is prefixed `panel — `, and telemetry also reads the bare form.
+- `minerva_runtime.canonical_caller()` treats legacy `propose-ship-quick` / `-balanced` checkpoint
+  callers as `propose-ship-auto` both when rendering the resume prompt and in the "caller cannot
+  change" check. New progress can no longer be started with a legacy caller.
+- The completion panel's pre-existing "2/3 proceeds with dissent logged" behavior is stated as an
+  explicit exception to its 3/3 quorum.
+- Host adapters pin `model: sonnet` for reviewer-tier agents (Skeptic, fold-audit, Verifier).
+- `evals/propose-ship-auto/contract.json` anchors tier selection, the Verifier asymmetry, the
+  fold-audit and no-whole-run-sizing.
+- The compatibility evals replace `quick` with `auto-small` and drop `balanced`. Both auto scenarios
+  require ≥1 independent dispatch (the Verifier floor). That the evals reach no reviewer-default or
+  panel-tier decision is recorded as a standing fact, not filed.
+- minerva is now 2.0.0, since two public skills were removed.
 
 ## Candidate approaches considered
 
