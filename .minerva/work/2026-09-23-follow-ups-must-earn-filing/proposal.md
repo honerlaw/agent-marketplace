@@ -1,7 +1,7 @@
 # Proposal: follow-ups-must-earn-filing
 
 **Date**: 2026-09-23
-**Status**: Draft
+**Status**: Shipped (2026-09-23)
 
 ## Goal
 
@@ -36,29 +36,32 @@ or *is it too big to just do now?* Two rules feed the flow:
 Single-sourced, per the bar's own rule: the conditions live only in
 `plugins/minerva/skills/promote/references/deferral-bar.md`; consumers point at it.
 
-- `deferral-bar.md` — restate the bar as three conditions; add a **Fix now** outlet ahead of
-  the tracker (absorbable defects, including outside the diff, with a bound on what "absorbable"
-  means); define the per-unit soft cap and its justification line.
-- `github-issues.md` — two-level priority table (`critical`, `high`); drop the `medium` colour
-  and the "default to medium" sentence; an item with no urgency signal fails condition 2.
-- `review/references/protocol.md` — triage: a finding with a failure scenario is FIX unless it
-  fails condition 3; drop the "belongs to this diff" restriction.
-- `promote/references/modes.md`, the three `propose-ship-*` `phases.md`, and
-  `using-minerva/references/guide.md` — update their summaries (priority lists, outlet lists) to
-  match; keep them as pointers.
-- `tests/test_deferral_bar.py` — vocabulary is exactly `{critical, high}`; the bar names the
-  fix-now outlet.
+- `deferral-bar.md` restates the bar as three conditions. It adds **outlet 0, fix it now**, tried
+  first, with a bound on what "absorbable" means. An absorbable defect found only at promote is
+  not fixed inside promote: promote stops and the fix goes back through review first. Absorbed
+  fixes are logged `- Absorbed fix:` so review does not flag them as scope creep. It also defines
+  the one-per-unit soft cap (justification goes in the second issue's body and the promote
+  report) and names seed-new-proposal as the one other disposition.
+- `github-issues.md` has a two-level priority table (`critical`, `high`). `medium` and the
+  "default to medium" rule are gone: no urgency signal means the item fails condition 2.
+- Review triage (`review/references/protocol.md`): a finding with a failure scenario is FIX, even
+  outside the diff, unless it is too large to absorb.
+- `promote/references/modes.md`, `promote/SKILL.md` (including its description), the three
+  `propose-ship-*` `phases.md`, `using-minerva/references/guide.md`, and a
+  `status/references/tables.md` sample are updated to match.
+- `tests/test_deferral_bar.py`: the vocabulary is exactly `{critical, high}`, and the bar names
+  the fix-now outlet.
 
 Rejected: a hard numeric cap (a real critical defect would be dropped); keeping `medium` but
 forbidding its use (a vocabulary level that must never be used is a trap).
 
 ## Success criteria
 
-- [ ] `deferral-bar.md` states the three conditions, the fix-now outlet, and the one-per-unit soft cap.
-- [ ] The priority table in `github-issues.md` has exactly `critical` and `high`; no skill prose uses `priority: medium`.
-- [ ] Review triage no longer restricts FIX to the diff; absorbable defects outside it are FIX.
-- [ ] Every consumer still points at `deferral-bar.md`; the bar's defining sentence appears only there.
-- [ ] `pytest` passes.
+- [x] `deferral-bar.md` states the three conditions, the fix-now outlet, and the one-per-unit soft cap.
+- [x] The priority table in `github-issues.md` has exactly `critical` and `high`; no skill prose uses `priority: medium`.
+- [x] Review triage no longer restricts FIX to the diff; absorbable defects outside it are FIX.
+- [x] Every consumer still points at `deferral-bar.md`; the bar's defining sentence appears only there.
+- [x] `pytest` passes.
 
 ## Open Questions
 
