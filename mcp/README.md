@@ -7,6 +7,7 @@ deployed as a container.
 | Server | What it gives an LLM |
 |---|---|
 | [`openai`](openai/) | Full access to the OpenAI REST API via five generic, spec-driven tools |
+| [`google-search-console`](google-search-console/) | Full access to the Google Search Console API via ten typed tools, one per operation (optional read-only mode) |
 
 ## Contract for every server
 
@@ -61,5 +62,8 @@ anyone can pull it without signing in.
 
 1. Copy `openai/pyproject.toml`, `Makefile` and `Dockerfile` into `mcp/<name>/`
    and rename the package.
+   Pick the tool shape by API size. A large or fast-moving API gets generic, spec-driven
+   tools like `openai/`. A small, stable API gets one typed tool per operation like
+   `google-search-console/`.
 2. Write the server and its tests until `make check` passes.
 3. Add a row to the table above.
