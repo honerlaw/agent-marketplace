@@ -31,3 +31,4 @@ examples online still target 1.x.
 
 ## Related
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — the server these facts come from
+- [[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]] — see also

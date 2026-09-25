@@ -755,7 +755,7 @@ distinguishes the cases that were caught is not care but method — each was fou
 fresh-context reader **deleting the clause and watching**, never by re-reading the anchor
 list, which looked correct every time.
 
-## MCP servers: generic tools and the transport-shaped security boundary
+## MCP servers: tool shape by API size, and the security boundary set by transport and path
 
 The repo's first product outside the minerva plugin is a home for custom MCP servers under
 `mcp/`, starting with one that gives an LLM the whole OpenAI REST API. The founding choice
@@ -763,6 +763,11 @@ is to wrap a large, fast-moving API with a **few generic, spec-driven tools** ra
 one tool per endpoint. Hundreds of per-operation tools exceed client tool limits and flood
 context every turn, and a curated subset goes stale. Discovery reads the vendor's OpenAPI
 spec lazily instead ([[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]]).
+The second server, for Google Search Console, set the limit of that rule. The API has ten
+stable operations, so each one gets a typed tool. The server builds every URL itself, and
+the model never has to percent-encode a site URL into a path. Tool shape follows the API's
+size and stability
+([[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]]).
 That spec has its own traps. The obvious `manual_spec` branch is more than a year stale,
 and self-referential schemas expand to megabytes, so discovery defaults to one level of
 `$ref` expansion ([[2026-09-25-reference-openai-openapi-spec-source-and-size]]). The SDK
@@ -775,7 +780,19 @@ path is harmless over stdio, where the server is the user. The same argument ser
 HTTP is arbitrary file read and write for any caller. Every design panel accepted it with a
 documented caveat. Only a review that tried to *use* the feature hostilely found the
 exploit. Controls belong per transport, and a documented limitation is not a control
-([[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]]). The
+([[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]]).
+Server-built URLs have their own gap. `quote(value, safe="")` keeps `/` from splitting a
+value, but `.` and `..` pass through unchanged, and HTTP clients resolve them. As a result,
+"delete sitemap `..`" became "delete the whole property". Self-review, a completion panel
+and 100% coverage all missed it; an independent reviewer found it. Whole-value dot
+segments have to be refused, not encoded
+([[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]]). Credential
+configuration is a surface too. google-auth's generic loaders accept `external_account`
+configs that fetch URLs or run programs, so only the expected credential types are
+accepted ([[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]]).
+google-auth is only partly annotated under `mypy --strict`, and the mcp 2.x client uses
+snake_case accessors
+([[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]]). The
 servers' CI follows the repo's rule that collection is the enumeration: it discovers
 servers by glob so no server's tests can go dark
 ([[2026-08-11-decision-ci-runs-the-whole-suite]]).

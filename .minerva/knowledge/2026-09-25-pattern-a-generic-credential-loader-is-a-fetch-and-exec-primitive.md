@@ -32,3 +32,4 @@ controls directly.
 ## Related
 - [[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]] — same shape: a configuration or tool argument that turns into file or network access
 - [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — accepting only the expected types is the allowlist direction
+- [[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]] — see also

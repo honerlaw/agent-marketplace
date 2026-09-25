@@ -60,3 +60,4 @@ because a checklist is a list of rules.
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also: the orchestrator rung that spends exactly one independent reviewer at the high-signal gates; this is evidence for which gates those are
 - [[2026-08-28-pattern-a-registry-with-the-wrong-arity-manufactures-agreement]] — see also
 - [[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]] — see also
+- [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — see also
