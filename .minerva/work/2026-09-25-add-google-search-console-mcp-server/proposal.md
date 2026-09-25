@@ -1,7 +1,7 @@
 # Proposal: add-google-search-console-mcp-server
 
 **Date**: 2026-09-25
-**Status**: Draft
+**Status**: Shipped (2026-09-25)
 
 ## Goal
 Add `mcp/google-search-console/`: an MCP server that gives an LLM full access to the Google
@@ -16,7 +16,7 @@ The user asked for "a Google Search Console API MCP server similar to the OpenAI
 `mcp/README.md` defines a per-server contract and CI already discovers servers by glob, so the
 second server should reuse that contract. The Search Console API is small (11 operations in the
 v1 discovery document, revision 20260923; one of them, the Mobile-Friendly Test, belongs to a tool
-Google retired in Dec 2023, to be confirmed during implementation) and stable (the `webmasters/v3` resources plus the 2022 URL Inspection
+Google retired on 1 December 2023, together with its API) and stable (the `webmasters/v3` resources plus the 2022 URL Inspection
 addition).
 
 ## Approach
@@ -27,8 +27,11 @@ through `httpx2`, with credentials from `google-auth`:
 - **Sitemaps:** `gsc_list_sitemaps(site_url, sitemap_index?)`, `gsc_get_sitemap(site_url, feedpath)`,
   `gsc_submit_sitemap(site_url, feedpath)`*, `gsc_delete_sitemap(site_url, feedpath)`*
 - **Search Analytics:** `gsc_query_search_analytics(site_url, query: SearchAnalyticsQuery)` — a pydantic
-  model mirroring `SearchAnalyticsQueryRequest` (dates, dimensions, type, dimensionFilterGroups,
-  aggregationType, rowLimit, startRow, dataState), serialized to camelCase
+  model (`models.py`) mirroring `SearchAnalyticsQueryRequest` (dates, dimensions, type,
+  dimensionFilterGroups, aggregationType, rowLimit, startRow, dataState). The schema uses the API's
+  camelCase names and also accepts snake_case. The deprecated `searchType` is accepted as an alias
+  for `type`, and unknown fields are rejected (`extra="forbid"`), so a misspelled option fails
+  instead of being silently dropped
 - **URL Inspection:** `gsc_inspect_url(site_url, inspection_url, language_code?)`
 
 (* mutating.)
@@ -44,23 +47,36 @@ percent-encode `siteUrl` itself, and openai's `check_path` rejects an encoded `h
 would need a new, looser path validator. A generic escape hatch on top of typed tools was rejected: it
 brings back a caller-controlled path for endpoints that do not exist yet. **Staleness mitigation:** the
 README records the discovery revision the tools were built against; if Google's discovery document
-grows materially, revisit the generic shape. Promote records this size/stability split as a knowledge
-entry so future `mcp/<name>/` servers know which shape applies.
+grows materially, revisit the generic shape. The size/stability rule is recorded in
+[[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] and as one line in
+`mcp/README.md`'s "Adding a server".
 
 The server builds every URL itself, and each tool carries its own full path because the API mixes
 two prefixes: sites, sitemaps and Search Analytics live under `webmasters/v3/sites/{siteUrl}/…`, while
 URL Inspection is `POST v1/urlInspection/index:inspect` with `siteUrl` and `inspectionUrl` as JSON
-body fields (no path parameters). Path parameters (`site_url`, `feedpath`) are percent-encoded as
-single path segments (`quote(value, safe="")`), so callers never supply a path and there is no
-path-validation boundary to defend. Non-2xx responses raise `ToolError` with the HTTP status and
-Google's `error.message`; 2xx responses return the parsed JSON (empty bodies return `{"status": <code>}`).
+body fields (no path parameters). Callers never supply a path. Each path parameter (`site_url`,
+`feedpath`) becomes exactly one segment in `api.segment`: it is percent-encoded
+(`quote(value, safe="")`), and `""`, `.` and `..` are refused. Encoding alone was not enough.
+Review found that httpx2 resolves dot segments, so `gsc_delete_sitemap(feedpath="..")` was sending
+DELETE on the site itself
+([[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]]). Responses:
+- Non-2xx raises `ToolError` with the HTTP status and Google's `error.message`, falling back to the body.
+- 2xx returns the parsed JSON object. An empty body returns `{"status": <code>}`, and a non-JSON
+  body returns `{"status", "text"}`.
+- Transport errors and timeouts raise `ToolError` naming the exception.
 
 **Credentials** are resolved lazily on the first tool call (so the container starts and answers
 `/healthz` without Google credentials, which keeps CI's generic docker smoke test unchanged):
-`GSC_CREDENTIALS_JSON` (inline service-account or authorized-user JSON, via
-`google.auth.load_credentials_from_dict`) if set, otherwise Application Default Credentials
-(`GOOGLE_APPLICATION_CREDENTIALS`, `gcloud auth application-default login`, GCP metadata). Token
-refresh runs in a worker thread via `google-auth[requests]`. Scope is `webmasters`;
+`GSC_CREDENTIALS_JSON` if set, otherwise Application Default Credentials
+(`GOOGLE_APPLICATION_CREDENTIALS`, `gcloud auth application-default login`, GCP metadata). Inline
+JSON must be `service_account` or `authorized_user` and goes through that type's own constructor.
+The draft planned `google.auth.load_credentials_from_dict`, but that loader also accepts
+`external_account` configs, which can make the server fetch URLs or run executables, so every
+other type is refused
+([[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]]). Token refresh
+runs in a worker thread under an `anyio.Lock`, via `google-auth[requests]`. google-auth's
+unannotated functions get commented per-call `type: ignore[no-untyped-call]`, so the copied
+`[tool.mypy]` block stays unchanged. Scope is `webmasters`;
 `GSC_READ_ONLY=true` requests `webmasters.readonly` instead and does not register the four mutating
 tools. This keeps the credential surface minimal: an operator who only needs reporting gets a server
 that cannot change properties or sitemaps. The guarantee is the unregistered tools; the narrower
@@ -68,12 +84,13 @@ OAuth scope is defence in depth whose effect depends on the credential type (the
 
 **Shared plumbing is copied, not shared** (per `mcp/README.md`'s self-contained contract): config
 loading (`MCP_TRANSPORT`, `MCP_HOST/PORT`, `MCP_AUTH_TOKEN`, `MCP_ALLOW_UNAUTHENTICATED`,
-`MCP_MAX_REQUEST_BYTES`, `MCP_STATELESS`, `GSC_TIMEOUT_SECONDS`), `BearerAuth` middleware,
+`MCP_MAX_REQUEST_BYTES`, which defaults to the SDK's 4 MiB because there are no uploads, `MCP_STATELESS`,
+`GSC_TIMEOUT_SECONDS`), `BearerAuth` middleware,
 `/healthz`, `main()`, Makefile, Dockerfile, `.env.example`, `.dockerignore`, docker-compose, and the
 `pyproject.toml` quality block verbatim.
 
 Files: `mcp/google-search-console/{pyproject.toml,Makefile,Dockerfile,docker-compose.yml,.env.example,.dockerignore,README.md}`,
-`src/google_search_console_mcp/{__init__,__main__,main,config,credentials,api,server,http_app}.py`,
+`src/google_search_console_mcp/{__init__,__main__,main,config,credentials,api,models,server,http_app}.py`,
 `tests/*`, plus a row in both server tables: `mcp/README.md` and the root `README.md`'s "MCP servers" section.
 
 ## Success criteria
@@ -98,5 +115,5 @@ Files: `mcp/google-search-console/{pyproject.toml,Makefile,Dockerfile,docker-com
    depth) and limitations; `mcp/README.md` and the root `README.md` both list the new server.
 
 ## Open Questions
-- None blocking. The Mobile-Friendly Test operation is excluded as retired; if the endpoint still
-  answers, adding it later is a one-tool change.
+- None. The Mobile-Friendly Test was confirmed retired (tool, report and API shut down on 1 December
+  2023) and is excluded.
