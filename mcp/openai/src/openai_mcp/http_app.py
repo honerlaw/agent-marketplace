@@ -21,19 +21,20 @@ class BearerAuth:
     def __init__(self, app: ASGIApp, token: str) -> None:
         """Wrap `app`, requiring `token` on every non-health-check request."""
         self._app = app
-        self._expected = f"Bearer {token}".encode()
+        self._expected = token.encode()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Pass authorized requests through; answer the rest with 401."""
-        if scope["type"] != "http" or scope["path"] in OPEN_PATHS or self._authorized(scope):
+        if scope["type"] == "lifespan" or scope["path"] in OPEN_PATHS or self._authorized(scope):
             await self._app(scope, receive, send)
             return
         response = JSONResponse({"error": "unauthorized"}, status_code=401)
         await response(scope, receive, send)
 
     def _authorized(self, scope: Scope) -> bool:
-        supplied = dict(scope["headers"]).get(b"authorization", b"")
-        return hmac.compare_digest(supplied, self._expected)
+        header = dict(scope["headers"]).get(b"authorization", b"")
+        scheme, _, token = header.partition(b" ")
+        return scheme.lower() == b"bearer" and hmac.compare_digest(token, self._expected)
 
 
 def build_http_app(server: MCPServer, settings: Settings) -> ASGIApp:

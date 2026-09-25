@@ -8,7 +8,7 @@ together reach every endpoint, so it doesn't go stale when OpenAI adds endpoints
 |---|---|
 | `openai_request(method, path, query?, body?, headers?)` | Any JSON call, e.g. `POST /responses`, `GET /models`, `DELETE /files/{id}` |
 | `openai_multipart_request(path, files, fields?)` | File uploads: `/files`, `/uploads/{id}/parts`, `/audio/transcriptions`, `/images/edits`, … |
-| `openai_download(path, save_to?)` | Binary content, e.g. `/files/{id}/content`, returned as base64 or written to a file |
+| `openai_download(path, save_to?)` | Binary content, e.g. `/files/{id}/content`, returned as base64 or (stdio only) written to a file |
 | `openai_list_endpoints(text_filter?)` | Lists operations from OpenAI's published OpenAPI spec |
 | `openai_describe_endpoint(method, path, depth?)` | Parameters and schemas of one operation |
 
@@ -74,7 +74,7 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... OPENAI_API_KEY=... .venv/
 | `OPENAI_TIMEOUT_SECONDS` | `600` | Per-request timeout |
 | `OPENAI_MCP_MAX_BINARY_BYTES` | `20971520` (20 MiB) | Largest binary returned inline as base64 |
 | `OPENAI_OPENAPI_PATH` | unset | Local spec file for discovery (offline / restricted egress) |
-| `OPENAI_OPENAPI_URL` | openai-openapi `manual_spec` on GitHub | Spec URL used when no path is set |
+| `OPENAI_OPENAPI_URL` | `openai/openai-openapi` `main` branch on GitHub | Spec URL used when no path is set |
 | `MCP_TRANSPORT` | `stdio` (`http` in Docker) | `stdio` or `http` |
 | `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` (`0.0.0.0` in Docker) | HTTP bind address |
 | `MCP_AUTH_TOKEN` | unset | Bearer token; **required** in http mode |
@@ -90,6 +90,10 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... OPENAI_API_KEY=... .venv/
 - **HTTP mode is closed by default.** The server won't start without
   `MCP_AUTH_TOKEN` unless you set `MCP_ALLOW_UNAUTHENTICATED=true`. Tokens are
   compared in constant time.
+- **No server filesystem access over HTTP.** `local_path` uploads and `save_to`
+  downloads work only over stdio, where the client already runs as you on your
+  machine. Over HTTP they are refused, so a remote caller can't read the
+  server's files (such as its environment) or write to them.
 - **Accepted risk: anything the key can do, the client can do.** This includes
   cost-bearing operations (fine-tunes, batches, image and audio generation) and
   admin endpoints if you use an admin key. There's no server-side rate or spend
@@ -100,13 +104,13 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... OPENAI_API_KEY=... .venv/
 
 - **Streaming is buffered.** With `"stream": true` the raw server-sent events are
   returned once the stream finishes, not incrementally.
-- **Local paths are server-local.** `local_path` uploads and `save_to` downloads
-  use the server's filesystem. Remote HTTP/Docker clients send uploads as base64.
-  They can only retrieve downloads inline, up to `OPENAI_MCP_MAX_BINARY_BYTES`,
-  unless you mount a volume or raise the limit.
-- **Discovery follows the published spec.** The spec tracks a branch of
-  `openai/openai-openapi` and may lag new endpoints. `openai_request` works for
-  any endpoint whether or not it's listed.
+- **Local paths are stdio-only.** Over HTTP/Docker, uploads go as base64 and
+  downloads come back inline, up to `OPENAI_MCP_MAX_BINARY_BYTES`. Raise that
+  limit to fetch larger files.
+- **Discovery follows the published spec.** The spec tracks the `main` branch of
+  `openai/openai-openapi` and may briefly lag new endpoints. `openai_request`
+  works for any endpoint whether or not it's listed.
+- **Array parameters** are passed as lists, e.g. `query={"include[]": ["a", "b"]}`.
 
 ## Development
 

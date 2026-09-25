@@ -11,9 +11,10 @@ from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel
 
 from openai_mcp.config import Settings
-from openai_mcp.safety import check_headers, check_path
+from openai_mcp.safety import check_headers, check_local_file, check_path
 
 JsonObject = dict[str, object]
+FormValue = str | int | float | bool | list[str]
 
 FORWARDED_HEADERS = frozenset(
     {
@@ -52,7 +53,7 @@ class JsonRequest:
 
     method: str
     path: str
-    query: dict[str, str] | None = None
+    query: dict[str, FormValue] | None = None
     body: JsonObject | None = None
     headers: dict[str, str] | None = None
 
@@ -65,6 +66,7 @@ class OpenAIApi:
     ) -> None:
         """Create the client; `transport` is injectable for tests."""
         self._max_binary_bytes = settings.max_binary_bytes
+        self._local_files = settings.transport == "stdio"
         self._client = httpx2.AsyncClient(
             base_url=settings.base_url,
             headers=_auth_headers(settings),
@@ -75,7 +77,7 @@ class OpenAIApi:
     async def send_json(self, request: JsonRequest) -> JsonObject:
         """Send a JSON request and describe the response."""
         response = await self._client.request(
-            request.method.upper(),
+            request.method,
             check_path(request.path),
             params=request.query,
             json=request.body,
@@ -84,15 +86,18 @@ class OpenAIApi:
         return describe_response(response, self._max_binary_bytes)
 
     async def send_multipart(
-        self, path: str, fields: dict[str, str], files: list[FileInput]
+        self, path: str, fields: dict[str, FormValue], files: list[FileInput]
     ) -> JsonObject:
         """POST a multipart/form-data request and describe the response."""
+        for item in files:
+            check_local_file(item.local_path, allowed=self._local_files)
         parts = [(item.field, (item.filename, item.read(), item.content_type)) for item in files]
         response = await self._client.post(check_path(path), data=fields, files=parts)
         return describe_response(response, self._max_binary_bytes)
 
     async def download(self, path: str, save_to: str | None) -> JsonObject:
         """GET binary content, returning it inline or writing it to a server-local file."""
+        check_local_file(save_to, allowed=self._local_files)
         if save_to is None:
             response = await self._client.get(check_path(path))
             return describe_response(response, self._max_binary_bytes)
@@ -144,7 +149,8 @@ def _encode_capped(content: bytes, max_binary_bytes: int) -> str:
     if len(content) > max_binary_bytes:
         message = (
             f"binary response is {len(content)} bytes, over the {max_binary_bytes}-byte limit; "
-            "use openai_download with save_to, or raise OPENAI_MCP_MAX_BINARY_BYTES"
+            "for GET endpoints use openai_download with save_to (stdio only); "
+            "otherwise raise OPENAI_MCP_MAX_BINARY_BYTES"
         )
         raise ToolError(message)
     return base64.b64encode(content).decode("ascii")

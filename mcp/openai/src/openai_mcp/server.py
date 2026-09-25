@@ -7,7 +7,7 @@ from mcp.server.mcpserver import MCPServer
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from openai_mcp.api import FileInput, JsonObject, JsonRequest, OpenAIApi
+from openai_mcp.api import FileInput, FormValue, JsonObject, JsonRequest, OpenAIApi
 from openai_mcp.config import Settings
 from openai_mcp.spec import SpecCatalog
 
@@ -44,7 +44,7 @@ def _add_api_tools(server: MCPServer, api: OpenAIApi) -> None:
     async def openai_request(
         method: HttpMethod,
         path: str,
-        query: dict[str, str] | None = None,
+        query: dict[str, FormValue] | None = None,
         body: JsonObject | None = None,
         headers: dict[str, str] | None = None,
     ) -> JsonObject:
@@ -59,12 +59,12 @@ def _add_api_tools(server: MCPServer, api: OpenAIApi) -> None:
 
     @server.tool()
     async def openai_multipart_request(
-        path: str, files: list[FileInput], fields: dict[str, str] | None = None
+        path: str, files: list[FileInput], fields: dict[str, FormValue] | None = None
     ) -> JsonObject:
         """POST a multipart/form-data upload, e.g. "/files" or "/audio/transcriptions".
 
         Each file gives either `content_base64` or `local_path`. A local path is read
-        on the server's filesystem, so remote clients should send base64.
+        on the server's filesystem and is only allowed over stdio; over HTTP send base64.
         `fields` holds the other form fields, e.g. {"purpose": "batch"}.
         """
         return await api.send_multipart(path, fields or {}, files)
@@ -74,7 +74,7 @@ def _add_api_tools(server: MCPServer, api: OpenAIApi) -> None:
         """GET binary content, e.g. "/files/{file_id}/content".
 
         Without `save_to` the content is returned as base64 (up to the size limit).
-        With `save_to` it is streamed to that path on the server's filesystem.
+        With `save_to` (stdio only) it is streamed to that path on the server's filesystem.
         """
         return await api.download(path, save_to)
 

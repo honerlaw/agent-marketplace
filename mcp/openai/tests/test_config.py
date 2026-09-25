@@ -62,3 +62,19 @@ def test_http_without_token_needs_explicit_opt_out() -> None:
     )
     assert settings.allow_unauthenticated
     assert settings.auth_token is None
+
+
+def test_blank_optional_values_fall_back_to_defaults() -> None:
+    settings = load_settings(
+        {"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": "", "MCP_PORT": "", "MCP_TRANSPORT": ""}
+    )
+    assert (settings.base_url, settings.port, settings.transport) == (
+        DEFAULT_BASE_URL,
+        8000,
+        "stdio",
+    )
+
+
+def test_non_numeric_values_are_a_config_error() -> None:
+    with pytest.raises(ConfigError, match="MCP_PORT must be a number"):
+        load_settings({"OPENAI_API_KEY": "sk-test", "MCP_PORT": "eighty"})

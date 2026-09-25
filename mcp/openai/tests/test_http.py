@@ -80,6 +80,12 @@ async def test_authenticated_multipart_call_over_http(guarded_url: str, fake: Fa
 
 
 @pytest.mark.anyio
+def test_bearer_scheme_is_case_insensitive(guarded_url: str) -> None:
+    response = httpx2.get(f"{guarded_url}/mcp", headers={"Authorization": f"bearer {TOKEN}"})
+    assert response.status_code != 401
+
+
+@pytest.mark.anyio
 async def test_unauthenticated_mode_serves_without_a_token(open_url: str) -> None:
     async with Client(f"{open_url}/mcp") as client:
         listed = await client.list_tools()

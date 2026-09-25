@@ -1,7 +1,8 @@
 """Guards that keep the API key pointed at the configured OpenAI base URL.
 
-Every tool that takes a `path` passes it through `check_path`, and every
-caller-supplied header set through `check_headers`. Keep this module small:
+Every tool that takes a `path` passes it through `check_path`, every
+caller-supplied header set through `check_headers`, and every server-local file
+path through `check_local_file`. Keep this module small:
 it is the security boundary of the server.
 """
 
@@ -25,6 +26,17 @@ def check_path(path: str) -> str:
         raise ToolError(message)
     if ".." in decoded.split("/"):
         message = f"path must not contain '..' segments, got {path!r}"
+        raise ToolError(message)
+    return path
+
+
+def check_local_file(path: str | None, *, allowed: bool) -> str | None:
+    """Return `path` unless server-local file access is disabled (http mode)."""
+    if path is not None and not allowed:
+        message = (
+            "server-local file paths are disabled over HTTP; "
+            "send content_base64 instead of local_path, and omit save_to"
+        )
         raise ToolError(message)
     return path
 

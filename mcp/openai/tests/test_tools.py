@@ -2,6 +2,7 @@
 
 import base64
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
 import httpx2
@@ -226,3 +227,30 @@ async def test_download_error_is_described_not_saved(
     assert result.structured_content is not None
     assert result.structured_content["status"] == 404
     assert not target.exists()
+
+
+async def test_query_accepts_numbers_booleans_and_lists(
+    settings: Settings, fake: FakeOpenAI
+) -> None:
+    query = {"limit": 10, "stream": False, "include[]": ["a", "b"]}
+    await call(settings, fake, "openai_request", {"method": "GET", "path": "/x", "query": query})
+    assert fake.last.url.query == b"limit=10&stream=false&include%5B%5D=a&include%5B%5D=b"
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [
+        ("openai_download", {"path": "/files/f/content", "save_to": "/tmp/out"}),  # noqa: S108
+        (
+            "openai_multipart_request",
+            {"path": "/files", "files": [{"filename": "e", "local_path": "/proc/self/environ"}]},
+        ),
+    ],
+)
+async def test_http_mode_refuses_server_local_files(
+    settings: Settings, fake: FakeOpenAI, tool: str, arguments: dict[str, object]
+) -> None:
+    http_settings = replace(settings, transport="http")
+    result = await call(http_settings, fake, tool, arguments)
+    assert "disabled over HTTP" in error_text(result)
+    assert fake.requests == []

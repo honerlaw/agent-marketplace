@@ -24,6 +24,9 @@
     - fix (skeptic/arbiter): real stdio subprocess smoke test criterion added
     - fix (proponent/skeptic/arbiter): response-header allowlist named; $ref depth default 6
     - fix (main model, implementation detail): `MCP_MAX_REQUEST_BYTES` (64 MiB) since the SDK caps HTTP bodies at 4 MiB
+- [panel — 3/3 accept, 3 with fixes] completion verification: all 13 criteria independently reproduced (make check, docker 200/401, root 1018 passed) (tier: panel — diff introduces a public interface, the MCP tool surface)
+    - fix (all): proposal Approach says $ref default depth 6; shipped default 1 with optional depth 1..6 — reconcile at promote
+    - fix (skeptic/arbiter): name httpx2 (not httpx) as the HTTP dependency in proposal — reconcile at promote
 
 ## Work notes
 - Used `httpx2` (pydantic's httpx fork, already a hard dependency of mcp 2.x) instead of `httpx`, avoiding a second HTTP stack. Routine choice; proposal says httpx — fix wording at promote.
