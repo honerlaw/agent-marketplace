@@ -1,7 +1,7 @@
 # Proposal: add-openai-mcp-server
 
 **Date**: 2026-09-25
-**Status**: Draft
+**Status**: Shipped (2026-09-25)
 
 ## Goal
 
@@ -28,8 +28,8 @@ server here be forced toward the simplest, most readable code possible via tooli
 **Layout.** `mcp/README.md` indexes servers and states the per-server contract: each server is
 its own directory with `pyproject.toml`, `Dockerfile`, `README.md`, `tests/`, and the shared strict
 quality configuration. `mcp/openai/` is a Python package (`openai_mcp`) built on the official MCP
-Python SDK (`mcp>=2.2,<3`, `MCPServer`; verified on PyPI — 2.2.0 is current) and `httpx`, with a
-`hatchling` build backend. This is the repo's **first `pyproject.toml` and first Dockerfile**, so
+Python SDK (`mcp>=2.2,<3`, `MCPServer`) and `httpx2` (pydantic's httpx successor, already a hard
+dependency of the SDK, so no second HTTP stack), with a `hatchling` build backend. This is the repo's **first `pyproject.toml` and first Dockerfile**, so
 `mcp/README.md` names that as a new convention rather than implying continuity. The root
 `README.md` gains a short "MCP servers" section pointing at `mcp/`. Python matches the rest of the
 repo's tooling. Security-critical logic (path/header validation, bearer-auth middleware) lives in
@@ -39,39 +39,41 @@ its own small modules so review can target it.
 expose five tools that together reach every endpoint:
 
 1. `openai_request(method, path, query?, body?, headers?)` — any JSON request against the
-   configured base URL (`/v1`). Returns status, an allowlist of response headers (`content-type`,
+   configured base URL (`/v1`). Query values may be strings, numbers, booleans or lists (repeated
+   keys such as `include[]`). Returns status, an allowlist of response headers (`content-type`,
    `x-request-id`, `openai-processing-ms`, `openai-organization`, `openai-version`,
    `x-ratelimit-*`), and the JSON body
    (or text; binary responses base64-encoded up to `OPENAI_MCP_MAX_BINARY_BYTES`, default
-   20 MiB, beyond which the tool returns an error pointing at `openai_download`). `stream: true`
+   20 MiB, beyond which the tool returns an error naming the options). `stream: true`
    is supported but **buffered**: the raw SSE text is returned once the stream completes (a stated
    v1 limitation).
 2. `openai_multipart_request(path, fields, files)` — multipart uploads (`/files`,
    `/uploads/{id}/parts`, `/audio/transcriptions`, `/audio/translations`, `/images/edits`, …).
-   Each file is base64 content, or a local file path. **Local paths resolve on the server's
-   filesystem**, so they are useful only when client and server share a filesystem (stdio, or a
-   mounted volume); remote HTTP/Docker clients send base64.
+   Each file is base64 content, or (**stdio only**) a local file path. Form fields accept the same
+   value types as `query`.
 3. `openai_list_endpoints(filter?)` — lists `METHOD /path — summary` from OpenAI's published
    OpenAPI spec, filterable by substring.
-4. `openai_describe_endpoint(method, path)` — the operation's parameters and request/response
-   schemas from the spec, with `$ref`s resolved to a bounded depth (default 6; deeper refs are left as `$ref` markers).
+4. `openai_describe_endpoint(method, path, depth=1)` — the operation's parameters, request body
+   and success (2xx) responses from the spec, with `$ref`s inlined `depth` levels (clamped to 1–6;
+   deeper refs stay as `$ref` markers). The default is 1 because deeper expansion explodes: POST
+   /responses is ~16 KB at depth 1 and over 1 MB at depth 6.
 5. `openai_download(path, save_to?)` — fetches binary content (e.g. `/files/{id}/content`,
-   generated audio) and writes it to a server-local path, or returns base64 under the size cap.
-   **`save_to` writes on the server's filesystem**, so in HTTP/Docker mode without a mounted volume
-   a binary larger than the cap is not retrievable by a remote client (a stated v1 limitation,
-   mirroring the upload-side one; the operator raises the cap or mounts a volume).
+   generated audio) and returns base64 under the size cap, or (**stdio only**) streams it to
+   `save_to` on the server's filesystem.
 
 The OpenAPI spec is loaded lazily on first discovery call from `OPENAI_OPENAPI_PATH` (a local
 file, for offline / egress-restricted deployments) or else `OPENAI_OPENAPI_URL` (default
-`https://raw.githubusercontent.com/openai/openai-openapi/manual_spec/openapi.yaml`), and cached in
-memory. The default URL is an **accepted egress dependency on GitHub** and tracks a mutable
+`https://raw.githubusercontent.com/openai/openai-openapi/main/openapi.yaml`, 352 operations; the
+`manual_spec` branch is 17 months stale), and cached in memory. The default URL is an **accepted egress dependency on GitHub** and tracks a mutable
 branch; spec unavailability only degrades the two discovery tools with a clear error — requests
 still work.
 
 **Safety of the key.** `path` must be a relative API path (starts with `/`, no scheme/host, no
 `..` segments, no `//`); requests only ever go to `OPENAI_BASE_URL`, so a prompt-injected model
 cannot send the `Authorization` header elsewhere. Caller-supplied headers may not override
-`Authorization`, `Host`, `OpenAI-Organization` or `OpenAI-Project`. **Accepted risk:** by design any
+`Authorization`, `Host`, `OpenAI-Organization` or `OpenAI-Project`. **Server-local file paths
+(`local_path`, `save_to`) are refused over HTTP**: over a remote transport they would give any
+caller arbitrary file read/write on the server host (found in code review). **Accepted risk:** by design any
 caller authorized to reach the server can trigger any operation the key permits, including
 cost-bearing ones (fine-tunes, batches, image/audio generation) — there is no rate or spend limit
 in v1; the operator bounds risk with a scoped OpenAI project key and project spend limits,
@@ -84,17 +86,20 @@ documented in the README.
 `MCP_ALLOW_UNAUTHENTICATED`, `MCP_MAX_REQUEST_BYTES` (HTTP request-body cap; default 64 MiB, raised
 from the SDK's 4 MiB so base64 uploads fit). In `http` mode the server **refuses to start without
 `MCP_AUTH_TOKEN`** (bearer-token check, constant-time compare, on every request except `/healthz`)
-unless `MCP_ALLOW_UNAUTHENTICATED=true` is set explicitly — a deployed server holding an OpenAI
+(scheme matched case-insensitively; only ASGI lifespan scopes bypass the check) unless
+`MCP_ALLOW_UNAUTHENTICATED=true` is set explicitly — a deployed server holding an OpenAI
 key must not be open by default.
 
 **Docker.** `mcp/openai/Dockerfile` (slim Python base, non-root user, `MCP_TRANSPORT=http`,
-`EXPOSE 8000`, healthcheck on unauthenticated `GET /healthz`), plus `docker-compose.yml` and
+`EXPOSE 8000`, healthcheck on unauthenticated `GET /healthz` at `MCP_PORT`), a `Makefile`
+(`make install`, `make check`), plus `docker-compose.yml` and
 `.env.example`.
 
 **Strict quality gates (user requirement).** Configured in `mcp/openai/pyproject.toml` and
 enforced in CI; none may be loosened per-file without an inline justification comment:
 - **Ruff lint** with `select = ["ALL"]`, ignoring only rules that conflict with each other or the
-  formatter (e.g. `D203`/`D213`, `COM812`, `ISC001`), plus McCabe `max-complexity = 5` and
+  formatter (e.g. `D203`/`D213`, `COM812`, `ISC001`), plus `CPY001` (the repo LICENSE covers every file) and, in tests only, `S101`, `PLR2004` and
+`D103`, plus McCabe `max-complexity = 5` and
   pylint limits `max-args = 5`, `max-branches = 6`, `max-statements = 25`, `max-returns = 4`,
   `max-nested-blocks = 2`.
 - **Ruff format** check (no diff allowed).
@@ -103,7 +108,7 @@ enforced in CI; none may be loosened per-file without an inline justification co
 - **pytest** with **100% line and branch coverage** (`--cov-fail-under=100 --cov-branch`).
 A single `make check` (or equivalent script) runs all four locally, identically to CI.
 
-**Tests.** `mcp/openai/tests/` uses pytest with `httpx.MockTransport` (no network, no API key):
+**Tests.** `mcp/openai/tests/` uses pytest with `httpx2.MockTransport` (no network, no API key):
 path validation, header protection, JSON/binary/multipart/SSE handling, the size cap, spec
 listing/describe against a small fixture spec and its unreachable-spec error, auth-middleware
 accept/reject over the HTTP app (including a multipart call over HTTP), startup refusal without a
@@ -130,22 +135,23 @@ setting outside this diff; the final report surfaces it.
 
 ## Success criteria
 
-- [ ] `mcp/README.md` documents the one-directory-per-server convention, the shared strict-quality contract, and lists `openai`.
-- [ ] `mcp/openai/` contains `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `README.md`, the `openai_mcp` package and `tests/`.
-- [ ] An in-process MCP client test lists exactly the five tools named in Approach.
-- [ ] Tests show `openai_request`, `openai_multipart_request` and `openai_download` each reject absolute URLs, `..` segments and `//`, and that protected-header overrides are rejected.
-- [ ] A stdio smoke test spawns the server with `MCP_TRANSPORT=stdio`, completes an MCP handshake over real pipes and lists the five tools.
-- [ ] Tests exercise JSON, binary (under and over the size cap), SSE-buffered and multipart requests against `httpx.MockTransport`.
-- [ ] Tests show the discovery tools list and describe operations from a fixture spec (via `OPENAI_OPENAPI_PATH`) and return a clear error when the spec is unreachable.
-- [ ] Tests show HTTP mode refuses to start without `MCP_AUTH_TOKEN` unless `MCP_ALLOW_UNAUTHENTICATED=true`, rejects missing/wrong bearer tokens, serves `/healthz` unauthenticated, and completes an authenticated multipart tool call over HTTP.
-- [ ] In `mcp/openai/`: `ruff check`, `ruff format --check`, `mypy --strict` and `pytest` at 100% line+branch coverage all pass, with the rule set and limits stated in Approach.
-- [ ] `docker build mcp/openai` succeeds and the running container answers `GET /healthz` with 200.
-- [ ] `.github/workflows/mcp.yml` has no `paths:` filter, discovers servers by glob, runs all four gates plus `docker build`, and fails on zero collected tests.
-- [ ] Root `README.md` points to `mcp/`; root `pytest tests/` still passes.
-- [ ] `mcp/openai/README.md` documents stdio config for Claude Code / Claude Desktop, HTTP/Docker usage, every env var, the security model including the accepted cost risk, the buffered-streaming limitation, and the server-local-path limitation for uploads and downloads in HTTP/Docker mode.
+- [x] `mcp/README.md` documents the one-directory-per-server convention, the shared strict-quality contract, and lists `openai`.
+- [x] `mcp/openai/` contains `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `README.md`, the `openai_mcp` package and `tests/`.
+- [x] An in-process MCP client test lists exactly the five tools named in Approach.
+- [x] Tests show `openai_request`, `openai_multipart_request` and `openai_download` each reject absolute URLs, `..` segments and `//`, and that protected-header overrides are rejected.
+- [x] A stdio smoke test spawns the server with `MCP_TRANSPORT=stdio`, completes an MCP handshake over real pipes and lists the five tools.
+- [x] Tests exercise JSON, binary (under and over the size cap), SSE-buffered and multipart requests against `httpx2.MockTransport`.
+- [x] Tests show the discovery tools list and describe operations from a fixture spec (via `OPENAI_OPENAPI_PATH`) and return a clear error when the spec is unreachable.
+- [x] Tests show HTTP mode refuses to start without `MCP_AUTH_TOKEN` unless `MCP_ALLOW_UNAUTHENTICATED=true`, rejects missing/wrong bearer tokens, serves `/healthz` unauthenticated, and completes an authenticated multipart tool call over HTTP.
+- [x] In `mcp/openai/`: `ruff check`, `ruff format --check`, `mypy --strict` and `pytest` at 100% line+branch coverage all pass, with the rule set and limits stated in Approach.
+- [x] `docker build mcp/openai` succeeds and the running container answers `GET /healthz` with 200.
+- [x] `.github/workflows/mcp.yml` has no `paths:` filter, discovers servers by glob, runs all four gates plus `docker build`, and fails on zero collected tests.
+- [x] Root `README.md` points to `mcp/`; root `pytest tests/` still passes.
+- [x] `mcp/openai/README.md` documents stdio config for Claude Code / Claude Desktop, HTTP/Docker usage, every env var, the security model including the accepted cost risk, the buffered-streaming limitation, and the server-local-path limitation for uploads and downloads in HTTP/Docker mode.
 
 ## Open Questions
 
 - Per-request OpenAI key override (multi-tenant) — deferred; single operator key for now.
 - Server-side rate / spend limits — deferred; v1 relies on OpenAI project-level limits.
-- Remote retrieval of binaries larger than the cap in HTTP/Docker mode (e.g. chunked download) — deferred; documented limitation.
+- Remote retrieval of binaries larger than the cap over HTTP (e.g. chunked download) — deferred; documented limitation.
+- Making `mcp.yml` a required status check — a repository setting, not part of this diff.
