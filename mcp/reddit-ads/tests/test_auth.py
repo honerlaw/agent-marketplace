@@ -4,6 +4,7 @@ import base64
 from dataclasses import replace
 from urllib.parse import parse_qs
 
+import anyio
 import httpx2
 import pytest
 from mcp import Client
@@ -134,10 +135,85 @@ async def test_a_second_401_is_returned_not_looped(settings: Settings, fake: Fak
     assert len(fake.token_requests) == 2
 
 
-def test_invalidate_keeps_a_token_that_was_already_replaced(settings: Settings) -> None:
-    tokens = auth.AccessTokens(settings, httpx2.AsyncClient())
-    tokens.invalidate("never-issued")
-    assert tokens.refreshable
+async def test_invalidate_drops_only_the_rejected_token(
+    settings: Settings, fake: FakeReddit
+) -> None:
+    issued = iter(["access-1", "access-2"])
+    fake.token_handler = lambda _request: httpx2.Response(
+        200, json={"access_token": next(issued), "expires_in": 3600}
+    )
+    tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
+    assert await tokens.get() == "access-1"
+    tokens.invalidate("an-older-token")
+    assert await tokens.get() == "access-1"
+    tokens.invalidate("access-1")
+    assert await tokens.get() == "access-2"
+    assert len(fake.token_requests) == 2
+
+
+async def test_concurrent_calls_share_one_refresh(settings: Settings) -> None:
+    refreshes: list[httpx2.Request] = []
+
+    async def slow_token_endpoint(request: httpx2.Request) -> httpx2.Response:
+        refreshes.append(request)
+        await anyio.sleep(0.01)  # let every caller reach the lock while this one is in flight
+        return httpx2.Response(200, json={"access_token": "access-1", "expires_in": 3600})
+
+    transport = httpx2.MockTransport(slow_token_endpoint)
+    tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=transport))
+    results: list[str] = []
+
+    async def fetch() -> None:
+        results.append(await tokens.get())
+
+    async with anyio.create_task_group() as group:
+        for _ in range(10):
+            group.start_soon(fetch)
+    assert results == ["access-1"] * 10
+    assert len(refreshes) == 1
+
+
+async def test_a_short_lived_token_is_still_reused_for_half_its_life(
+    settings: Settings, fake: FakeReddit, clock: Clock
+) -> None:
+    fake.token_handler = lambda _request: httpx2.Response(
+        200, json={"access_token": "a", "expires_in": 60}
+    )
+    async with Client(build_server(settings, fake.transport)) as client:
+        await client.call_tool("reddit_ads_request", ME)
+        clock.now = 29
+        await client.call_tool("reddit_ads_request", ME)
+        clock.now = 30
+        await client.call_tool("reddit_ads_request", ME)
+    assert len(fake.token_requests) == 2
+
+
+def refuse_connection(request: httpx2.Request) -> httpx2.Response:
+    """Fail the way an unreachable host does."""
+    message = "timed out"
+    raise httpx2.ConnectTimeout(message, request=request)
+
+
+async def test_an_unreachable_token_endpoint_is_a_clear_error(
+    settings: Settings, fake: FakeReddit
+) -> None:
+    fake.token_handler = refuse_connection
+    [result] = await call_many(settings, fake, 1)
+    assert result.is_error
+    assert "could not reach the Reddit token endpoint: ConnectTimeout" in str(result.content[0])
+    assert fake.api_requests == []
+
+
+@pytest.mark.parametrize(
+    ("status", "hint"),
+    [(400, "check REDDIT_CLIENT_ID"), (429, "retry later"), (503, "retry later")],
+)
+async def test_a_failed_refresh_hint_depends_on_the_status(
+    settings: Settings, fake: FakeReddit, status: int, hint: str
+) -> None:
+    fake.token_handler = lambda _request: httpx2.Response(status, json={"error": "x"})
+    [result] = await call_many(settings, fake, 1)
+    assert hint in str(result.content[0])
 
 
 @pytest.mark.parametrize(
@@ -147,6 +223,7 @@ def test_invalidate_keeps_a_token_that_was_already_replaced(settings: Settings) 
         httpx2.Response(200, json={"error": "invalid_grant"}),
         httpx2.Response(502, text="<html>bad gateway</html>"),
         httpx2.Response(200, json=["not", "an", "object"]),
+        httpx2.Response(200, json={"access_token": "", "expires_in": 3600}),
     ],
 )
 async def test_a_failed_refresh_is_a_clear_error_without_secrets(

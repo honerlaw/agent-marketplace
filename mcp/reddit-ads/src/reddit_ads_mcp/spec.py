@@ -11,7 +11,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from reddit_ads_mcp.config import Settings
 
-HTTP_METHODS = ("get", "post", "put", "patch", "delete")
+HTTP_METHODS = ("get", "post", "put", "patch", "delete")  # PUT: none today; kept for new ones
 MAX_REF_DEPTH = 6
 HTML_TAG = re.compile(r"<[^>]+>")
 RUN_OF_SPACES = re.compile(r"[ \t]+")
@@ -70,12 +70,17 @@ class SpecCatalog:
 
     async def _load(self) -> Spec:
         if self._spec is None:
-            self._spec = _as_dict(json.loads(await self._read()))
+            text = await self._read()
+            try:
+                self._spec = _as_dict(json.loads(text))
+            except ValueError as error:
+                message = f"the OpenAPI spec is not valid JSON: {error}"
+                raise ToolError(message) from error
         return self._spec
 
     async def _read(self) -> str:
         if self._path is not None:
-            return await anyio.Path(Path(self._path)).read_text(encoding="utf-8")
+            return await _read_file(self._path)
         try:
             async with httpx2.AsyncClient(transport=self._transport, timeout=60) as client:
                 response = await client.get(self._url)
@@ -84,6 +89,14 @@ class SpecCatalog:
             message = f"could not load the OpenAPI spec from {self._url}: {error}"
             raise ToolError(message) from error
         return response.text
+
+
+async def _read_file(path: str) -> str:
+    try:
+        return await anyio.Path(Path(path)).read_text(encoding="utf-8")
+    except OSError as error:
+        message = f"could not read the OpenAPI spec from {path}: {error}"
+        raise ToolError(message) from error
 
 
 def required_scopes(operation: dict[str, Node]) -> list[str] | None:

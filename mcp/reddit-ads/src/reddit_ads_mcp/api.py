@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 import httpx2
+from mcp.server.mcpserver.exceptions import ToolError
 
 from reddit_ads_mcp.auth import AccessTokens
 from reddit_ads_mcp.config import Settings
@@ -60,6 +61,9 @@ class RedditAdsApi:
 
     async def follow_page(self, url: str, method: str, body: JsonObject | None) -> JsonObject:
         """Request a pagination URL from an earlier response, exactly as Reddit gave it."""
+        if body is not None and method != "POST":
+            message = "body is only sent with method POST (to re-send a POST list's request)"
+            raise ToolError(message)
         return await self._send(_Outgoing(method, check_page_url(url, self._base_url), body=body))
 
     async def _send(self, outgoing: _Outgoing) -> JsonObject:
@@ -72,13 +76,17 @@ class RedditAdsApi:
         return describe_response(response)
 
     async def _request(self, outgoing: _Outgoing, token: str) -> httpx2.Response:
-        return await self._client.request(
-            outgoing.method,
-            outgoing.url,
-            params=outgoing.query,
-            json=outgoing.body,
-            headers={**outgoing.headers, "Authorization": f"Bearer {token}"},
-        )
+        try:
+            return await self._client.request(
+                outgoing.method,
+                outgoing.url,
+                params=outgoing.query,
+                json=outgoing.body,
+                headers={**outgoing.headers, "Authorization": f"Bearer {token}"},
+            )
+        except httpx2.HTTPError as error:
+            message = f"request to the Reddit Ads API failed: {type(error).__name__}: {error}"
+            raise ToolError(message) from error
 
 
 def describe_response(response: httpx2.Response) -> JsonObject:

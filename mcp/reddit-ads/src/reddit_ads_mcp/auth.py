@@ -56,9 +56,13 @@ class AccessTokens:
 
     async def _refresh(self) -> str:
         form = {"grant_type": "refresh_token", "refresh_token": self._refresh_token}
-        response = await self._client.post(self._token_url, data=form, auth=self._client_auth)
+        try:
+            response = await self._client.post(self._token_url, data=form, auth=self._client_auth)
+        except httpx2.HTTPError as error:
+            message = f"could not reach the Reddit token endpoint: {type(error).__name__}"
+            raise ToolError(message) from error
         payload = _token_payload(response)
-        self._expires_at = now() + _expires_in(payload) - EXPIRY_MARGIN_SECONDS
+        self._expires_at = now() + _lifetime(payload)
         rotated = payload.get("refresh_token")
         if isinstance(rotated, str) and rotated:
             self._refresh_token = rotated
@@ -71,17 +75,24 @@ def _token_payload(response: httpx2.Response) -> dict[str, object]:
         payload = response.json()
     except ValueError:
         payload = None
-    if not isinstance(payload, dict) or not isinstance(payload.get("access_token"), str):
-        reason = payload.get("error") if isinstance(payload, dict) else None
-        message = (
-            f"Reddit refused to refresh the access token (HTTP {response.status_code}, "
-            f"error {reason!r}); check REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET and "
-            "REDDIT_REFRESH_TOKEN"
-        )
-        raise ToolError(message)
-    return payload
+    token = payload.get("access_token") if isinstance(payload, dict) else None
+    if isinstance(payload, dict) and isinstance(token, str) and token:
+        return payload
+    reason = payload.get("error") if isinstance(payload, dict) else None
+    status = response.status_code
+    hint = (
+        "Reddit is rate-limiting or unavailable; retry later"
+        if status == httpx2.codes.TOO_MANY_REQUESTS or status >= httpx2.codes.INTERNAL_SERVER_ERROR
+        else "check REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET and REDDIT_REFRESH_TOKEN"
+    )
+    message = (
+        f"Reddit refused to refresh the access token (HTTP {status}, error {reason!r}); {hint}"
+    )
+    raise ToolError(message)
 
 
-def _expires_in(payload: dict[str, object]) -> float:
+def _lifetime(payload: dict[str, object]) -> float:
+    """Seconds to reuse a token: its lifetime less the margin, but at least half of it."""
     value = payload.get("expires_in")
-    return float(value) if isinstance(value, int | float) else DEFAULT_EXPIRES_IN
+    expires_in = float(value) if isinstance(value, int | float) else DEFAULT_EXPIRES_IN
+    return max(expires_in - EXPIRY_MARGIN_SECONDS, expires_in / 2)

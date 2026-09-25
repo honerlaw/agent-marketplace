@@ -169,6 +169,25 @@ async def test_follow_page_can_repost_the_original_body(
     assert json.loads(sent.content) == body
 
 
+async def test_an_unreachable_api_is_a_clear_error(settings: Settings, fake: FakeReddit) -> None:
+    def refuse(request: httpx2.Request) -> httpx2.Response:
+        message = "connection refused"
+        raise httpx2.ConnectError(message, request=request)
+
+    fake.api_handler = refuse
+    result = await call(settings, fake, "reddit_ads_request", {"method": "GET", "path": "/me"})
+    assert "request to the Reddit Ads API failed: ConnectError" in error_text(result)
+
+
+async def test_follow_page_refuses_a_body_without_post(
+    settings: Settings, fake: FakeReddit
+) -> None:
+    arguments = {"url": NEXT_URL, "body": {"data": {}}}
+    result = await call(settings, fake, "reddit_ads_follow_page", arguments)
+    assert "only sent with method POST" in error_text(result)
+    assert fake.requests == []
+
+
 @pytest.mark.parametrize(
     "url",
     [

@@ -1,5 +1,7 @@
 """Endpoint discovery against a small fixture spec."""
 
+from pathlib import Path
+
 import httpx2
 import pytest
 from mcp import Client
@@ -111,6 +113,23 @@ async def test_spec_is_fetched_once_from_the_url(fake: FakeReddit) -> None:
     await catalog.list_endpoints("me")
     assert [str(request.url) for request in fake.requests] == [url]
     assert "authorization" not in fake.requests[0].headers
+
+
+@pytest.mark.parametrize(
+    ("contents", "error"),
+    [(None, "could not read the OpenAPI spec"), ("{not json", "not valid JSON")],
+)
+async def test_a_bad_local_spec_is_a_clear_tool_error(
+    tmp_path: Path, contents: str | None, error: str
+) -> None:
+    spec = tmp_path / "openapi.json"
+    if contents is not None:
+        spec.write_text(contents)
+    settings = Settings(credentials=STATIC, openapi_path=str(spec))
+    async with Client(build_server(settings)) as client:
+        result = await client.call_tool("reddit_ads_list_endpoints", {})
+    assert result.is_error
+    assert error in str(result.content[0])
 
 
 async def test_unreachable_spec_is_a_clear_tool_error(fake: FakeReddit) -> None:

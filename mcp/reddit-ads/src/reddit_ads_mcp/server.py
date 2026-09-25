@@ -22,7 +22,7 @@ pagination.next_url to reddit_ads_follow_page. Creating or changing campaigns, a
 and ads can spend money; confirm those actions with the user.
 """
 
-HttpMethod = Literal["GET", "POST", "PATCH", "DELETE"]
+HttpMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
 PageMethod = Literal["GET", "POST"]
 
 
