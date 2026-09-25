@@ -758,7 +758,7 @@ list, which looked correct every time.
 ## MCP servers: tool shape by API size, and the security boundary set by transport and path
 
 The repo's first product outside the minerva plugin is a home for custom MCP servers under
-`mcp/`, starting with one that gives an LLM the whole OpenAI REST API. The founding choice
+`mcp/`, starting with one that gave an LLM the whole OpenAI REST API. The founding choice
 is to wrap a large, fast-moving API with a **few generic, spec-driven tools** rather than
 one tool per endpoint. Hundreds of per-operation tools exceed client tool limits and flood
 context every turn, and a curated subset goes stale. Discovery reads the vendor's OpenAPI
@@ -781,6 +781,23 @@ The third server, for Reddit Ads, confirms the generic shape on another vendor.
 - Pagination comes as full `next_url`s that Reddit says to follow directly, and four of the
   paginators are POSTs. That needs its own same-origin-checked tool
   ([[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]]).
+
+The first server did not last in its original form. It was renamed to `mcp/openai-ads/` and
+pointed at OpenAI's Advertiser API, so the repo no longer has a general OpenAI REST API server.
+The last `openai-mcp` image stays published but frozen. The generic shape survived the move,
+with four tools. Keeping the old name was rejected because it would have silently changed
+what the published `openai-mcp` image does
+([[2026-09-25-decision-mcp-openai-server-refocused-on-the-ads-api]]). The Ads API is gentler
+than Reddit's in some ways and not others.
+- It pages with cursor query parameters on the same path, so no follow-URL tool is needed.
+- Its schemas are small.
+- It has two upload endpoints: creative images go to `/upload`, custom-audience files to
+  `/uploads`.
+- Keys are per ad account, and amounts are in micros.
+- The spec names array parameters `include` while OpenAI's own examples write `include[]`
+  ([[2026-09-25-reference-openai-ads-api-facts-for-mcp-servers]]).
+Entries above that point at `mcp/openai/` describe the retired general-API server. Its guards
+and discovery code live on in `mcp/openai-ads/`.
 
 The sharpest lesson is about the security boundary. A tool argument naming a server-local
 path is harmless over stdio, where the server is the user. The same argument served over

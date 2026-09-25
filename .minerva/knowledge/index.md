@@ -33,6 +33,7 @@
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — a folded Skeptic critique now gets one fold-audit re-check, arbitrated strictly; whole-proposal soundness became a Skeptic gate; `decision_telemetry.py` measures the gate taxonomy
 - [[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]] — Follow-up issues need failure scenario, critical/high priority, and too-large-to-absorb; small defects fixed in-unit
 - [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — propose-ship-auto routes each decision solo/reviewer/panel and escalates up a tier; quick and balanced deleted
+- [[2026-09-25-decision-mcp-openai-server-refocused-on-the-ads-api]] — mcp/openai renamed to mcp/openai-ads for the Ads API; general-API server and image retired
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — Small, stable APIs get one typed MCP tool per operation; large or fast-moving APIs get generic tools
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — API-wrapping MCP servers expose generic request tools plus OpenAPI discovery, not per-endpoint tools
 - [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — mcp.yml's docker smoke test runs each image with --env-file mcp/<server>/ci.env
@@ -124,5 +125,6 @@
 - [[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]] — Both auto eval scenarios use a trivial fixture; no eval reaches the reviewer-default or panel tier
 - [[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]] — google-auth is only partly annotated under mypy --strict; mcp 2.x Client uses snake_case accessors
 - [[2026-09-25-reference-mcp-python-sdk-2x-server-facts]] — mcp 2.x renamed FastMCP to MCPServer, uses httpx2, caps HTTP bodies at 4 MiB
+- [[2026-09-25-reference-openai-ads-api-facts-for-mcp-servers]] — OpenAI Ads API v1 publishes openapi.json; per-account bearer keys; cursor pagination; micros; two upload endpoints
 - [[2026-09-25-reference-openai-openapi-spec-source-and-size]] — openai-openapi main branch lists 352 operations; manual_spec is stale; deep $ref expansion reaches megabytes
 - [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — Reddit Ads v3 publishes openapi.json; OAuth refresh tokens; follow next_url; four POST paginators

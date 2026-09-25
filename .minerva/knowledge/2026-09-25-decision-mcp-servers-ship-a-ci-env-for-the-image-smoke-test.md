@@ -33,3 +33,4 @@ copied into the image, because each Dockerfile copies only `pyproject.toml`, `RE
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — builds on
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — the hard-coded variable list was an enumeration waiting to fail
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — see also
+- [[2026-09-25-decision-mcp-openai-server-refocused-on-the-ads-api]] — see also

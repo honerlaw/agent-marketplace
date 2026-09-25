@@ -53,3 +53,4 @@ existing open-source Reddit Ads MCP servers don't record them.
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — Reddit Ads is the "large, fast-moving" case
 - [[2026-09-25-reference-openai-openapi-spec-source-and-size]] — the sibling spec-source reference for OpenAI
 - [[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]] — see also
+- [[2026-09-25-reference-openai-ads-api-facts-for-mcp-servers]] — see also

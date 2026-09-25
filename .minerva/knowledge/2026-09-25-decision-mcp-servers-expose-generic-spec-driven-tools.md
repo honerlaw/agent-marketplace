@@ -34,3 +34,5 @@ as the vendor adds endpoints.
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — see also
 - [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — see also
 - [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — see also
+- [[2026-09-25-decision-mcp-openai-server-refocused-on-the-ads-api]] — see also
+- [[2026-09-25-reference-openai-ads-api-facts-for-mcp-servers]] — see also
