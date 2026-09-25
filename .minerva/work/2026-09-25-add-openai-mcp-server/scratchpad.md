@@ -24,3 +24,12 @@
     - fix (skeptic/arbiter): real stdio subprocess smoke test criterion added
     - fix (proponent/skeptic/arbiter): response-header allowlist named; $ref depth default 6
     - fix (main model, implementation detail): `MCP_MAX_REQUEST_BYTES` (64 MiB) since the SDK caps HTTP bodies at 4 MiB
+
+## Work notes
+- Used `httpx2` (pydantic's httpx fork, already a hard dependency of mcp 2.x) instead of `httpx`, avoiding a second HTTP stack. Routine choice; proposal says httpx — fix wording at promote.
+- mcp 2.x renamed FastMCP → `MCPServer`; `custom_route` is an untyped decorator, so mypy --strict forced registering `/healthz` by call instead of decorator syntax.
+- Strict gates bit as intended: `build_server` hit McCabe 7 with nested tool closures → split into `_add_api_tools` / `_add_discovery_tools`. Only added ignores: `CPY001` (repo LICENSE covers files) and `D103` in tests (test names document them).
+- `openai_describe_endpoint` $ref depth: default 6 (as proposed) produced 300 KB for POST /responses (165 KB at 4, 55 KB at 2, 9 KB at 1). Changed to default 1 with an optional `depth` param clamped 1..6. Routine tuning, not a load-bearing divergence (tool count, approach, criteria unchanged) — reflect in proposal at promote.
+- Live spec (`manual_spec` branch) lists 148 operations; it lags some newer endpoints — `openai_request` still reaches them. Documented in README Limitations.
+- Verified: `make check` green on 3.13 and 3.11 (70 tests, 100% line+branch); docker image builds, /healthz 200, /mcp 401 without token, startup refused without MCP_AUTH_TOKEN; root `pytest tests/` 1018 passed.
+- SDK's default HTTP body cap is 4 MiB → `MCP_MAX_REQUEST_BYTES` (64 MiB) passed to `streamable_http_app`.

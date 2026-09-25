@@ -1,0 +1,75 @@
+name: mcp
+
+# Quality gates for every MCP server under mcp/.
+#
+# Deliberately NOT path-filtered and NOT an enumerated server list: servers are
+# discovered by globbing mcp/*/pyproject.toml, so a new server is covered with no
+# workflow edit and its tests can never silently go dark. Per knowledge
+# 2026-08-11-decision-ci-runs-the-whole-suite, collection is the enumeration.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      servers: ${{ steps.find.outputs.servers }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: |
+          servers=$(ls mcp/*/pyproject.toml | xargs -n1 dirname | jq -R . | jq -cs .)
+          echo "servers=$servers" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $servers"
+
+  check:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        server: ${{ fromJson(needs.discover.outputs.servers) }}
+        python-version: ["3.11", "3.13"]
+    defaults:
+      run:
+        working-directory: ${{ matrix.server }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: make install
+
+      # pytest exits 5 when it collects no tests; that fails this step, so a
+      # server without tests cannot pass.
+      - name: Lint, format, type-check, test (100% coverage)
+        run: make check
+
+  docker:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        server: ${{ fromJson(needs.discover.outputs.servers) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t "mcp-$(basename ${{ matrix.server }})" ${{ matrix.server }}
+      - name: Container answers /healthz
+        run: |
+          image="mcp-$(basename ${{ matrix.server }})"
+          docker run -d --name smoke -p 8000:8000 \
+            -e OPENAI_API_KEY=sk-ci -e MCP_AUTH_TOKEN=ci "$image"
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/healthz && exit 0
+            sleep 1
+          done
+          docker logs smoke
+          exit 1

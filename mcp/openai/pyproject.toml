@@ -1,0 +1,78 @@
+[project]
+name = "openai-mcp"
+version = "0.1.0"
+description = "MCP server giving an LLM full access to the OpenAI REST API."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=2.2,<3",
+    "httpx2>=2.5",
+    "pyyaml>=6.0",
+    "uvicorn>=0.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+openai-mcp = "openai_mcp.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openai_mcp"]
+
+# --- Strict quality gates -------------------------------------------------
+# Every rule family is on. The ignores below are only rules that contradict
+# another enabled rule or the formatter; do not add convenience ignores.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",   # conflicts with D211 (no blank line before class docstring)
+    "D213",   # conflicts with D212 (summary on first docstring line)
+    "COM812", # conflicts with the formatter
+    "ISC001", # conflicts with the formatter
+    "CPY001", # the repository-level LICENSE covers every file
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert with bare `assert`, use HTTP status codes as literals, and are
+# documented by their names rather than docstrings.
+"tests/**" = ["S101", "PLR2004", "D103"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 5
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-branches = 6
+max-statements = 25
+max-returns = 4
+max-nested-blocks = 2
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+mypy_path = "src"
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=openai_mcp --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[tool.coverage.run]
+source = ["openai_mcp"]
