@@ -41,3 +41,4 @@ character-level encoding catches it.
 - [[2026-08-28-pattern-an-author-audits-rules-a-reviewer-audits-wiring]] — the independent reviewer, not self-review, found it
 - [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — how the guard's tests were verified
 - [[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]] — a sibling hazard of caller values reaching a path
+- [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — see also

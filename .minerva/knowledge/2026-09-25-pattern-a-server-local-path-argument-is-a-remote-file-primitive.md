@@ -31,3 +31,5 @@ reviews only judged whether the feature was *described* correctly.
 ## Related
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — the tool surface this guards
 - [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — the path validator is an allowlist of shape, not a denylist of hosts
+- [[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]] — see also
+- [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — see also

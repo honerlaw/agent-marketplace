@@ -49,3 +49,6 @@ mutating verbs qualify; another tool's subcommands do not.
 - [[2026-08-28-pattern-a-coverage-claim-inherits-its-derivations-horizon]] — see also
 - [[2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable]] — see also
 - [[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]] — see also
+- [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — see also
+- [[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]] — see also
+- [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — see also
