@@ -53,3 +53,4 @@ fact about one broken import, and it inherited that import's lifetime by acciden
 - [[2026-06-11-constraint-ci-test-enumeration-explicit]] — supersedes
 - [[2026-08-11-pattern-a-gate-blind-to-what-it-checks]] — builds on
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
+- [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — see also
