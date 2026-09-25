@@ -1,0 +1,174 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Reddit Advertising API (test fixture)",
+    "version": "3"
+  },
+  "servers": [
+    {
+      "url": "https://ads-api.reddit.com/api/v3"
+    }
+  ],
+  "paths": {
+    "/me": {
+      "get": {
+        "summary": "Get Me",
+        "security": [
+          {
+            "RedditAPIKey": [
+              "adsread"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ad_accounts/{ad_account_id}/campaigns": {
+      "get": {
+        "summary": "List Campaigns",
+        "security": [
+          {
+            "RedditAPIKey": [
+              "adsread"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page_token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Campaign",
+        "description": "Create a campaign.\n<h2>Rate Limit</h2>\n        <div><a href=\"/ratelimits/write\">See the <strong>write</strong> limits</a></div>\n\n\n<svg viewBox=\"0 0 1 1\"><path d=\"M0\"/></svg>",
+        "security": [
+          {
+            "RedditAPIKey": [
+              "adsedit"
+            ]
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/targeting/communities/suggestions": {
+      "get": {
+        "operationId": "suggestCommunities",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/ad_accounts/{ad_account_id}/reports": {
+      "post": {
+        "summary": "Get a Report",
+        "security": [
+          {
+            "RedditAPIKey": [
+              "adsread"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page_token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "page_token": {
+        "in": "query",
+        "name": "page.token",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "Me": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "CampaignRequest": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "description": "A <em>campaign</em>.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "child": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "RedditAPIKey": {
+        "type": "oauth2"
+      }
+    }
+  }
+}

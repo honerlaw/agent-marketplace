@@ -8,6 +8,7 @@ deployed as a container.
 |---|---|
 | [`openai`](openai/) | Full access to the OpenAI REST API via five generic, spec-driven tools |
 | [`google-search-console`](google-search-console/) | Full access to the Google Search Console API via ten typed tools, one per operation (optional read-only mode) |
+| [`reddit-ads`](reddit-ads/) | Full access to the Reddit Ads API (v3) via four generic, spec-driven tools, with OAuth token refresh |
 
 ## Contract for every server
 
@@ -17,6 +18,8 @@ Each `mcp/<name>/` directory has:
   script entry point, plus the **strict quality configuration** below
 - `Dockerfile` (non-root, `/healthz` health check) and, where useful,
   `docker-compose.yml` and `.env.example`
+- `ci.env`: dummy, non-secret environment values that let the image start, so
+  CI's `/healthz` smoke test can run it without naming any server's variables
 - `Makefile` with `make install` and `make check`
 - `README.md`: tools, configuration, security model, limitations
 - `tests/`: collected by CI automatically
@@ -45,7 +48,8 @@ instead of loosening the rule.
 [`.github/workflows/mcp.yml`](../.github/workflows/mcp.yml) runs on every PR and
 push to `main`. It discovers servers by globbing `mcp/*/pyproject.toml`, so a new
 server needs no workflow edit. For each server it runs `make check` on Python 3.11
-and 3.13 and builds the Docker image. A server with no collected tests fails the
+and 3.13, builds the Docker image, and starts it with `--env-file <server>/ci.env`
+to check `/healthz`. A server with no collected tests, or no `ci.env`, fails the
 job. Tests must never be able to go dark.
 
 On a push to `main` only (never on a pull request), once `check` and `docker` have
@@ -61,7 +65,7 @@ anyone can pull it without signing in.
 ## Adding a server
 
 1. Copy `openai/pyproject.toml`, `Makefile` and `Dockerfile` into `mcp/<name>/`
-   and rename the package.
+   and rename the package. Add a `ci.env` with dummy values that let it start.
    Pick the tool shape by API size. A large or fast-moving API gets generic, spec-driven
    tools like `openai/`. A small, stable API gets one typed tool per operation like
    `google-search-console/`.
