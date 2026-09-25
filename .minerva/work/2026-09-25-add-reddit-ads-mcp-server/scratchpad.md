@@ -17,3 +17,13 @@
 - [panel — 3/3 accept, 2 with fixes] whole-proposal: sound after revising to reddit_ads_follow_page(url, method, body?) and correcting to 36 ops (tier: panel — fold-audit escalation)
     - fix (skeptic): Open Question + tool description caveat that POST re-send-body is inferred, not live-confirmed; scope-null wording covers absent or empty; DELETE purpose named
     - fix (arbiter): surface the POST-pagination caveat in the tool description/README; "has no `security` key at all" wording
+
+## Work notes 2026-09-25
+- Reddit publishes its Ads API v3 spec at https://ads-api.reddit.com/api/v3/openapi.json (no auth, ~1 MB JSON, OpenAPI 3.1, 108 ops / 80 paths). WebFetch is blocked on ads-api.reddit.com; plain curl works. Only GET/POST/PATCH/DELETE; every body application/json.
+- Operation descriptions embed a rendered HTML rate-limit panel with inline SVG; stripping tags takes POST /ad_accounts/{id}/campaigns describe from ~14 KB to ~10 KB at depth 1 and leaves readable "Policy Slug / Window / Quota" text.
+- Pagination: next_url/previous_url are full URLs the spec says to follow directly; four POST endpoints paginate (reports, history, two /query). page.token is a shared components parameter on 36 ops.
+- Rate limits use IETF `RateLimit` / `RateLimit-Policy` headers (docs, not spec — the spec declares no response headers).
+- Token endpoint can answer HTTP 200 with {"error": "invalid_grant"}; the token manager checks for access_token rather than status alone.
+- Refresh tokens: the refresh response may carry a new refresh_token; kept in memory only.
+- Tests: the token manager's clock is a module-level `now` so tests monkeypatch it instead of time.monotonic (patching the time module would disturb anyio).
+- CI: docker smoke job now reads `<server>/ci.env`; both images verified locally to answer /healthz with their ci.env. Root pytest 1018 passed; openai make check 78 passed; reddit-ads make check 112 passed at 100% line+branch.
