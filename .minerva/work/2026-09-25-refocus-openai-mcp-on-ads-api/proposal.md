@@ -1,7 +1,7 @@
 # Proposal: refocus-openai-mcp-on-ads-api
 
 **Date**: 2026-09-25
-**Status**: Draft
+**Status**: Shipped (2026-09-25)
 
 ## Goal
 Turn the MCP server under `mcp/openai/` into a server that lets an LLM manage ChatGPT
@@ -65,7 +65,10 @@ and frequent additions, the Ads API gets the generic shape.
 - **Tools (4):**
   - `openai_ads_request(method, path, query?, body?, headers?)` with method GET, POST, PATCH or
     DELETE.
-  - `openai_ads_multipart_request(path, files, fields?)` for `/upload` and `/uploads`.
+  - `openai_ads_multipart_request(path, files, fields?)` for `/upload` (creative images) and
+    `/uploads` (custom-audience files, `purpose: custom_audience`). It refuses an empty `files`
+    list, because httpx would otherwise send a urlencoded form, and points `image_url` uploads at
+    `openai_ads_request`.
   - `openai_ads_list_endpoints(text_filter?)`.
   - `openai_ads_describe_endpoint(method, path, depth?)`.
 
@@ -75,14 +78,15 @@ and frequent additions, the Ads API gets the generic shape.
   - `OPENAI_ADS_BASE_URL` (default `https://api.ads.openai.com/v1`).
   - `OPENAI_ADS_OPENAPI_URL` (default `https://developers.openai.com/ads/openapi.json`) or
     `OPENAI_ADS_OPENAPI_PATH` (a local JSON file).
-  - `OPENAI_ADS_TIMEOUT_SECONDS`.
+  - `OPENAI_ADS_TIMEOUT_SECONDS`, default 120 s. The old 600 s default existed for long model
+    generations on the general API; Ads calls are CRUD and reporting.
   - The existing `MCP_*` transport, auth and stateless variables, unchanged.
 
   `OPENAI_ORG_ID`, `OPENAI_PROJECT_ID` and `OPENAI_MCP_MAX_BINARY_BYTES` are dropped.
 - **Responses:** JSON bodies come back as `json`. Every other body comes back as `text`. The
   base64 branch and its size cap are removed, since the spec has no binary responses.
 - **Spec loading:** switch to `json.loads` and drop the `pyyaml` / `types-PyYAML` dependencies.
-  Discovery keeps `$ref` expansion at depth 1 by default.
+  Discovery keeps `$ref` expansion at depth 1 by default, and `HTTP_METHODS` drops the unused PUT.
 - **Safety:**
   - The shared `check_path` guard stays on both request tools.
   - `Authorization` and `Host` remain non-overridable; the org/project entries leave
@@ -91,12 +95,17 @@ and frequent additions, the Ads API gets the generic shape.
   - Forwarded response headers are `content-type`, `x-request-id`, `openai-processing-ms`,
     `openai-version`, `retry-after` (if present) and any `x-ratelimit-*` / `ratelimit*` header.
     The rate-limit names are defensive because they aren't documented.
-- **Instructions** (the `MCPServer` instructions string) cover:
+- **Instructions** (the `MCPServer` instructions string, which clients read as `Client.instructions`) cover:
   - the account > campaign > ad group > ad hierarchy
   - amounts in micros of the account currency
   - creating resources with `status: "paused"`
   - sending an `Idempotency-Key` on creates
   - confirming with the user before activating anything or changing budgets and spend limits
+  - which upload endpoint takes which file, and that list endpoints page with `limit`/`after`/`before`
+
+  The README tells the model to pass array query parameters under the name
+  `openai_ads_describe_endpoint` shows, sent as repeated keys. The spec says `include`, while
+  OpenAI's own curl examples write `include[]`.
 - **Packaging/docs:**
   - Dockerfile, docker-compose, `.env.example`, `ci.env`, Makefile and pyproject are renamed,
     and the server README is rewritten.
@@ -110,7 +119,9 @@ and frequent additions, the Ads API gets the generic shape.
 
 ## Success criteria
 1. `mcp/openai-ads/` exists and `mcp/openai/` does not. The move is a `git mv`, so git reports
-   the files as renames. `make check` passes in the new directory (ruff ALL, format,
+   the files as renames. (Git detects 20 files as renames. The 7 most heavily rewritten ones fall under its
+   50% similarity threshold and show as delete+add, even though they were moved with `git mv`.)
+   `make check` passes in the new directory (ruff ALL, format,
    `mypy --strict`, 100% line and branch coverage).
 2. The server registers exactly four tools: `openai_ads_request`,
    `openai_ads_multipart_request`, `openai_ads_list_endpoints` and `openai_ads_describe_endpoint`.
