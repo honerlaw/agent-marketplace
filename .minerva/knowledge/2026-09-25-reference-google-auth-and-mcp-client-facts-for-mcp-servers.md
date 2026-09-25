@@ -39,3 +39,4 @@
 ## Related
 - [[2026-09-25-reference-mcp-python-sdk-2x-server-facts]] — builds on
 - [[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]] — why the type-specific constructors are used
+- [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — see also

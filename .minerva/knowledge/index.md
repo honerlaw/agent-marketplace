@@ -35,6 +35,7 @@
 - [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — propose-ship-auto routes each decision solo/reviewer/panel and escalates up a tier; quick and balanced deleted
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — Small, stable APIs get one typed MCP tool per operation; large or fast-moving APIs get generic tools
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — API-wrapping MCP servers expose generic request tools plus OpenAPI discovery, not per-endpoint tools
+- [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — mcp.yml's docker smoke test runs each image with --env-file mcp/<server>/ci.env
 
 ## Bugs
 
@@ -81,6 +82,7 @@
 - [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — run the reader a unit ships against the unit's own motivating numbers; a free-text grep over-counted the headline finding
 - [[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]] — 3/3 panels escalated decisions all panelists agreed on; round-table gained an accept-with-fixes verdict
 - [[2026-09-25-pattern-a-generic-credential-loader-is-a-fetch-and-exec-primitive]] — google-auth's generic loaders accept external_account configs that fetch URLs or run executables; accept only the expected types
+- [[2026-09-25-pattern-a-mock-transport-that-never-yields-cannot-test-a-lock]] — Concurrency test passed with the lock removed; synchronous mock handlers never let callers overlap
 - [[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]] — Tool args naming server-local paths are safe over stdio, arbitrary file read/write over HTTP
 - [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — quote(value, safe="") leaves "." and ".." intact; URL resolution collapses them into another endpoint
 
@@ -123,3 +125,4 @@
 - [[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]] — google-auth is only partly annotated under mypy --strict; mcp 2.x Client uses snake_case accessors
 - [[2026-09-25-reference-mcp-python-sdk-2x-server-facts]] — mcp 2.x renamed FastMCP to MCPServer, uses httpx2, caps HTTP bodies at 4 MiB
 - [[2026-09-25-reference-openai-openapi-spec-source-and-size]] — openai-openapi main branch lists 352 operations; manual_spec is stale; deep $ref expansion reaches megabytes
+- [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — Reddit Ads v3 publishes openapi.json; OAuth refresh tokens; follow next_url; four POST paginators

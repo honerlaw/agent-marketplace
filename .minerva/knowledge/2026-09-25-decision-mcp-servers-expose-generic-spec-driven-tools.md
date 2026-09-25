@@ -32,3 +32,5 @@ as the vendor adds endpoints.
 - [[2026-08-11-decision-ci-runs-the-whole-suite]] — why `mcp.yml` discovers servers by glob rather than a list
 - [[2026-09-25-reference-mcp-python-sdk-2x-server-facts]] — see also
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — see also
+- [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — see also
+- [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — see also

@@ -26,3 +26,4 @@ The OpenAI MCP server's discovery tools read OpenAI's published OpenAPI spec fro
 
 ## Related
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — the discovery tools that read this spec
+- [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — see also
