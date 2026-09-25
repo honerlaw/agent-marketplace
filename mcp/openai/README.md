@@ -80,6 +80,7 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... OPENAI_API_KEY=... .venv/
 | `MCP_AUTH_TOKEN` | unset | Bearer token; **required** in http mode |
 | `MCP_ALLOW_UNAUTHENTICATED` | `false` | Set `true` to run http mode without a token |
 | `MCP_MAX_REQUEST_BYTES` | `67108864` (64 MiB) | Largest HTTP request body, which bounds base64 uploads |
+| `MCP_STATELESS` | `false` | Set `true` to serve http mode without sessions (no `mcp-session-id`; a fresh transport per request). Use it on hosts that stop idle instances, or with several replicas behind a load balancer, where an in-memory session would be lost or land on the wrong instance |
 
 ## Security model
 

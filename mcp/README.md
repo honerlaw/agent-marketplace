@@ -47,6 +47,16 @@ server needs no workflow edit. For each server it runs `make check` on Python 3.
 and 3.13 and builds the Docker image. A server with no collected tests fails the
 job. Tests must never be able to go dark.
 
+On a push to `main` only (never on a pull request), once `check` and `docker` have
+both passed, a `publish` job builds each server's image for `linux/amd64` and
+`linux/arm64` and pushes it to GitHub Container Registry as
+`ghcr.io/<repository-owner>/<server-dir>-mcp`, for example
+`ghcr.io/<owner>/openai-mcp`. Each image is tagged with the full commit SHA and
+`latest`, and the pushed digest is written to the job summary. The job signs in
+with the workflow's `GITHUB_TOKEN`, so no secret is needed. A new package starts
+private: make it public once, under the package's settings on GitHub, before
+anyone can pull it without signing in.
+
 ## Adding a server
 
 1. Copy `openai/pyproject.toml`, `Makefile` and `Dockerfile` into `mcp/<name>/`

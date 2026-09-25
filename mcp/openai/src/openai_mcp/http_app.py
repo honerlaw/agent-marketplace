@@ -38,9 +38,15 @@ class BearerAuth:
 
 
 def build_http_app(server: MCPServer, settings: Settings) -> ASGIApp:
-    """Return the ASGI app to serve, wrapped in bearer auth unless explicitly disabled."""
+    """Return the ASGI app to serve, wrapped in bearer auth unless explicitly disabled.
+
+    In stateless mode the SDK keeps no sessions: each request gets a fresh transport
+    and no `mcp-session-id`, so any instance can answer any request.
+    """
     app = server.streamable_http_app(
-        host=settings.host, max_request_body_size=settings.max_request_bytes
+        host=settings.host,
+        max_request_body_size=settings.max_request_bytes,
+        stateless_http=settings.stateless,
     )
     if settings.auth_token is None:
         return app
