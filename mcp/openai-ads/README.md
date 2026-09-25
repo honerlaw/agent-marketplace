@@ -9,7 +9,7 @@ together reach every endpoint, so it keeps working as OpenAI adds endpoints.
 | Tool | What it does |
 |---|---|
 | `openai_ads_request(method, path, query?, body?, headers?)` | Any JSON call, e.g. `POST /campaigns`, `GET /ad_groups`, `POST /ads/{ad_id}/activate` |
-| `openai_ads_multipart_request(path, files, fields?)` | File uploads, e.g. a creative image to `/upload` |
+| `openai_ads_multipart_request(path, files, fields?)` | File uploads: a creative image to `/upload`, or a custom-audience file to `/uploads` |
 | `openai_ads_list_endpoints(text_filter?)` | Lists operations from OpenAI's published Ads OpenAPI spec |
 | `openai_ads_describe_endpoint(method, path, depth?)` | Parameters and schemas of one operation |
 
@@ -122,7 +122,9 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... OPENAI_ADS_API_KEY=... .v
   `ads.admin.all.read|write`) is not supported. Use one server per ad account.
 - **Discovery follows the published spec**, which may briefly lag new endpoints.
   `openai_ads_request` works for any endpoint whether or not it's listed.
-- **Array parameters** are passed as lists, e.g. `query={"include[]": ["serving_issues"]}`.
+- **Array parameters** are passed as lists and sent as repeated keys, e.g.
+  `query={"include": ["serving_issues"]}` sends `include=serving_issues`. Use the parameter
+  name exactly as `openai_ads_describe_endpoint` shows it.
 - **Response headers are an allowlist:** `content-type`, `x-request-id`,
   `openai-processing-ms`, `openai-version`, `retry-after`, and any `x-ratelimit-*` or
   `ratelimit*` header. The rate-limit header names are not documented, so both common

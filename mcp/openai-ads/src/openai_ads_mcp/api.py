@@ -89,6 +89,10 @@ class AdsApi:
         self, path: str, fields: dict[str, FormValue], files: list[FileInput]
     ) -> JsonObject:
         """POST a multipart/form-data request and describe the response."""
+        if not files:
+            # With no file parts httpx sends a urlencoded form, which upload endpoints refuse.
+            message = "give at least one file; for an image URL use openai_ads_request instead"
+            raise ToolError(message)
         for item in files:
             check_local_file(item.local_path, allowed=self._local_files)
         parts = [(item.field, (item.filename, item.read(), item.content_type)) for item in files]

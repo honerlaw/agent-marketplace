@@ -10,7 +10,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from openai_ads_mcp.config import Settings
 
-HTTP_METHODS = ("get", "post", "put", "patch", "delete")
+HTTP_METHODS = ("get", "post", "patch", "delete")
 MAX_REF_DEPTH = 6
 Spec = dict[str, object]
 Node = object

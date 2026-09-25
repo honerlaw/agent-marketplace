@@ -24,7 +24,7 @@ TOOL_NAMES = {
 }
 PATH_TOOLS = [
     ("openai_ads_request", {"method": "GET"}),
-    ("openai_ads_multipart_request", {"files": []}),
+    ("openai_ads_multipart_request", {"files": [{"filename": "a", "content_base64": "eA=="}]}),
 ]
 
 
@@ -180,12 +180,18 @@ async def test_multipart_upload_from_base64_and_local_path(
         },
         {"field": "extra", "filename": "card.png", "local_path": str(local)},
     ]
-    arguments = {"path": "/uploads", "fields": {"purpose": "creative"}, "files": files}
+    arguments = {"path": "/uploads", "fields": {"purpose": "custom_audience"}, "files": files}
     result = await call(settings, fake, "openai_ads_multipart_request", arguments)
     assert not result.is_error
     body = fake.last.content
     assert fake.last.headers["content-type"].startswith("multipart/form-data")
-    fragments = (b'name="purpose"', b"creative", b'filename="shoe.png"', b"png bytes", b"from disk")
+    fragments = (
+        b'name="purpose"',
+        b"custom_audience",
+        b'filename="shoe.png"',
+        b"png bytes",
+        b"from disk",
+    )
     for fragment in fragments:
         assert fragment in body
 
@@ -210,13 +216,20 @@ async def test_bad_file_inputs_are_refused(
 async def test_query_accepts_numbers_booleans_and_lists(
     settings: Settings, fake: FakeAdsApi
 ) -> None:
-    query = {"limit": 10, "archived": False, "include[]": ["serving_issues", "reviews"]}
+    query = {"limit": 10, "is_active": False, "include": ["serving_issues", "reviews"]}
     await call(
         settings, fake, "openai_ads_request", {"method": "GET", "path": "/x", "query": query}
     )
     assert fake.last.url.query == (
-        b"limit=10&archived=false&include%5B%5D=serving_issues&include%5B%5D=reviews"
+        b"limit=10&is_active=false&include=serving_issues&include=reviews"
     )
+
+
+async def test_multipart_without_files_is_refused(settings: Settings, fake: FakeAdsApi) -> None:
+    arguments = {"path": "/upload", "files": [], "fields": {"image_url": "https://x.test/a.png"}}
+    result = await call(settings, fake, "openai_ads_multipart_request", arguments)
+    assert "at least one file" in error_text(result)
+    assert fake.requests == []
 
 
 async def test_http_mode_refuses_server_local_files(settings: Settings, fake: FakeAdsApi) -> None:

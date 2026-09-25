@@ -19,7 +19,8 @@ product sets; ads hold the creative and destination URL.
 Paths are relative to the API base URL, e.g. "/campaigns", "/ad_groups/{ad_group_id}".
 Unsure how to call an endpoint? Use openai_ads_list_endpoints to find it and
 openai_ads_describe_endpoint to read its parameters and body schema, then call it with
-openai_ads_request (JSON) or openai_ads_multipart_request (image file uploads to "/upload").
+openai_ads_request (JSON) or openai_ads_multipart_request (file uploads: creative images to
+"/upload", custom-audience files to "/uploads" with purpose "custom_audience").
 Lists page with the `limit`, `after` and `before` query parameters.
 Money is in micros of the ad account's currency: 50000000 is 50.00.
 This API spends real money. Create campaigns, ad groups and ads with status "paused",
@@ -67,7 +68,7 @@ def _add_api_tools(server: MCPServer, api: AdsApi) -> None:
     async def openai_ads_multipart_request(
         path: str, files: list[FileInput], fields: dict[str, FormValue] | None = None
     ) -> JsonObject:
-        """POST a multipart/form-data upload, e.g. a creative image to "/upload".
+        """POST a multipart/form-data upload: an image to "/upload" or a file to "/uploads".
 
         Each file gives either `content_base64` or `local_path`. A local path is read
         on the server's filesystem and is only allowed over stdio; over HTTP send base64.

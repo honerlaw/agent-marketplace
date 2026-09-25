@@ -21,6 +21,8 @@
     - fix (all): `mcp/google-search-console/README.md:8` still said "The OpenAI server ... hundreds of operations"; reworded to name openai-ads/reddit-ads (~100 ops each)
     - fix (skeptic/arbiter): `tests/__init__.py` docstring → "OpenAI Ads MCP server"
 
+- [solo] review triage: 6 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was small enough to absorb; none had two defensible dispositions). Minerva audit: no knowledge violations; one disclosed drift (timeout default 600→120 s)
+
 ## Work notes
 - `git mv mcp/openai mcp/openai-ads` then `git mv src/openai_mcp src/openai_ads_mcp`; bulk sed for identifiers, then hand edits.
 - Timeout default lowered 600 → 120 s: the 600 s default existed for long model generations on the general API; Ads calls are CRUD/reporting. Not in the proposal text — minor default change, called out in README config table.
@@ -30,3 +32,12 @@
 - Docker: `docker build` + `docker run --env-file ci.env` → `/healthz` = ok, `POST /mcp` without token = 401.
 - `make check`: 73 passed, 100% line+branch coverage; ruff/format/mypy clean.
 - Stale-reference grep (criterion 8): zero hits for the ten retired identifiers outside `.minerva/`; every `openai` hit is openai-ads or the vendor.
+
+## Review triage 2026-09-25
+Code review: local-diff mode (fresh-context subagent; no PR yet). Minerva audit inline.
+1. FIX (medium) README array example `include[]` → spec name `include`, sent as repeated keys; tell the model to use the name `describe` shows. (OpenAI's own quickstart curl uses `include[]=`; the spec names it `include` — the README no longer asserts either spelling beyond "as describe shows".)
+2. FIX (low) multipart tool with empty `files` went out urlencoded → now refused with a pointer to `openai_ads_request` for `image_url`; test added.
+3. FIX (low) criterion 1 "git reports renames": 7 heavily rewritten files fall under git's 50% similarity threshold and show as delete+add despite `git mv`. Recorded in the promoted proposal rather than contorting the diff.
+4. FIX (low) tests encoded wrong API shapes (`include[]`, `archived`, `purpose: creative`) → `include`, `purpose: custom_audience`.
+5. FIX (low) instructions/docstring/README named only `/upload`; now also `/uploads` (custom-audience files, `purpose: custom_audience`).
+6. FIX (low) `HTTP_METHODS` dropped unused `put`.
