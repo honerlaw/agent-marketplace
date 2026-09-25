@@ -1,7 +1,7 @@
 # Proposal: add-reddit-ads-mcp-server
 
 **Date**: 2026-09-25
-**Status**: Draft
+**Status**: Shipped (2026-09-25)
 
 ## Goal
 
@@ -36,7 +36,8 @@ and CI matrix entry. `mcp/README.md` and the root `README.md` "MCP servers" tabl
 
 **Tool surface: four tools.**
 1. `reddit_ads_request(method, path, query?, body?, headers?)` sends any JSON request relative to
-   the base URL. `method` is one of GET/POST/PATCH/DELETE, the only methods the spec uses: POST for creates and
+   the base URL. `method` is one of GET/POST/PUT/PATCH/DELETE. The spec uses no PUT today; PUT is accepted so that
+   one added later is callable. The spec uses POST for creates and
    for query-style reads (`/query`, `/reports`, `/history`, estimates), PATCH for updates and DELETE for deletes. The result contains:
    - the status
    - an allowlist of response headers: `content-type`, `ratelimit`, `ratelimit-policy` and
@@ -63,8 +64,8 @@ and CI matrix entry. `mcp/README.md` and the root `README.md` "MCP servers" tabl
    - a path under the base path, whose base-relative remainder passes the same `check_path`
    - no fragment
 
-   It then sends the request to the relative path plus the URL's query string verbatim, so the
-   access token only ever goes to the base URL.
+   Host comparison ignores case. The tool sends the validated URL verbatim, so the access token
+   only ever goes to the base URL, and it refuses a `body` unless `method` is POST.
 3. `reddit_ads_list_endpoints(text_filter?)` returns `METHOD /path — summary` lines from the spec
    (about 6.7 KB for all 108 operations).
 4. `reddit_ads_describe_endpoint(method, path, depth=1)` returns parameters, request body, 2xx
@@ -91,13 +92,19 @@ tokens.
   - The server POSTs `grant_type=refresh_token` to `REDDIT_TOKEN_URL` (default
     `https://www.reddit.com/api/v1/access_token`), form-encoded, with HTTP Basic
     `client_id:client_secret`.
-  - It caches the access token until 60 s before `expires_in`. Reddit sends either 3600 or
-    86400 seconds.
+  - It caches the access token for `max(expires_in - 60, expires_in / 2)` seconds, so a
+    short-lived token isn't refreshed on every call. Reddit sends either 3600 or 86400 seconds,
+    and a missing value counts as 3600.
   - If the response includes a new `refresh_token`, it replaces the old one in memory.
   - A lock makes concurrent tool calls share one refresh.
   - On a 401 from the API it refreshes and retries **once**.
-  - If the token endpoint rejects the credentials, the tool error names the problem and does not
-    echo any secret.
+  - A refresh fails with a `ToolError` that never echoes a secret, in three cases:
+    - the token endpoint is unreachable
+    - it answers without a non-empty `access_token` (it can answer HTTP 200 with
+      `{"error": …}`)
+    - it returns 429 or 5xx, and the hint then says to retry later, not to check credentials
+  - Transport errors on API calls and unreadable local specs also become `ToolError`s, never bare
+    exceptions.
 - **Static mode**: `REDDIT_ACCESS_TOKEN` is sent as-is and never refreshed. This covers a CAPI
   conversion access token or a token minted elsewhere.
 
@@ -133,14 +140,17 @@ needs all four.
   `REDDIT_ACCESS_TOKEN`, `REDDIT_USER_AGENT`, `REDDIT_TOKEN_URL`, `REDDIT_ADS_BASE_URL`,
   `REDDIT_TIMEOUT_SECONDS`, `REDDIT_ADS_OPENAPI_PATH` and `REDDIT_ADS_OPENAPI_URL`.
 - MCP: `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`, `MCP_AUTH_TOKEN`, `MCP_ALLOW_UNAUTHENTICATED`,
-  `MCP_MAX_REQUEST_BYTES` and `MCP_STATELESS`, all identical to openai.
+  `MCP_MAX_REQUEST_BYTES` and `MCP_STATELESS`, with the same meanings as openai's.
+- Two defaults differ from openai's because nothing here uploads files: `MCP_MAX_REQUEST_BYTES`
+  is 4 MiB (the SDK default, not 64 MiB), and `REDDIT_TIMEOUT_SECONDS` is 120 s (not 600).
 
 **CI contract change (cross-cutting).** The `docker` smoke job in `.github/workflows/mcp.yml`
 currently hard-codes `-e OPENAI_API_KEY=sk-ci -e MCP_AUTH_TOKEN=ci`. The reddit container would
 exit on missing credentials and fail `/healthz`. The fix is for each server to ship a
 `ci.env` of dummy, non-secret values that lets its image start. The smoke job runs
-`docker run --env-file "<server>/ci.env"` instead of enumerating variables. `mcp/openai/ci.env` is
-added, and `mcp/README.md`'s per-server contract lists `ci.env`. This keeps the rule that "a new
+`docker run --env-file "<server>/ci.env"` instead of enumerating variables. `mcp/openai/ci.env` is added,
+and so is `mcp/google-search-console/ci.env` (`MCP_AUTH_TOKEN=ci` only), because that server
+merged to main during this work without touching the workflow, and `mcp/README.md`'s per-server contract lists `ci.env`. This keeps the rule that "a new
 server needs no workflow edit", and a server without `ci.env` fails the job loudly. No startup step
 calls Reddit, so dummy credentials are enough for `/healthz`. The `publish` job needs no change:
 the image name derives from the directory.
@@ -190,18 +200,18 @@ pytest at 100% line and branch coverage) through `make check`, and CI discovers 
 
 ## Success criteria
 
-- `mcp/reddit-ads/` contains `pyproject.toml` (gate config identical to openai's), `Makefile`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `ci.env`, `.dockerignore`, `README.md`, the `reddit_ads_mcp` package and `tests/`.
-- An in-process MCP client test lists exactly `reddit_ads_request`, `reddit_ads_follow_page`, `reddit_ads_list_endpoints`, `reddit_ads_describe_endpoint`.
-- Tests show `reddit_ads_request` rejects absolute URLs, `..` segments, `//`, `?` and percent-encoded variants, and rejects overrides of `Authorization`, `Host` and `User-Agent`. Tests show `reddit_ads_follow_page` follows a base-URL `next_url` with its query string intact, as a GET and as a POST carrying the given body, and refuses a different host, scheme or port, userinfo, a path outside the base path, a `..` segment and a fragment.
-- Tests show refresh mode fetches a token with HTTP Basic client credentials from the token URL, reuses it until near expiry, refreshes after expiry, adopts a rotated refresh token, retries exactly once on a 401, and never sends the client secret or refresh token to the API base URL.
-- Tests show static-token mode sends `REDDIT_ACCESS_TOKEN` with no token-endpoint call, and config refuses zero modes, both modes, or incomplete refresh credentials.
-- Tests show every API request carries the configured `User-Agent` and that `ratelimit`/`ratelimit-policy`/`retry-after` headers are returned.
-- Tests show list/describe work from a fixture spec via `REDDIT_ADS_OPENAPI_PATH`, describe includes the required scope (`null` when undeclared) and HTML-stripped descriptions, and an unreachable spec yields a clear error.
-- Tests show HTTP mode refuses to start without `MCP_AUTH_TOKEN` unless explicitly allowed, rejects bad bearer tokens, serves `/healthz` unauthenticated, completes an authenticated tool call, and serves stateless mode without sessions; a stdio subprocess test completes a handshake and lists four tools.
-- In `mcp/reddit-ads/`, `make check` passes: ruff check, ruff format --check, mypy --strict, pytest with 100% line and branch coverage.
-- `docker build mcp/reddit-ads` succeeds and the container started with `--env-file mcp/reddit-ads/ci.env` answers `GET /healthz` with 200. The same holds for `mcp/openai` with its new `ci.env`.
-- `.github/workflows/mcp.yml`'s docker job uses `--env-file <server>/ci.env` and names no server-specific variables. `mcp/README.md` and root `README.md` list `reddit-ads`; `mcp/README.md` adds `ci.env` to the per-server contract.
-- `mcp/reddit-ads/README.md` documents:
+- [x] `mcp/reddit-ads/` contains `pyproject.toml` (gate config identical to openai's), `Makefile`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `ci.env`, `.dockerignore`, `README.md`, the `reddit_ads_mcp` package and `tests/`.
+- [x] An in-process MCP client test lists exactly `reddit_ads_request`, `reddit_ads_follow_page`, `reddit_ads_list_endpoints`, `reddit_ads_describe_endpoint`.
+- [x] Tests show `reddit_ads_request` rejects absolute URLs, `..` segments, `//`, `?` and percent-encoded variants, and rejects overrides of `Authorization`, `Host` and `User-Agent`. Tests show `reddit_ads_follow_page` follows a base-URL `next_url` with its query string intact, as a GET and as a POST carrying the given body, and refuses a different host, scheme or port, userinfo, a path outside the base path, a `..` segment and a fragment.
+- [x] Tests show refresh mode fetches a token with HTTP Basic client credentials from the token URL, reuses it until near expiry, refreshes after expiry, adopts a rotated refresh token, retries exactly once on a 401, and never sends the client secret or refresh token to the API base URL.
+- [x] Tests show static-token mode sends `REDDIT_ACCESS_TOKEN` with no token-endpoint call, and config refuses zero modes, both modes, or incomplete refresh credentials.
+- [x] Tests show every API request carries the configured `User-Agent` and that `ratelimit`/`ratelimit-policy`/`retry-after` headers are returned.
+- [x] Tests show list/describe work from a fixture spec via `REDDIT_ADS_OPENAPI_PATH`, describe includes the required scope (`null` when undeclared) and HTML-stripped descriptions, and an unreachable spec yields a clear error.
+- [x] Tests show HTTP mode refuses to start without `MCP_AUTH_TOKEN` unless explicitly allowed, rejects bad bearer tokens, serves `/healthz` unauthenticated, completes an authenticated tool call, and serves stateless mode without sessions; a stdio subprocess test completes a handshake and lists four tools.
+- [x] In `mcp/reddit-ads/`, `make check` passes: ruff check, ruff format --check, mypy --strict, pytest with 100% line and branch coverage.
+- [x] `docker build mcp/reddit-ads` succeeds and the container started with `--env-file mcp/reddit-ads/ci.env` answers `GET /healthz` with 200. The same holds for `mcp/openai` with its new `ci.env`.
+- [x] `.github/workflows/mcp.yml`'s docker job uses `--env-file <server>/ci.env` and names no server-specific variables. `mcp/README.md` and root `README.md` list `reddit-ads`; `mcp/README.md` adds `ci.env` to the per-server contract.
+- [x] `mcp/reddit-ads/README.md` documents:
   - stdio setup for Claude Code and Claude Desktop, and HTTP/Docker usage
   - every environment variable
   - the refresh-token bootstrap and scopes
@@ -210,7 +220,7 @@ pytest at 100% line and branch coverage) through `make check`, and CI discovers 
   - all four OAuth scopes and which operations need each
   - the security model, including the accepted spend risk and scope minimization
   - rate limits
-- `make check` in `mcp/openai` still passes, and root `pytest tests/` still passes.
+- [x] `make check` in `mcp/openai` still passes, and root `pytest tests/` still passes.
 
 ## Open Questions
 
