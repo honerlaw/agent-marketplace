@@ -774,6 +774,13 @@ and self-referential schemas expand to megabytes, so discovery defaults to one l
 underneath changed shape between major versions: `FastMCP` became `MCPServer`, the HTTP
 stack is `httpx2`, request bodies are capped at 4 MiB, and one decorator is untyped under
 `mypy --strict` ([[2026-09-25-reference-mcp-python-sdk-2x-server-facts]]).
+The third server, for Reddit Ads, confirms the generic shape on another vendor.
+- Reddit publishes an unauthenticated OpenAPI spec whose bodies are all JSON, so the server has
+  no upload or download tools.
+- Its access tokens are short-lived, so the server refreshes them itself.
+- Pagination comes as full `next_url`s that Reddit says to follow directly, and four of the
+  paginators are POSTs. That needs its own same-origin-checked tool
+  ([[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]]).
 
 The sharpest lesson is about the security boundary. A tool argument naming a server-local
 path is harmless over stdio, where the server is the user. The same argument served over
@@ -795,7 +802,13 @@ snake_case accessors
 ([[2026-09-25-reference-google-auth-and-mcp-client-facts-for-mcp-servers]]). The
 servers' CI follows the repo's rule that collection is the enumeration: it discovers
 servers by glob so no server's tests can go dark
-([[2026-08-11-decision-ci-runs-the-whole-suite]]).
+([[2026-08-11-decision-ci-runs-the-whole-suite]]). The image smoke test follows the same rule.
+Each server ships a `ci.env` of dummy values rather than the workflow naming any server's
+variables ([[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]]). Tests
+of concurrency guards carry a trap of their own. A synchronous mock transport never yields, so a
+"one refresh for ten callers" test passed with the lock deleted. Only a fake that awaits inside
+the guarded section tests the lock
+([[2026-09-25-pattern-a-mock-transport-that-never-yields-cannot-test-a-lock]]).
 
 ## Limitations
 

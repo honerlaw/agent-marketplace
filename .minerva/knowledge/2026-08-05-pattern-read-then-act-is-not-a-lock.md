@@ -55,3 +55,4 @@ pointless work in the common case, explicitly documented as *not* the lock.
 - [[2026-08-22-pattern-a-just-written-index-is-not-a-read-back-guarantee]] — see also
 - [[2026-08-24-pattern-a-lock-on-a-derived-name-does-not-cover-the-source]] — see also
 - [[2026-08-30-decision-cross-session-messages-inform-never-delegate]] — see also
+- [[2026-09-25-pattern-a-mock-transport-that-never-yields-cannot-test-a-lock]] — see also
