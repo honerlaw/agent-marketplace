@@ -132,7 +132,7 @@ async def test_search_analytics_rejects_an_out_of_range_row_limit(
     result = await call(
         settings, fake, "gsc_query_search_analytics", {"site_url": SITE, "query": query}
     )
-    assert "row_limit" in error_text(result) or "rowLimit" in error_text(result)
+    assert "query.row_limit" in error_text(result)
     assert fake.requests == []
 
 

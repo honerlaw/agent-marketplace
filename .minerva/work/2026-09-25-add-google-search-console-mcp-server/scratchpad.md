@@ -19,6 +19,9 @@
     - fix (arbiter): explain generic candidate's 3-tool count (no upload/download surface)
 - [reviewed — folded] whole-proposal: gsc_inspect_url is a body-based POST under v1/ not covered by criterion 3; two path prefixes unflagged; read-only scope claim overstated — criterion 3, Approach and criterion 7 revised (tier: reviewer — multi-file proposal, solo predicate fails)
 - [rechecked — clean] whole-proposal: fold-audit confirmed items 1–3 addressed; item 4 (google-auth mypy risk, low) left as implementation risk
+- [panel — 3/3 accept, 1 with fixes] completion verification: all 7 criteria independently reproduced by Proponent and Skeptic (make check, 3.11, docker 200/401, gate-config diff, mcp.yml untouched) (tier: panel — diff introduces a public tool interface)
+    - fix (arbiter): tighten the row-limit test to assert the actual field name (`query.row_limit`)
+    - fix (arbiter): remove the no-op `@pytest.mark.anyio` from the sync bearer-scheme test
 
 ## Work notes
 - Mobile-Friendly Test API: confirmed retired 2023-12-01 (Google announced April 2023; tool, report and API shut down together). Excluded; open question closed.
