@@ -10,7 +10,7 @@ from mcp.server.mcpserver import MCPServer
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from openai_mcp.config import Settings
+from openai_ads_mcp.config import Settings
 
 OPEN_PATHS = frozenset({"/healthz"})
 

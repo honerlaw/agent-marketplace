@@ -1,4 +1,4 @@
-"""Shared fixtures: settings and a recording fake of the OpenAI API."""
+"""Shared fixtures: settings and a recording fake of the OpenAI Ads API."""
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -7,15 +7,15 @@ from pathlib import Path
 import httpx2
 import pytest
 
-from openai_mcp.config import Settings
+from openai_ads_mcp.config import Settings
 
-FIXTURE_SPEC = Path(__file__).parent / "fixtures" / "openapi.yaml"
+FIXTURE_SPEC = Path(__file__).parent / "fixtures" / "openapi.json"
 
 Handler = Callable[[httpx2.Request], httpx2.Response]
 
 
 @dataclass
-class FakeOpenAI:
+class FakeAdsApi:
     """A mock transport that records requests and answers with `handler`."""
 
     handler: Handler = field(default=lambda _request: httpx2.Response(200, json={"ok": True}))
@@ -40,10 +40,10 @@ class FakeOpenAI:
 @pytest.fixture
 def settings() -> Settings:
     """Return settings pointing discovery at the local fixture spec."""
-    return Settings(api_key="sk-test", openapi_path=str(FIXTURE_SPEC), max_binary_bytes=16)
+    return Settings(api_key="sk-test", openapi_path=str(FIXTURE_SPEC))
 
 
 @pytest.fixture
-def fake() -> FakeOpenAI:
-    """Return a fresh fake OpenAI API."""
-    return FakeOpenAI()
+def fake() -> FakeAdsApi:
+    """Return a fresh fake Ads API."""
+    return FakeAdsApi()

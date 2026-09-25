@@ -18,3 +18,11 @@
     - fix (all): naming clarified (dist `openai-ads-mcp`, module `openai_ads_mcp`); base64 branch removed; spec parsed with json.loads, pyyaml dropped; live-spec half of criterion 3 marked best-effort
 
 ## Work notes
+- `git mv mcp/openai mcp/openai-ads` then `git mv src/openai_mcp src/openai_ads_mcp`; bulk sed for identifiers, then hand edits.
+- Timeout default lowered 600 → 120 s: the 600 s default existed for long model generations on the general API; Ads calls are CRUD/reporting. Not in the proposal text — minor default change, called out in README config table.
+- `mcp` 2.x `Client` exposes server instructions as `client.instructions` (no `initialize_result`). Used it to assert the instructions reach clients.
+- Live spec (2026-09-25): discovery lists 87 operations incl. `POST /campaigns — Create Campaign`, `POST /ad_groups — Create Ad Group`, `POST /ads — Create Ad`; depth-1 describe of POST /campaigns ≈ 3.4 KB (Ads schemas are small: depth 3 ≤ 13 KB even for insights).
+- Live 401 from `api.ads.openai.com` carries `x-request-id`, `openai-version`, `openai-processing-ms`, plus Cloudflare cookies (`set-cookie`, `cf-ray`) — the allowlist keeps the cookies out.
+- Docker: `docker build` + `docker run --env-file ci.env` → `/healthz` = ok, `POST /mcp` without token = 401.
+- `make check`: 73 passed, 100% line+branch coverage; ruff/format/mypy clean.
+- Stale-reference grep (criterion 8): zero hits for the ten retired identifiers outside `.minerva/`; every `openai` hit is openai-ads or the vendor.

@@ -6,7 +6,7 @@ deployed as a container.
 
 | Server | What it gives an LLM |
 |---|---|
-| [`openai`](openai/) | Full access to the OpenAI REST API via five generic, spec-driven tools |
+| [`openai-ads`](openai-ads/) | Manage ChatGPT ads through the OpenAI Ads (Advertiser) API via four generic, spec-driven tools |
 | [`google-search-console`](google-search-console/) | Full access to the Google Search Console API via ten typed tools, one per operation (optional read-only mode) |
 | [`reddit-ads`](reddit-ads/) | Full access to the Reddit Ads API (v3) via four generic, spec-driven tools, with OAuth token refresh |
 
@@ -30,7 +30,7 @@ repo is scripts and skills without packaging.
 ### Strict quality gates
 
 Every server copies the `[tool.ruff]`, `[tool.mypy]` and `[tool.pytest]`
-configuration from [`openai/pyproject.toml`](openai/pyproject.toml):
+configuration from [`openai-ads/pyproject.toml`](openai-ads/pyproject.toml):
 
 - Ruff with `select = ["ALL"]`. Only rules that contradict another rule or the
   formatter are ignored.
@@ -56,7 +56,7 @@ On a push to `main` only (never on a pull request), once `check` and `docker` ha
 both passed, a `publish` job builds each server's image for `linux/amd64` and
 `linux/arm64` and pushes it to GitHub Container Registry as
 `ghcr.io/<repository-owner>/<server-dir>-mcp`, for example
-`ghcr.io/<owner>/openai-mcp`. Each image is tagged with the full commit SHA and
+`ghcr.io/<owner>/openai-ads-mcp`. Each image is tagged with the full commit SHA and
 `latest`, and the pushed digest is written to the job summary. The job signs in
 with the workflow's `GITHUB_TOKEN`, so no secret is needed. A new package starts
 private: make it public once, under the package's settings on GitHub, before
@@ -64,10 +64,10 @@ anyone can pull it without signing in.
 
 ## Adding a server
 
-1. Copy `openai/pyproject.toml`, `Makefile` and `Dockerfile` into `mcp/<name>/`
+1. Copy `openai-ads/pyproject.toml`, `Makefile` and `Dockerfile` into `mcp/<name>/`
    and rename the package. Add a `ci.env` with dummy values that let it start.
    Pick the tool shape by API size. A large or fast-moving API gets generic, spec-driven
-   tools like `openai/`. A small, stable API gets one typed tool per operation like
+   tools like `openai-ads/`. A small, stable API gets one typed tool per operation like
    `google-search-console/`.
 2. Write the server and its tests until `make check` passes.
 3. Add a row to the table above.

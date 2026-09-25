@@ -1,14 +1,14 @@
-"""Endpoint discovery from OpenAI's published OpenAPI spec, loaded lazily."""
+"""Endpoint discovery from the Ads API's published OpenAPI spec, loaded lazily."""
 
+import json
 from collections.abc import Iterator
 from pathlib import Path
 
 import anyio
 import httpx2
-import yaml
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openai_mcp.config import Settings
+from openai_ads_mcp.config import Settings
 
 HTTP_METHODS = ("get", "post", "put", "patch", "delete")
 MAX_REF_DEPTH = 6
@@ -43,7 +43,9 @@ class SpecCatalog:
         spec = await self._load()
         operation = _as_dict(_as_dict(spec.get("paths")).get(path)).get(method.lower())
         if not isinstance(operation, dict):
-            message = f"no operation {method.upper()} {path} in the spec; see openai_list_endpoints"
+            message = (
+                f"no operation {method.upper()} {path} in the spec; see openai_ads_list_endpoints"
+            )
             raise ToolError(message)
         responses = _as_dict(operation.get("responses"))
         success = {code: body for code, body in responses.items() if str(code).startswith("2")}
@@ -61,7 +63,7 @@ class SpecCatalog:
 
     async def _load(self) -> Spec:
         if self._spec is None:
-            self._spec = _as_dict(yaml.load(await self._read(), Loader=yaml.CSafeLoader))
+            self._spec = _as_dict(json.loads(await self._read()))
         return self._spec
 
     async def _read(self) -> str:

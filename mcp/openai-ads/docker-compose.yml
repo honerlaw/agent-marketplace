@@ -1,5 +1,5 @@
 services:
-  openai-mcp:
+  openai-ads-mcp:
     build: .
     env_file: .env
     ports:

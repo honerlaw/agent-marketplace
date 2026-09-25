@@ -14,10 +14,10 @@ import uvicorn
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
-from openai_mcp.config import Settings
-from openai_mcp.http_app import build_http_app
-from openai_mcp.server import build_server
-from tests.conftest import FakeOpenAI
+from openai_ads_mcp.config import Settings
+from openai_ads_mcp.http_app import build_http_app
+from openai_ads_mcp.server import build_server
+from tests.conftest import FakeAdsApi
 
 TOKEN = "test-token"  # noqa: S105 - a fixture value, not a secret
 
@@ -30,7 +30,7 @@ def free_port() -> int:
         return port
 
 
-def serve(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
+def serve(settings: Settings, fake: FakeAdsApi) -> Iterator[str]:
     """Run the HTTP app in a background thread and yield its base URL."""
     app = build_http_app(build_server(settings, fake.transport), settings)
     server = uvicorn.Server(uvicorn.Config(app, port=settings.port, log_level="warning"))
@@ -44,19 +44,19 @@ def serve(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
 
 
 @pytest.fixture
-def guarded_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
+def guarded_url(settings: Settings, fake: FakeAdsApi) -> Iterator[str]:
     """Run a server that requires the bearer token."""
     yield from serve(replace(settings, auth_token=TOKEN, port=free_port()), fake)
 
 
 @pytest.fixture
-def open_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
+def open_url(settings: Settings, fake: FakeAdsApi) -> Iterator[str]:
     """Run a server started with authentication explicitly disabled."""
     yield from serve(replace(settings, allow_unauthenticated=True, port=free_port()), fake)
 
 
 @pytest.fixture
-def stateless_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
+def stateless_url(settings: Settings, fake: FakeAdsApi) -> Iterator[str]:
     """Run a guarded server in stateless mode."""
     yield from serve(replace(settings, auth_token=TOKEN, stateless=True, port=free_port()), fake)
 
@@ -90,18 +90,18 @@ def result_of(response: httpx2.Response) -> dict[str, object]:
 
 
 def test_stateless_mode_serves_every_request_without_a_session(
-    stateless_url: str, fake: FakeOpenAI
+    stateless_url: str, fake: FakeAdsApi
 ) -> None:
-    call = {"name": "openai_request", "arguments": {"method": "GET", "path": "/models"}}
+    call = {"name": "openai_ads_request", "arguments": {"method": "GET", "path": "/campaigns"}}
     initialized = rpc(stateless_url, "initialize", INITIALIZE)
     listed = rpc(stateless_url, "tools/list", {})
     called = rpc(stateless_url, "tools/call", call)
     responses = (initialized, listed, called)
     assert [r.status_code for r in responses] == [200, 200, 200]
     assert all("mcp-session-id" not in r.headers for r in responses)
-    assert len(result_of(listed)["tools"]) == 5  # type: ignore[arg-type]
+    assert len(result_of(listed)["tools"]) == 4  # type: ignore[arg-type]
     assert result_of(called)["isError"] is False
-    assert fake.last.url.path == "/v1/models"
+    assert fake.last.url.path == "/v1/campaigns"
 
 
 def test_default_mode_issues_a_session_and_requires_it(guarded_url: str) -> None:
@@ -126,15 +126,15 @@ def test_mcp_endpoint_rejects_bad_tokens(guarded_url: str, headers: dict[str, st
 
 
 @pytest.mark.anyio
-async def test_authenticated_multipart_call_over_http(guarded_url: str, fake: FakeOpenAI) -> None:
-    files = [{"filename": "a.jsonl", "content_base64": base64.b64encode(b"{}").decode()}]
+async def test_authenticated_multipart_call_over_http(guarded_url: str, fake: FakeAdsApi) -> None:
+    files = [{"filename": "a.png", "content_base64": base64.b64encode(b"png").decode()}]
     auth = httpx2.AsyncClient(headers={"Authorization": f"Bearer {TOKEN}"})
     async with Client(streamable_http_client(f"{guarded_url}/mcp", http_client=auth)) as client:
         result = await client.call_tool(
-            "openai_multipart_request", {"path": "/files", "files": files}
+            "openai_ads_multipart_request", {"path": "/upload", "files": files}
         )
     assert not result.is_error
-    assert b'filename="a.jsonl"' in fake.last.content
+    assert b'filename="a.png"' in fake.last.content
 
 
 @pytest.mark.anyio
@@ -147,4 +147,4 @@ def test_bearer_scheme_is_case_insensitive(guarded_url: str) -> None:
 async def test_unauthenticated_mode_serves_without_a_token(open_url: str) -> None:
     async with Client(f"{open_url}/mcp") as client:
         listed = await client.list_tools()
-    assert len(listed.tools) == 5
+    assert len(listed.tools) == 4

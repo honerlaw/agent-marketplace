@@ -1,12 +1,12 @@
-"""Command-line entry point: `openai-mcp` or `python -m openai_mcp`."""
+"""Command-line entry point: `openai-ads-mcp` or `python -m openai_ads_mcp`."""
 
 import os
 
 import uvicorn
 
-from openai_mcp.config import load_settings
-from openai_mcp.http_app import build_http_app
-from openai_mcp.server import build_server
+from openai_ads_mcp.config import load_settings
+from openai_ads_mcp.http_app import build_http_app
+from openai_ads_mcp.server import build_server
 
 
 def main() -> None:

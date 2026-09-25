@@ -3,8 +3,8 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-DEFAULT_BASE_URL = "https://api.openai.com/v1"
-DEFAULT_OPENAPI_URL = "https://raw.githubusercontent.com/openai/openai-openapi/main/openapi.yaml"
+DEFAULT_BASE_URL = "https://api.ads.openai.com/v1"
+DEFAULT_OPENAPI_URL = "https://developers.openai.com/ads/openapi.json"
 MIB = 1024 * 1024
 TRUE_VALUES = frozenset({"1", "true", "yes"})
 
@@ -19,10 +19,7 @@ class Settings:
 
     api_key: str
     base_url: str = DEFAULT_BASE_URL
-    organization: str | None = None
-    project: str | None = None
-    timeout_seconds: float = 600.0
-    max_binary_bytes: int = 20 * MIB
+    timeout_seconds: float = 120.0
     openapi_path: str | None = None
     openapi_url: str = DEFAULT_OPENAPI_URL
     transport: str = "stdio"
@@ -37,14 +34,11 @@ class Settings:
 def load_settings(env: Mapping[str, str]) -> Settings:
     """Build settings from an environment mapping, validating as we go."""
     settings = Settings(
-        api_key=_required(env, "OPENAI_API_KEY"),
-        base_url=env.get("OPENAI_BASE_URL") or DEFAULT_BASE_URL,
-        organization=env.get("OPENAI_ORG_ID") or None,
-        project=env.get("OPENAI_PROJECT_ID") or None,
-        timeout_seconds=_number(env, "OPENAI_TIMEOUT_SECONDS", 600),
-        max_binary_bytes=int(_number(env, "OPENAI_MCP_MAX_BINARY_BYTES", 20 * MIB)),
-        openapi_path=env.get("OPENAI_OPENAPI_PATH") or None,
-        openapi_url=env.get("OPENAI_OPENAPI_URL") or DEFAULT_OPENAPI_URL,
+        api_key=_required(env, "OPENAI_ADS_API_KEY"),
+        base_url=env.get("OPENAI_ADS_BASE_URL") or DEFAULT_BASE_URL,
+        timeout_seconds=_number(env, "OPENAI_ADS_TIMEOUT_SECONDS", 120),
+        openapi_path=env.get("OPENAI_ADS_OPENAPI_PATH") or None,
+        openapi_url=env.get("OPENAI_ADS_OPENAPI_URL") or DEFAULT_OPENAPI_URL,
         transport=env.get("MCP_TRANSPORT") or "stdio",
         host=env.get("MCP_HOST") or "127.0.0.1",
         port=int(_number(env, "MCP_PORT", 8000)),

@@ -1,4 +1,4 @@
-"""Guards that keep the API key pointed at the configured OpenAI base URL.
+"""Guards that keep the API key pointed at the configured Ads API base URL.
 
 Every tool that takes a `path` passes it through `check_path`, every
 caller-supplied header set through `check_headers`, and every server-local file
@@ -11,7 +11,7 @@ from urllib.parse import unquote
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-PROTECTED_HEADERS = frozenset({"authorization", "host", "openai-organization", "openai-project"})
+PROTECTED_HEADERS = frozenset({"authorization", "host"})
 FORBIDDEN_PATH_CHARACTERS = ("?", "#", "\\")
 
 
@@ -35,7 +35,7 @@ def check_local_file(path: str | None, *, allowed: bool) -> str | None:
     if path is not None and not allowed:
         message = (
             "server-local file paths are disabled over HTTP; "
-            "send content_base64 instead of local_path, and omit save_to"
+            "send content_base64 instead of local_path"
         )
         raise ToolError(message)
     return path

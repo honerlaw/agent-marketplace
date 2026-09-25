@@ -63,7 +63,7 @@ directory each, runnable locally over stdio or deployed as a container.
 
 | Server | Description |
 |--------|-------------|
-| [`openai`](mcp/openai/) | Full access to the OpenAI REST API through five generic, spec-driven tools; stdio, HTTP (bearer-token auth) or Docker |
+| [`openai-ads`](mcp/openai-ads/) | Manage ChatGPT ads through the OpenAI Ads (Advertiser) API — campaigns, ad groups, ads, uploads, audiences, feeds, conversions, insights — via four generic, spec-driven tools; stdio, HTTP (bearer-token auth) or Docker |
 | [`google-search-console`](mcp/google-search-console/) | Full access to the Google Search Console API (search analytics, sites, sitemaps, URL inspection) through ten typed tools, with an optional read-only mode; stdio, HTTP (bearer-token auth) or Docker |
 | [`reddit-ads`](mcp/reddit-ads/) | Full access to the Reddit Ads API (v3) through four generic, spec-driven tools with OAuth token refresh; stdio, HTTP (bearer-token auth) or Docker |
 

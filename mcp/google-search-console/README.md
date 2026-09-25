@@ -34,7 +34,7 @@ are rejected, so a misspelled option fails instead of being ignored.
 The tools cover the Search Console discovery document at revision `20260923`, except the
 Mobile-Friendly Test (`urlTestingTools.mobileFriendlyTest.run`), which Google retired on
 1 December 2023. If Google adds operations, add a tool for each one. If the API grows large
-or changes quickly, switch to the generic approach used by [`../openai`](../openai/).
+or changes quickly, switch to the generic approach used by [`../openai-ads`](../openai-ads/).
 
 ## Credentials
 

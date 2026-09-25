@@ -1,0 +1,209 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fixture OpenAI Ads API",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "https://api.ads.openai.com/v1"
+    }
+  ],
+  "paths": {
+    "/campaigns": {
+      "get": {
+        "operationId": "ListCampaignsMethod",
+        "summary": "List Campaigns",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignsResource"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreateCampaignMethod",
+        "summary": "Create Campaign",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Campaign"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "operationId": "UploadImageMethod",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadImageBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/lead_sync_subscriptions/{subscription_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SubscriptionId"
+        }
+      ],
+      "get": {
+        "summary": "Get Lead Sync Subscription",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Lead Sync Subscription",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SubscriptionId": {
+        "name": "subscription_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "CampaignsResource": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Campaign"
+            }
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "copied_from": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        }
+      },
+      "CreateCampaignBody": {
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "budget"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "paused"
+            ]
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          }
+        }
+      },
+      "Budget": {
+        "type": "object",
+        "properties": {
+          "daily_spend_limit_micros": {
+            "type": "integer"
+          }
+        }
+      },
+      "UploadImageBody": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "image_url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
