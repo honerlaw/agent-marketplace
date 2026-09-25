@@ -755,6 +755,31 @@ distinguishes the cases that were caught is not care but method — each was fou
 fresh-context reader **deleting the clause and watching**, never by re-reading the anchor
 list, which looked correct every time.
 
+## MCP servers: generic tools and the transport-shaped security boundary
+
+The repo's first product outside the minerva plugin is a home for custom MCP servers under
+`mcp/`, starting with one that gives an LLM the whole OpenAI REST API. The founding choice
+is to wrap a large, fast-moving API with a **few generic, spec-driven tools** rather than
+one tool per endpoint. Hundreds of per-operation tools exceed client tool limits and flood
+context every turn, and a curated subset goes stale. Discovery reads the vendor's OpenAPI
+spec lazily instead ([[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]]).
+That spec has its own traps. The obvious `manual_spec` branch is more than a year stale,
+and self-referential schemas expand to megabytes, so discovery defaults to one level of
+`$ref` expansion ([[2026-09-25-reference-openai-openapi-spec-source-and-size]]). The SDK
+underneath changed shape between major versions: `FastMCP` became `MCPServer`, the HTTP
+stack is `httpx2`, request bodies are capped at 4 MiB, and one decorator is untyped under
+`mypy --strict` ([[2026-09-25-reference-mcp-python-sdk-2x-server-facts]]).
+
+The sharpest lesson is about the security boundary. A tool argument naming a server-local
+path is harmless over stdio, where the server is the user. The same argument served over
+HTTP is arbitrary file read and write for any caller. Every design panel accepted it with a
+documented caveat. Only a review that tried to *use* the feature hostilely found the
+exploit. Controls belong per transport, and a documented limitation is not a control
+([[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]]). The
+servers' CI follows the repo's rule that collection is the enumeration: it discovers
+servers by glob so no server's tests can go dark
+([[2026-08-11-decision-ci-runs-the-whole-suite]]).
+
 ## Limitations
 
 This overview is **advisory** — a navigation aid, never a CI-gated artifact. It no longer
