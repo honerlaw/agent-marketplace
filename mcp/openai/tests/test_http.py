@@ -1,10 +1,11 @@
 """The HTTP transport, served by a real uvicorn server on a local port."""
 
 import base64
+import json
 import socket
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import replace
 
 import httpx2
@@ -52,6 +53,63 @@ def guarded_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
 def open_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
     """Run a server started with authentication explicitly disabled."""
     yield from serve(replace(settings, allow_unauthenticated=True, port=free_port()), fake)
+
+
+@pytest.fixture
+def stateless_url(settings: Settings, fake: FakeOpenAI) -> Iterator[str]:
+    """Run a guarded server in stateless mode."""
+    yield from serve(replace(settings, auth_token=TOKEN, stateless=True, port=free_port()), fake)
+
+
+# The last protocol version with `initialize` handshakes and HTTP sessions; the
+# stateless switch matters only to clients speaking it (or an earlier one).
+SESSION_PROTOCOL = "2025-11-25"
+HEADERS = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Accept": "application/json, text/event-stream",
+    "MCP-Protocol-Version": SESSION_PROTOCOL,
+}
+INITIALIZE = {
+    "protocolVersion": SESSION_PROTOCOL,
+    "capabilities": {},
+    "clientInfo": {"name": "test", "version": "0"},
+}
+
+
+def rpc(url: str, method: str, params: Mapping[str, object]) -> httpx2.Response:
+    """POST one JSON-RPC request with no session header."""
+    body = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+    return httpx2.post(f"{url}/mcp", headers=HEADERS, json=body)
+
+
+def result_of(response: httpx2.Response) -> dict[str, object]:
+    """Pull the JSON-RPC result out of an SSE response body."""
+    data = next(line for line in response.text.splitlines() if line.startswith("data:"))
+    result: dict[str, object] = json.loads(data.removeprefix("data:"))["result"]
+    return result
+
+
+def test_stateless_mode_serves_every_request_without_a_session(
+    stateless_url: str, fake: FakeOpenAI
+) -> None:
+    call = {"name": "openai_request", "arguments": {"method": "GET", "path": "/models"}}
+    initialized = rpc(stateless_url, "initialize", INITIALIZE)
+    listed = rpc(stateless_url, "tools/list", {})
+    called = rpc(stateless_url, "tools/call", call)
+    responses = (initialized, listed, called)
+    assert [r.status_code for r in responses] == [200, 200, 200]
+    assert all("mcp-session-id" not in r.headers for r in responses)
+    assert len(result_of(listed)["tools"]) == 5  # type: ignore[arg-type]
+    assert result_of(called)["isError"] is False
+    assert fake.last.url.path == "/v1/models"
+
+
+def test_default_mode_issues_a_session_and_requires_it(guarded_url: str) -> None:
+    initialized = rpc(guarded_url, "initialize", INITIALIZE)
+    sessionless = rpc(guarded_url, "tools/list", {})
+    assert initialized.status_code == 200
+    assert initialized.headers["mcp-session-id"]
+    assert sessionless.status_code == 400
 
 
 def test_health_check_needs_no_token(guarded_url: str) -> None:

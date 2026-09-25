@@ -12,6 +12,7 @@ def test_defaults_need_only_an_api_key() -> None:
     assert settings.transport == "stdio"
     assert settings.organization is None
     assert settings.max_request_bytes == 64 * 1024 * 1024
+    assert not settings.stateless
 
 
 def test_every_variable_is_read() -> None:
@@ -30,6 +31,7 @@ def test_every_variable_is_read() -> None:
             "MCP_PORT": "9000",
             "MCP_AUTH_TOKEN": "secret",
             "MCP_MAX_REQUEST_BYTES": "100",
+            "MCP_STATELESS": "yes",
         }
     )
     assert settings.base_url == "https://example.test/v1"
@@ -39,6 +41,7 @@ def test_every_variable_is_read() -> None:
     assert settings.openapi_url == "https://example.test/spec.yaml"
     assert (settings.host, settings.port, settings.auth_token) == ("0.0.0.0", 9000, "secret")  # noqa: S104
     assert settings.max_request_bytes == 100
+    assert settings.stateless
 
 
 def test_missing_api_key_is_refused() -> None:

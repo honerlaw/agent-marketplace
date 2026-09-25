@@ -31,6 +31,7 @@ class Settings:
     auth_token: str | None = None
     allow_unauthenticated: bool = False
     max_request_bytes: int = 64 * MIB
+    stateless: bool = False
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
@@ -50,6 +51,7 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         auth_token=env.get("MCP_AUTH_TOKEN") or None,
         allow_unauthenticated=env.get("MCP_ALLOW_UNAUTHENTICATED", "").lower() in TRUE_VALUES,
         max_request_bytes=int(_number(env, "MCP_MAX_REQUEST_BYTES", 64 * MIB)),
+        stateless=env.get("MCP_STATELESS", "").lower() in TRUE_VALUES,
     )
     _check_transport(settings)
     return settings
