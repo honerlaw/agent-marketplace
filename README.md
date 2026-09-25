@@ -64,6 +64,7 @@ directory each, runnable locally over stdio or deployed as a container.
 | Server | Description |
 |--------|-------------|
 | [`openai`](mcp/openai/) | Full access to the OpenAI REST API through five generic, spec-driven tools; stdio, HTTP (bearer-token auth) or Docker |
+| [`google-search-console`](mcp/google-search-console/) | Full access to the Google Search Console API (search analytics, sites, sitemaps, URL inspection) through ten typed tools, with an optional read-only mode; stdio, HTTP (bearer-token auth) or Docker |
 
 Every server is held to strict gates (Ruff with all rules, complexity ≤ 5, `mypy --strict`,
 100% branch coverage), enforced by `.github/workflows/mcp.yml`. See [`mcp/README.md`](mcp/README.md).
