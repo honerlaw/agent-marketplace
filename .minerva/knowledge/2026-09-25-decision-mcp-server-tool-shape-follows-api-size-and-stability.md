@@ -43,3 +43,4 @@ endpoints that don't exist yet.
 - [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — the guard typed tools still need
 - [[2026-08-22-pattern-a-denylist-safety-guard-fails-open]] — why server-built URLs beat validating caller paths
 - [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — see also
+- [[2026-09-25-decision-mcp-openai-server-refocused-on-the-ads-api]] — see also
