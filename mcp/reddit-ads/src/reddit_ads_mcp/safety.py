@@ -33,13 +33,13 @@ def check_path(path: str) -> str:
 def check_page_url(url: str, base_url: str) -> str:
     """Return `url` if it is a pagination URL under `base_url`, else raise ToolError.
 
-    Scheme and host (with any userinfo or port) must equal the base URL's exactly,
+    Scheme and host (with any userinfo or port) must equal the base URL's, ignoring case,
     the path must sit under the base path and pass `check_path`, and there may be
     no fragment. The query string is Reddit's and is kept as-is.
     """
     target, base = urlsplit(url), urlsplit(base_url)
     base_path = base.path.rstrip("/")
-    same_origin = (target.scheme, target.netloc) == (base.scheme, base.netloc)
+    same_origin = (target.scheme, target.netloc.lower()) == (base.scheme, base.netloc.lower())
     if not same_origin or not target.path.startswith(f"{base_path}/") or "#" in url:
         message = f"url must be a pagination URL under {base_url}, got {url!r}"
         raise ToolError(message)

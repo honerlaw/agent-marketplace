@@ -23,6 +23,7 @@ BASE = DEFAULT_BASE_URL
 SAFE_PAGE_URLS = [
     f"{BASE}/ad_accounts/a1/campaigns?page.token=abc&page.size=100",
     f"{BASE}/ad_accounts/a1/reports",
+    "HTTPS://Ads-Api.Reddit.com/api/v3/ad_accounts/a1/campaigns",
 ]
 UNSAFE_PAGE_URLS = [
     "https://evil.test/api/v3/ad_accounts/a1/campaigns?page.token=abc",
