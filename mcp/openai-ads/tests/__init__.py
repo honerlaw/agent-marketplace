@@ -1,1 +1,1 @@
-"""Tests for the OpenAI MCP server."""
+"""Tests for the OpenAI Ads MCP server."""

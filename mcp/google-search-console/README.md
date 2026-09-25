@@ -5,8 +5,8 @@ Google credentials: search performance, properties, sitemaps and URL inspection.
 
 The API is small (ten live operations), so each operation gets its own typed tool. Tool
 schemas carry the API's field names and enums, so the model doesn't need a separate
-discovery step. The OpenAI server takes the opposite approach because its API has hundreds
-of operations.
+discovery step. The `openai-ads` and `reddit-ads` servers take the opposite approach because
+their APIs have around a hundred operations each and add endpoints often.
 
 | Tool | API operation |
 |---|---|

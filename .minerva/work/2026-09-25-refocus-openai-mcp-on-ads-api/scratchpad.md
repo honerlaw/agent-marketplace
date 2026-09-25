@@ -17,6 +17,10 @@
     - fix (skeptic/arbiter): header forwarding softened to "retry-after if present" + defensive rate-limit prefixes, with a retry-after test (live 401 confirmed x-request-id/openai-version/openai-processing-ms)
     - fix (all): naming clarified (dist `openai-ads-mcp`, module `openai_ads_mcp`); base64 branch removed; spec parsed with json.loads, pyyaml dropped; live-spec half of criterion 3 marked best-effort
 
+- [panel — 3/3 accept, 3 with fixes] completion verification: all 9 criteria met, each reproduced independently by all three panelists (make check, grep, Docker healthz/401) (tier: panel — the diff changes a public interface, so the Verifier floor is raised)
+    - fix (all): `mcp/google-search-console/README.md:8` still said "The OpenAI server ... hundreds of operations"; reworded to name openai-ads/reddit-ads (~100 ops each)
+    - fix (skeptic/arbiter): `tests/__init__.py` docstring → "OpenAI Ads MCP server"
+
 ## Work notes
 - `git mv mcp/openai mcp/openai-ads` then `git mv src/openai_mcp src/openai_ads_mcp`; bulk sed for identifiers, then hand edits.
 - Timeout default lowered 600 → 120 s: the 600 s default existed for long model generations on the general API; Ads calls are CRUD/reporting. Not in the proposal text — minor default change, called out in README config table.
