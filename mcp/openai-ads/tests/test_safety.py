@@ -1,0 +1,41 @@
+"""The path and header guards that keep the API key on the configured host."""
+
+import pytest
+from mcp.server.mcpserver.exceptions import ToolError
+
+from openai_ads_mcp.safety import check_headers, check_path
+
+UNSAFE_PATHS = [
+    "campaigns",
+    "https://evil.test/v1/campaigns",
+    "//evil.test/campaigns",
+    "/%2Fevil.test/campaigns",
+    "/ads/../../api_keys",
+    "/ads/%2e%2e/api_keys",
+    "/campaigns?limit=1",
+    "/campaigns#top",
+    "/campaigns\\x",
+    "/redirect/https://evil.test",
+]
+
+
+@pytest.mark.parametrize("path", ["/campaigns", "/campaigns/cmpn_123/activate", "/v1..beta/x"])
+def test_plain_paths_pass(path: str) -> None:
+    assert check_path(path) == path
+
+
+@pytest.mark.parametrize("path", UNSAFE_PATHS)
+def test_unsafe_paths_are_refused(path: str) -> None:
+    with pytest.raises(ToolError):
+        check_path(path)
+
+
+def test_ordinary_headers_pass() -> None:
+    assert check_headers({"Idempotency-Key": "k-1"}) == {"Idempotency-Key": "k-1"}
+    assert check_headers(None) == {}
+
+
+@pytest.mark.parametrize("name", ["Authorization", "authorization", "Host", "HOST"])
+def test_protected_headers_are_refused(name: str) -> None:
+    with pytest.raises(ToolError, match="cannot be overridden"):
+        check_headers({name: "x"})
