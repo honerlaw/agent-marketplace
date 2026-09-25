@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 Dimension = Literal["DATE", "QUERY", "PAGE", "COUNTRY", "DEVICE", "SEARCH_APPEARANCE", "HOUR"]
@@ -16,9 +16,13 @@ DataState = Literal["FINAL", "ALL", "HOURLY_ALL"]
 
 
 class ApiModel(BaseModel):
-    """Serializes to the API's camelCase names; accepts either spelling as input."""
+    """Serializes to the API's camelCase names; accepts either spelling as input.
 
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    Unknown fields are an error rather than silently dropped, so a misspelled option
+    fails loudly instead of returning a different report than the one asked for.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
     def to_api(self) -> dict[str, object]:
         """Return the JSON body the API expects, leaving out unset fields."""
@@ -47,7 +51,10 @@ class SearchAnalyticsQuery(ApiModel):
     end_date: str = Field(description="Last day, inclusive, YYYY-MM-DD")
     dimensions: list[Dimension] | None = Field(default=None, description="Group-by dimensions")
     search_type: SearchType | None = Field(
-        default=None, alias="type", description="Search type; the API default is WEB"
+        default=None,
+        alias="type",
+        validation_alias=AliasChoices("type", "searchType", "search_type"),
+        description="Search type; the API default is WEB (also accepted as searchType)",
     )
     dimension_filter_groups: list[DimensionFilterGroup] | None = None
     aggregation_type: AggregationType | None = None

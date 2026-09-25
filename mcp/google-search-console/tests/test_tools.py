@@ -125,6 +125,45 @@ async def test_search_analytics_sends_the_api_body(
     }
 
 
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [
+        ("gsc_delete_sitemap", {"site_url": SITE, "feedpath": ".."}),
+        ("gsc_submit_sitemap", {"site_url": SITE, "feedpath": "."}),
+        ("gsc_get_site", {"site_url": ".."}),
+        (
+            "gsc_query_search_analytics",
+            {"site_url": ".", "query": {"startDate": "a", "endDate": "b"}},
+        ),
+    ],
+)
+async def test_dot_segments_never_reach_another_endpoint(
+    settings: Settings, fake: FakeSearchConsole, tool: str, arguments: dict[str, object]
+) -> None:
+    result = await call(settings, fake, tool, arguments)
+    assert "is not a site URL or sitemap URL" in error_text(result)
+    assert fake.requests == []
+
+
+async def test_search_analytics_accepts_the_deprecated_search_type_name(
+    settings: Settings, fake: FakeSearchConsole
+) -> None:
+    query = {"startDate": "2026-09-01", "endDate": "2026-09-07", "searchType": "IMAGE"}
+    await call(settings, fake, "gsc_query_search_analytics", {"site_url": SITE, "query": query})
+    assert json.loads(fake.last.content)["type"] == "IMAGE"
+
+
+async def test_search_analytics_refuses_unknown_fields(
+    settings: Settings, fake: FakeSearchConsole
+) -> None:
+    query = {"startDate": "2026-09-01", "endDate": "2026-09-07", "rowlimit": 5}
+    result = await call(
+        settings, fake, "gsc_query_search_analytics", {"site_url": SITE, "query": query}
+    )
+    assert "query.rowlimit" in error_text(result)
+    assert fake.requests == []
+
+
 async def test_search_analytics_rejects_an_out_of_range_row_limit(
     settings: Settings, fake: FakeSearchConsole
 ) -> None:
@@ -163,6 +202,16 @@ async def test_api_errors_come_back_as_tool_errors(settings: Settings) -> None:
     )
     result = await call(settings, fake, "gsc_get_site", {"site_url": SITE})
     assert error_text(result).endswith("Search Console API returned 403: No access")
+
+
+async def test_network_failures_come_back_as_tool_errors(settings: Settings) -> None:
+    def unreachable(request: httpx2.Request) -> httpx2.Response:
+        message = "timed out"
+        raise httpx2.ConnectTimeout(message, request=request)
+
+    fake = FakeSearchConsole(handler=unreachable)
+    result = await call(settings, fake, "gsc_list_sites", {})
+    assert "could not reach the Search Console API: ConnectTimeout" in error_text(result)
 
 
 async def test_missing_credentials_are_reported_without_a_request(

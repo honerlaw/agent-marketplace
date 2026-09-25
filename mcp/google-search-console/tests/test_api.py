@@ -19,6 +19,12 @@ def test_segment_keeps_a_value_in_one_segment(value: str, encoded: str) -> None:
     assert segment(value) == encoded
 
 
+@pytest.mark.parametrize("value", ["", ".", ".."])
+def test_dot_segments_are_refused(value: str) -> None:
+    with pytest.raises(ToolError, match="is not a site URL or sitemap URL"):
+        segment(value)
+
+
 def test_site_path_encodes_every_part() -> None:
     path = site_path("sc-domain:example.com", "sitemaps", "https://example.com/a.xml")
     assert path == (
@@ -32,6 +38,11 @@ def test_success_returns_the_json_object() -> None:
 
 def test_empty_success_reports_the_status() -> None:
     assert describe_response(httpx2.Response(204)) == {"status": 204}
+
+
+def test_non_json_success_is_returned_as_text() -> None:
+    response = httpx2.Response(200, text="<html>ok</html>", headers={"content-type": "text/html"})
+    assert describe_response(response) == {"status": 200, "text": "<html>ok</html>"}
 
 
 def test_non_object_json_is_wrapped() -> None:

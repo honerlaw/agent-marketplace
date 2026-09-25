@@ -22,6 +22,7 @@
 - [panel — 3/3 accept, 1 with fixes] completion verification: all 7 criteria independently reproduced by Proponent and Skeptic (make check, 3.11, docker 200/401, gate-config diff, mcp.yml untouched) (tier: panel — diff introduces a public tool interface)
     - fix (arbiter): tighten the row-limit test to assert the actual field name (`query.row_limit`)
     - fix (arbiter): remove the no-op `@pytest.mark.anyio` from the sync bearer-scheme test
+- [solo] review triage: 14 FIX (code findings 1–7, 9–11 + README fixes; minerva audit findings 2 → promote rewrite) / 0 SUGGEST / 1 IGNORE (8, concurrent-refresh test: no failure scenario) (tier: default-solo row — no finding had two defensible dispositions; the dot-segment fix is a bug fix inside the approach, not a divergence, so no replan-vs-FIX panel)
 
 ## Work notes
 - Mobile-Friendly Test API: confirmed retired 2023-12-01 (Google announced April 2023; tool, report and API shut down together). Excluded; open question closed.
@@ -34,3 +35,18 @@
 - Added one "pick the tool shape by API size" line to mcp/README.md "Adding a server" (the approach panel asked for this precedent to be recorded).
 - MCP_MAX_REQUEST_BYTES default is 4 MiB (SDK default) rather than openai's 64 MiB: there are no uploads here.
 - Verified: make check on 3.13 and 3.11 (uv), docker build + /healthz 200 with only MCP_AUTH_TOKEN/OPENAI_API_KEY (CI smoke env), /mcp 401 without token.
+
+## Review triage 2026-09-25
+Code review: independent fresh-context subagent on the local diff (no PR yet — local-diff mode). Minerva audit: inline.
+- [FIX] (high) api.py segment(): `quote(safe="")` leaves `.`/`..` intact and httpx2 resolves dot segments — `gsc_delete_sitemap(feedpath="..")` sent DELETE on the site itself. Now "", ".", ".." are refused; tool-level tests added; deletion check confirmed 7 tests fail without the guard.
+- [FIX] (medium) README / api.py docstring claimed values "cannot leave their segment" — corrected.
+- [FIX] (medium) no test for bare dot segments — added (api + 4 tools).
+- [FIX] (medium) models: extra fields silently dropped (e.g. `searchType`, `rowlimit`) — `extra="forbid"`, `searchType` accepted as a validation alias; tests added; README notes it.
+- [FIX] (low) 2xx non-JSON body raised an opaque error — returned as `{"status", "text"}`; test added.
+- [FIX] (low) httpx2 transport errors/timeouts were opaque — ToolError naming the exception; test added. (mcp/openai has the same gap; out of this diff.)
+- [FIX] (low) bearer-scheme test only asserted != 401 — now a lowercase-bearer initialize must return 200.
+- [IGNORE] (low) no concurrent token() test — lock is a single anyio.Lock around load+refresh; no failure scenario.
+- [FIX→promote] (low, audit) proposal Approach names `google.auth.load_credentials_from_dict` and omits models.py — promote rewrites Approach to match what shipped.
+
+## Review finding 2026-09-25
+- The dot-segment escape is the 2026-08-22 denylist pattern in a new form: percent-encoding is an enumeration of *characters* to neutralise, and `.`/`..` are whole-segment values no character-level encoding touches. Candidate knowledge: a path-segment encoder must also refuse dot segments; `quote(value, safe="")` alone does not make a value "one segment". mcp/openai's check_path does reject `..` segments, so it is not affected.

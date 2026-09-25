@@ -1,9 +1,10 @@
 """Thin async client for the Search Console API.
 
 Callers never supply a path. Every URL is built here from a fixed template, and each
-caller value that lands in a path (`site_url`, `feedpath`) is percent-encoded as one
-segment, so a value like "../x" or "https://a/?b" cannot leave its segment. That
-encoding is the server's security boundary on the Google side.
+caller value that lands in a path (`site_url`, `feedpath`) becomes exactly one segment:
+it is percent-encoded, so "/", "?" and "#" cannot split it, and the three values that
+encoding leaves special ("", "." and "..", which URL resolution collapses into a
+different path) are refused. That is the server's security boundary on the Google side.
 """
 
 from urllib.parse import quote
@@ -15,6 +16,7 @@ from google_search_console_mcp.config import Settings
 from google_search_console_mcp.credentials import TokenSource
 
 BASE_URL = "https://searchconsole.googleapis.com"
+UNSAFE_SEGMENTS = frozenset({"", ".", ".."})
 SITES = "/webmasters/v3/sites"
 INSPECT_PATH = "/v1/urlInspection/index:inspect"
 
@@ -22,7 +24,10 @@ JsonObject = dict[str, object]
 
 
 def segment(value: str) -> str:
-    """Percent-encode `value` so it is exactly one path segment."""
+    """Percent-encode `value` so it is exactly one path segment, refusing dot segments."""
+    if value in UNSAFE_SEGMENTS:
+        message = f"{value!r} is not a site URL or sitemap URL"
+        raise ToolError(message)
     return quote(value, safe="")
 
 
@@ -55,9 +60,13 @@ class SearchConsoleApi:
     ) -> JsonObject:
         """Send one request and return its JSON body, raising ToolError on failure."""
         headers = {"Authorization": f"Bearer {await self._tokens.token()}"}
-        response = await self._client.request(
-            method, path, json=body, params=params, headers=headers
-        )
+        try:
+            response = await self._client.request(
+                method, path, json=body, params=params, headers=headers
+            )
+        except httpx2.HTTPError as error:
+            message = f"could not reach the Search Console API: {error!r}"
+            raise ToolError(message) from error
         return describe_response(response)
 
 
@@ -68,7 +77,10 @@ def describe_response(response: httpx2.Response) -> JsonObject:
         raise ToolError(message)
     if not response.content:
         return {"status": response.status_code}
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError:
+        return {"status": response.status_code, "text": response.text}
     return payload if isinstance(payload, dict) else {"result": payload}
 
 

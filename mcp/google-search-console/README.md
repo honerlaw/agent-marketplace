@@ -28,6 +28,8 @@ A `site_url` is a property exactly as Search Console lists it: `https://www.exam
 A `feedpath` is a sitemap's full URL. `query` mirrors
 [`SearchAnalyticsQueryRequest`](https://developers.google.com/webmaster-tools/v1/searchanalytics/query),
 e.g. `{"startDate": "2026-09-01", "endDate": "2026-09-07", "dimensions": ["QUERY"], "rowLimit": 25}`.
+Use `type` for the search type; the deprecated `searchType` is also accepted. Unknown fields
+are rejected, so a misspelled option fails instead of being ignored.
 
 The tools cover the Search Console discovery document at revision `20260923`, except the
 Mobile-Friendly Test (`urlTestingTools.mobileFriendlyTest.run`), which Google retired on
@@ -134,9 +136,11 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... .venv/bin/google-search-c
 ## Security model
 
 - **Callers never supply a URL path.** Every tool builds its URL from a fixed template, and
-  `site_url` and `feedpath` are percent-encoded as single path segments. A value like
-  `../../x?y` stays inside its segment and can't reach another endpoint or host. Requests
-  only go to `https://searchconsole.googleapis.com`.
+  `site_url` and `feedpath` each become exactly one path segment. They are percent-encoded,
+  so `/`, `?` and `#` can't split them. The empty string, `.` and `..` are refused outright,
+  because URL resolution would collapse them into a different path (for example turning
+  "delete sitemap `..`" into "delete site"). Requests only go to
+  `https://searchconsole.googleapis.com`.
 - **Only two credential types are accepted inline.** `GSC_CREDENTIALS_JSON` must be a
   `service_account` or `authorized_user` object. `external_account` configurations are refused
   because they can make the server fetch URLs or run programs.
@@ -159,6 +163,7 @@ Without Docker: `MCP_TRANSPORT=http MCP_AUTH_TOKEN=... .venv/bin/google-search-c
 - **Search Analytics returns at most 25,000 rows per call.** Page through larger result sets
   with `startRow`. Dates are in Pacific time, and the last few days may be incomplete unless
   `dataState` is `ALL`.
+- **Network failures and timeouts** come back as tool errors naming the exception.
 - **Adding a property doesn't verify it.** `gsc_add_site` only registers the property.
   Ownership verification happens outside this API.
 
