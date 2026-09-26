@@ -17,8 +17,10 @@ Use the `Agent` tool with fresh context, `subagent_type: general-purpose`, and
 previous reviewer for a fold-audit. Round-table panelists and reviewer-tier agents
 (Skeptic, fold-audit, Verifier) use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
 review leaves `model` unpinned. Proponent and Skeptic calls run in parallel;
-Arbiter runs after both outputs are available. If any required capability is
-missing, stop with an actionable recovery report.
+Arbiter runs after both outputs are available. For a wave of independent
+decisions, issue all of its first-wave `Agent` calls in one message; calls in
+one message already run concurrently, so a wave needs no new capability. If any
+required capability is missing, stop with an actionable recovery report.
 
 When an OPEN PR exists and `code-review:code-review` is installed, use that skill
 for code quality. Without it, use an independent reviewer with the shared review

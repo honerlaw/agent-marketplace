@@ -40,6 +40,10 @@ path and use `git -C`; never switch the session into a host-managed worktree.
   the specified brief and artifacts before arbitration.
   The panel operation runs Proponent/Skeptic in parallel, waits for results, then
   sends their outputs to Arbiter and waits again. Release completed agents.
+  Independent decisions with no data dependency between them (a wave) may
+  run concurrently: start them together, still arbitrate each one only on its
+  own result, and reconcile the wave only once every result it waits on is in.
+  A parked handle is resumed on its notification; it is never a verdict.
   If delegation is unavailable, stop this workflow with recovery instructions;
   never replace independent review or consensus with the author's self-review.
 - **Tracked watcher operation:** observe the completion of a shell process while

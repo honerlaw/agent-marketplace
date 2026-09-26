@@ -35,7 +35,7 @@ The full policy — **tier selection** (hardcoded → panel predicate → solo p
 
 Binding floor, even before the reference is read:
 
-- **Decide first, then route.** Draft the decision, then choose its tier. Both predicates fail closed: doubt about a panel clause convenes the panel; doubt about a solo clause denies solo.
+- **Decide first, then route.** Draft the decision, then choose its tier. Both predicates fail closed: doubt about a panel clause convenes the panel (doubt about the existing-interface clause goes to a reviewer instead); doubt about a solo clause denies solo.
 - **Never below the floor:** divergence confirmation, new-plan acceptance and replan-vs-FIX are always panels; completion verification is at least a Verifier. Triage, promote partition and TODO disposition never convene a panel.
 - **Up, never sideways.** An unadjudicable critique or a failed fold-audit moves the decision to a panel; a panel that fails quorum twice goes to the user. No step recommends switching to another orchestrator.
 - Panel mechanics are delegated to `minerva:round-table` in caller mode; quorums come from the Decision taxonomy in `references/decision-protocol.md`, never round-table's standalone default.
@@ -45,8 +45,8 @@ Binding floor, even before the reference is read:
 
 Execute the phases in order. The full inline protocols — per-gate artifacts, tier handling, escalation aftermath and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
 
-1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
-2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence confirmation (panel) when a load-bearing divergence is suspected; completion verification (Verifier floor) on the success-criteria checklist + diff.
+1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered, dispatched as one parallel wave) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
+2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence confirmation (panel) when a load-bearing divergence is suspected; completion verification (Verifier floor) on the success-criteria checklist + diff, with Phase 3's code review dispatched alongside it.
    - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan acceptance (panel); append to `replan.md`.
 3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); triage (solo, reviewer ceiling); replan-vs-FIX (panel) if a load-bearing finding surfaces.
 4. **Promote (inline)** — partition and TODO disposition (solo, reviewer ceiling); apply writes per `minerva:promote` Mode A; archive scratchpad.
