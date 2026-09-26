@@ -9,9 +9,9 @@
 - **Reviewer, Verifier gate (completion):** one dispatch. A `revise` loops through Phase 2.5 rather than re-dispatching.
 - **Panel:** one initial vote + one revision vote. 6 subagent dispatches max per panel.
 
-A decision that moves up from reviewer to panel spends both budgets, so the worst case for one decision is 8 dispatches.
+A decision that moves up from reviewer to panel spends both budgets, so the worst case for one decision is 8 dispatches — except a restarted whole-proposal, which adds its discarded first wave (below).
 
-**Propose-wave restart.** When the gate wave's restart check (`references/phases.md` Phase 1) finds whole-proposal's first-wave review stale, that review is discarded. The re-dispatched whole-proposal is a new review of a new artifact, with a fresh per-tier budget of its own. A restarted whole-proposal can therefore spend up to 4 reviewer dispatches in total (2 stale, 2 restarted), or one panel budget on top of the stale wave's dispatches. There is at most **one** restart per run, because the check is made once, after scope and approach are final.
+**Propose-wave restart.** When the gate wave's restart check (`references/phases.md` Phase 1) finds whole-proposal's first-wave review stale, that review is discarded. The re-dispatched whole-proposal is a new review of a new artifact, with a fresh per-tier budget of its own. The stale first wave is held unarbitrated, so it spent at most its first-wave dispatches: 1 reviewer, or a panel's Proponent + Skeptic + Arbiter (3). A restarted whole-proposal can therefore spend up to 3 reviewer dispatches in total (1 stale + 2 restarted), and at worst 11 (3 stale + a restarted reviewer-to-panel move's 8). There is at most **one** restart per run, because the check is made once, after scope and approach are final.
 
 **Provisional review findings.** Code review sent out alongside completion verification (`references/phases.md` Phase 2 step 4) is Phase 3's code-review pass, run early, not an extra reviewer. It is re-run only when a failed completion led to a changed diff.
 

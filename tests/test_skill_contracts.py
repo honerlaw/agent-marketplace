@@ -830,11 +830,18 @@ def test_auto_interface_doubt_routes_to_a_seeded_reviewer():
     """Only the interface clause's doubt moves down to a reviewer; the others still fail closed
     to a panel, and the Skeptic is handed the author's doubt rather than rediscovering it."""
     body = _auto_ref("decision-protocol.md")
-    assert "**doubt about the existing-interface clause**: it routes to the **reviewer**" in body
+    assert "**doubt about the existing-interface clause** at a **Skeptic gate** (scope, approach, whole-proposal): it routes to the **reviewer**, not the panel, and never to solo" in body
     assert "Doubt about ambiguity, blast radius or knowledge tension still convenes a panel" in body
     assert "Write your specific doubt" in body
-    assert "## Panel warranted?" in body
+    # Pin the brief's output format itself, not just a mention elsewhere in the prose.
+    assert "## Panel warranted?\n<no | yes — <clause>: <evidence" in body
     assert "the three reviewer events above" in body
+    # The up-move must not fire on capped rows, whose reviewer tier is itself caused by a panel
+    # clause — otherwise every reviewer-tier triage item would escalate to the user.
+    assert "applies only on rows whose ceiling is panel" in body
+    assert "not** already the reason the decision reached the reviewer" in body
+    # A Verifier cannot move up, so interface doubt at completion keeps failing closed.
+    assert "The exception does not reach **completion**" in body
     skill = (SKILLS_DIR / "propose-ship-auto" / "SKILL.md").read_text(encoding="utf-8")
     assert "doubt about the existing-interface clause goes to a reviewer instead" in skill
 
@@ -856,6 +863,8 @@ def test_auto_propose_gates_run_as_one_wave_with_a_held_restart_check():
                       "changed the draft's structure (phases added or removed)",
                       "rewrote `## Goal` or `## Success criteria`"):
         assert condition in body, condition
+    assert "whole-proposal's tier is **selected again**" in body
+    assert "routed on a pending clause that scope or approach did not approve as drafted" in body
     gov = _auto_ref("governance.md")
     assert "**Propose-wave restart.**" in gov and "at most **one** restart per run" in gov
 
