@@ -56,3 +56,4 @@ eyeballing a corpus fails in ways that only asking the corpus reveals.
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-08-09-pattern-read-authored-metadata-from-where-it-is]] — see also
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
+- [[2026-09-26-reference-claude-code-transcript-timing-facts]] — see also

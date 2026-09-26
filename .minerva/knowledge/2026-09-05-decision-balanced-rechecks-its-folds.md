@@ -98,3 +98,4 @@ sequential Arbiter in each. Every added dispatch lands exactly where the logs sa
 - [[2026-08-11-pattern-the-enumeration-is-what-fails]] — see also
 - [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also
 - [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — see also
+- [[2026-09-26-decision-trace-orchestrator-time-from-transcripts]] — see also

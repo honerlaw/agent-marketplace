@@ -75,3 +75,4 @@ Two rules that fall out:
 - [[2026-08-28-pattern-import-the-grammar-not-its-conclusion]] — see also
 - [[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]] — see also
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
+- [[2026-09-26-reference-claude-code-transcript-timing-facts]] — see also

@@ -37,6 +37,7 @@
 - [[2026-09-25-decision-mcp-server-tool-shape-follows-api-size-and-stability]] — Small, stable APIs get one typed MCP tool per operation; large or fast-moving APIs get generic tools
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — API-wrapping MCP servers expose generic request tools plus OpenAPI discovery, not per-endpoint tools
 - [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — mcp.yml's docker smoke test runs each image with --env-file mcp/<server>/ci.env
+- [[2026-09-26-decision-trace-orchestrator-time-from-transcripts]] — scripts/run_trace.py traces propose-ship-auto time; propose-phase reviewer waits dominate
 
 ## Bugs
 
@@ -86,6 +87,7 @@
 - [[2026-09-25-pattern-a-mock-transport-that-never-yields-cannot-test-a-lock]] — Concurrency test passed with the lock removed; synchronous mock handlers never let callers overlap
 - [[2026-09-25-pattern-a-server-local-path-argument-is-a-remote-file-primitive]] — Tool args naming server-local paths are safe over stdio, arbitrary file read/write over HTTP
 - [[2026-09-25-pattern-percent-encoding-does-not-confine-a-dot-segment]] — quote(value, safe="") leaves "." and ".." intact; URL resolution collapses them into another endpoint
+- [[2026-09-26-pattern-a-same-size-mutation-can-leave-stale-bytecode]] — Deletion passes need python -B: same-size edits restored in-second reuse the mutated .pyc
 
 ## Constraints
 
@@ -128,3 +130,4 @@
 - [[2026-09-25-reference-openai-ads-api-facts-for-mcp-servers]] — OpenAI Ads API v1 publishes openapi.json; per-account bearer keys; cursor pagination; micros; two upload endpoints
 - [[2026-09-25-reference-openai-openapi-spec-source-and-size]] — openai-openapi main branch lists 352 operations; manual_spec is stale; deep $ref expansion reaches megabytes
 - [[2026-09-25-reference-reddit-ads-api-v3-facts-for-mcp-servers]] — Reddit Ads v3 publishes openapi.json; OAuth refresh tokens; follow next_url; four POST paginators
+- [[2026-09-26-reference-claude-code-transcript-timing-facts]] — durationMs is not per-turn wall time; subagents live in sidecar files; notifications carry true durations
