@@ -656,8 +656,9 @@ def test_gate_table_columns_stay_aligned_for_code_review(tmp_path, capsys):
     rows = [l for l in capsys.readouterr().out.splitlines()
             if l.startswith(("  review          ", "  completion      "))]
     assert len(rows) == 2
-    # the subagent-time column lines up in both rows (tier "code-review" fits its column)
+    # the subagent-time and cost columns line up in both rows (tier "code-review" fits its column)
     assert rows[0].index("1.0m") == rows[1].index("1.0m")
+    assert rows[0].index("$") == rows[1].index("$")
 
 
 
@@ -690,3 +691,165 @@ def test_catalog_edits_are_not_promote_signals(tmp_path):
               assistant(9), marker(9, 9)]
     run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
     assert [w["phase"] for w in run["phases"]] == ["propose"]
+
+
+# --------------------------------------------------------------------------- cost
+
+from run_analyzer import analyze_transcript  # noqa: E402
+
+USAGE = {"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 1000,
+         "cache_creation": {"ephemeral_5m_input_tokens": 200, "ephemeral_1h_input_tokens": 10}}
+
+
+def priced(t, *tools, mid=None, model="claude-opus-5-5", sidechain=False):
+    e = assistant(t, *tools, mid=mid)
+    e["message"]["model"] = model
+    e["message"]["usage"] = dict(USAGE)
+    if sidechain:
+        e["isSidechain"] = True
+    return e
+
+
+def _priced_sub(tid, desc, start, model="claude-sonnet-5", mid=None):
+    meta = {"agentType": "general-purpose", "description": desc, "toolUseId": tid, "model": "sonnet"}
+    evs = [prompt(start, "brief"), priced(start + 20, model=model),
+           priced(start + 40, model=model, mid=mid)]
+    return meta, evs
+
+
+def _cost_session(tmp_path):
+    """A full lifecycle, priced, with a cross-source duplicate id, a legacy
+    isSidechain line, an unpriced model and a message at the file's last instant."""
+    ev = [orchestrator_prompt(0), priced(5, mid="dup")]
+    for e in _lifecycle(0)[1:]:
+        if e["type"] == "assistant":
+            e["message"]["model"] = "claude-opus-5-5"
+            e["message"]["usage"] = dict(USAGE)
+        ev.append(e)
+    ev += [priced(60, sidechain=True), priced(95, model="claude-unknown-9")]
+    subs = [_priced_sub(f"v0", "Completion Verifier", 50, mid="dup"),   # "dup" already billed in main
+            _priced_sub(f"c0", "Code quality review of diff", 70, model="claude-opus-5")]
+    return write_session(tmp_path, ev, subagents=subs)
+
+
+def test_session_cost_matches_run_analyzer_with_one_billing_per_message(tmp_path):
+    path = _cost_session(tmp_path)
+    tr = rt.trace_session(path)
+    ref = analyze_transcript(path, include_subagent_files=True)
+    assert tr["cost"]["usd"] == pytest.approx(ref["total_cost_usd"], abs=1e-6)
+    assert tr["cost"]["main_usd"] == pytest.approx(ref["by_scope"]["main"]["cost_usd"], abs=1e-6)
+    assert tr["cost"]["subagent_usd"] == pytest.approx(ref["by_scope"]["subagent"]["cost_usd"], abs=1e-6)
+    assert tr["cost"]["tokens"] == ref["totals"]
+    assert tr["cost"]["unpriced_models"] == ref["unpriced_models"] == ["claude-unknown-9"]
+    # the duplicated id is billed in the main file, not again in the Verifier's sidecar
+    verifier = next(s for s in tr["subagents"] if s["gate"] == "completion")
+    assert verifier["tokens"]["output_tokens"] == 50
+
+
+def test_run_trace_defines_no_pricing_of_its_own():
+    import re
+    src = Path(rt.__file__).read_text()
+    assert not re.search(r"^\s*[A-Z_]*(PRICING|_MULT)[A-Z_]*\s*=", src, re.M)   # no rate table assigned here
+    assert rt.usage_cost.__module__ == "run_analyzer"
+
+
+def test_phase_costs_sum_to_the_run_and_gates_carry_subagent_cost(tmp_path):
+    tr = rt.trace_session(_cost_session(tmp_path))
+    run = tr["runs"][0]
+    assert sum(w["cost"]["usd"] for w in run["phases"]) == pytest.approx(run["cost"]["usd"], abs=1e-5)
+    assert run["cost"]["usd"] == pytest.approx(tr["cost"]["usd"], abs=1e-6)   # one run spans the file
+    assert run["cost"]["unpriced_models"] == ["claude-unknown-9"]
+    by_phase = {w["phase"]: w["cost"] for w in run["phases"]}
+    # the Verifier (launched in verify) and the code review (launched in review) are charged there
+    gates = {g["gate"]: g for g in run["gates"]}
+    # plus the legacy isSidechain line at t=60: subagent spend in verify, with no gate row
+    sidechain = next(p for p in rt.cost_points(rt.load_events(tr["path"]), set()) if p["scope"] == "subagent")
+    assert by_phase["verify"]["subagent_usd"] == pytest.approx(
+        gates["completion"]["cost_usd"] + sidechain["usd"], abs=1e-6)
+    assert by_phase["work"]["subagent_usd"] == 0
+    assert by_phase["review"]["subagent_usd"] == pytest.approx(gates["review"]["cost_usd"], abs=1e-6)
+    assert gates["review"]["tokens"]["output_tokens"] == 100
+    for s in tr["subagents"]:
+        assert s["cost_usd"] > 0 and set(s["tokens"]) == set(USAGE_KEYS)
+
+
+USAGE_KEYS = ("input_tokens", "output_tokens", "cache_write_5m_tokens", "cache_write_1h_tokens",
+              "cache_read_tokens")
+
+
+def test_cost_text_and_aggregate(tmp_path, capsys):
+    path = _cost_session(tmp_path)
+    assert rt.main([str(path)]) == 0
+    out = capsys.readouterr().out
+    assert "  cost $" in out and "unpriced models" in out
+    assert "cost  set by" in out and "out tokens      cost" in out
+    agg = rt.aggregate(tmp_path)
+    tr = rt.trace_session(path)
+    assert agg["runs"][0]["cost_usd"] == tr["runs"][0]["cost"]["usd"]
+    assert agg["phases"]["verify"]["cost_total_usd"] > 0
+    assert agg["phases"]["verify"]["cost_median_usd"] == agg["phases"]["verify"]["cost_total_usd"]
+    assert {"cost_total_usd", "cost_median_usd"} <= set(agg["gates"][0])
+    assert rt.main(["--all", "--project-dir", str(tmp_path)]) == 0
+    assert "cost total  cost median" in capsys.readouterr().out
+
+
+def test_spend_outside_runs_counts_for_the_session_only_and_is_printed(tmp_path, capsys):
+    ev = [prompt(0, "warm up"), priced(1), marker(1, 1)]                  # before any run
+    ev += [e for e in _lifecycle(100)]
+    ev += [prompt(400, "unrelated question"), priced(401), marker(401, 1)]  # cut by _end_after_cleanup
+    ev += [orchestrator_prompt(1000), priced(1001), marker(1001, 1)]        # second run
+    path = write_session(tmp_path, ev)
+    tr = rt.trace_session(path)
+    per_msg = rt.cost_points([{**priced(0), "_t": 0.0}], set())[0]["usd"]
+    assert len(tr["runs"]) == 2
+    assert tr["runs"][0]["cost"]["usd"] == 0                               # lifecycle lines are unpriced fixtures
+    assert tr["runs"][1]["cost"]["usd"] == pytest.approx(per_msg)
+    assert tr["cost"]["usd"] == pytest.approx(3 * per_msg)                # before + gap + run 2
+    assert tr["cost"]["usd"] == pytest.approx(analyze_transcript(path)["total_cost_usd"], abs=1e-6)
+    rt.main([str(path)])
+    assert f"session cost {rt._usd(tr['cost']['usd'])}" in capsys.readouterr().out
+
+
+def test_lines_without_a_timestamp_are_still_billed(tmp_path):
+    a, b = priced(1, mid="m1"), priced(2, mid="m2")
+    del b["timestamp"]
+    path = write_session(tmp_path, [orchestrator_prompt(0), a, b, marker(3, 3)])
+    tr = rt.trace_session(path)
+    assert tr["cost"]["usd"] == pytest.approx(analyze_transcript(path)["total_cost_usd"], abs=1e-6)
+    assert tr["runs"][0]["cost"]["usd"] == pytest.approx(tr["cost"]["usd"])   # placed at the previous line's time
+
+
+def test_malformed_usage_bills_as_empty_instead_of_sinking_the_trace(tmp_path):
+    bad, odd = priced(1, mid="bad"), priced(2, mid="odd")
+    bad["message"]["usage"] = "bad"
+    odd["message"]["usage"] = {"output_tokens": 5, "cache_creation": "x"}
+    odd["message"]["model"] = 7
+    tr = rt.trace_session(write_session(tmp_path, [orchestrator_prompt(0), bad, odd, marker(3, 3)]))
+    assert tr["cost"]["tokens"]["output_tokens"] == 5
+    assert tr["cost"]["unpriced_models"] == ["unknown"]
+
+
+def test_unlinked_subagent_after_the_last_main_event_stays_in_the_last_run(tmp_path):
+    ev = [orchestrator_prompt(0), assistant(1), marker(1, 1)]
+    meta, sub = _priced_sub("nolink", "Scope Skeptic", 50)
+    path = write_session(tmp_path, ev, subagents=[({}, sub)])              # no meta, no agentId link
+    tr = rt.trace_session(path)
+    assert tr["runs"][0]["cost"]["usd"] == pytest.approx(tr["cost"]["usd"]) and tr["cost"]["usd"] > 0
+
+
+def test_phase_cost_column_lines_up(tmp_path, capsys):
+    rt.main([str(_cost_session(tmp_path))])
+    out = capsys.readouterr().out.splitlines()
+    head = next(i for i, l in enumerate(out) if l.startswith("  phase     start"))
+    end = out.index("", head)                                              # the phase table ends at a blank line
+    rows = [l for l in out[head + 1:end] if not l.startswith("  !")]
+    assert len({l.index("$") + len(l.split("$")[1].split()[0]) for l in rows}) == 1   # right-aligned
+
+
+def test_cost_medians_count_only_runs_that_have_the_gate(tmp_path):
+    write_session(tmp_path, _lifecycle(0), name="a",
+                  subagents=[_priced_sub("v0", "Completion Verifier", 50)])
+    write_session(tmp_path, _lifecycle(0), name="b")                        # no subagents
+    agg = rt.aggregate(tmp_path)
+    comp = next(g for g in agg["gates"] if g["gate"] == "completion")
+    assert comp["runs"] == 1 and comp["cost_median_usd"] == comp["cost_total_usd"] > 0

@@ -48,7 +48,7 @@ python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_trace.py 
 It accepts a transcript path or a bare session id (resolved under
 `~/.claude/projects/<encoded cwd>/`, or pass `--project-dir`). Add `--json` for the
 full structure. For the cross-run view of every `minerva:propose-ship-auto` run in a
-project, with per-phase and per-gate totals and medians, use:
+project, with per-phase and per-gate time **and cost** totals and medians, use:
 
 ```bash
 python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_trace.py --all --project-dir ~/.claude/projects/<encoded-cwd>
@@ -69,6 +69,19 @@ How to read it:
   flag missing or out-of-order signals.
 - The **gate table** groups subagents by gate, tier (panel / reviewer / code-review) and
   role, so you can see which adjudication tier the time went to.
+- **Cost sits next to time**, priced by `run_analyzer.py`'s table. Call out:
+  - the `session cost` line: the whole file, including spend before, between and after
+    runs. It equals Step 2's `total_cost_usd`;
+  - each run's `cost` line: USD split into main vs subagents, plus the token classes;
+  - the **phase table's `cost` column**: a main-thread message is charged to the phase it
+    was sent in, and a subagent's whole cost to the phase it launched in;
+  - the **gate table's `cost` column**: what each gate × tier × role spent. This is the
+    speed-vs-cost view: a panel's cost next to its subagent time;
+  - any `! unpriced models` line: those tokens are counted but their cost is excluded.
+
+  Unlike subagent time, cost is additive: main + subagents is what the phase spent.
+  Legacy `isSidechain` lines count as subagent cost with no gate row, so a phase's
+  subagent cost can exceed the sum of its gate rows.
 
 ## Step 3 — Record to baseline (optional)
 
