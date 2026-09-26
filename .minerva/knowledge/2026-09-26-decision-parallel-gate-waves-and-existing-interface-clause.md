@@ -72,3 +72,4 @@
 - [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — refines
 - [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also
 - [[2026-07-27-constraint-agent-dispatch-pins-execution-mode]] — see also
+- [[2026-09-26-decision-price-orchestrator-phases-and-gates-in-run-trace]] — see also

@@ -334,6 +334,14 @@ code review. The panel clause that convened most panels now fires only for a cha
 **existing**, consumed interface: introducing a new one gets a reviewer, and an approved change does
 not re-fire later ([[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]]).
 
+The same trace now prices each phase and gate next to its time, using the cost analyzer's single
+rate table, and its session total matches the analyzer's. That turned the speed-vs-cost question
+into a measurement, and the answer is lopsided. Subagent gates are about a quarter of a run's
+spend. A panel's median cost is around a dollar, against five to ten minutes of wall time. The
+money goes to the main thread's growing context in propose and work, so the tiers are the lever
+for time and the main context is the lever for cost
+([[2026-09-26-decision-price-orchestrator-phases-and-gates-in-run-trace]]).
+
 The project is also honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[2026-05-31-decision-behavioral-evals-provisional]]).

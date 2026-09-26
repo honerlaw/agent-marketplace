@@ -58,3 +58,4 @@ subagent.
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
 - [[2026-09-26-reference-claude-code-transcript-timing-facts]] — builds on
 - [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — see also
+- [[2026-09-26-decision-price-orchestrator-phases-and-gates-in-run-trace]] — see also
