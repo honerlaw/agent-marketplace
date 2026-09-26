@@ -602,7 +602,7 @@ def segment_runs(events) -> list:
 
 
 _HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)", re.S)
-_QUOTED_RE = re.compile(r"'[^'\n]*'|\"[^\"\n]*\"")
+_QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")  # may span lines (commit messages, PR bodies)
 _PY_KNOWLEDGE_WRITE_RE = re.compile(
     r"\.minerva/knowledge/[^\"'\s]+\.md[\"']\s*\)?\s*\.write_text"
     r"|open\(\s*[\"'][^\"']*\.minerva/knowledge/[^\"']+\.md[\"']\s*,\s*[\"'][wa]")
@@ -611,10 +611,11 @@ _NOT_AN_ENTRY = ("index.md", "overview.md")
 
 
 # A work unit's worktree is created with a NEW branch, `-b <date-slug>`
-# (propose's on-approval step). cleanup's reconciliation worktree uses
-# `-B minerva/reconcile` and must not read as the start of `work`.
+# (propose's on-approval step), with options/path in any order git accepts.
+# minerva's own maintenance worktrees (`-B minerva/reconcile`, `-b minerva/synthesize`)
+# live in the `minerva/` branch namespace and must not read as the start of `work`.
 _GIT_WORKTREE_ADD_RE = re.compile(
-    r"\bgit\s+(?:-C\s+\S+\s+)?worktree\s+add\s+(?:-q\s+|--quiet\s+)*-b\s+(?!minerva/reconcile\b)")
+    r"\bgit\s+(?:-[Cc]\s+\S+\s+)*worktree\s+add\b[^\n;&|]*?\s-b\s+(?!minerva/)")
 
 
 def _shell_only(command: str) -> str:

@@ -663,6 +663,13 @@ def test_gate_table_columns_stay_aligned_for_code_review(tmp_path, capsys):
 
 @pytest.mark.parametrize("cmd,is_signal", [
     ("git worktree add -b u .minerva/worktrees/u main", True),
+    ("git worktree add -q -b u .minerva/worktrees/u main", True),
+    ("git worktree add .minerva/worktrees/u -b u main", True),
+    ("git worktree add --track -b u .minerva/worktrees/u origin/main", True),
+    ("git -c core.x=1 worktree add -b u .minerva/worktrees/u main", True),
+    ("git worktree add -b minerva/synthesize .minerva/worktrees/minerva-synthesize origin/main", False),
+    ("git worktree add -q -b minerva/reconcile .minerva/worktrees/minerva-reconcile origin/main", False),
+    ('git commit -m "Doc\n\nrun git worktree add -b x w main"', False),
     ("W=.minerva/worktrees/u && git -C /repo worktree add -b u $W main", True),
     ("cat > .minerva/work/u/proposal.md <<'EOF'\nThen run git worktree add -b u\nEOF", False),
     ("grep -rn 'git worktree add' plugins/", False),

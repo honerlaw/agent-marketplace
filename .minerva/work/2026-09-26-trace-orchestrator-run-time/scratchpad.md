@@ -28,6 +28,7 @@
     - fix (proponent/arbiter): test pinning the round term of the panel-batch match — added (test_panel_batch_match_requires_the_same_round)
     - fix (arbiter, optional): disambiguate tier "review" vs "reviewer" — renamed to "code-review"
 - [solo] review triage (round 2, fix-delta re-review): 7 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — each had a verified failure scenario and was absorbable; no item had two defensible dispositions)
+- [solo] review triage (round 3, promote-time fix delta): 4 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — each verified and absorbable; the reviewer's own recommended fixes)
 - note: approach fold-audit and whole-proposal Skeptic were dispatched in parallel (scope + approach Skeptics likewise) to cut wall time; no gate's artifact depended on an unresolved sibling
 
 ## Work notes
@@ -67,3 +68,4 @@ Deletion pass re-run over the extended rule set: 49/49 mutations killed (bytecod
 
 ## Promote-time fix 2026-09-26 (found while drafting the partition; sent back through review)
 - `git worktree add` detection was still a substring check, the same flaw R1 fixed for knowledge writes. On real data it produced 12 "work during cleanup" warnings that were really cleanup's `git worktree add -B minerva/reconcile`. The work signal now reads shell structure (`_shell_only`) and requires `-b <branch>` other than minerva/reconcile. Write/Edit of index.md/overview.md (cleanup's reconciliation) no longer counts as promote. Out-of-order warnings across the corpus dropped from 23 to 7. Deletion pass: 63/63. Suite: 1108 passed.
+- Round-3 review of that fix (all 40 real `worktree add` commands checked): widened the exclusion to the whole `minerva/` branch namespace (`-b minerva/synthesize` was a real false work signal in 495d20d8); accepted git's permuted options (`add <path> -b x`, `--track -b`, `git -c k=v`); quoted strings may span lines (a multi-line commit message mentioning `git worktree add -b` was a false signal); pinned `-q -b` and a lowercase `-b minerva/…` negative. Real corpus: 15/15 signals are genuine work-unit creations. Deletion pass 66/66, suite 1115 passed. No fourth review round: these are the reviewer's own recommended fixes, each pinned by a test and a mutation and verified against every real command.
