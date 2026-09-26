@@ -30,17 +30,23 @@ import re
 import sys
 from pathlib import Path
 
-# Per-1M-token rates (USD): (input, output). As of 2026-06; source: the
-# `claude-api` skill / https://platform.claude.com/docs/en/pricing — pricing
-# drifts, so re-verify on update. The `total_cost_usd` cross-check in
+# Per-1M-token rates (USD): (input, output). Source: the `claude-api` skill's
+# `shared/models.md` model table (cached 2026-06-24, re-read 2026-09-26) —
+# pricing drifts, so re-verify on update. The `total_cost_usd` cross-check in
 # run_benchmark.py catches a stale table loudly.
 PRICING = {
+    "claude-fable-5-1": (10.0, 50.0),
+    "claude-mythos-5-1": (10.0, 50.0),
+    "claude-fable-5": (10.0, 50.0),
+    "claude-mythos-5": (10.0, 50.0),
+    "claude-opus-5-5": (4.0, 20.0),
+    "claude-opus-5": (5.0, 25.0),
     "claude-opus-4-8": (5.0, 25.0),
     "claude-opus-4-7": (5.0, 25.0),
     "claude-opus-4-6": (5.0, 25.0),
+    "claude-sonnet-5": (2.0, 10.0),
     "claude-sonnet-4-6": (3.0, 15.0),
     "claude-haiku-4-5": (1.0, 5.0),
-    "claude-fable-5": (10.0, 50.0),
 }
 
 # Prompt-cache multipliers applied to the INPUT rate (shared/prompt-caching.md):
@@ -48,6 +54,15 @@ PRICING = {
 CACHE_WRITE_5M_MULT = 1.25
 CACHE_WRITE_1H_MULT = 2.0
 CACHE_READ_MULT = 0.1
+
+# Models whose cache READ is not the standard 0.1x (shared/prompt-caching.md
+# "Economics"; shared/models.md): Fable 5.1 / Mythos 5.1 read at $0.25/MTok
+# (0.025x), Opus 5.5 at $0.20/MTok (0.05x). Every other model uses CACHE_READ_MULT.
+CACHE_READ_MULT_BY_MODEL = {
+    "claude-fable-5-1": 0.025,
+    "claude-mythos-5-1": 0.025,
+    "claude-opus-5-5": 0.05,
+}
 
 # A model id may carry a context-tier suffix (e.g. ``claude-opus-4-8[1m]``);
 # the 1M tier is standard-priced, so strip the suffix before pricing.
@@ -95,17 +110,54 @@ def usage_cost(usage: dict, model: str) -> "float | None":
     if rates is None:
         return None
     in_rate, out_rate = (r / 1_000_000 for r in rates)
+    read_mult = CACHE_READ_MULT_BY_MODEL.get(normalize_model(model), CACHE_READ_MULT)
     return (
         usage["input_tokens"] * in_rate
         + usage["output_tokens"] * out_rate
         + usage["cache_write_5m_tokens"] * in_rate * CACHE_WRITE_5M_MULT
         + usage["cache_write_1h_tokens"] * in_rate * CACHE_WRITE_1H_MULT
-        + usage["cache_read_tokens"] * in_rate * CACHE_READ_MULT
+        + usage["cache_read_tokens"] * in_rate * read_mult
     )
 
 
-def analyze_transcript(path) -> dict:
+def subagent_files(path) -> list:
+    """The sidecar transcripts Claude Code writes for Agent-spawned subagents.
+
+    A session ``<dir>/<session>.jsonl`` keeps each subagent's turns in
+    ``<dir>/<session>/subagents/agent-<id>.jsonl`` — they are NOT marked
+    ``isSidechain`` in the main file. Sorted for determinism; empty when the
+    directory is absent.
+    """
+    p = Path(path)
+    return sorted((p.parent / p.stem / "subagents").glob("agent-*.jsonl"))
+
+
+def _assistant_lines(sources):
+    """Yield ``(assistant_obj, is_sidecar)`` for each parseable assistant line."""
+    for src, is_sidecar in sources:
+        for line in Path(src).read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") == "assistant":
+                yield obj, is_sidecar
+
+
+def analyze_transcript(path, include_subagent_files: bool = False) -> dict:
     """Return the deterministic cost + usage report for one transcript JSONL.
+
+    ``include_subagent_files`` (opt-in) also folds the session's sidecar
+    subagent transcripts (see ``subagent_files``) into the ``subagent`` scope.
+    It defaults to False so existing callers keep their accounting:
+    ``run_benchmark.build_record`` cross-checks a main-only total against
+    Claude's main-only ``total_cost_usd`` and adds subagent files itself via
+    ``subagent_paths`` — folding them here too would count them twice. The
+    message-id dedupe is shared across the main file and its sidecars, so a
+    message present in both is billed once.
 
     Keys (all JSON-serializable):
       total_cost_usd        float — derived cost across all priced messages
@@ -140,19 +192,14 @@ def analyze_transcript(path) -> dict:
     seen_tool_block_ids: set = set()
     fallback_idx = 0
 
-    for line in Path(path).read_text().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            obj = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if obj.get("type") != "assistant":
-            continue
+    sources = [(Path(path), False)]
+    if include_subagent_files:
+        sources += [(sp, True) for sp in subagent_files(path)]
+
+    for obj, is_sidecar in _assistant_lines(sources):
         msg = obj.get("message") or {}
         model = msg.get("model") or "unknown"
-        scope = "subagent" if obj.get("isSidechain") else "main"
+        scope = "subagent" if (is_sidecar or obj.get("isSidechain")) else "main"
 
         mid = msg.get("id")
         if mid is None:
@@ -216,11 +263,15 @@ def analyze_transcript(path) -> dict:
 
 
 def main(argv=None) -> int:
-    argv = argv if argv is not None else sys.argv[1:]
-    if not argv:
-        print("usage: run_analyzer.py <transcript.jsonl>", file=sys.stderr)
+    """CLI: report the WHOLE session by default (main transcript + its subagent
+    sidecar files); ``--main-only`` restricts it to the main transcript."""
+    argv = list(argv if argv is not None else sys.argv[1:])
+    main_only = "--main-only" in argv
+    paths = [a for a in argv if a != "--main-only"]
+    if len(paths) != 1:
+        print("usage: run_analyzer.py <transcript.jsonl> [--main-only]", file=sys.stderr)
         return 2
-    print(json.dumps(analyze_transcript(argv[0]), indent=2))
+    print(json.dumps(analyze_transcript(paths[0], include_subagent_files=not main_only), indent=2))
     return 0
 
 

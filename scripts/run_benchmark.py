@@ -79,6 +79,9 @@ def build_record(
     ``~/.claude/projects/<encoded-cwd>/`` alongside the main transcript.
     The ``cost_crosscheck_ok`` cross-check is against the main transcript only,
     since Claude's ``total_cost_usd`` does not include separate subagent sessions.
+    That is why ``analyze_transcript`` is deliberately called main-only here
+    (``include_subagent_files`` left False): sidecar discovery would put subagent
+    cost into ``derived`` and double-count any path also passed in ``subagent_paths``.
     """
     report = analyze_transcript(transcript_path)
     claude_cost = result.get("total_cost_usd")

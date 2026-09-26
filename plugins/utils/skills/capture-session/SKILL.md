@@ -1,11 +1,11 @@
 ---
 name: capture-session
-description: Use when the user wants to analyze or record token/cost usage from a Claude Code session they just ran, in any repo. Finds the most recent transcript, runs the cost analyzer, and optionally records to the benchmark baseline.
+description: Use when the user wants to analyze or record token/cost usage from a Claude Code session they just ran — or see where the time went (which phase, decision gate, tool or subagent a propose-ship-auto run spent its wall-clock on) — in any repo. Finds the most recent transcript, runs the cost analyzer and the time tracer, and optionally records to the benchmark baseline.
 ---
 
 # Capture Session
 
-Analyze and optionally record context usage from any completed Claude Code run.
+Analyze and optionally record context usage — and trace where the wall-clock time went — for any completed Claude Code run.
 
 ## Step 1 — Find the transcript
 
@@ -29,12 +29,46 @@ Pick the most recently modified file. Confirm with the user if it's unclear whic
 python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_analyzer.py <transcript.jsonl>
 ```
 
+This reports the whole session: the main transcript plus its subagent sidecar files
+(`<session>/subagents/agent-*.jsonl`). Add `--main-only` to exclude the subagents.
+
 Show the user the full JSON output. Call out:
 - `total_cost_usd` — derived cost
 - `totals` — breakdown of all five token classes (input, output, cache-write-5m, cache-write-1h, cache-read)
 - `by_model` — per-model cost split
-- `num_subagent_messages` — how many subagent turns fired
+- `by_scope.subagent.messages` — how many subagent turns fired
 - `by_tool` — tool call counts
+
+## Step 2b — Time breakdown (where the time went)
+
+```bash
+python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_trace.py <transcript.jsonl>
+```
+
+It accepts a transcript path or a bare session id (resolved under
+`~/.claude/projects/<encoded cwd>/`, or pass `--project-dir`). Add `--json` for the
+full structure. For the cross-run view of every `minerva:propose-ship-auto` run in a
+project, with per-phase and per-gate totals and medians, use:
+
+```bash
+python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_trace.py --all --project-dir ~/.claude/projects/<encoded-cwd>
+```
+
+How to read it:
+- **wall = active + between-turn waits.** Active time splits into `model`
+  (generating), `tools` (a tool call open, including permission prompts), `user` (an
+  `AskUserQuestion` open) and `harness` (hooks). Waits split into `background` (the
+  model idled until a subagent or background task reported back), `scheduled`, and
+  `user idle`.
+- **Subagents are an overlapping view.** `sum` is total subagent compute, and
+  `union` is wall-clock with at least one running. Most of it already sits inside
+  background waits, so never add it to the other figures.
+- **Phases are inferred** from observable events: `git worktree add`, the completion
+  Verifier, the code-review agent, knowledge writes, and the `minerva:ship` and
+  `minerva:cleanup` calls. Each boundary names the event that set it, and `!` lines
+  flag missing or out-of-order signals.
+- The **gate table** groups subagents by gate, tier (panel / reviewer / code-review) and
+  role, so you can see which adjudication tier the time went to.
 
 ## Step 3 — Record to baseline (optional)
 
