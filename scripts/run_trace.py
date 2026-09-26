@@ -31,6 +31,18 @@ Time model (what partitions what — never add the overlapping views):
   ``union`` the wall-clock with at least one running. Most of it sits inside
   background-wait or in-turn tool time already.
 
+**Cost** rides next to time, priced by ``run_analyzer``'s helpers (one PRICING
+table — this file defines no rates). Every assistant message is billed once
+across the main file and all sidecars (one session-wide ``message.id`` set, main
+first, then sidecars sorted — ``run_analyzer``'s order), so the session total
+equals ``analyze_transcript(path, include_subagent_files=True)``. A main-file
+message is charged to the phase holding its first copy's timestamp; a
+subagent's whole cost is charged to its launch phase and gate row, the same
+bucket-by-start rule the time columns use. Legacy ``isSidechain`` main-file
+lines count as subagent cost by timestamp and belong to no gate row, so a
+phase's ``subagent_usd`` can exceed the sum of its gate rows. Unlike subagent
+*time*, cost is additive: main + subagent is the phase's spend.
+
 Subagent durations prefer the ``<task-notification>``'s own ``duration_ms``
 (ground truth) and fall back to the sidecar file's first→last timestamp — a
 background Agent call's ``tool_result`` returns in ~1s, so pairing tool calls
@@ -50,6 +62,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+from run_analyzer import _add_usage, _zero_usage, normalize_model, usage_cost
 
 ORCHESTRATORS = (
     "minerva:propose-ship-auto",
@@ -385,6 +399,56 @@ def _clip(segments, lo, hi) -> dict:
     return out
 
 
+# --------------------------------------------------------------------------- cost
+
+
+def cost_points(events, seen: set, sidecar: bool = False) -> list:
+    """One priced point per assistant message not already in ``seen``.
+
+    ``seen`` is shared across the main file and every sidecar so a message
+    present in two sources is billed once (``run_analyzer``'s dedupe). A point is
+    ``{t, scope, tokens, usd, unpriced}``: ``scope`` is ``subagent`` for a sidecar
+    or a legacy ``isSidechain`` line, else ``main``; an unpriced model costs 0
+    and names itself in ``unpriced``.
+    """
+    out = []
+    for e in events:
+        if e.get("type") != "assistant":
+            continue
+        msg = e.get("message") or {}
+        mid = msg.get("id")
+        if mid is not None:
+            if mid in seen:
+                continue
+            seen.add(mid)
+        tokens = _zero_usage()
+        _add_usage(tokens, msg.get("usage") or {})
+        model = msg.get("model") or "unknown"
+        usd = usage_cost(tokens, model)
+        out.append({"t": e["_t"], "scope": "subagent" if sidecar or e.get("isSidechain") else "main",
+                    "tokens": tokens, "usd": usd or 0.0,
+                    "unpriced": normalize_model(model) if usd is None else None})
+    return out
+
+
+def _cost(points, subs, lo=float("-inf"), hi=float("inf")) -> dict:
+    """Spend inside ``[lo, hi)``: main-file points by timestamp, subagents by launch."""
+    acc = {"usd": 0.0, "main_usd": 0.0, "subagent_usd": 0.0, "tokens": _zero_usage()}
+    unpriced = set()
+    items = [(p["scope"], p["usd"], p["tokens"], [p["unpriced"]] if p["unpriced"] else [])
+             for p in points if lo <= p["t"] < hi]
+    items += [("subagent", s["cost_usd"], s["tokens"], s["unpriced_models"])
+              for s in subs if lo <= s["start"] < hi]
+    for scope, usd, tokens, names in items:
+        acc["usd"] += usd
+        acc[f"{scope}_usd"] += usd
+        for k, v in tokens.items():
+            acc["tokens"][k] += v
+        unpriced.update(names)
+    return {**{k: round(v, 6) for k, v in acc.items() if k != "tokens"},
+            "tokens": acc["tokens"], "unpriced_models": sorted(unpriced)}
+
+
 # --------------------------------------------------------------------------- subagents
 
 
@@ -449,8 +513,12 @@ def _notification_durations(events) -> dict:
     return out
 
 
-def load_subagents(main_path, main_events, agent_spans) -> list:
-    """One record per sidecar subagent file, linked to its Agent call."""
+def load_subagents(main_path, main_events, agent_spans, seen=None) -> list:
+    """One record per sidecar subagent file, linked to its Agent call.
+
+    ``seen`` is the session-wide billed ``message.id`` set (see ``cost_points``).
+    """
+    seen = set() if seen is None else seen
     main_path = Path(main_path)
     sub_dir = main_path.parent / main_path.stem / "subagents"
     by_tool_use = {s["tool_use_id"]: s for s in agent_spans}
@@ -474,19 +542,15 @@ def load_subagents(main_path, main_events, agent_spans) -> list:
         if not events:
             continue
         att = attribute(events, include_idle=False)
+        points = cost_points(events, seen, sidecar=True)
         first, last = events[0]["_t"], events[-1]["_t"]
         tid = meta.get("toolUseId") or by_agent_id.get(f.stem[len("agent-"):])
         launch = by_tool_use.get(tid)
         desc = meta.get("description") or (launch or {}).get("input", {}).get("description", "")
-        out_tokens, seen = 0, set()
-        for e in events:
-            if e.get("type") != "assistant":
-                continue
-            msg = e.get("message") or {}
-            if msg.get("id") in seen:
-                continue
-            seen.add(msg.get("id"))
-            out_tokens += (msg.get("usage") or {}).get("output_tokens", 0) or 0
+        tokens = _zero_usage()
+        for pt in points:
+            for k, v in pt["tokens"].items():
+                tokens[k] += v
         file_span = max(0.0, last - first)
         dur = notif.get(tid, file_span)
         start = launch["start"] if launch else first
@@ -501,7 +565,10 @@ def load_subagents(main_path, main_events, agent_spans) -> list:
             "dur_source": "notification" if tid in notif else "file-span",
             "file_span": file_span,
             "launch_message_id": (launch or {}).get("message_id"),
-            "output_tokens": out_tokens,
+            "output_tokens": tokens["output_tokens"],
+            "tokens": tokens,
+            "cost_usd": round(sum(pt["usd"] for pt in points), 6),
+            "unpriced_models": sorted({pt["unpriced"] for pt in points if pt["unpriced"]}),
             "tool_calls": len(att["spans"]),
             "breakdown": _clip(att["segments"], first, last),
             **parse_description(desc),
@@ -801,10 +868,14 @@ def default_project_dir(cwd=None) -> Path:
 def trace_session(path) -> dict:
     """The full trace of one session: runs, phases, subagents, spans."""
     path = Path(path)
-    events = [e for e in load_events(path) if not e.get("isSidechain")]
+    raw = load_events(path)
+    events = [e for e in raw if not e.get("isSidechain")]
     att = attribute(events)
     agent_spans = [s for s in att["spans"] if s["name"] in ("Agent", "Task")]
-    subs = load_subagents(path, events, agent_spans)
+    seen: set = set()
+    points = cost_points(raw, seen)          # main file first, unfiltered: run_analyzer's order
+    subs = load_subagents(path, events, agent_spans, seen)
+    end_of_file = events[-1]["_t"] if events else None
     runs = []
     for i, r in enumerate(segment_runs(events)):
         lo, hi = r["start"], r["end"]
@@ -814,7 +885,12 @@ def trace_session(path) -> dict:
             phases = infer_phases(events, att["spans"], lo, hi)
         run_subs = [s for s in subs if lo <= s["start"] < hi]
         run_spans = [s for s in att["spans"] if lo <= s["start"] < hi]
-        for w in phases["windows"]:
+        # A run that reaches the end of the file owns the messages stamped at
+        # (or, for legacy sidechain lines, after) its last event.
+        cost_hi = float("inf") if hi == end_of_file else hi
+        for i_w, w in enumerate(phases["windows"]):
+            w_end = cost_hi if i_w == len(phases["windows"]) - 1 else w["end"]
+            w["cost"] = _cost(points, run_subs, w["t"], w_end)
             w["time"] = _round(_clip(att["segments"], w["t"], w["end"]))
             ws = [s for s in run_subs if w["t"] <= s["start"] < w["end"]]
             w["subagent_sum_s"] = round(sum(s["dur"] for s in ws), 3)
@@ -826,6 +902,7 @@ def trace_session(path) -> dict:
             "start": _iso(lo),
             "end": _iso(hi),
             "summary": _summary(att["segments"], run_subs, lo, hi),
+            "cost": _cost(points, run_subs, lo, cost_hi),
             "bash_heads": _round(_bash_heads(run_spans)),
             "phases": phases["windows"],
             "phase_warnings": phases["warnings"],
@@ -846,6 +923,7 @@ def trace_session(path) -> dict:
             "turns_disagreeing_over_2s": att["reported_disagreements"],
         }),
         "summary": whole,
+        "cost": _cost(points, subs),
         "runs": runs,
         "subagents": [_public_sub(s) for s in subs],
     }
@@ -889,12 +967,17 @@ def _gate_table(subs) -> list:
     for s in subs:
         k = (s["gate"], s["tier"], s["role"], s["round"])
         r = rows.setdefault(k, {"gate": s["gate"], "tier": s["tier"], "role": s["role"],
-                                "round": s["round"], "count": 0, "sum_s": 0.0, "output_tokens": 0})
+                                "round": s["round"], "count": 0, "sum_s": 0.0, "output_tokens": 0,
+                                "cost_usd": 0.0, "tokens": _zero_usage()})
         r["count"] += 1
         r["sum_s"] += s["dur"]
         r["output_tokens"] += s["output_tokens"]
+        r["cost_usd"] += s["cost_usd"]
+        for k, v in s["tokens"].items():
+            r["tokens"][k] += v
     for r in rows.values():
         r["sum_s"] = round(r["sum_s"], 3)
+        r["cost_usd"] = round(r["cost_usd"], 6)
     return sorted(rows.values(), key=lambda r: -r["sum_s"])
 
 
@@ -919,7 +1002,8 @@ def _detail(span) -> str:
 
 def _public_sub(s) -> dict:
     keep = ("file", "tool_use_id", "description", "model", "dur", "dur_source", "file_span",
-            "output_tokens", "tool_calls", "role", "gate", "round", "tier", "breakdown")
+            "output_tokens", "tokens", "cost_usd", "unpriced_models", "tool_calls", "role", "gate",
+            "round", "tier", "breakdown")
     out = {k: s[k] for k in keep}
     out["start"] = _iso(s["start"])
     return _round(out)
@@ -942,6 +1026,7 @@ def _round(obj):
 def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
     """Every orchestrator run in a project directory, with totals and medians."""
     rows, phase_vals, wait_vals, gate_vals, skipped = [], {}, {}, {}, []
+    phase_cost, gate_cost = {}, {}
     for path in sorted(Path(project_dir).expanduser().glob("*.jsonl")):
         try:
             tr = trace_session(path)
@@ -956,11 +1041,13 @@ def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
                    "start": run["start"], **{k: s[k] for k in (
                        "wall_s", "active_s", "model_s", "tools_s", "user_s",
                        "background_wait_s", "user_idle_s", "subagent_sum_s", "subagent_union_s",
-                       "subagents")}}
+                       "subagents")},
+                   "cost_usd": run["cost"]["usd"], "unpriced_models": run["cost"]["unpriced_models"]}
             # Active time only: waits (background, user idle — including any
             # unrelated conversation after the run finished) are reported apart.
-            per_phase, per_wait = {}, {}
+            per_phase, per_wait, per_phase_cost = {}, {}, {}
             for w in run["phases"]:
+                per_phase_cost[w["phase"]] = per_phase_cost.get(w["phase"], 0.0) + w["cost"]["usd"]
                 active = sum(v for k, v in w["time"].items() if k not in _WAITS)
                 waits = sum(v for k, v in w["time"].items() if k in _WAITS)
                 per_phase[w["phase"]] = per_phase.get(w["phase"], 0.0) + active
@@ -968,26 +1055,35 @@ def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
             for p, v in per_phase.items():
                 phase_vals.setdefault(p, []).append(v)
                 wait_vals.setdefault(p, []).append(per_wait[p])
+                phase_cost.setdefault(p, []).append(per_phase_cost[p])
             row["phases_active"] = _round(per_phase)
             row["phases_waits"] = _round(per_wait)
-            per_gate: dict = {}
+            row["phases_cost_usd"] = {p: round(v, 6) for p, v in per_phase_cost.items()}
+            per_gate, per_gate_cost = {}, {}
             for g in run["gates"]:
-                per_gate[(g["gate"], g["tier"])] = per_gate.get((g["gate"], g["tier"]), 0.0) + g["sum_s"]
+                k = (g["gate"], g["tier"])
+                per_gate[k] = per_gate.get(k, 0.0) + g["sum_s"]
+                per_gate_cost[k] = per_gate_cost.get(k, 0.0) + g["cost_usd"]
             for k, v in per_gate.items():
                 gate_vals.setdefault(k, []).append(v)
+                gate_cost.setdefault(k, []).append(per_gate_cost[k])
             rows.append(row)
 
     def stats(vals):
         return _round({"runs": len(vals), "total_s": sum(vals), "median_s": statistics.median(vals)})
 
+    def cost_stats(vals):
+        return {"cost_total_usd": round(sum(vals), 6), "cost_median_usd": round(statistics.median(vals), 6)}
+
     return {
         "project_dir": str(project_dir),
         "callers": list(callers),
         "runs": rows,
-        "phases": {p: {**stats(phase_vals[p]), "waits_total_s": round(sum(wait_vals[p]), 3)}
+        "phases": {p: {**stats(phase_vals[p]), "waits_total_s": round(sum(wait_vals[p]), 3),
+                       **cost_stats(phase_cost[p])}
                    for p in PHASES if p in phase_vals},
         "skipped": skipped,
-        "gates": [{"gate": g, "tier": t, **stats(v)}
+        "gates": [{"gate": g, "tier": t, **stats(v), **cost_stats(gate_cost[(g, t)])}
                   for (g, t), v in sorted(gate_vals.items(), key=lambda kv: -sum(kv[1]))],
     }
 
@@ -1004,6 +1100,20 @@ def _fmt(sec) -> str:
     return f"{sec:.0f}s"
 
 
+def _usd(v) -> str:
+    return f"${float(v or 0):.2f}"
+
+
+def _render_cost(c) -> list:
+    t = c["tokens"]
+    out = [f"  cost {_usd(c['usd'])} (main {_usd(c['main_usd'])} · subagents {_usd(c['subagent_usd'])}) — "
+           f"tokens in {t['input_tokens']:,} · out {t['output_tokens']:,} · cache-write "
+           f"{t['cache_write_5m_tokens'] + t['cache_write_1h_tokens']:,} · cache-read {t['cache_read_tokens']:,}"]
+    if c["unpriced_models"]:
+        out.append("  ! unpriced models (tokens counted, cost excluded): " + ", ".join(c["unpriced_models"]))
+    return out
+
+
 def _pct(part, whole) -> str:
     return f"{100 * part / whole:4.0f}%" if whole else "   -"
 
@@ -1017,18 +1127,21 @@ def render_session(tr) -> str:
     if not tr["runs"]:
         lines.append("  (no orchestrator invocation found — whole-session summary only)")
         lines += _render_summary(tr["summary"])
+        lines += _render_cost(tr["cost"])
     for run in tr["runs"]:
         lines.append("")
         lines.append(f"== run {run['index']} · {run['caller']} · {run['start']} → {run['end']}"
                      + (f" · {run['resumes']} resume(s)" if run["resumes"] else ""))
         lines += _render_summary(run["summary"])
+        lines += _render_cost(run["cost"])
         lines.append("")
-        lines.append("  phase     start                      active   waits    subagents(sum/union)  set by")
+        lines.append("  phase     start                      active   waits    subagents(sum/union)      cost  set by")
         for w in run["phases"]:
             active = sum(v for k, v in w["time"].items() if k not in _WAITS)
             waits = sum(v for k, v in w["time"].items() if k in _WAITS)
             lines.append(f"  {w['phase']:<9} {w['t'] and _iso(w['t']):<26} {_fmt(active):>6}  {_fmt(waits):>6}"
-                         f"   {_fmt(w['subagent_sum_s']):>6} / {_fmt(w['subagent_union_s']):<6}      {w['event']}")
+                         f"   {_fmt(w['subagent_sum_s']):>6} / {_fmt(w['subagent_union_s']):<6}  "
+                         f"{_usd(w['cost']['usd']):>8}  {w['event']}")
         for msg in run["phase_warnings"]:
             lines.append(f"  ! {msg}")
         for rp in run["replans"]:
@@ -1037,10 +1150,10 @@ def render_session(tr) -> str:
             lines.append(f"  ~ mid-work knowledge capture: {cp['event']}")
         if run["gates"]:
             lines.append("")
-            lines.append("  gate            tier         role         rnd  n   subagent time  out tokens")
+            lines.append("  gate            tier         role         rnd  n   subagent time  out tokens      cost")
             for g in run["gates"]:
                 lines.append(f"  {g['gate']:<15} {g['tier']:<12} {g['role']:<12} {g['round']:>3}  {g['count']:<3} "
-                             f"{_fmt(g['sum_s']):>12}  {g['output_tokens']:>10}")
+                             f"{_fmt(g['sum_s']):>12}  {g['output_tokens']:>10}  {_usd(g['cost_usd']):>8}")
         if run["unknown_subagents"]:
             lines.append("  unrecognised subagent descriptions: " + "; ".join(run["unknown_subagents"]))
         if run["bash_heads"]:
@@ -1075,22 +1188,26 @@ def _render_summary(s) -> list:
 
 def render_aggregate(agg) -> str:
     lines = [f"{len(agg['runs'])} run(s) of {', '.join(agg['callers']) or 'any orchestrator'} in {agg['project_dir']}", ""]
-    lines.append("  session   run  start                      wall    active  model   tools   user    bg-wait  subagents(sum/union)")
+    lines.append("  session   run  start                      wall    active  model   tools   user    bg-wait      cost"
+                 "  subagents(sum/union)")
     for r in agg["runs"]:
         lines.append(f"  {r['session'][:8]}  {r['run']:>3}  {r['start']:<26} {_fmt(r['wall_s']):>6}  {_fmt(r['active_s']):>6}  "
                      f"{_fmt(r['model_s']):>6}  {_fmt(r['tools_s']):>6}  {_fmt(r['user_s']):>6}  "
-                     f"{_fmt(r['background_wait_s']):>6}   {_fmt(r['subagent_sum_s'])} / {_fmt(r['subagent_union_s'])}")
+                     f"{_fmt(r['background_wait_s']):>6}  {_usd(r['cost_usd']):>8}  "
+                     f"{_fmt(r['subagent_sum_s'])} / {_fmt(r['subagent_union_s'])}")
     lines.append("")
-    lines.append("  phase     runs  active total  median/run  (waits total)")
+    lines.append("  phase     runs  active total  median/run  cost total  cost median  (waits total)")
     for p, st in agg["phases"].items():
         lines.append(f"  {p:<9} {st['runs']:>4}  {_fmt(st['total_s']):>12}  {_fmt(st['median_s']):>10}"
+                     f"  {_usd(st['cost_total_usd']):>10}  {_usd(st['cost_median_usd']):>11}"
                      f"  ({_fmt(st['waits_total_s'])})")
     for sk in agg["skipped"]:
         lines.append(f"  ! skipped {sk['session']}: {sk['error']}")
     lines.append("")
-    lines.append("  gate            tier         runs  subagent total  median/run")
+    lines.append("  gate            tier         runs  subagent total  median/run  cost total  cost median")
     for g in agg["gates"]:
-        lines.append(f"  {g['gate']:<15} {g['tier']:<12} {g['runs']:>4}  {_fmt(g['total_s']):>14}  {_fmt(g['median_s']):>10}")
+        lines.append(f"  {g['gate']:<15} {g['tier']:<12} {g['runs']:>4}  {_fmt(g['total_s']):>14}  {_fmt(g['median_s']):>10}"
+                     f"  {_usd(g['cost_total_usd']):>10}  {_usd(g['cost_median_usd']):>11}")
     return "\n".join(lines)
 
 
