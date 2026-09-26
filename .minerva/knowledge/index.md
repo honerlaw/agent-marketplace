@@ -38,6 +38,7 @@
 - [[2026-09-25-decision-mcp-servers-expose-generic-spec-driven-tools]] — API-wrapping MCP servers expose generic request tools plus OpenAPI discovery, not per-endpoint tools
 - [[2026-09-25-decision-mcp-servers-ship-a-ci-env-for-the-image-smoke-test]] — mcp.yml's docker smoke test runs each image with --env-file mcp/<server>/ci.env
 - [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — propose-ship-auto dispatches independent gates together and narrows the interface panel clause to existing, consumed interfaces
+- [[2026-09-26-decision-price-orchestrator-phases-and-gates-in-run-trace]] — run_trace prices each phase/gate via run_analyzer; subagent gates are ~26% of auto-run cost, panels cost time more than money
 - [[2026-09-26-decision-trace-orchestrator-time-from-transcripts]] — scripts/run_trace.py traces propose-ship-auto time; propose-phase reviewer waits dominate
 
 ## Bugs
