@@ -57,3 +57,4 @@ subagent.
 - [[2026-09-23-decision-one-orchestrator-picks-each-decisions-tier]] — see also
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
 - [[2026-09-26-reference-claude-code-transcript-timing-facts]] — builds on
+- [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — see also

@@ -59,3 +59,4 @@ Everything logs under one dated `## Decisions YYYY-MM-DD` header, each line nami
 - [[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]] — the vote rule adopted alongside
 - [[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]] — see also
 - [[2026-09-26-decision-trace-orchestrator-time-from-transcripts]] — see also
+- [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — see also

@@ -61,3 +61,4 @@ entry describes: an orchestrator that "sometimes stops and says it's waiting."
 - [[2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption]] — see also
 - [[2026-06-10-decision-panel-mechanics-extracted-to-round-table]] — see also
 - [[2026-09-05-decision-balanced-rechecks-its-folds]] — see also
+- [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — see also
