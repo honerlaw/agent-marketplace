@@ -327,6 +327,13 @@ live in sidecar files the main transcript never marks. A background Agent call r
 second, while its real duration arrives later in a task-notification
 ([[2026-09-26-reference-claude-code-transcript-timing-facts]]).
 
+The first changes driven by that baseline changed only timing and routing; no gate was removed.
+Independent gates now run as **waves**. Scope, approach and whole-proposal are dispatched together,
+and whole-proposal is held until the other two are final. Completion verification runs alongside
+code review. The panel clause that convened most panels now fires only for a change to an
+**existing**, consumed interface: introducing a new one gets a reviewer, and an approved change does
+not re-fire later ([[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]]).
+
 The project is also honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted
 ([[2026-05-31-decision-behavioral-evals-provisional]]).

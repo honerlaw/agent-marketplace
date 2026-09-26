@@ -28,3 +28,4 @@ Any skill text that **instructs** a subagent dispatch must pin `run_in_backgroun
 - [[2026-06-29-decision-propose-ship-balanced-single-reviewer]] — see also
 - [[2026-07-29-pattern-wait-shape-matches-what-is-awaited]] — see also
 - [[2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch]] — see also
+- [[2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause]] — see also
