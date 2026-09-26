@@ -1,7 +1,7 @@
 # Proposal: trace-orchestrator-run-time
 
 **Date**: 2026-09-26
-**Status**: Draft
+**Status**: Shipped (2026-09-26)
 
 ## Goal
 Add a deterministic, read-only tracer, `scripts/run_trace.py`. It rebuilds a time trace of a
@@ -48,143 +48,72 @@ The two tools we have today can't answer that:
   time. The union of their intervals is the wall-clock contribution.
 
 ## Approach
-Add a new standalone dev tool, `scripts/run_trace.py`, next to `run_analyzer.py` in the repo-root
-`scripts/`. It is not shipped in the minerva plugin. It uses only the standard library, is
-read-only, and returns JSON-serializable data.
+*(Rewritten at promote to describe what shipped. The replan of 2026-09-26 and three review rounds
+changed the turn model and phase signals. See replan.md and the archived scratchpad.)*
 
-1. **Load.** Take a transcript path or a session id (resolved under `--project-dir`, default
-   `~/.claude/projects/<encoded cwd>`). Read the main JSONL and every `subagents/*.jsonl` + `.meta.json`.
-   Streamed assistant messages repeat, so dedupe by `uuid` and tool blocks by `id`, as `run_analyzer` does.
-2. **Active vs. idle.** Active time is the sum of `turn_duration.durationMs`. For a turn with no
-   `turn_duration` event, use that turn's first→last event. Each gap between turns is classified
-   by what started the next turn:
-   - `background-wait`: a `<task-notification>` or agent hand-back started it.
-   - `scheduled-wait`: a ScheduleWakeup re-entry started it.
-   - `user-idle`: a human prompt started it.
-3. **Main-thread attribution.** Walk non-sidechain events in timestamp order and give each
-   in-turn gap to exactly one category:
-   - `tool:<Name>` while a tool call is open. When several are open, the one opened earliest
-     gets it.
-   - `user`: `AskUserQuestion` is attributed as user time, not tool time.
-   - `model`: the gap ends at an assistant message and no tool is open.
-   Bash is sub-bucketed by command head: the first token of the first command after stripping
-   `cd … &&` prefixes and env assignments. For the multiplexers `gh`, `git`, `npm`, `uv`, the
-   next non-flag token is added (`gh pr`, `git worktree`). For `python`/`python3 -m`, the module
-   is added (`python3 -m pytest`). The report also lists the slowest individual calls. The
-   earliest-open tie-break for parallel tool calls is a disclosed heuristic.
-4. **Subagent spans.** Each subagent span runs from the subagent file's first to last
-   timestamp. Its duration is cross-checked against the `<task-notification>` `duration_ms` for
-   the same `toolUseId`; the notification's figure is used when present. Each span records its
-   description, model, output tokens, tool-call count and its own tool/model breakdown (the
-   same algorithm as step 3). Two aggregates are reported:
-   - **Sum:** total subagent compute.
-   - **Union of intervals:** wall-clock time with at least one subagent running.
-5. **Gate/tier/role attribution.** Agent descriptions are parsed against a small closed
-   vocabulary:
-   - role: `Proponent|Skeptic|Arbiter|Verifier|fold-audit|code review`
-   - gate: `scope|approach|whole-proposal|completion|divergence|triage|partition|todo|replan`
-   - round: `r2` → revision round.
-   - tier: subagents are first grouped by (gate, round). A group containing a Proponent or an
-     Arbiter, or whose description says `panel`, is a **panel**, and every member takes that
-     tier. A lone Skeptic, Verifier or fold-audit is **reviewer**. Real panel descriptions often
-     omit the word "panel": session `51b73da3` has `Whole-proposal: Proponent` +
-     `Whole-proposal: Skeptic`. So keyword matching alone is wrong, and a fixture pins exactly
-     that shape.
-   A description the vocabulary doesn't match is kept, tagged `unknown` and listed. It is never
-   dropped (per `2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
-6. **Run segmentation, then phase attribution (inferred, auditable).** One session file can hold
-   several orchestrator runs. For example, session `51b73da3` holds a
-   `minerva:propose-ship-quick` run with its own ship/cleanup, and later a
-   `minerva:propose-ship-auto` run. So the tool first splits each session into **runs**. A run
-   starts at an orchestrator invocation (a `Skill` call or `<command-name>` prompt naming
-   `minerva:propose-ship-auto`, or the retired `propose-ship-quick` / `propose-ship-balanced`,
-   which are tagged by caller). It ends at the next orchestrator invocation or at the end of the
-   file. A `--cleanup-only` re-entry attaches to the run it resumes, not a new run. Every
-   boundary signal below is searched **only within its own run's window**. Phase boundaries
-   within a run come from observable events in the main thread:
-   - The run starts at the `Skill` call to `minerva:propose-ship-auto`, or the first
-     `<command-name>/minerva:propose-ship-auto` prompt.
-   - `propose` ends at the first `git worktree add`.
-   - `work` runs until the first completion-Verifier/completion-panel Agent.
-   - `verify` runs until the first review Agent (code review / spec audit).
-   - `review` runs until the first Write/Edit under `.minerva/knowledge/`, which starts `promote`.
-   - `ship` starts at the `Skill` call to `minerva:ship`, and `cleanup` at the `Skill` call to
-     `minerva:cleanup`.
-   Each boundary records the event (timestamp and short description) that set it, so the
-   report is auditable. A boundary the tool can't find leaves its time in the preceding phase
-   and adds a warning; it is never guessed. Phases stay in order: a signal that appears out of
-   order is ignored and reported. A replan re-entering design work after `work` began is
-   expected. It stays in the current phase, and a `minerva:replan` Skill call or a
-   `replan.md` write is reported as a `replan` event, not an ordering warning.
-7. **Report.**
-   - Default output is a text report:
-     - summary: wall, active, model, tools, user, subagent sum and union, background and
-       scheduled waits;
-     - a phase table;
-     - a gate × tier × role table;
-     - the 10 slowest spans.
-   - The summary states which figures **partition** active time and which **overlap** with them:
-     - model + tool + user partition in-turn active time;
-     - background-wait / scheduled-wait / user-idle partition the time between turns;
-     - subagent sum and union are overlapping views of subagent activity. Most of that activity
-       falls inside background-wait or in-turn tool time, so they must not be added to the
-       other figures.
-   - `--json` emits the full structure.
-   - `--all` aggregates every session in the project directory that invoked
-     `minerva:propose-ship-auto`, with per-run rows plus totals and medians per phase and gate.
-8. **Discoverability.** Add a "Time breakdown" step to `plugins/utils/skills/capture-session/SKILL.md`,
-   the existing dev-facing skill that already runs `run_analyzer.py` by absolute repo path.
-   The new step's body is a command block,
-   `python3 /Users/derekhonerlaw/Development/agent-marketplace/scripts/run_trace.py <transcript.jsonl>`
-   (plus `--all` for the cross-run view), mirroring Step 2's `run_analyzer.py` block, with a
-   short guide to reading the report. Broaden its frontmatter description from token/cost usage to "token/cost usage and where the
-   time went", so a question about time reaches it. This edits a `plugins/utils` skill file, a
-   plugin surface. The skill-contract and site-catalog tests scope only
-   `plugins/minerva/skills`, so it is not contract-tested.
-9. **Absorbed fixes to `scripts/run_analyzer.py`.** The deferral bar applies
-   (`2026-09-23-decision-a-defect-earns-a-tracker-slot-only-if-urgent-and-unabsorbable`): both
-   defects are local and small, need no new design, and change interfaces only additively (one
-   keyword argument defaulting to today's behavior and one CLI flag), so they are fixed here
-   rather than filed.
-   - (a) Add the current models to `PRICING`, with rates verified from the `claude-api`
-     skill's pricing reference (`shared/models.md`, `shared/prompt-caching.md`) and not from
-     memory. The transcripts in this repo use `claude-opus-5`, `claude-opus-5-5`,
-     `claude-sonnet-5` and `claude-fable-5-1`. Today every current-model message is unpriced,
-     so the analyzer reports $0.00. Newer models have their own cache-read rates:
-     - Fable 5.1 and Mythos 5.1: $0.25/MTok (0.025x);
-     - Opus 5.5: $0.20/MTok (0.05x);
-     - every other model: the standard 0.1x.
-     Add a per-model cache-read override. The 0.1x default stays, and the existing cost-math
-     tests stay valid.
-   - (b) `analyze_transcript(path, include_subagent_files=False)` gets an **opt-in** keyword.
-     When `True`, it also folds `<session>/subagents/agent-*.jsonl` (resolved from the main
-     transcript's stem) into `by_scope["subagent"]`, `by_model`, `by_tool` and `totals`.
-     - **The default stays `False`, so every existing caller keeps its current
-       subagent accounting.** The only change they see is that current-model messages are now
-       priced instead of reported as $0. `run_benchmark.build_record` still calls it main-only. Its
-       `cost_crosscheck_ok` still compares a main-only derived total with Claude's main-only
-       `total_cost_usd`, and its manual `subagent_paths` / `--subagent` loop is still the only
-       place a benchmark record picks up subagent cost. Nothing can be counted twice.
-     - The standalone CLI (`run_analyzer.py <transcript>`, which `capture-session` runs) turns
-       discovery **on** by default and takes `--main-only` to turn it off, so a person asking
-       what a session cost sees the whole session.
-     - Tests build the **real on-disk shape** (`tmp_path/<stem>.jsonl` +
-       `tmp_path/<stem>/subagents/agent-x.jsonl`). They pin that:
-       - the default call ignores the sibling file;
-       - the opt-in call counts it once;
-       - `build_record` with `--subagent` pointing at that same sibling file counts it
-         exactly once and keeps `cost_crosscheck_ok` computed from main-only cost.
-     - Assumption: a session's main file and its `subagents/` sidecar are non-overlapping
-       records of subagent activity. Both real sessions checked have zero `isSidechain: true`
-       lines despite populated `subagents/` dirs. As a guard for a hybrid or legacy transcript,
-       the message-id dedupe set is shared across the main file and its sidecar files, so an
-       overlapping message is billed once.
-     - `build_record`'s docstring gains one sentence noting that it deliberately calls the
-       analyzer main-only.
-10. **Tests.** Add `tests/test_run_trace.py` with synthetic fixture transcripts written to
-   `tmp_path`. It covers every attribution rule above. CI already runs the whole `tests/`
-   suite (`2026-08-11-decision-ci-runs-the-whole-suite`). Each assertion gets a deletion pass
-   (`2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail`).
+**`scripts/run_trace.py`** is a stdlib, read-only dev tool in the repo-root `scripts/`, next to
+`run_analyzer.py`. It is not shipped in the minerva plugin.
+
+1. **Load.** Input is a transcript path or a session id. `--project-dir` defaults to Claude Code's
+   directory for the *primary checkout*: a linked worktree re-anchors through
+   `git --git-common-dir`, while submodules and subdirectories keep their own directory. Loading
+   reads the main JSONL plus `<session>/subagents/agent-*.jsonl` and `.meta.json`, dedupes events
+   by `uuid` and reads naive timestamps as UTC.
+2. **Turns.** A turn is the events between `turn_duration` markers. It starts at the event that
+   began it (the first user event with an `origin`: human, task-notification, or peer hand-back,
+   which is `isMeta`) and ends at the marker; a trailing unmarked turn is started the same way.
+   Turns never overlap. Active time is the sum of turn spans, and `durationMs` is only a reported
+   cross-check (it is not per-turn wall time; see replan.md).
+3. **Attribution.** In-turn time is partitioned into:
+   - `model`: no tool open;
+   - `tool:<Name>`: a tool call is open (earliest-opened wins; includes permission waits);
+   - `user`: an `AskUserQuestion` is open;
+   - `harness`: a gap ending at a `system` event.
+   Between-turn gaps are background-wait / scheduled-wait / user-idle / idle-other, by what started
+   the next turn. Bash is bucketed by command head (multiplexer subcommand, `python -m <mod>`,
+   `python (stdin)`).
+4. **Subagents.** Each sidecar is linked to its Agent call by `toolUseId`, or failing that by the
+   last `agentId:` in the Agent result. Its duration comes from the `<task-notification>`
+   `duration_ms`, with the file span as fallback. Both sum and union are reported.
+5. **Gate / role / round / tier.** These come from a closed description vocabulary. "fold-audit"
+   is recognised only as the explicit word; "new-plan" maps to replan. Tier is panel for a
+   Proponent or Arbiter, a description saying "panel", or a Skeptic dispatched in the same batch
+   (same message or within 10 s) as a same-gate, same-round Proponent. Otherwise a Skeptic,
+   Verifier or fold-audit is reviewer and a code review is code-review. Unknowns are reported,
+   never dropped.
+6. **Runs and phases.** A session splits into runs, one per orchestrator invocation (including
+   retired callers). Two invocations within 120 s are one run, and a `--cleanup-only` re-entry
+   extends the run it resumes. A run ends at the next invocation, at the first new human request
+   after its cleanup began, or at the end of the file. Phase signals are searched only within the
+   run and read from **shell structure**: heredoc bodies and quoted strings (including multi-line
+   ones) are set aside first. The signals are:
+   - `work`: `git worktree add … -b <branch>`, excluding the `minerva/` maintenance namespace;
+   - `verify`: a completion Agent;
+   - `review`: a code-review Agent;
+   - `promote`: a write of a knowledge **entry** via Write/Edit, Bash redirect/tee/cp/mv (with
+     `$VAR` expansion and `cd`) or a Python `write_text`/`open(…, "w")`, excluding index.md and
+     overview.md; or `Skill minerva:promote`;
+   - `ship` / `cleanup`: their Skill calls.
+   A knowledge write before the last pre-ship verify/review is a mid-work capture event.
+   Out-of-order or missing signals are warnings, and a replan is an event.
+7. **Report.** The text report has a summary that states which figures partition and which
+   overlap, a phase table (active vs waits, subagent sum and union, the event that set each
+   boundary), a gate × tier × role × round table, Bash heads and the 10 slowest spans. `--json`
+   emits the full structure. `--all [--any-orchestrator]` aggregates runs with per-phase *active*
+   totals and medians (waits apart) and per-gate totals and medians; a transcript that can't be
+   read is listed under `skipped`, not fatal.
+8. **`capture-session` skill** (plugins/utils) has Step 2b for the time breakdown, and its
+   description mentions time.
+9. **`scripts/run_analyzer.py`** (absorbed fixes):
+   - it prices the current models, with per-model cache-read rates;
+   - `analyze_transcript(include_subagent_files=False)` is opt-in, and its message-id dedupe is
+     shared across the main file and sidecars;
+   - the CLI reports the whole session by default, with `--main-only` to restrict it;
+   - `run_benchmark.build_record` stays main-only, so its cross-check and `--subagent` flow are
+     unchanged.
+10. **Tests.** `tests/test_run_trace.py` has 84 tests, and `tests/test_run_analyzer.py` has 24
+    (13 new). A scripted deletion pass of 66 mutations, run with bytecode caching off, is 66/66
+    killed. The full suite has 1115 passing.
 
 ### Candidate approaches considered
 - **A (picked): new root `scripts/run_trace.py` dev tool.** It sits next to the cost analyzer.
