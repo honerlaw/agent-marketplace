@@ -355,7 +355,11 @@ def attribute(events: list, include_idle: bool = True) -> dict:
                         "dur": max(0.0, e["_t"] - start), "tool_use_id": b["tool_use_id"],
                         "message_id": mid, "input": inp}
                 if name in ("Agent", "Task"):
-                    span["result_text"] = _result_text(b)[:2000]
+                    # The launch/hand-back text names the sidecar's agent id; a
+                    # foreground report appends it after the report, so take the
+                    # LAST match over the whole text (a quoted id comes earlier).
+                    ids = _AGENT_ID_RE.findall(_result_text(b))
+                    span["agent_id"] = ids[-1] if ids else None
                 spans.append(span)
         # Calls still open at turn end (interrupted / backgrounded) close there.
         for tid, (start, name, key, mid, inp) in list(open_calls.items()):
@@ -454,9 +458,8 @@ def load_subagents(main_path, main_events, agent_spans) -> list:
     # ("agentId: a764eb…"), which is the sidecar's file name.
     by_agent_id = {}
     for s in agent_spans:
-        m = _AGENT_ID_RE.search(s.get("result_text") or "")
-        if m:
-            by_agent_id.setdefault(m.group(1), s["tool_use_id"])
+        if s.get("agent_id"):
+            by_agent_id.setdefault(s["agent_id"], s["tool_use_id"])
     notif = _notification_durations(main_events)
     out = []
     for f in sorted(sub_dir.glob("agent-*.jsonl")):
@@ -598,13 +601,53 @@ def segment_runs(events) -> list:
     return runs
 
 
+_HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)", re.S)
+_QUOTED_RE = re.compile(r"'[^'\n]*'|\"[^\"\n]*\"")
+_PY_KNOWLEDGE_WRITE_RE = re.compile(
+    r"\.minerva/knowledge/[^\"'\s]+\.md[\"']\s*\)?\s*\.write_text"
+    r"|open\(\s*[\"'][^\"']*\.minerva/knowledge/[^\"']+\.md[\"']\s*,\s*[\"'][wa]")
+# index.md / overview.md are the catalog and synthesis — reconciliation, not promote.
+_NOT_AN_ENTRY = ("index.md", "overview.md")
+
+
 def _writes_knowledge(command: str) -> bool:
-    """A Bash command that writes a knowledge entry: a redirect/tee/cp/mv whose
-    target is under ``.minerva/knowledge/`` (or run after ``cd`` into it)."""
-    if ".minerva/knowledge" not in command:
+    """Does this Bash command write a knowledge ENTRY (``.minerva/knowledge/*.md``)?
+
+    Structural, not a substring search: heredoc bodies and quoted strings are
+    set aside before looking for write targets (a proposal heredoc that merely
+    mentions the path is not a write), ``$VAR`` targets are expanded from
+    assignments in the same command (``K=.minerva/knowledge; cat > $K/x.md``),
+    a ``cd`` into the directory is honoured, and a Python heredoc that
+    ``write_text``s / ``open(..., "w")``s an entry counts.
+    """
+    if not isinstance(command, str) or ".minerva/knowledge" not in command:
         return False
-    return bool(re.search(r"(>|\btee\b|\bcp\b|\bmv\b|\bgit mv\b)[^|;&]*\.minerva/knowledge/", command)
-                or re.search(r"cd [^;&]*\.minerva/knowledge[^;&]*(&&|;)[^|]*(>|\btee\b)", command))
+    bodies = [m.group(3) for m in _HEREDOC_RE.finditer(command)]
+    if any(_PY_KNOWLEDGE_WRITE_RE.search(b) for b in bodies):
+        return True
+    shell = _QUOTED_RE.sub("Q", _HEREDOC_RE.sub(" ", command))
+    env = dict(re.findall(r"(?:^|[\s;&])([A-Za-z_][A-Za-z0-9_]*)=([^\s;&]+)", shell))
+    cwd = ""
+    for seg in re.split(r"&&|\|\||;|\n|\|", shell):
+        seg = re.sub(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", lambda m: env.get(m.group(1), m.group(0)), seg).strip()
+        toks = seg.split()
+        if not toks:
+            continue
+        if toks[0] == "cd" and len(toks) > 1:
+            cwd = toks[1]
+            continue
+        targets = re.findall(r"(?<![0-9&])>>?\s*([^\s<>]+)", seg)
+        if toks[0] == "tee":
+            targets += [t for t in toks[1:] if not t.startswith("-")]
+        if toks[0] in ("cp", "mv") and len(toks) >= 3:
+            targets.append(toks[-1])
+        if toks[:2] == ["git", "mv"] and len(toks) >= 4:
+            targets.append(toks[-1])
+        for t in targets:
+            full = t if "/" in t or not cwd else f"{cwd}/{t}"
+            if ".minerva/knowledge/" in full + "/" and full.endswith(".md") and Path(full).name not in _NOT_AN_ENTRY:
+                return True
+    return False
 
 
 def _phase_signals(events, spans, lo, hi) -> list:
@@ -653,7 +696,10 @@ def infer_phases(events, spans, lo, hi) -> dict:
     signals = _phase_signals(events, spans, lo, hi)
     # A knowledge write BEFORE a later verify/review signal is a mid-work capture
     # (minerva:promote's capture mode), not the start of the promote phase.
-    last_check = max((t for t, p, _ in signals if p in ("verify", "review")), default=None)
+    # Only checks before the first ship/cleanup count — a post-ship CI-fix review
+    # must not turn the real promote writes into "captures".
+    shipped = min((t for t, p, _ in signals if p in ("ship", "cleanup")), default=float("inf"))
+    last_check = max((t for t, p, _ in signals if p in ("verify", "review") and t < shipped), default=None)
     for t, phase, desc in signals:
         if phase == "replan":
             replans.append({"t": t, "event": desc})
@@ -682,6 +728,29 @@ def infer_phases(events, spans, lo, hi) -> dict:
 # --------------------------------------------------------------------------- report
 
 
+def _end_after_cleanup(events, phases, hi) -> float:
+    """A run is over once cleanup has begun and a human asks for something else.
+
+    The first human prompt after the cleanup boundary ends the run (a
+    ``--cleanup-only`` re-entry is an invocation, not a new request, and does
+    not); without it, unrelated follow-on work in the same session would be
+    charged to the run's cleanup phase.
+    """
+    cleanup = next((w["t"] for w in phases["windows"] if w["phase"] == "cleanup"), None)
+    if cleanup is None:
+        return hi
+    for e in events:
+        if not (cleanup < e["_t"] < hi) or e.get("type") != "user" or _origin_kind(e) != "human":
+            continue
+        if any(True for _ in _tool_results(e)):
+            continue
+        m = _COMMAND_NAME_RE.search(_text_of(e))
+        if m and m.group(1) in ORCHESTRATORS:
+            continue
+        return e["_t"]
+    return hi
+
+
 def resolve_session(arg: str, project_dir=None) -> Path:
     p = Path(arg).expanduser()
     if p.suffix == ".jsonl" and p.exists():
@@ -702,11 +771,14 @@ def default_project_dir(cwd=None) -> Path:
     """
     cwd = Path(cwd or Path.cwd()).resolve()
     try:
-        common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                                cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
-        if common:
+        out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"],
+                             cwd=cwd, capture_output=True, text=True, check=True).stdout.split("\n")
+        git_dir, common = out[0].strip(), out[1].strip()
+        # Only a LINKED worktree has git-dir != common-dir (…/.git/worktrees/<name>).
+        # A submodule or a plain subdirectory keeps its own launch directory.
+        if git_dir and common and Path(git_dir) != Path(common) and Path(git_dir).parent.name == "worktrees":
             cwd = Path(common).parent
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, IndexError):
         pass
     return Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(cwd))
 
@@ -722,6 +794,9 @@ def trace_session(path) -> dict:
     for i, r in enumerate(segment_runs(events)):
         lo, hi = r["start"], r["end"]
         phases = infer_phases(events, att["spans"], lo, hi)
+        hi = _end_after_cleanup(events, phases, hi)
+        if hi != r["end"]:
+            phases = infer_phases(events, att["spans"], lo, hi)
         run_subs = [s for s in subs if lo <= s["start"] < hi]
         run_spans = [s for s in att["spans"] if lo <= s["start"] < hi]
         for w in phases["windows"]:
@@ -947,9 +1022,9 @@ def render_session(tr) -> str:
             lines.append(f"  ~ mid-work knowledge capture: {cp['event']}")
         if run["gates"]:
             lines.append("")
-            lines.append("  gate            tier      role         rnd  n   subagent time  out tokens")
+            lines.append("  gate            tier         role         rnd  n   subagent time  out tokens")
             for g in run["gates"]:
-                lines.append(f"  {g['gate']:<15} {g['tier']:<9} {g['role']:<12} {g['round']:>3}  {g['count']:<3} "
+                lines.append(f"  {g['gate']:<15} {g['tier']:<12} {g['role']:<12} {g['round']:>3}  {g['count']:<3} "
                              f"{_fmt(g['sum_s']):>12}  {g['output_tokens']:>10}")
         if run["unknown_subagents"]:
             lines.append("  unrecognised subagent descriptions: " + "; ".join(run["unknown_subagents"]))
@@ -998,9 +1073,9 @@ def render_aggregate(agg) -> str:
     for sk in agg["skipped"]:
         lines.append(f"  ! skipped {sk['session']}: {sk['error']}")
     lines.append("")
-    lines.append("  gate            tier      runs  subagent total  median/run")
+    lines.append("  gate            tier         runs  subagent total  median/run")
     for g in agg["gates"]:
-        lines.append(f"  {g['gate']:<15} {g['tier']:<9} {g['runs']:>4}  {_fmt(g['total_s']):>14}  {_fmt(g['median_s']):>10}")
+        lines.append(f"  {g['gate']:<15} {g['tier']:<12} {g['runs']:>4}  {_fmt(g['total_s']):>14}  {_fmt(g['median_s']):>10}")
     return "\n".join(lines)
 
 

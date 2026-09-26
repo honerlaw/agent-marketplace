@@ -24,6 +24,10 @@
     - fix (skeptic/arbiter): criterion 2 fixture covers the undershoot case too; test added (test_duration_ms_undershoot_keeps_the_question_wait_as_user_time)
     - fix (skeptic/arbiter): reconcile 32/165 vs 13/150 (naive first-raw-event start vs starting event)
 - [solo] review triage: 12 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was absorbable; none had two defensible dispositions, so the ambiguity clause did not fire; #9 naive-timestamp is defensive-only on real data but a one-line fix, so FIX dominates IGNORE)
+- [panel — 3/3 accept, 2 with fixes] completion verification: all 10 criteria independently reproduced (1065 passed at 8a009db; 0 overlap/active>wall over 19 sessions; $21.69/$16.98/151 to the cent) (tier: panel — the diff changes run_analyzer's CLI default output, an interface change)
+    - fix (proponent/arbiter): test pinning the round term of the panel-batch match — added (test_panel_batch_match_requires_the_same_round)
+    - fix (arbiter, optional): disambiguate tier "review" vs "reviewer" — renamed to "code-review"
+- [solo] review triage (round 2, fix-delta re-review): 7 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — each had a verified failure scenario and was absorbable; no item had two defensible dispositions)
 - note: approach fold-audit and whole-proposal Skeptic were dispatched in parallel (scope + approach Skeptics likewise) to cut wall time; no gate's artifact depended on an unresolved sibling
 
 ## Work notes
@@ -50,3 +54,13 @@ Local-diff mode (independent fresh-context reviewer; no PR yet) plus the inline 
 - 10 [low] FIX — CLI argument errors (missing --project-dir value, unknown session) now print a message and exit 2 instead of a traceback.
 - 11 [low] FIX — added tests for every fix above, plus the round term of the panel-batch match (surviving mutation found by the completion Proponent) and the "New-plan panel" gate vocabulary. Also renamed tier "review" to "code-review" for readability (completion Skeptic, low).
 Deletion pass re-run over the extended rule set: 49/49 mutations killed (bytecode caching disabled). Full suite: 1084 passed.
+
+## Review triage 2026-09-26 (round 2 — re-review of the fix delta 8a009db..8fcd6cd)
+- R1 [high] FIX — `_writes_knowledge` was a substring search: about 16 of its 31 real matches were false (heredoc bodies of proposal/scratchpad, reads, `gh issue comment`). It is now structural: heredoc bodies and quoted strings are set aside, write targets are taken from `>`/`>>`/tee/cp/mv/git mv (destination only), `cd` is honoured, and index.md/overview.md are excluded. After the fix, 12 of 13 distinct real matches are true entry writes. The remaining one is this session's own Python heredoc containing a nested `EOF` terminator, a disclosed narrow limitation.
+- R2 [medium] FIX — missed writes via `K=.minerva/knowledge; cat > $K/x.md` and Python `Path(...).write_text`. `$VAR` is now expanded from same-command assignments, and Python heredoc bodies are checked for write_text/open(..., "w") on an entry.
+- R3 [medium] FIX — a post-ship review agent made the real promote writes look like captures. last_check now counts only verify/review signals before the first ship/cleanup.
+- R4 [low] FIX — agentId linkage read the first 2000 chars and took the first match. It now reads the full text and takes the last match.
+- R5 [low] FIX — default_project_dir re-anchored submodules and plain subdirectories. It now re-anchors only inside a linked worktree (git-dir != common-dir, under .../worktrees/).
+- R6 [low] FIX — tier column too narrow for "code-review", now width 12.
+- R7 [low] FIX — active post-run work was still charged to cleanup. A run now ends at the first human request after its cleanup boundary; a `--cleanup-only` resume does not end it.
+- Test-quality gotcha: a generated parametrize edit silently failed to match (escaped `\n` in the search text), so two positive cases (the `$K` form and the Python write) were never added, and 5 mutations survived because of it. Found through the deletion pass, not by reading. Final deletion pass: 60/60 killed. Full suite: 1102 passed.

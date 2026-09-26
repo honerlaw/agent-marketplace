@@ -440,6 +440,8 @@ def _promote_run(knowledge_cmd):
     "cat > .minerva/knowledge/2026-09-26-pattern-x.md <<'EOF'\nbody\nEOF",
     "cd .minerva/worktrees/u/.minerva/knowledge && cat > 2026-09-26-pattern-x.md <<'EOF'\nb\nEOF",
     "git mv .minerva/work/u/note.md .minerva/knowledge/2026-09-26-pattern-x.md",
+    "K=.minerva/worktrees/u/.minerva/knowledge; cat > $K/2026-09-26-decision-y.md <<'EOF'\nb\nEOF",
+    "python3 - <<'PY'\nfrom pathlib import Path\nPath('.minerva/knowledge/2026-09-26-bug-z.md').write_text('x')\nPY",
 ])
 def test_knowledge_written_through_bash_starts_promote(tmp_path, cmd):
     run = rt.trace_session(write_session(tmp_path, _promote_run(cmd)))["runs"][0]
@@ -469,12 +471,13 @@ def test_skill_promote_is_a_promote_signal(tmp_path):
 
 
 def test_aggregate_phase_totals_are_active_time_with_waits_apart(tmp_path):
-    # The run's last phase is followed by 5,000 s of unrelated user idle.
-    events = _lifecycle(0) + [prompt(5130), assistant(5140), marker(5140, 10)]
+    # The run's last phase is followed by 5,000 s of user idle, then an
+    # unrelated request: the idle is a wait, the new request is not the run.
+    events = _lifecycle(0) + [prompt(5130, "now something else"), assistant(5140), marker(5140, 10)]
     write_session(tmp_path, events, name="a")
     agg = rt.aggregate(tmp_path)
     cleanup = agg["phases"]["cleanup"]
-    assert cleanup["total_s"] == pytest.approx(20.0)        # 120→130 and 5130→5140
+    assert cleanup["total_s"] == pytest.approx(10.0)        # 120→130 only
     assert cleanup["waits_total_s"] == pytest.approx(5000.0)
 
 
@@ -564,3 +567,94 @@ def test_panel_batch_match_requires_the_same_round(tmp_path):
     subs = [_sub("s", "Skeptic: scope check", 10), _sub("p", "Scope r2: Proponent", 15)]
     tiers = {s["description"]: s["tier"] for s in rt.trace_session(write_session(tmp_path, events, subagents=subs))["subagents"]}
     assert tiers["Skeptic: scope check"] == "reviewer"
+
+
+
+@pytest.mark.parametrize("cmd", [
+    # heredoc BODIES that merely mention the path are not writes
+    "cat > .minerva/work/u/proposal.md <<'EOF'\nSee .minerva/knowledge/2026-x.md > context\nEOF",
+    "cat >> .minerva/work/u/scratchpad.md <<'EOF'\n- FIX: promote now detects writes under .minerva/knowledge/\nEOF",
+    "python3 - <<'PY'\nopen('tests/t.py','w').write('.minerva/knowledge/x.md')\nPY",
+    # reads
+    "cp .minerva/knowledge/index.md /tmp/x",
+    "grep -c '>' .minerva/knowledge/index.md",
+    "cd .minerva/knowledge && ls 2>/dev/null",
+    'gh issue comment 5 --body "then: echo x > .minerva/knowledge/2026-x-pattern-a.md now"',
+    "cat > .minerva/work/u/proposal.md <<'EOF'\nRun: cat > .minerva/knowledge/2026-x-pattern-a.md\nEOF",
+    # catalog / synthesis are reconciliation, not promote
+    "cat > .minerva/knowledge/index.md <<'EOF'\nx\nEOF",
+    # a cp/mv SOURCE under knowledge is a read
+    "cp .minerva/knowledge/2026-x-pattern-a.md .minerva/work/u/copy.md",
+])
+def test_knowledge_write_detection_ignores_mentions_reads_and_catalog(cmd):
+    assert not rt._writes_knowledge(cmd)
+
+
+def test_post_ship_review_does_not_erase_the_promote_phase(tmp_path):
+    events = [
+        orchestrator_prompt(0),
+        assistant(10, tool("wt", "Bash", command="git worktree add x")), result(11, "wt"),
+        assistant(50, _agent("v", "Completion Verifier")), result(51, "v"),
+        assistant(70, _agent("c", "Code quality review of diff")), result(71, "c"),
+        assistant(90, tool("k", "Write", file_path="/r/.minerva/knowledge/2026-x.md")), result(91, "k"),
+        assistant(100, tool("s", "Skill", skill="minerva:ship")), result(101, "s"),
+        assistant(110, _agent("ci", "Review CI fix diff")), result(111, "ci"),
+        assistant(120, tool("cl", "Skill", skill="minerva:cleanup")), result(121, "cl"),
+        assistant(130), marker(130, 130),
+    ]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert "promote" in [w["phase"] for w in run["phases"]]
+    assert run["knowledge_captures"] == []
+
+
+def test_agent_id_link_takes_the_last_id_in_the_full_result(tmp_path):
+    long_report = "report " * 600 + "quoting agentId: zzzz in passing. " + "more " * 50
+    events = [orchestrator_prompt(0),
+              assistant(10, _agent("t1", "Completion Verifier")),
+              {"type": "user", "uuid": _uuid(), "timestamp": ts(70), "message": {"content": [
+                  {"type": "tool_result", "tool_use_id": "t1",
+                   "content": [{"type": "text", "text": long_report + "agentId: a0"}]}]}},
+              assistant(71), marker(71, 71)]
+    path = write_session(tmp_path, events, subagents=[_sub("t1", "Completion Verifier", 10)])
+    (tmp_path / "sess" / "subagents" / "agent-a0.meta.json").unlink()
+    assert rt.trace_session(path)["subagents"][0]["tool_use_id"] == "t1"
+
+
+def test_run_ends_at_the_first_new_human_request_after_cleanup(tmp_path):
+    events = _lifecycle(0) + [
+        prompt(200, "unrelated: fix the README"), assistant(260), marker(260, 60),
+        orchestrator_prompt(300, args="--cleanup-only 2026-09-01-x --retry=1"), assistant(301), marker(301, 1),
+    ]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert run["end"] == rt._iso(rt._ts(ts(200)))
+    assert run["summary"]["active_s"] == pytest.approx(130.0)
+
+
+def test_cleanup_only_resume_after_cleanup_does_not_end_the_run(tmp_path):
+    events = _lifecycle(0) + [
+        orchestrator_prompt(300, args="--cleanup-only 2026-09-01-x --retry=1"), assistant(310), marker(310, 10)]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert run["end"] == rt._iso(rt._ts(ts(310)))
+
+
+def test_default_project_dir_keeps_a_plain_subdirectory(tmp_path):
+    import subprocess
+    repo = tmp_path / "repo"
+    sub = repo / "pkg" / "sub"
+    sub.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    assert rt.default_project_dir(sub).name.endswith("-repo-pkg-sub")
+
+
+def test_gate_table_columns_stay_aligned_for_code_review(tmp_path, capsys):
+    events = [orchestrator_prompt(0), assistant(1, _agent("c", "Code quality review of diff"),
+                                                  _agent("v", "Completion Verifier")),
+              result(2, "c"), result(2, "v"), assistant(3), marker(3, 3)]
+    path = write_session(tmp_path, events, subagents=[_sub("c", "Code quality review of diff", 1),
+                                                      _sub("v", "Completion Verifier", 1)])
+    rt.main([str(path)])
+    rows = [l for l in capsys.readouterr().out.splitlines()
+            if l.startswith(("  review          ", "  completion      "))]
+    assert len(rows) == 2
+    # the subagent-time column lines up in both rows (tier "code-review" fits its column)
+    assert rows[0].index("1.0m") == rows[1].index("1.0m")
