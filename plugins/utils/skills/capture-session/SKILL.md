@@ -69,9 +69,10 @@ How to read it:
   flag missing or out-of-order signals.
 - The **gate table** groups subagents by gate, tier (panel / reviewer / code-review) and
   role, so you can see which adjudication tier the time went to.
-- **Cost sits next to time**, priced by `run_analyzer.py`'s table, so the session `cost`
-  equals Step 2's `total_cost_usd`. Call out:
-  - the run's `cost` line: USD split into main vs subagents, plus the token classes;
+- **Cost sits next to time**, priced by `run_analyzer.py`'s table. Call out:
+  - the `session cost` line: the whole file, including spend before, between and after
+    runs. It equals Step 2's `total_cost_usd`;
+  - each run's `cost` line: USD split into main vs subagents, plus the token classes;
   - the **phase table's `cost` column**: a main-thread message is charged to the phase it
     was sent in, and a subagent's whole cost to the phase it launched in;
   - the **gate table's `cost` column**: what each gate × tier × role spent. This is the

@@ -402,6 +402,27 @@ def _clip(segments, lo, hi) -> dict:
 # --------------------------------------------------------------------------- cost
 
 
+def billing_lines(path) -> list:
+    """Every parseable line of one JSONL file, in FILE order, for billing.
+
+    Unlike ``load_events`` nothing is dropped: ``run_analyzer`` bills lines with
+    no timestamp and repeated ``uuid`` values too, and the totals must agree. A
+    line without a usable timestamp takes the previous line's time (``-inf``
+    before any), which only decides the phase it is charged to.
+    """
+    out, t = [], float("-inf")
+    for line in Path(path).read_text().splitlines():
+        try:
+            obj = json.loads(line) if line.strip() else None
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(obj, dict):
+            continue
+        t = _ts(obj.get("timestamp")) or t
+        out.append({**obj, "_t": t})
+    return out
+
+
 def cost_points(events, seen: set, sidecar: bool = False) -> list:
     """One priced point per assistant message not already in ``seen``.
 
@@ -415,15 +436,21 @@ def cost_points(events, seen: set, sidecar: bool = False) -> list:
     for e in events:
         if e.get("type") != "assistant":
             continue
-        msg = e.get("message") or {}
+        msg = e.get("message")
+        msg = msg if isinstance(msg, dict) else {}
         mid = msg.get("id")
         if mid is not None:
             if mid in seen:
                 continue
             seen.add(mid)
         tokens = _zero_usage()
-        _add_usage(tokens, msg.get("usage") or {})
-        model = msg.get("model") or "unknown"
+        usage = msg.get("usage")
+        usage = dict(usage) if isinstance(usage, dict) else {}   # a malformed record bills as empty
+        if not isinstance(usage.get("cache_creation"), dict):
+            usage.pop("cache_creation", None)
+        _add_usage(tokens, {k: v if isinstance(v, (int, float)) or k == "cache_creation" else 0
+                            for k, v in usage.items()})
+        model = msg.get("model") if isinstance(msg.get("model"), str) else "unknown"
         usd = usage_cost(tokens, model)
         out.append({"t": e["_t"], "scope": "subagent" if sidecar or e.get("isSidechain") else "main",
                     "tokens": tokens, "usd": usd or 0.0,
@@ -513,10 +540,12 @@ def _notification_durations(events) -> dict:
     return out
 
 
-def load_subagents(main_path, main_events, agent_spans, seen=None) -> list:
+def load_subagents(main_path, main_events, agent_spans, seen=None, unplaced=None) -> list:
     """One record per sidecar subagent file, linked to its Agent call.
 
     ``seen`` is the session-wide billed ``message.id`` set (see ``cost_points``).
+    A sidecar with no timestamped event cannot be placed in time; its cost
+    points are appended to ``unplaced`` (session total only) instead of lost.
     """
     seen = set() if seen is None else seen
     main_path = Path(main_path)
@@ -538,11 +567,13 @@ def load_subagents(main_path, main_events, agent_spans, seen=None) -> list:
             meta = {}
         if not isinstance(meta, dict):
             meta = {}
+        points = cost_points(billing_lines(f), seen, sidecar=True)
         events = load_events(f)
         if not events:
+            if unplaced is not None:
+                unplaced.extend({**pt, "t": float("-inf")} for pt in points)
             continue
         att = attribute(events, include_idle=False)
-        points = cost_points(events, seen, sidecar=True)
         first, last = events[0]["_t"], events[-1]["_t"]
         tid = meta.get("toolUseId") or by_agent_id.get(f.stem[len("agent-"):])
         launch = by_tool_use.get(tid)
@@ -873,8 +904,9 @@ def trace_session(path) -> dict:
     att = attribute(events)
     agent_spans = [s for s in att["spans"] if s["name"] in ("Agent", "Task")]
     seen: set = set()
-    points = cost_points(raw, seen)          # main file first, unfiltered: run_analyzer's order
-    subs = load_subagents(path, events, agent_spans, seen)
+    # Billed from the raw lines, main file first, then sidecars: run_analyzer's order.
+    points = cost_points(billing_lines(path), seen)
+    subs = load_subagents(path, events, agent_spans, seen, unplaced=points)
     end_of_file = events[-1]["_t"] if events else None
     runs = []
     for i, r in enumerate(segment_runs(events)):
@@ -888,9 +920,10 @@ def trace_session(path) -> dict:
         # A run that reaches the end of the file owns the messages stamped at
         # (or, for legacy sidechain lines, after) its last event.
         cost_hi = float("inf") if hi == end_of_file else hi
+        cost_subs = [s for s in subs if lo <= s["start"] < cost_hi]
         for i_w, w in enumerate(phases["windows"]):
             w_end = cost_hi if i_w == len(phases["windows"]) - 1 else w["end"]
-            w["cost"] = _cost(points, run_subs, w["t"], w_end)
+            w["cost"] = _cost(points, cost_subs, w["t"], w_end)
             w["time"] = _round(_clip(att["segments"], w["t"], w["end"]))
             ws = [s for s in run_subs if w["t"] <= s["start"] < w["end"]]
             w["subagent_sum_s"] = round(sum(s["dur"] for s in ws), 3)
@@ -902,7 +935,7 @@ def trace_session(path) -> dict:
             "start": _iso(lo),
             "end": _iso(hi),
             "summary": _summary(att["segments"], run_subs, lo, hi),
-            "cost": _cost(points, run_subs, lo, cost_hi),
+            "cost": _cost(points, cost_subs, lo, cost_hi),
             "bash_heads": _round(_bash_heads(run_spans)),
             "phases": phases["windows"],
             "phase_warnings": phases["warnings"],
@@ -1104,9 +1137,9 @@ def _usd(v) -> str:
     return f"${float(v or 0):.2f}"
 
 
-def _render_cost(c) -> list:
+def _render_cost(c, label="cost") -> list:
     t = c["tokens"]
-    out = [f"  cost {_usd(c['usd'])} (main {_usd(c['main_usd'])} · subagents {_usd(c['subagent_usd'])}) — "
+    out = [f"  {label} {_usd(c['usd'])} (main {_usd(c['main_usd'])} · subagents {_usd(c['subagent_usd'])}) — "
            f"tokens in {t['input_tokens']:,} · out {t['output_tokens']:,} · cache-write "
            f"{t['cache_write_5m_tokens'] + t['cache_write_1h_tokens']:,} · cache-read {t['cache_read_tokens']:,}"]
     if c["unpriced_models"]:
@@ -1124,6 +1157,10 @@ def render_session(tr) -> str:
              f"  cross-check: turn spans {_fmt(x['sum_turn_spans_s'])} vs Claude's durationMs sum "
              f"{_fmt(x['sum_duration_ms_s'])} ({x['turns_disagreeing_over_2s']} turn(s) differ >2s; "
              "durationMs excludes question waits and can reach back across turns)"]
+    if tr["runs"]:
+        # The whole file, including spend before, between and after runs — the
+        # figure that equals run_analyzer's total_cost_usd.
+        lines += _render_cost(tr["cost"], label="session cost")
     if not tr["runs"]:
         lines.append("  (no orchestrator invocation found — whole-session summary only)")
         lines += _render_summary(tr["summary"])

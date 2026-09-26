@@ -791,3 +791,65 @@ def test_cost_text_and_aggregate(tmp_path, capsys):
     assert {"cost_total_usd", "cost_median_usd"} <= set(agg["gates"][0])
     assert rt.main(["--all", "--project-dir", str(tmp_path)]) == 0
     assert "cost total  cost median" in capsys.readouterr().out
+
+
+def test_spend_outside_runs_counts_for_the_session_only_and_is_printed(tmp_path, capsys):
+    ev = [prompt(0, "warm up"), priced(1), marker(1, 1)]                  # before any run
+    ev += [e for e in _lifecycle(100)]
+    ev += [prompt(400, "unrelated question"), priced(401), marker(401, 1)]  # cut by _end_after_cleanup
+    ev += [orchestrator_prompt(1000), priced(1001), marker(1001, 1)]        # second run
+    path = write_session(tmp_path, ev)
+    tr = rt.trace_session(path)
+    per_msg = rt.cost_points([{**priced(0), "_t": 0.0}], set())[0]["usd"]
+    assert len(tr["runs"]) == 2
+    assert tr["runs"][0]["cost"]["usd"] == 0                               # lifecycle lines are unpriced fixtures
+    assert tr["runs"][1]["cost"]["usd"] == pytest.approx(per_msg)
+    assert tr["cost"]["usd"] == pytest.approx(3 * per_msg)                # before + gap + run 2
+    assert tr["cost"]["usd"] == pytest.approx(analyze_transcript(path)["total_cost_usd"], abs=1e-6)
+    rt.main([str(path)])
+    assert f"session cost {rt._usd(tr['cost']['usd'])}" in capsys.readouterr().out
+
+
+def test_lines_without_a_timestamp_are_still_billed(tmp_path):
+    a, b = priced(1, mid="m1"), priced(2, mid="m2")
+    del b["timestamp"]
+    path = write_session(tmp_path, [orchestrator_prompt(0), a, b, marker(3, 3)])
+    tr = rt.trace_session(path)
+    assert tr["cost"]["usd"] == pytest.approx(analyze_transcript(path)["total_cost_usd"], abs=1e-6)
+    assert tr["runs"][0]["cost"]["usd"] == pytest.approx(tr["cost"]["usd"])   # placed at the previous line's time
+
+
+def test_malformed_usage_bills_as_empty_instead_of_sinking_the_trace(tmp_path):
+    bad, odd = priced(1, mid="bad"), priced(2, mid="odd")
+    bad["message"]["usage"] = "bad"
+    odd["message"]["usage"] = {"output_tokens": 5, "cache_creation": "x"}
+    odd["message"]["model"] = 7
+    tr = rt.trace_session(write_session(tmp_path, [orchestrator_prompt(0), bad, odd, marker(3, 3)]))
+    assert tr["cost"]["tokens"]["output_tokens"] == 5
+    assert tr["cost"]["unpriced_models"] == ["unknown"]
+
+
+def test_unlinked_subagent_after_the_last_main_event_stays_in_the_last_run(tmp_path):
+    ev = [orchestrator_prompt(0), assistant(1), marker(1, 1)]
+    meta, sub = _priced_sub("nolink", "Scope Skeptic", 50)
+    path = write_session(tmp_path, ev, subagents=[({}, sub)])              # no meta, no agentId link
+    tr = rt.trace_session(path)
+    assert tr["runs"][0]["cost"]["usd"] == pytest.approx(tr["cost"]["usd"]) and tr["cost"]["usd"] > 0
+
+
+def test_phase_cost_column_lines_up(tmp_path, capsys):
+    rt.main([str(_cost_session(tmp_path))])
+    out = capsys.readouterr().out.splitlines()
+    head = next(i for i, l in enumerate(out) if l.startswith("  phase     start"))
+    end = out.index("", head)                                              # the phase table ends at a blank line
+    rows = [l for l in out[head + 1:end] if not l.startswith("  !")]
+    assert len({l.index("$") + len(l.split("$")[1].split()[0]) for l in rows}) == 1   # right-aligned
+
+
+def test_cost_medians_count_only_runs_that_have_the_gate(tmp_path):
+    write_session(tmp_path, _lifecycle(0), name="a",
+                  subagents=[_priced_sub("v0", "Completion Verifier", 50)])
+    write_session(tmp_path, _lifecycle(0), name="b")                        # no subagents
+    agg = rt.aggregate(tmp_path)
+    comp = next(g for g in agg["gates"] if g["gate"] == "completion")
+    assert comp["runs"] == 1 and comp["cost_median_usd"] == comp["cost_total_usd"] > 0
