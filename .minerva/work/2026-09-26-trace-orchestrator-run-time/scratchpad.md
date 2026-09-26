@@ -16,4 +16,20 @@
 - [panel — 3/3 accept, 2 with fixes] whole-proposal: revised 9(b) to opt-in include_subagent_files=False (CLI on, --main-only), real-layout tests, per-model cache-read overrides (tier: panel — revision round)
     - fix (skeptic/arbiter): step 8 states the capture-session step invokes scripts/run_trace.py <transcript.jsonl>
     - fix (skeptic/arbiter): 9(b) states the main-file/sidecar non-overlap assumption; shared message-id dedupe guards hybrid transcripts
+- [panel — 3/3 accept, 3 with fixes] divergence: turn_duration.durationMs is not per-turn wall time (overshoots up to 12.4x, excludes AskUserQuestion waits) — criterion 2 unsatisfiable; replan (tier: panel floor)
+    - fix (all): recompute bucket counts at write time; note code moved ahead of the vote; soften the durationMs mechanism to an inference; dispose of the "shorter" category; cite the tolerant-reader pattern; report corrected 51b73da3 active (3,941 s)
+- [panel — 3/3 accept, 2 with fixes] new-plan acceptance: active = sum of turn spans (starting event → marker), durationMs a cross-check only; criterion 2 replaced, criterion 3 gains harness (tier: panel floor)
+    - fix (skeptic/arbiter): amend criterion 3 to include harness
+    - fix (skeptic/arbiter): define idle-other in the New Plan
+    - fix (skeptic/arbiter): criterion 2 fixture covers the undershoot case too; test added (test_duration_ms_undershoot_keeps_the_question_wait_as_user_time)
+    - fix (skeptic/arbiter): reconcile 32/165 vs 13/150 (naive first-raw-event start vs starting event)
 - note: approach fold-audit and whole-proposal Skeptic were dispatched in parallel (scope + approach Skeptics likewise) to cut wall time; no gate's artifact depended on an unresolved sibling
+
+## Work notes
+- Panel-tier rule refined in implementation: grouping is by (gate, round, launch batch), not only by (gate, round). A lone reviewer Skeptic and a later escalation panel at the same gate share (gate, round), for example this unit's own "Skeptic: whole-proposal soundness" and "Panel Skeptic: whole-proposal". A Skeptic is a panel member only when a same-gate Proponent went out in the same assistant message or within 10 s. Pinned by test_lone_skeptic_is_reviewer_even_when_a_later_panel_shares_its_gate. This refines the step-5 mechanism and does not change the decision.
+- Phase verify/review signals come from Agent calls in the main thread, not from sidecar files, so a run whose sidecar is missing still gets its phases.
+- A turn starts at the event that began it (first user event with an `origin`, where subagent hand-backs are `isMeta` + origin peer), not at its first raw line: queue-operations and pr-link lines written while idle belonged to the idle gap. Before this fix, 6.7 min of the user composing a prompt showed up as `harness`.
+- In-turn gaps with no tool open are `model`, except those ending at a `system` event (hooks), which are `harness`. Bookkeeping lines land mid-generation.
+- Deletion pass: 30 mutations over every attribution rule plus the analyzer fixes (script: session scratchpad mutate.py). The first run left 2 survivors: run end-bounding and the verifier default gate. Tests were tightened and all 30 are now killed.
+- Gotcha: the first mutation pass was partly invalid. A same-size mutation (`rnd = 2` → `rnd = 1`, `min` → `max`) restored within the same second leaves a stale `.pyc`, because Python validates bytecode by mtime and size. The mutated code kept running after restore, and a full-suite run failed on correct source. Rerun with `python -B`, PYTHONDONTWRITEBYTECODE=1 and caches cleared: 30/30 killed. Full suite: 1064 passed.
+- Real data (19 sessions, 6 propose-ship-auto runs): the propose phase dominates with a median of 19.4 min per run, and whole-proposal panels are the costliest gate by subagent time (38.8 min over 5 runs).

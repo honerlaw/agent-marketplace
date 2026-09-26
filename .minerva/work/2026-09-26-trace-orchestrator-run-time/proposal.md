@@ -30,7 +30,8 @@ The two tools we have today can't answer that:
 - Tool calls pair up: an assistant `tool_use` block's `id` matches a later user `tool_result`
   block's `tool_use_id`.
 - Each turn ends with a `system` event, `subtype: turn_duration`, which carries `durationMs`.
-  One past auto session had 24 turns totalling 7,355 s of active time.
+  One past auto session's 24 turns report 7,355 s in total. That is the `durationMs` sum, which
+  overcounts: the session's real active time is 3,941 s (see replan.md, 2026-09-26).
 - Subagents write separate files, `<session>/subagents/agent-<id>.jsonl`, next to
   `agent-<id>.meta.json` = `{agentType, description, toolUseId, model?}`. The main-file
   `isSidechain` flag no longer marks them. In one past session `run_analyzer` reports 0 subagent
@@ -186,7 +187,7 @@ read-only, and returns JSON-serializable data.
    (`2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail`).
 
 ### Candidate approaches considered
-- **A (picked): new root `scripts/run_trace.py` dev tool.** It sits next to the cost analyzer
+- **A (picked): new root `scripts/run_trace.py` dev tool.** It sits next to the cost analyzer.
   It has no minerva-plugin, contract-tested or host-compatibility impact. Its only plugin edit
   is the untested `plugins/utils` capture-session doc step. It re-implements the event-dedupe
   rule instead of importing it. `run_analyzer`'s dedupe is inline in a billing loop, not an
@@ -215,9 +216,13 @@ read-only, and returns JSON-serializable data.
 1. `python3 scripts/run_trace.py <session.jsonl>` prints a text report with a summary, a phase
    table, a gate × tier × role table and the 10 slowest spans. `--json` emits the same data as
    JSON. It runs on a real propose-ship-auto session in this repo without error.
-2. Active time equals the sum of `turn_duration.durationMs`. Inter-turn gaps are classified as
-   background-wait / scheduled-wait / user-idle. Covered by fixture tests.
-3. Main-thread in-turn time is split into model / `tool:<Name>` / user (`AskUserQuestion`). The
+2. Active time is the sum of per-turn spans (starting event → `turn_duration` marker). On every
+   session in this project, turns never overlap and active ≤ wall, per session and per run.
+   `durationMs` appears only as a cross-check (sums and the count of disagreeing turns).
+   Inter-turn gaps are classified as background-wait / scheduled-wait / user-idle / idle-other.
+   Covered by fixture tests, including a turn whose `durationMs` overshoots its span and one where
+   it undershoots (an open `AskUserQuestion`). *(Replaced 2026-09-26; see replan.md.)*
+3. Main-thread in-turn time is split into model / `tool:<Name>` / user (`AskUserQuestion`) / harness (hooks). The
    categories sum to active time within 1 s on the fixture. Bash is sub-bucketed by command head.
 4. Subagent spans are read from `subagents/*.jsonl` + `.meta.json`, linked to their Agent call by
    `toolUseId`, and cross-checked against `<task-notification>` `duration_ms`. Both sum and
