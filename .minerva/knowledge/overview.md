@@ -46,6 +46,10 @@ one: a discriminator **shared** across items, so any single occurrence satisfies
 a check accepting a **union of spellings** where each item declares exactly one. The inverse
 failure looks identical from outside — a regex too *narrow* matches nothing and is equally green
 ([[2026-08-28-pattern-an-assertion-is-untested-until-a-deletion-makes-it-fail]]).
+The deletion pass itself has a trap. A mutation that keeps the file's size (`2`→`1`, `min`→`max`),
+restored within the same second, leaves Python's cached bytecode valid, so the mutated code keeps
+running and every later verdict in the pass is suspect. Run such passes with bytecode caching off
+([[2026-09-26-pattern-a-same-size-mutation-can-leave-stale-bytecode]]).
 
 Coverage claims inherit the problem one level up. Deriving a consumer set from the corpus beats
 enumerating by eye, but the derivation has a **horizon**. A migration that asked the orchestrators'
@@ -310,6 +314,18 @@ that counts toward quorum and folds its fixes, failing closed when a fix might c
 ([[2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes]]). The compatibility evals,
 meanwhile, only reach the Verifier tier of the new router, so a green run says nothing about tier
 selection ([[2026-09-23-reference-compatibility-evals-exercise-only-the-verifier-tier]]).
+
+Tuning that router now starts from a measurement rather than intuition. `scripts/run_trace.py`
+rebuilds a wall-time trace of any orchestrator run from Claude Code's on-disk transcripts, broken
+down by run, phase, gate × tier × role, tool and subagent. It lives beside the cost analyzer rather
+than in the plugin, because transcripts are a Claude-Code-only format. Its first baseline puts most
+of a run's time in the propose phase, and most of that is waiting on reviewer and panel subagents;
+completion and whole-proposal panels are the costliest gates
+([[2026-09-26-decision-trace-orchestrator-time-from-transcripts]]). Building it meant learning what
+the transcripts actually record. `turn_duration.durationMs` is not per-turn wall time. Subagents
+live in sidecar files the main transcript never marks. A background Agent call returns in about a
+second, while its real duration arrives later in a task-notification
+([[2026-09-26-reference-claude-code-transcript-timing-facts]]).
 
 The project is also honest about how much it trusts its own measurements: **behavioral skill-value
 evals are provisional** — not CI-gated, their deltas not yet trusted

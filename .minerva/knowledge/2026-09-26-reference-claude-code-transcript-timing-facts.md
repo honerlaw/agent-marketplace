@@ -53,3 +53,4 @@ Measured on this project's transcripts (Claude Code 2.1.28x, 19 sessions, Septem
 ## Related
 - [[2026-08-11-pattern-a-tolerant-reader-needs-a-boundary]] — see also
 - [[2026-09-05-pattern-a-hand-count-is-a-claim-until-the-reader-reproduces-it]] — see also
+- [[2026-09-26-decision-trace-orchestrator-time-from-transcripts]] — see also
