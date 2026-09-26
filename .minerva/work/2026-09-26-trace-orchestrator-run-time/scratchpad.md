@@ -64,3 +64,6 @@ Deletion pass re-run over the extended rule set: 49/49 mutations killed (bytecod
 - R6 [low] FIX — tier column too narrow for "code-review", now width 12.
 - R7 [low] FIX — active post-run work was still charged to cleanup. A run now ends at the first human request after its cleanup boundary; a `--cleanup-only` resume does not end it.
 - Test-quality gotcha: a generated parametrize edit silently failed to match (escaped `\n` in the search text), so two positive cases (the `$K` form and the Python write) were never added, and 5 mutations survived because of it. Found through the deletion pass, not by reading. Final deletion pass: 60/60 killed. Full suite: 1102 passed.
+
+## Promote-time fix 2026-09-26 (found while drafting the partition; sent back through review)
+- `git worktree add` detection was still a substring check, the same flaw R1 fixed for knowledge writes. On real data it produced 12 "work during cleanup" warnings that were really cleanup's `git worktree add -B minerva/reconcile`. The work signal now reads shell structure (`_shell_only`) and requires `-b <branch>` other than minerva/reconcile. Write/Edit of index.md/overview.md (cleanup's reconciliation) no longer counts as promote. Out-of-order warnings across the corpus dropped from 23 to 7. Deletion pass: 63/63. Suite: 1108 passed.

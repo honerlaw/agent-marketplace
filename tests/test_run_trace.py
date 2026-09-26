@@ -335,7 +335,7 @@ def test_missing_phase_signal_warns_and_never_guesses(tmp_path):
 def test_out_of_order_signal_is_ignored_and_reported_but_replan_is_an_event(tmp_path):
     events = [orchestrator_prompt(0),
               assistant(5, tool("s", "Skill", skill="minerva:ship")), result(6, "s"),
-              assistant(8, tool("w", "Bash", command="git worktree add y")), result(9, "w"),
+              assistant(8, tool("w", "Bash", command="git worktree add -b y .minerva/worktrees/y main")), result(9, "w"),
               assistant(10, tool("r", "Skill", skill="minerva:replan")), result(11, "r"),
               assistant(12), marker(12, 12)]
     run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
@@ -350,7 +350,7 @@ def test_two_runs_in_one_session_keep_their_own_phase_signals(tmp_path):
     # never reaches ship: the auto run must not inherit the quick run's signals.
     events = _lifecycle(0, "minerva:propose-ship-quick") + [
         orchestrator_prompt(1000),
-        assistant(1010, tool("wt2", "Bash", command="git worktree add z")), result(1011, "wt2"),
+        assistant(1010, tool("wt2", "Bash", command="git worktree add -b z .minerva/worktrees/z main")), result(1011, "wt2"),
         assistant(1020), marker(1020, 20),
     ]
     tr = rt.trace_session(write_session(tmp_path, events))
@@ -426,7 +426,7 @@ def test_trailing_unmarked_turn_starts_at_its_starting_event():
 def _promote_run(knowledge_cmd):
     return [
         orchestrator_prompt(0),
-        assistant(10, tool("wt", "Bash", command="git worktree add x")), result(11, "wt"),
+        assistant(10, tool("wt", "Bash", command="git worktree add -b x .minerva/worktrees/x main")), result(11, "wt"),
         assistant(20, tool("cap", "Bash", command="cat > .minerva/knowledge/2026-x-constraint-a.md <<'EOF'\nx\nEOF")),
         result(21, "cap"),                                                      # mid-work capture
         assistant(50, _agent("v", "Completion Verifier")), result(51, "v"),
@@ -593,7 +593,7 @@ def test_knowledge_write_detection_ignores_mentions_reads_and_catalog(cmd):
 def test_post_ship_review_does_not_erase_the_promote_phase(tmp_path):
     events = [
         orchestrator_prompt(0),
-        assistant(10, tool("wt", "Bash", command="git worktree add x")), result(11, "wt"),
+        assistant(10, tool("wt", "Bash", command="git worktree add -b x .minerva/worktrees/x main")), result(11, "wt"),
         assistant(50, _agent("v", "Completion Verifier")), result(51, "v"),
         assistant(70, _agent("c", "Code quality review of diff")), result(71, "c"),
         assistant(90, tool("k", "Write", file_path="/r/.minerva/knowledge/2026-x.md")), result(91, "k"),
@@ -658,3 +658,28 @@ def test_gate_table_columns_stay_aligned_for_code_review(tmp_path, capsys):
     assert len(rows) == 2
     # the subagent-time column lines up in both rows (tier "code-review" fits its column)
     assert rows[0].index("1.0m") == rows[1].index("1.0m")
+
+
+
+@pytest.mark.parametrize("cmd,is_signal", [
+    ("git worktree add -b u .minerva/worktrees/u main", True),
+    ("W=.minerva/worktrees/u && git -C /repo worktree add -b u $W main", True),
+    ("cat > .minerva/work/u/proposal.md <<'EOF'\nThen run git worktree add -b u\nEOF", False),
+    ("grep -rn 'git worktree add' plugins/", False),
+    ("git fetch -q origin && git worktree add -q -B minerva/reconcile .minerva/worktrees/minerva-reconcile origin/main", False),
+])
+def test_worktree_add_signal_reads_shell_structure(tmp_path, cmd, is_signal):
+    events = [orchestrator_prompt(0), assistant(5, tool("w", "Bash", command=cmd)), result(6, "w"),
+              assistant(7), marker(7, 7)]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert ("work" in [w["phase"] for w in run["phases"]]) is is_signal
+
+
+
+def test_catalog_edits_are_not_promote_signals(tmp_path):
+    events = [orchestrator_prompt(0),
+              assistant(5, tool("o", "Edit", file_path="/r/.minerva/knowledge/overview.md")), result(6, "o"),
+              assistant(7, tool("i", "Write", file_path="/r/.minerva/knowledge/index.md")), result(8, "i"),
+              assistant(9), marker(9, 9)]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert [w["phase"] for w in run["phases"]] == ["propose"]

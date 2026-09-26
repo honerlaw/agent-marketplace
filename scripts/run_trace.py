@@ -610,6 +610,19 @@ _PY_KNOWLEDGE_WRITE_RE = re.compile(
 _NOT_AN_ENTRY = ("index.md", "overview.md")
 
 
+# A work unit's worktree is created with a NEW branch, `-b <date-slug>`
+# (propose's on-approval step). cleanup's reconciliation worktree uses
+# `-B minerva/reconcile` and must not read as the start of `work`.
+_GIT_WORKTREE_ADD_RE = re.compile(
+    r"\bgit\s+(?:-C\s+\S+\s+)?worktree\s+add\s+(?:-q\s+|--quiet\s+)*-b\s+(?!minerva/reconcile\b)")
+
+
+def _shell_only(command: str) -> str:
+    """The command's shell structure: heredoc bodies and quoted strings set aside,
+    so a proposal or test that merely MENTIONS a command is not that command."""
+    return _QUOTED_RE.sub("Q", _HEREDOC_RE.sub(" ", command))
+
+
 def _writes_knowledge(command: str) -> bool:
     """Does this Bash command write a knowledge ENTRY (``.minerva/knowledge/*.md``)?
 
@@ -625,7 +638,7 @@ def _writes_knowledge(command: str) -> bool:
     bodies = [m.group(3) for m in _HEREDOC_RE.finditer(command)]
     if any(_PY_KNOWLEDGE_WRITE_RE.search(b) for b in bodies):
         return True
-    shell = _QUOTED_RE.sub("Q", _HEREDOC_RE.sub(" ", command))
+    shell = _shell_only(command)
     env = dict(re.findall(r"(?:^|[\s;&])([A-Za-z_][A-Za-z0-9_]*)=([^\s;&]+)", shell))
     cwd = ""
     for seg in re.split(r"&&|\|\||;|\n|\|", shell):
@@ -657,9 +670,10 @@ def _phase_signals(events, spans, lo, hi) -> list:
         if not (lo <= s["start"] < hi):
             continue
         inp = s["input"] or {}
-        if s["name"] == "Bash" and "git worktree add" in str(inp.get("command", "")):
+        if s["name"] == "Bash" and _GIT_WORKTREE_ADD_RE.search(_shell_only(str(inp.get("command", "")))):
             sig.append((s["start"], "work", "Bash: git worktree add"))
-        elif s["name"] in ("Write", "Edit") and ".minerva/knowledge/" in str(inp.get("file_path", "")):
+        elif (s["name"] in ("Write", "Edit") and ".minerva/knowledge/" in str(inp.get("file_path", ""))
+              and Path(str(inp["file_path"])).name not in _NOT_AN_ENTRY):
             sig.append((s["start"], "promote", f"{s['name']} {Path(inp['file_path']).name}"))
         elif s["name"] == "Bash" and _writes_knowledge(str(inp.get("command", ""))):
             sig.append((s["start"], "promote", "Bash: write under .minerva/knowledge/"))
