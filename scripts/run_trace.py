@@ -46,8 +46,9 @@ Stdlib only; read-only; every return value is JSON-serializable.
 import json
 import re
 import statistics
+import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ORCHESTRATORS = (
@@ -70,6 +71,7 @@ _NOTIFICATION_RE = re.compile(r"<task-notification>(.*?)</task-notification>", r
 _TOOL_USE_ID_RE = re.compile(r"<tool-use-id>\s*([^<\s]+)\s*</tool-use-id>")
 _DURATION_RE = re.compile(r"<duration_ms>\s*(\d+)\s*</duration_ms>")
 _COMMAND_NAME_RE = re.compile(r"<command-name>/?([^<\s]+)</command-name>")
+_AGENT_ID_RE = re.compile(r"agentId:\s*([A-Za-z0-9]+)")
 _COMMAND_ARGS_RE = re.compile(r"<command-args>(.*?)</command-args>", re.S)
 
 
@@ -80,9 +82,12 @@ def _ts(value) -> "float | None":
     if not isinstance(value, str):
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)  # transcripts are UTC; never read a naive stamp as local
+    return dt.timestamp()
 
 
 def load_events(path) -> list:
@@ -128,8 +133,11 @@ def _text_of(event) -> str:
     content = (event.get("message") or {}).get("content")
     if isinstance(content, str):
         return content
+    if not isinstance(content, list):
+        return ""
     return "".join(
-        b.get("text", "") for b in content or [] if isinstance(b, dict) and b.get("type") == "text"
+        b["text"] for b in content
+        if isinstance(b, dict) and b.get("type") == "text" and isinstance(b.get("text"), str)
     )
 
 
@@ -147,6 +155,15 @@ def _tool_results(event):
     for b in _content_blocks(event):
         if isinstance(b, dict) and b.get("type") == "tool_result" and b.get("tool_use_id"):
             yield b
+
+
+def _result_text(block) -> str:
+    c = block.get("content")
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        return "".join(x["text"] for x in c if isinstance(x, dict) and isinstance(x.get("text"), str))
+    return ""
 
 
 def _origin_kind(event) -> "str | None":
@@ -225,8 +242,10 @@ def _turns(events: list) -> list:
     shorter than the span in 13 — it excludes time an ``AskUserQuestion`` waited
     on the user, which here stays in active time as ``user`` — and far longer in
     11, up to 12.4x (best-fitting inference: measured from a request that began
-    many turns earlier). So it is kept only as ``reported_s``, a cross-check. Events after the last marker form a trailing
-    turn spanning its first→last event (an in-flight or cut-off turn).
+    many turns earlier). So it is kept only as ``reported_s``, a cross-check.
+
+    Events after the last marker form a trailing turn (in-flight or cut off),
+    started the same way — at its starting event — and ending at its last event.
     """
     turns, bucket = [], []
     for e in events:
@@ -234,14 +253,23 @@ def _turns(events: list) -> list:
             if bucket:
                 i = _starter_index(bucket) or 0
                 turns.append({"start": bucket[i]["_t"], "end": e["_t"], "events": bucket[i:],
-                              "reported_s": (e.get("durationMs") or 0) / 1000.0})
+                              "reported_s": _seconds(e.get("durationMs"))})
             bucket = []
         else:
             bucket.append(e)
     if bucket:
-        turns.append({"start": bucket[0]["_t"], "end": bucket[-1]["_t"], "events": bucket,
+        i = _starter_index(bucket) or 0
+        turns.append({"start": bucket[i]["_t"], "end": bucket[-1]["_t"], "events": bucket[i:],
                       "reported_s": None})
     return turns
+
+
+def _seconds(ms) -> float:
+    """``durationMs`` as seconds; a non-numeric value reads as 0 (it is only a cross-check)."""
+    try:
+        return float(ms or 0) / 1000.0
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _starter_index(events) -> "int | None":
@@ -323,9 +351,12 @@ def attribute(events: list, include_idle: bool = True) -> dict:
                 if call is None:
                     continue
                 start, name, key, mid, inp = call
-                spans.append({"key": key, "name": name, "start": start, "end": e["_t"],
-                              "dur": max(0.0, e["_t"] - start), "tool_use_id": b["tool_use_id"],
-                              "message_id": mid, "input": inp})
+                span = {"key": key, "name": name, "start": start, "end": e["_t"],
+                        "dur": max(0.0, e["_t"] - start), "tool_use_id": b["tool_use_id"],
+                        "message_id": mid, "input": inp}
+                if name in ("Agent", "Task"):
+                    span["result_text"] = _result_text(b)[:2000]
+                spans.append(span)
         # Calls still open at turn end (interrupted / backgrounded) close there.
         for tid, (start, name, key, mid, inp) in list(open_calls.items()):
             spans.append({"key": key, "name": name, "start": start, "end": turn["end"],
@@ -360,7 +391,9 @@ def parse_description(desc: str) -> dict:
     it is reported, never dropped.
     """
     d = (desc or "").lower()
-    if "fold-audit" in d or "fold audit" in d or "re-check" in d or "recheck" in d:
+    # Only the explicit role word: "re-check"/"recheck" also appear in slugs and
+    # diff names ("Verify balanced-rechecks-folds completion").
+    if "fold-audit" in d or "fold audit" in d:
         role = "fold-audit"
     elif "proponent" in d:
         role = "proponent"
@@ -382,7 +415,7 @@ def parse_description(desc: str) -> dict:
         ("approach", ("approach",)),
         ("completion", ("completion", "criteria")),
         ("divergence", ("divergence",)),
-        ("replan", ("replan",)),
+        ("replan", ("replan", "new-plan", "new plan")),
         ("triage", ("triage",)),
         ("partition", ("partition",)),
         ("todo", ("todo",)),
@@ -417,6 +450,13 @@ def load_subagents(main_path, main_events, agent_spans) -> list:
     main_path = Path(main_path)
     sub_dir = main_path.parent / main_path.stem / "subagents"
     by_tool_use = {s["tool_use_id"]: s for s in agent_spans}
+    # Without a meta file, the Agent call's result text still names the agent id
+    # ("agentId: a764eb…"), which is the sidecar's file name.
+    by_agent_id = {}
+    for s in agent_spans:
+        m = _AGENT_ID_RE.search(s.get("result_text") or "")
+        if m:
+            by_agent_id.setdefault(m.group(1), s["tool_use_id"])
     notif = _notification_durations(main_events)
     out = []
     for f in sorted(sub_dir.glob("agent-*.jsonl")):
@@ -425,12 +465,14 @@ def load_subagents(main_path, main_events, agent_spans) -> list:
             meta = json.loads(meta_path.read_text())
         except (OSError, json.JSONDecodeError):
             meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
         events = load_events(f)
         if not events:
             continue
         att = attribute(events, include_idle=False)
         first, last = events[0]["_t"], events[-1]["_t"]
-        tid = meta.get("toolUseId")
+        tid = meta.get("toolUseId") or by_agent_id.get(f.stem[len("agent-"):])
         launch = by_tool_use.get(tid)
         desc = meta.get("description") or (launch or {}).get("input", {}).get("description", "")
         out_tokens, seen = 0, set()
@@ -491,7 +533,7 @@ def _assign_tiers(subs) -> None:
         elif s["role"] in ("verifier", "fold-audit"):
             s["tier"] = "reviewer"
         elif s["role"] == "code-review":
-            s["tier"] = "review"
+            s["tier"] = "code-review"  # not "review": too close to "reviewer" in one column
         else:
             s["tier"] = "unknown"
 
@@ -556,6 +598,15 @@ def segment_runs(events) -> list:
     return runs
 
 
+def _writes_knowledge(command: str) -> bool:
+    """A Bash command that writes a knowledge entry: a redirect/tee/cp/mv whose
+    target is under ``.minerva/knowledge/`` (or run after ``cd`` into it)."""
+    if ".minerva/knowledge" not in command:
+        return False
+    return bool(re.search(r"(>|\btee\b|\bcp\b|\bmv\b|\bgit mv\b)[^|;&]*\.minerva/knowledge/", command)
+                or re.search(r"cd [^;&]*\.minerva/knowledge[^;&]*(&&|;)[^|]*(>|\btee\b)", command))
+
+
 def _phase_signals(events, spans, lo, hi) -> list:
     """Candidate ``(t, phase, description)`` boundary signals inside ``[lo, hi)``."""
     sig = []
@@ -567,6 +618,8 @@ def _phase_signals(events, spans, lo, hi) -> list:
             sig.append((s["start"], "work", "Bash: git worktree add"))
         elif s["name"] in ("Write", "Edit") and ".minerva/knowledge/" in str(inp.get("file_path", "")):
             sig.append((s["start"], "promote", f"{s['name']} {Path(inp['file_path']).name}"))
+        elif s["name"] == "Bash" and _writes_knowledge(str(inp.get("command", ""))):
+            sig.append((s["start"], "promote", "Bash: write under .minerva/knowledge/"))
         elif s["name"] in ("Write", "Edit") and str(inp.get("file_path", "")).endswith("replan.md"):
             sig.append((s["start"], "replan", f"{s['name']} replan.md"))
         elif s["name"] == "Skill":
@@ -577,6 +630,8 @@ def _phase_signals(events, spans, lo, hi) -> list:
                 sig.append((s["start"], "cleanup", "Skill minerva:cleanup"))
             elif skill == "minerva:replan":
                 sig.append((s["start"], "replan", "Skill minerva:replan"))
+            elif skill == "minerva:promote":
+                sig.append((s["start"], "promote", "Skill minerva:promote"))
     # Agent calls in the main thread — present even when a sidecar file is not.
     for s in spans:
         if s["name"] not in ("Agent", "Task") or not (lo <= s["start"] < hi):
@@ -594,10 +649,17 @@ def infer_phases(events, spans, lo, hi) -> dict:
     """Ordered phase windows inside a run, with auditable boundaries."""
     order = {p: i for i, p in enumerate(PHASES)}
     boundaries = [{"phase": "propose", "t": lo, "event": "orchestrator invocation"}]
-    warnings, replans = [], []
-    for t, phase, desc in _phase_signals(events, spans, lo, hi):
+    warnings, replans, captures = [], [], []
+    signals = _phase_signals(events, spans, lo, hi)
+    # A knowledge write BEFORE a later verify/review signal is a mid-work capture
+    # (minerva:promote's capture mode), not the start of the promote phase.
+    last_check = max((t for t, p, _ in signals if p in ("verify", "review")), default=None)
+    for t, phase, desc in signals:
         if phase == "replan":
             replans.append({"t": t, "event": desc})
+            continue
+        if phase == "promote" and last_check is not None and t < last_check:
+            captures.append({"t": t, "event": desc})
             continue
         cur = boundaries[-1]["phase"]
         if phase == cur:
@@ -614,7 +676,7 @@ def infer_phases(events, spans, lo, hi) -> dict:
     for i, b in enumerate(boundaries):
         end = boundaries[i + 1]["t"] if i + 1 < len(boundaries) else hi
         windows.append({**b, "end": end})
-    return {"windows": windows, "warnings": warnings, "replans": replans}
+    return {"windows": windows, "warnings": warnings, "replans": replans, "captures": captures}
 
 
 # --------------------------------------------------------------------------- report
@@ -632,7 +694,20 @@ def resolve_session(arg: str, project_dir=None) -> Path:
 
 
 def default_project_dir(cwd=None) -> Path:
+    """Claude Code's transcript directory for this project.
+
+    Anchored to the PRIMARY checkout: sessions run from the repo root, so from
+    inside a linked worktree (``.minerva/worktrees/…``) the cwd would encode to a
+    directory that does not exist (2026-08-28 worktree-reaching-paths constraint).
+    """
     cwd = Path(cwd or Path.cwd()).resolve()
+    try:
+        common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                                cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+        if common:
+            cwd = Path(common).parent
+    except (OSError, subprocess.CalledProcessError):
+        pass
     return Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(cwd))
 
 
@@ -665,6 +740,7 @@ def trace_session(path) -> dict:
             "phases": phases["windows"],
             "phase_warnings": phases["warnings"],
             "replans": phases["replans"],
+            "knowledge_captures": phases["captures"],
             "gates": _gate_table(run_subs),
             "unknown_subagents": [s["description"] for s in run_subs if s["role"] == "unknown" or s["gate"] == "unknown"],
             "slowest": _slowest(run_spans, run_subs),
@@ -775,11 +851,12 @@ def _round(obj):
 
 def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
     """Every orchestrator run in a project directory, with totals and medians."""
-    rows, phase_vals, gate_vals = [], {}, {}
+    rows, phase_vals, wait_vals, gate_vals, skipped = [], {}, {}, {}, []
     for path in sorted(Path(project_dir).expanduser().glob("*.jsonl")):
         try:
             tr = trace_session(path)
-        except (OSError, ValueError):
+        except Exception as exc:  # one unreadable transcript must not sink the report
+            skipped.append({"session": path.stem, "error": f"{type(exc).__name__}: {exc}"})
             continue
         for run in tr["runs"]:
             if callers and run["caller"] not in callers:
@@ -790,13 +867,19 @@ def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
                        "wall_s", "active_s", "model_s", "tools_s", "user_s",
                        "background_wait_s", "user_idle_s", "subagent_sum_s", "subagent_union_s",
                        "subagents")}}
-            per_phase = {}
+            # Active time only: waits (background, user idle — including any
+            # unrelated conversation after the run finished) are reported apart.
+            per_phase, per_wait = {}, {}
             for w in run["phases"]:
-                total = sum(w["time"].values())
-                per_phase[w["phase"]] = per_phase.get(w["phase"], 0.0) + total
+                active = sum(v for k, v in w["time"].items() if k not in _WAITS)
+                waits = sum(v for k, v in w["time"].items() if k in _WAITS)
+                per_phase[w["phase"]] = per_phase.get(w["phase"], 0.0) + active
+                per_wait[w["phase"]] = per_wait.get(w["phase"], 0.0) + waits
             for p, v in per_phase.items():
                 phase_vals.setdefault(p, []).append(v)
-            row["phases"] = _round(per_phase)
+                wait_vals.setdefault(p, []).append(per_wait[p])
+            row["phases_active"] = _round(per_phase)
+            row["phases_waits"] = _round(per_wait)
             per_gate: dict = {}
             for g in run["gates"]:
                 per_gate[(g["gate"], g["tier"])] = per_gate.get((g["gate"], g["tier"]), 0.0) + g["sum_s"]
@@ -811,7 +894,9 @@ def aggregate(project_dir, callers=("minerva:propose-ship-auto",)) -> dict:
         "project_dir": str(project_dir),
         "callers": list(callers),
         "runs": rows,
-        "phases": {p: stats(phase_vals[p]) for p in PHASES if p in phase_vals},
+        "phases": {p: {**stats(phase_vals[p]), "waits_total_s": round(sum(wait_vals[p]), 3)}
+                   for p in PHASES if p in phase_vals},
+        "skipped": skipped,
         "gates": [{"gate": g, "tier": t, **stats(v)}
                   for (g, t), v in sorted(gate_vals.items(), key=lambda kv: -sum(kv[1]))],
     }
@@ -858,6 +943,8 @@ def render_session(tr) -> str:
             lines.append(f"  ! {msg}")
         for rp in run["replans"]:
             lines.append(f"  ~ replan event: {rp['event']}")
+        for cp in run["knowledge_captures"]:
+            lines.append(f"  ~ mid-work knowledge capture: {cp['event']}")
         if run["gates"]:
             lines.append("")
             lines.append("  gate            tier      role         rnd  n   subagent time  out tokens")
@@ -904,9 +991,12 @@ def render_aggregate(agg) -> str:
                      f"{_fmt(r['model_s']):>6}  {_fmt(r['tools_s']):>6}  {_fmt(r['user_s']):>6}  "
                      f"{_fmt(r['background_wait_s']):>6}   {_fmt(r['subagent_sum_s'])} / {_fmt(r['subagent_union_s'])}")
     lines.append("")
-    lines.append("  phase     runs  total    median")
+    lines.append("  phase     runs  active total  median/run  (waits total)")
     for p, st in agg["phases"].items():
-        lines.append(f"  {p:<9} {st['runs']:>4}  {_fmt(st['total_s']):>6}  {_fmt(st['median_s']):>6}")
+        lines.append(f"  {p:<9} {st['runs']:>4}  {_fmt(st['total_s']):>12}  {_fmt(st['median_s']):>10}"
+                     f"  ({_fmt(st['waits_total_s'])})")
+    for sk in agg["skipped"]:
+        lines.append(f"  ! skipped {sk['session']}: {sk['error']}")
     lines.append("")
     lines.append("  gate            tier      runs  subagent total  median/run")
     for g in agg["gates"]:
@@ -926,7 +1016,10 @@ def main(argv=None) -> int:
         a = argv[i]
         if a in ("--json", "--all"):
             pass
-        elif a == "--project-dir" and i + 1 < len(argv):
+        elif a == "--project-dir":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("--"):
+                print("--project-dir needs a directory", file=sys.stderr)
+                return 2
             project_dir = argv[i + 1]
             i += 1
         elif a == "--any-orchestrator":
@@ -935,7 +1028,11 @@ def main(argv=None) -> int:
             rest.append(a)
         i += 1
     if all_runs:
-        agg = aggregate(project_dir or default_project_dir(), callers)
+        directory = Path(project_dir).expanduser() if project_dir else default_project_dir()
+        if not directory.is_dir():
+            print(f"no transcript directory at {directory} (pass --project-dir)", file=sys.stderr)
+            return 2
+        agg = aggregate(directory, callers)
         print(json.dumps(agg, indent=2) if as_json else render_aggregate(agg))
         return 0
     if len(rest) != 1:
@@ -943,7 +1040,12 @@ def main(argv=None) -> int:
               "       run_trace.py --all [--any-orchestrator] [--json] [--project-dir DIR]",
               file=sys.stderr)
         return 2
-    tr = trace_session(resolve_session(rest[0], project_dir))
+    try:
+        path = resolve_session(rest[0], project_dir)
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    tr = trace_session(path)
     print(json.dumps(tr, indent=2) if as_json else render_session(tr))
     return 0
 

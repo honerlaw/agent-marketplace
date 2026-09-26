@@ -23,6 +23,7 @@
     - fix (skeptic/arbiter): define idle-other in the New Plan
     - fix (skeptic/arbiter): criterion 2 fixture covers the undershoot case too; test added (test_duration_ms_undershoot_keeps_the_question_wait_as_user_time)
     - fix (skeptic/arbiter): reconcile 32/165 vs 13/150 (naive first-raw-event start vs starting event)
+- [solo] review triage: 12 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was absorbable; none had two defensible dispositions, so the ambiguity clause did not fire; #9 naive-timestamp is defensive-only on real data but a one-line fix, so FIX dominates IGNORE)
 - note: approach fold-audit and whole-proposal Skeptic were dispatched in parallel (scope + approach Skeptics likewise) to cut wall time; no gate's artifact depended on an unresolved sibling
 
 ## Work notes
@@ -33,3 +34,19 @@
 - Deletion pass: 30 mutations over every attribution rule plus the analyzer fixes (script: session scratchpad mutate.py). The first run left 2 survivors: run end-bounding and the verifier default gate. Tests were tightened and all 30 are now killed.
 - Gotcha: the first mutation pass was partly invalid. A same-size mutation (`rnd = 2` → `rnd = 1`, `min` → `max`) restored within the same second leaves a stale `.pyc`, because Python validates bytecode by mtime and size. The mutated code kept running after restore, and a full-suite run failed on correct source. Rerun with `python -B`, PYTHONDONTWRITEBYTECODE=1 and caches cleared: 30/30 killed. Full suite: 1064 passed.
 - Real data (19 sessions, 6 propose-ship-auto runs): the propose phase dominates with a median of 19.4 min per run, and whole-proposal panels are the costliest gate by subagent time (38.8 min over 5 runs).
+
+## Review triage 2026-09-26
+Local-diff mode (independent fresh-context reviewer; no PR yet) plus the inline minerva audit. The code review ran in parallel with the completion panel to save wall time.
+- A1 [medium] FIX — knowledge compliance (2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout): from inside a worktree, default_project_dir encoded the worktree path, so `--all` silently read a nonexistent directory and reported 0 runs. Now anchored via `git rev-parse --git-common-dir`, and a missing directory exits 2.
+- 1 [high] FIX — the trailing unmarked turn started at its first raw event, so 42 min of idle in bc949b50 counted as `model`. It now uses _starter_index; that run's active time is 18.2 min (was 1.0 h).
+- 2 [medium] FIX — "recheck"/"re-check" substrings in slugs were classified as fold-audit. Only the explicit "fold-audit"/"fold audit" words count now.
+- 3 [medium] FIX — promote was detected only from Write/Edit. Bash writes (redirect/tee/cp/mv into .minerva/knowledge/, or `cd` into it and then a redirect) and `Skill minerva:promote` now count too. Promote is now detected in 12 of 16 real runs (was 3).
+- 4 [medium] FIX — a mid-work knowledge capture jumped the phase to promote and discarded later verify/review signals. A knowledge write before the run's last verify/review signal is now reported as a capture event instead.
+- 5 [medium] FIX — aggregate phase totals included user-idle and post-run chatter (for example "cleanup 3.7h"). They are now active time only, with waits reported separately (waits_total_s).
+- 6 [medium] FIX — a missing meta.json left the subagent unlinked. It is now linked through the `agentId:` in the Agent tool_result, which matches the sidecar file name.
+- 7 [low] FIX — non-object meta JSON crashed; it is now read as {}.
+- 8 [low] FIX — a single malformed transcript killed `--all`. Transcripts that can't be read are now skipped and listed under `skipped`, and null text / string durationMs no longer crash.
+- 9 [low] FIX — naive timestamps are now read as UTC, not local time.
+- 10 [low] FIX — CLI argument errors (missing --project-dir value, unknown session) now print a message and exit 2 instead of a traceback.
+- 11 [low] FIX — added tests for every fix above, plus the round term of the panel-batch match (surviving mutation found by the completion Proponent) and the "New-plan panel" gate vocabulary. Also renamed tier "review" to "code-review" for readability (completion Skeptic, low).
+Deletion pass re-run over the extended rule set: 49/49 mutations killed (bytecode caching disabled). Full suite: 1084 passed.

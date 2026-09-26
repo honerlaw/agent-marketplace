@@ -16,6 +16,7 @@ a synthetic fixture whose timestamps are chosen so the right answer is exact:
   run's phase signals never leak into another run.
 """
 import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -216,6 +217,10 @@ def test_bash_head(command, head):
     ("Code quality review of diff", "code-review", "review", 1),
     ("Skeptic on replan acceptance", "skeptic", "replan", 1),
     ("Research Reddit Ads API facts", "unknown", "unknown", 1),
+    # "recheck" inside a slug or diff name is not the fold-audit role.
+    ("Verify balanced-rechecks-folds completion", "verifier", "completion", 1),
+    ("Code-quality review of balanced re-check diff", "code-review", "review", 1),
+    ("New-plan panel: Skeptic", "skeptic", "replan", 1),
 ])
 def test_description_vocabulary(desc, role, gate, rnd):
     got = rt.parse_description(desc)
@@ -400,3 +405,162 @@ def test_cli_text_and_json(tmp_path, capsys):
     assert "1 run(s)" in capsys.readouterr().out
     assert rt.main(["sess", "--project-dir", str(tmp_path), "--json"]) == 0
     assert json.loads(capsys.readouterr().out)["session"] == "sess"
+
+
+# --------------------------------------------------------------------------- review fixes
+
+
+def test_trailing_unmarked_turn_starts_at_its_starting_event():
+    # No closing marker: idle bookkeeping at t=20..200 before the human prompt at
+    # t=2600 must be idle, not 40 minutes of active `model`/`harness`.
+    events = [prompt(0), assistant(5), marker(5, 5),
+              {"type": "pr-link", "uuid": _uuid(), "timestamp": ts(20)},
+              {"type": "system", "subtype": "away_summary", "uuid": _uuid(), "timestamp": ts(200)},
+              prompt(2600), assistant(2610)]
+    events = [dict(e, _t=rt._ts(e["timestamp"])) for e in events]
+    att = rt.attribute(events)
+    assert att["active_s"] == pytest.approx(15.0)
+    assert rt._clip(att["segments"], 0, 1e12)["user-idle"] == pytest.approx(2595.0)
+
+
+def _promote_run(knowledge_cmd):
+    return [
+        orchestrator_prompt(0),
+        assistant(10, tool("wt", "Bash", command="git worktree add x")), result(11, "wt"),
+        assistant(20, tool("cap", "Bash", command="cat > .minerva/knowledge/2026-x-constraint-a.md <<'EOF'\nx\nEOF")),
+        result(21, "cap"),                                                      # mid-work capture
+        assistant(50, _agent("v", "Completion Verifier")), result(51, "v"),
+        assistant(70, _agent("c", "Code quality review of diff")), result(71, "c"),
+        assistant(90, tool("k", "Bash", command=knowledge_cmd)), result(91, "k"),
+        assistant(100), marker(100, 100),
+    ]
+
+
+@pytest.mark.parametrize("cmd", [
+    "cat > .minerva/knowledge/2026-09-26-pattern-x.md <<'EOF'\nbody\nEOF",
+    "cd .minerva/worktrees/u/.minerva/knowledge && cat > 2026-09-26-pattern-x.md <<'EOF'\nb\nEOF",
+    "git mv .minerva/work/u/note.md .minerva/knowledge/2026-09-26-pattern-x.md",
+])
+def test_knowledge_written_through_bash_starts_promote(tmp_path, cmd):
+    run = rt.trace_session(write_session(tmp_path, _promote_run(cmd)))["runs"][0]
+    phases = {w["phase"]: w for w in run["phases"]}
+    assert "promote" in phases
+    assert phases["promote"]["event"] == "Bash: write under .minerva/knowledge/"
+
+
+def test_reading_knowledge_is_not_a_promote_signal():
+    assert not rt._writes_knowledge("grep -rn foo .minerva/knowledge/ | head")
+    assert not rt._writes_knowledge("cat .minerva/knowledge/index.md")
+
+
+def test_mid_work_knowledge_capture_does_not_swallow_verify_and_review(tmp_path):
+    run = rt.trace_session(write_session(tmp_path, _promote_run(
+        "cat > .minerva/knowledge/2026-y-pattern-b.md <<'EOF'\nb\nEOF")))["runs"][0]
+    assert [w["phase"] for w in run["phases"]] == ["propose", "work", "verify", "review", "promote"]
+    assert [c["event"] for c in run["knowledge_captures"]] == ["Bash: write under .minerva/knowledge/"]
+    assert not any("out-of-order" in w for w in run["phase_warnings"])
+
+
+def test_skill_promote_is_a_promote_signal(tmp_path):
+    events = [orchestrator_prompt(0), assistant(5, tool("p", "Skill", skill="minerva:promote")),
+              result(6, "p"), assistant(7), marker(7, 7)]
+    run = rt.trace_session(write_session(tmp_path, events))["runs"][0]
+    assert [w["phase"] for w in run["phases"]] == ["propose", "promote"]
+
+
+def test_aggregate_phase_totals_are_active_time_with_waits_apart(tmp_path):
+    # The run's last phase is followed by 5,000 s of unrelated user idle.
+    events = _lifecycle(0) + [prompt(5130), assistant(5140), marker(5140, 10)]
+    write_session(tmp_path, events, name="a")
+    agg = rt.aggregate(tmp_path)
+    cleanup = agg["phases"]["cleanup"]
+    assert cleanup["total_s"] == pytest.approx(20.0)        # 120→130 and 5130→5140
+    assert cleanup["waits_total_s"] == pytest.approx(5000.0)
+
+
+def test_missing_meta_links_the_sidecar_through_the_agent_result(tmp_path):
+    events = [orchestrator_prompt(0),
+              assistant(10, _agent("t1", "Scope panel: Skeptic")),
+              {"type": "user", "uuid": _uuid(), "timestamp": ts(11), "message": {"content": [
+                  {"type": "tool_result", "tool_use_id": "t1",
+                   "content": [{"type": "text", "text": "Async agent launched. agentId: a0 (internal)"}]}]}},
+              assistant(12), marker(12, 12)]
+    path = write_session(tmp_path, events, subagents=[_sub("t1", "Scope panel: Skeptic", 10)])
+    (tmp_path / "sess" / "subagents" / "agent-a0.meta.json").unlink()
+    sub = rt.trace_session(path)["subagents"][0]
+    assert sub["description"] == "Scope panel: Skeptic"
+    assert sub["tier"] == "panel"
+    assert sub["tool_use_id"] == "t1"
+
+
+def test_non_object_meta_is_tolerated(tmp_path):
+    events = [orchestrator_prompt(0), assistant(1, _agent("u1", "Completion Verifier")),
+              result(2, "u1"), assistant(3), marker(3, 3)]
+    path = write_session(tmp_path, events, subagents=[_sub("u1", "Completion Verifier", 1)])
+    (tmp_path / "sess" / "subagents" / "agent-a0.meta.json").write_text("[1, 2]")
+    assert len(rt.trace_session(path)["subagents"]) == 1
+
+
+def test_malformed_transcript_is_skipped_and_reported_not_fatal(tmp_path, monkeypatch):
+    write_session(tmp_path, _lifecycle(0), name="good")
+    write_session(tmp_path, _lifecycle(0), name="bad")
+    real = rt.trace_session
+
+    def flaky(path):
+        if Path(path).stem == "bad":
+            raise TypeError("boom")
+        return real(path)
+
+    monkeypatch.setattr(rt, "trace_session", flaky)
+    agg = rt.aggregate(tmp_path)
+    assert [r["session"] for r in agg["runs"]] == ["good"]
+    assert agg["skipped"] == [{"session": "bad", "error": "TypeError: boom"}]
+
+
+def test_null_text_and_string_duration_do_not_crash(tmp_path):
+    events = [orchestrator_prompt(0),
+              {"type": "user", "uuid": _uuid(), "timestamp": ts(1),
+               "message": {"content": [{"type": "text", "text": None}]}},
+              assistant(2),
+              {"type": "system", "subtype": "turn_duration", "uuid": _uuid(), "timestamp": ts(3),
+               "durationMs": "not-a-number"}]
+    tr = rt.trace_session(write_session(tmp_path, events))
+    assert tr["turns"] == 1
+
+
+def test_naive_timestamps_are_utc():
+    assert rt._ts("2026-09-26T10:00:00") == rt._ts("2026-09-26T10:00:00Z")
+
+
+def test_cli_argument_errors_exit_2(tmp_path, capsys):
+    assert rt.main(["--project-dir"]) == 2
+    assert rt.main(["nope", "--project-dir", str(tmp_path)]) == 2
+    assert rt.main(["--all", "--project-dir", str(tmp_path / "missing")]) == 2
+    err = capsys.readouterr().err
+    assert "needs a directory" in err and "no transcript" in err
+
+
+def test_default_project_dir_anchors_to_the_primary_checkout(tmp_path):
+    import subprocess
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "--allow-empty", "-m", "i"], check=True,
+                   env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+                        "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"})
+    wt = repo / ".minerva" / "worktrees" / "u"
+    subprocess.run(["git", "-C", str(repo), "worktree", "add", "-q", "-b", "u", str(wt)], check=True)
+    assert rt.default_project_dir(wt) == rt.default_project_dir(repo)
+    assert "worktrees" not in rt.default_project_dir(wt).name
+
+
+def test_panel_batch_match_requires_the_same_round(tmp_path):
+    # A round-2 Proponent launched within the batch window of a lone round-1
+    # Skeptic at the same gate does not make that Skeptic a panel member.
+    events = [orchestrator_prompt(0),
+              assistant(10, _agent("s", "Skeptic: scope check")), result(11, "s"),
+              assistant(15, _agent("p", "Scope r2: Proponent")), result(16, "p"),
+              assistant(17), marker(17, 17)]
+    subs = [_sub("s", "Skeptic: scope check", 10), _sub("p", "Scope r2: Proponent", 15)]
+    tiers = {s["description"]: s["tier"] for s in rt.trace_session(write_session(tmp_path, events, subagents=subs))["subagents"]}
+    assert tiers["Skeptic: scope check"] == "reviewer"

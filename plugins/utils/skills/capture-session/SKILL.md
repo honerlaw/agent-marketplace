@@ -67,7 +67,7 @@ How to read it:
   Verifier, the code-review agent, knowledge writes, and the `minerva:ship` and
   `minerva:cleanup` calls. Each boundary names the event that set it, and `!` lines
   flag missing or out-of-order signals.
-- The **gate table** groups subagents by gate, tier (panel / reviewer / review) and
+- The **gate table** groups subagents by gate, tier (panel / reviewer / code-review) and
   role, so you can see which adjudication tier the time went to.
 
 ## Step 3 — Record to baseline (optional)
