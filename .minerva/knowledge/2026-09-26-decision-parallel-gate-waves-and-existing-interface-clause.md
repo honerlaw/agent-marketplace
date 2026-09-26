@@ -58,6 +58,12 @@
   capability.
 - `run_trace.py` reports the designed verify/review overlap as an "out-of-order signal". That is
   expected now, not a tracer defect.
+- **Scope any new upward-move event to the rows that can actually move up.** The first cut of
+  `## Panel warranted?` fired on every reviewer at a reviewer-capped row (triage, partition, TODO).
+  Those rows reach the reviewer *because* a panel clause holds, so every such dispatch would have
+  escalated to the user and burned the global escalation counter. Code review caught this. The
+  event now ignores capped rows, and ignores the clause that caused the routing. A new escape arm
+  needs checking against every row's ceiling, not just the row it was designed for.
 - Measure the effect with `run_trace.py --all` against the 2026-09-26 baseline before tuning
   further.
 

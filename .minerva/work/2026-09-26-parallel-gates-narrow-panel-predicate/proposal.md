@@ -1,7 +1,7 @@
 # Proposal: parallel-gates-narrow-panel-predicate
 
 **Date**: 2026-09-26
-**Status**: Draft
+**Status**: Shipped (2026-09-26)
 
 ## Goal
 Cut `minerva:propose-ship-auto` wall time without dropping any gate, in three ways:
@@ -55,15 +55,16 @@ Files in play:
 **Reconcile in gate order:**
 1. **Decompose aborts.** If scope resolves "decompose", abort as today and discard the other results. This wasted work is a known, accepted cost of the wave.
 2. **Merge folds.** The scope and approach decisions stand (after any fold or panel accept), and their folds are merged into the draft **first**.
-3. **Whole-proposal is held until scope and approach are final**, including any upward move to a panel. Only then is the restart check made, once, against the draft from step 2. Whole-proposal is re-dispatched against that draft if its first-wave review is materially stale, meaning any of:
+3. **Whole-proposal is held until scope and approach are final**, including any upward move to a panel. Only then is the restart check made, once, against the draft from step 2. If its first-wave review is materially stale, it is discarded and whole-proposal's tier is **selected again** against that draft before it is re-dispatched. Stale means any of:
    - the approach pick changed;
    - the scope decision changed the draft's structure (phases added or removed);
+   - whole-proposal was routed on an earlier gate's **pending** clause that the earlier gate did not approve as drafted (as shipped: inside the wave, clauses are pending when later gates are routed);
    - a scope or approach fold rewrote `## Goal` or `## Success criteria`.
 
    Otherwise the first-wave result stands and its fixes merge in. Because the check waits for scope and approach to be final, a late upward move cannot slip past it, and at most one restart can happen.
 4. **Fold-audits.** Every folded gate gets its fold-audit re-check, and these are dispatched concurrently. Each carries its own gate's original decision, its critique verbatim, and the revised decision.
 
-**Budget.** A restart is a new review of a new artifact: the stale first-wave dispatch is discarded, and the restarted gate gets the normal two-dispatch Skeptic cap (or a fresh panel budget). A restarted whole-proposal can therefore spend up to 4 reviewer dispatches (or one panel budget plus the stale wave's). governance.md states this explicitly. The "2 of 3 propose decisions reach the user → abort" rule is unchanged.
+**Budget.** A restart is a new review of a new artifact: the stale first-wave dispatch is discarded, and the restarted gate gets the normal two-dispatch Skeptic cap (or a fresh panel budget). The stale first wave is held unarbitrated, so it spent at most 1 reviewer or 3 panel dispatches. A restarted whole-proposal can therefore spend up to 3 reviewer dispatches (1 stale + 2), and at worst 11. governance.md states this explicitly. The "2 of 3 propose decisions reach the user → abort" rule is unchanged.
 
 **Logging.** Each decision line keeps its tier tag, and its `(tier: …)` reason adds `parallel wave`. A restart logs its own line naming the staleness condition.
 
@@ -80,10 +81,10 @@ Files in play:
 - A surface that had no concern when an earlier gate ran is not exempted from a later one.
 - Completion goes to a panel on the interface clause only when the diff changes an interface or contract **beyond what the proposal approved**.
 
-**Doubt about the interface clause goes to the reviewer, not a panel.** This applies to the narrowed interface clause only; doubt about the ambiguity, blast-radius or knowledge-tension clauses still convenes a panel, as today.
+**Doubt about the interface clause goes to the reviewer (never solo), not a panel.** This applies to the narrowed interface clause only, and only at the Skeptic gates (scope, approach, whole-proposal). At completion the reviewer is a Verifier, which cannot move up, so interface doubt there still convenes the completion panel; doubt about the ambiguity, blast-radius or knowledge-tension clauses still convenes a panel, as today.
 - In that case the main model passes its specific doubt to the Skeptic in CONTEXT.
 - The Skeptic brief gains a `## Panel warranted?` section, where the Skeptic names any panel clause it believes holds, with evidence.
-- A named, evidenced clause the main model cannot rule out is a third upward-move event (reviewer → panel).
+- A named, evidenced clause the main model cannot rule out is a third upward-move event (reviewer → panel). As shipped, it applies only on rows whose ceiling is panel and only for a clause that was not already the reason the decision reached the reviewer; capped rows (triage, partition, TODO) ignore it. It goes up **before** folding the critique, with no fold-audit, and is logged `[reviewed — escalated]`.
 - The "Both predicates fail closed, in opposite directions" paragraph is rewritten to state this one exception and its trade-off. For the interface clause, the second check is now an independent Skeptic seeded with the main model's doubt, rather than an automatic panel.
 - Doubt about a solo clause still denies solo.
 
@@ -95,7 +96,7 @@ Files in play:
 
 **When completion passes** (Verifier `accept`, or a completion panel at 3/3 or 2/3 — the latter proceeds with dissent logged as today): Phase 3 triages the already-generated code-review findings and the audit findings. There is no second code-review dispatch.
 
-**When completion fails** (Verifier `revise`/`reject`, or a completion panel at ≤1/3): replan (Phase 2.5) as today. If the replan or resumed implementation changes the diff, **both** the early code-review findings and the inline-audit findings are discarded, and Phase 3 re-generates them against the final diff. If the diff is unchanged, they stand.
+**When completion fails** (Verifier `revise`/`reject`, or a completion panel at ≤1/3): replan (Phase 2.5) as today. A replan always re-runs the inline audit, because it can rewrite `## Success criteria`. If the resumed implementation also changes the diff outside `.minerva/work/`, **both** the early code-review and the audit findings are discarded and Phase 3 re-generates them against the final diff. Otherwise the code-review findings stand.
 
 Review → promote ordering is unchanged.
 
@@ -112,7 +113,7 @@ Review → promote ordering is unchanged.
 
 ## Success criteria
 1. **Propose wave (phases.md Phase 1).** It describes routing in gate order with one-message dispatch; waiting for the full wave (Arbiters as their pairs complete); reconciliation in gate order (decompose aborts, then scope and approach folds merge first); holding whole-proposal until scope and approach are final; the single restart check with its three staleness conditions; and concurrent fold-audits.
-2. **Budget (governance.md).** It states that a restart discards the stale dispatch, that the restarted gate gets a fresh per-gate budget, and that a restarted whole-proposal's reviewer total can therefore reach 4.
+2. **Budget (governance.md).** It states that a restart discards the stale dispatch, that the restarted gate gets a fresh per-gate budget, and the resulting totals: 3 reviewer dispatches, or at worst 11 (as shipped; the draft said 4 before review corrected the arithmetic).
 3. **Tier selection (decision-protocol.md):**
    - the interface clause is narrowed to changes to an existing interface with consumers outside the unit, and introduce-then-consume within one unit is not "existing";
    - the once-per-surface rule has a defined "surface", suppresses re-firing only on an already-approved change, and is recorded in the decision-log reason;
