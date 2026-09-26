@@ -1,7 +1,7 @@
 # Proposal: per-phase-gate-cost
 
 **Date**: 2026-09-26
-**Status**: Draft
+**Status**: Shipped (2026-09-26)
 
 ## Goal
 `scripts/run_trace.py` reports the cost of a `minerva:propose-ship-auto` run next to its time:
@@ -19,29 +19,32 @@ gate cost". Parallel dispatch buys time nearly free; panels and fresh-context re
 confidence with tokens; the trace should price each lever.
 
 ## Approach
-- **One pricing source.** `run_trace` imports `_zero_usage`, `_add_usage`, `usage_cost` and
-  `normalize_model` from `run_analyzer`; it defines no rates. `run_analyzer.py` is unchanged
-  (`run_benchmark` pins it — `2026-09-26-decision-trace-orchestrator-time-from-transcripts`).
-- **Cost stream.** One session-wide `seen` `message.id` set spans the main file and all sidecar
-  files, in `run_analyzer`'s order (main first, then sidecars sorted); the first source to
-  present an id owns its cost, so no message is billed twice. Each message is priced at its own
-  `message.model`.
-  - Main-file assistant messages are cost points at their first copy's timestamp, charged to the
-    phase window containing that timestamp. The cost stream reads the main file **unfiltered**
-    (the time timeline still drops `isSidechain` lines); legacy `isSidechain` main-file messages
-    count as `subagent_usd` (`run_analyzer`'s convention), are placed by timestamp alone and
-    belong to no gate row — so a phase's `subagent_usd` can exceed the sum of its gate rows, and
-    the docs say so.
-  - A subagent's cost is the sum over its sidecar messages, charged to its launch phase and gate
-    row — the same bucket-by-start rule the time columns use.
-- **Output.** JSON: each phase gains `cost` = `{usd, main_usd, subagent_usd, tokens}`; each gate
-  row gains `cost_usd` + `tokens` (existing `output_tokens` kept); each subagent gains `cost_usd`
-  + `tokens`; run and session summaries gain cost totals; `unpriced_models` is reported per run
-  and per session. Text: cost columns in the phase and gate tables and a cost line in the
-  summary; `--all` adds per-phase and per-gate cost totals and medians.
-- **Docs.** `plugins/utils/skills/capture-session/SKILL.md` Step 2b calls out the cost fields.
-- **Rejected:** per-phase cost inside `run_analyzer` (needs phase inference there; the module is
-  pinned by `run_benchmark`); a second PRICING table in `run_trace` (two tables drift).
+*(Rewritten at promote to describe what shipped; review fixes are folded in.)*
+
+- **One pricing source.** `scripts/run_trace.py` imports `_zero_usage`, `_add_usage`,
+  `usage_cost` and `normalize_model` from `run_analyzer` and defines no rates. `run_analyzer.py`
+  is unchanged.
+- **Billing stream.** `billing_lines()` reads every parseable line in file order. Nothing is
+  dropped: a line with no timestamp takes the previous line's time. `cost_points()` bills each
+  assistant message once through one session-wide `message.id` set: the main file first, then the
+  sidecars sorted. That is `analyze_transcript(..., include_subagent_files=True)` exactly. A
+  malformed `usage`, `cache_creation` or `model` bills as empty or `unknown` and no longer crashes
+  the trace. A sidecar with no timestamped event is billed to the session only.
+- **Attribution (`_cost`).**
+  - A main-file message is charged to the phase window that holds its timestamp.
+  - A subagent's whole cost is charged to its launch phase and gate row.
+  - Legacy `isSidechain` lines count as `subagent_usd` with no gate row.
+  - A run that reaches the end of the file owns everything after its last event, including an
+    unlinked subagent that starts there.
+- **Output.**
+  - JSON: phase `cost` = `{usd, main_usd, subagent_usd, tokens, unpriced_models}`; run and
+    session `cost`; gate rows and subagents carry `cost_usd` and `tokens`. `output_tokens` is
+    kept.
+  - Text: a `session cost` line, each run's `cost` line, and a `cost` column in the phase and
+    gate tables.
+  - `--all`: per-run `cost_usd`, plus per-phase and per-gate `cost_total_usd` and
+    `cost_median_usd`.
+- **Docs.** `plugins/utils/skills/capture-session/SKILL.md` Step 2b calls out the cost view.
 
 ## Success criteria
 - `run_trace --json` carries `cost` on every phase window, `cost_usd` + `tokens` on every gate
