@@ -1,6 +1,6 @@
 {
   "name": "minerva",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Durable record discipline for software work — promotion, not accumulation. Implements a persistence hierarchy of proposals, replans, scratchpads, and decisions.",
   "author": {
     "name": "Derek Honerlaw"

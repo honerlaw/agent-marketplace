@@ -28,7 +28,9 @@ If fresh-context delegation is unavailable, stop this workflow with recovery
 instructions. Do not send the full authoring history to an independent reviewer.
 
 Wait for results through the available wait/status tools. Parallel Proponent
-and Skeptic agents must both finish before Arbiter starts. A fold-audit
+and Skeptic agents must both finish before Arbiter starts. For a wave of
+independent decisions, start every first-wave agent before waiting, then wait
+on all of them; reconcile only once every result is in. A fold-audit
 uses a new agent and excludes the author's arbitration reasoning. Close or
 release completed agents where supported. No background handle is a verdict.
 

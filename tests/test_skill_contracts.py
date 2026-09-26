@@ -804,3 +804,74 @@ def test_no_orchestrator_recommends_switching_orchestrators():
         or _present("recommending a switch", p.read_text(encoding="utf-8"), ignore_case=True)
     ]
     assert not offenders, f"a switch-orchestrator escape reappeared in {offenders}"
+
+
+# --- propose-ship-auto: parallel gate waves and the narrowed interface clause (2026-09-26) ----
+#
+# `run_trace.py --all` showed propose waiting on three serial gates, completion and code review
+# running back to back, and the interface clause convening most panels — on NEW tool surfaces
+# nobody consumed yet, and again at completion on an interface the proposal already approved.
+# These pin both halves of the fix so a later edit cannot quietly restore either.
+
+def _auto_ref(name):
+    return (SKILLS_DIR / "propose-ship-auto" / "references" / name).read_text(encoding="utf-8")
+
+
+def test_auto_interface_clause_covers_existing_interfaces_only():
+    body = _auto_ref("decision-protocol.md")
+    assert "**existing interface change**" in body
+    assert "*Introducing* a new interface" in body
+    assert "A consumer added inside the same unit does not make an interface \"existing\"" in body
+    # Inverted half: the old clause fired on any new surface.
+    assert "the decision introduces or changes one" not in body
+
+
+def test_auto_interface_doubt_routes_to_a_seeded_reviewer():
+    """Only the interface clause's doubt moves down to a reviewer; the others still fail closed
+    to a panel, and the Skeptic is handed the author's doubt rather than rediscovering it."""
+    body = _auto_ref("decision-protocol.md")
+    assert "**doubt about the existing-interface clause**: it routes to the **reviewer**" in body
+    assert "Doubt about ambiguity, blast radius or knowledge tension still convenes a panel" in body
+    assert "Write your specific doubt" in body
+    assert "## Panel warranted?" in body
+    assert "the three reviewer events above" in body
+    skill = (SKILLS_DIR / "propose-ship-auto" / "SKILL.md").read_text(encoding="utf-8")
+    assert "doubt about the existing-interface clause goes to a reviewer instead" in skill
+
+
+def test_auto_clause_fires_once_per_approved_change():
+    body = _auto_ref("decision-protocol.md")
+    assert "**A clause fires once per approved change.**" in body
+    assert "A surface that raised no concern at an earlier gate is not exempt" in body
+    for name in ("decision-protocol.md", "phases.md"):
+        assert "beyond what the proposal approved" in _auto_ref(name), name
+
+
+def test_auto_propose_gates_run_as_one_wave_with_a_held_restart_check():
+    body = _auto_ref("phases.md")
+    assert "**Steps 4–6 run as one gate wave" in body
+    assert "**Draft and route in gate order.**" in body
+    assert "is **held** until scope and approach are both final" in body
+    for condition in ("the approach pick changed",
+                      "changed the draft's structure (phases added or removed)",
+                      "rewrote `## Goal` or `## Success criteria`"):
+        assert condition in body, condition
+    gov = _auto_ref("governance.md")
+    assert "**Propose-wave restart.**" in gov and "at most **one** restart per run" in gov
+
+
+def test_auto_completion_and_code_review_run_together():
+    body = _auto_ref("phases.md")
+    assert "**Run review's finding generation alongside it.**" in body
+    assert "discard **both** the code-review and the audit findings" in body
+    assert "Completion fails** (Verifier `revise`/`reject`, or a completion panel at ≤1/3)" in body
+    assert "If Phase 2 step 4 already generated them" in body
+
+
+def test_waves_park_and_reconcile_on_the_full_set():
+    assert "**Waves park the same way, several handles at once.**" in _auto_ref("decision-protocol.md")
+    runtime = (SKILLS_DIR / "using-minerva" / "references" / "runtime.md").read_text(encoding="utf-8")
+    assert "reconcile the wave only once every result it waits on is in" in runtime
+    for adapter in ("claude.md", "codex.md"):
+        text = (SKILLS_DIR / "using-minerva" / "references" / adapter).read_text(encoding="utf-8")
+        assert "wave of" in text, adapter

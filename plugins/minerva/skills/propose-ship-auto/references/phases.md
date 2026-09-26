@@ -31,6 +31,16 @@ This phase replaces the user-interactive intake in `minerva:propose`.
 
 3. **Design synthesis.** The main LLM drafts a complete proposal (Goal / Why / Approach / Success criteria / Open Questions) along with 2-3 candidate approaches it considered. This is the strategic intake — context-grounded inference rather than user Q&A. Keep it in conversation; do not write any file yet.
 
+**Steps 4–6 run as one gate wave, not three sequential gates.** Each decision keeps its own ARTIFACT, CONTEXT, tier and budget as written in its step. Only the timing changes.
+   - **Draft and route in gate order.** Draft all three decisions: scope, the approach pick, and the whole-proposal verdict over the draft *with the recommended approach already applied*. Then route them in gate order. Approach is routed seeing scope's tier and the clause/surface pairs it adjudicated, and whole-proposal seeing both, so [a clause fires once per approved change](decision-protocol.md#tier-selection-order) holds inside the wave. Solo gates just decide.
+   - **Dispatch together.** Send every first-wave agent (each reviewer-tier Skeptic, each panel's Proponent + Skeptic) in one message. Then follow the wave rule in `references/decision-protocol.md`'s *Parked dispatches*: resume on each notification, and send each panel's Arbiter as soon as its own pair is back.
+   - **Reconcile in gate order.**
+     (a) If scope resolves "decompose", abort as in step 4 and discard the other results.
+     (b) Scope and approach each run to a standing decision: arbitration, any upward move, any fold. Their folds are merged into the draft **first**.
+     (c) Whole-proposal's first-wave result is **held** until scope and approach are both final. Only then make the **restart check**, once. The first-wave review is stale, and whole-proposal is re-dispatched against the merged draft from (b), if any of these holds: the approach pick changed; the scope decision changed the draft's structure (phases added or removed); or a scope or approach fold rewrote `## Goal` or `## Success criteria`. Otherwise its result stands and its folds merge in. Because the check waits for the other two to be final, a late upward move cannot slip past it, and there is at most one restart.
+     (d) Fold-audit re-checks for every folded gate go out together, each carrying its own gate's original decision, critique and revised decision.
+   - **Log.** Each decision line's `(tier: …)` reason adds `parallel wave`. A restart logs its own line naming the staleness condition that fired. The restart budget is in `references/governance.md`.
+
 4. **Scope check (tiered).** The main model decides: one work unit shipped in one PR, one unit shipped in ordered **phases**, or genuinely separate units? ARTIFACT = the framed scope decision + the recommended pick; CONTEXT = the seed + the draft proposal. **Too big for one PR is a reason to phase, not to decompose** — the panel's default for oversized-but-coherent work is a `## Phases` section (soft ceiling ~3), which keeps one proposal, one record and one promote; see `skills/propose/references/phasing.md`. Frame the cost of splitting explicitly for whoever reviews it: each extra unit re-pays propose, worktree, review, promote, knowledge reconciliation and ship, and re-derives the context the last unit just built; phasing re-runs only review and ship. Decomposition survives only for genuinely independent subsystems. If the decision (at any tier, or from a user escalation) is "decompose", abort the run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 
 5. **Approach selection (tiered).** The main model picks among its 2-3 candidates. ARTIFACT = the candidate approaches + the recommended pick + the stated criteria; CONTEXT = the draft proposal's `## Goal`/`## Approach`. Solo only if ≥2 approaches were enumerated and one is strictly dominant (the solo predicate's action check); the log records the rejected alternatives. Once the decision stands — after any fold and re-check, or a panel accept — the picked approach replaces the draft's `## Approach`.
@@ -67,7 +77,10 @@ This phase replaces the user-interactive setup and completion signal in `minerva
 
 4. **Completion verification.** When the main LLM judges that every `## Success criteria` item appears met:
    - Compose a checklist: each criterion, the evidence (test name, file path, behavior observed), and a yes/no.
-   - Route it: reviewer floor, so the **Verifier** unless the panel predicate holds (e.g. the diff changes a public interface), in which case a panel. ARTIFACT = the checklist + `git diff <default>...HEAD` + the proposal's `## Success criteria`.
+   - Route it: reviewer floor, so the **Verifier** unless the panel predicate holds, in which case a panel. On the interface clause, the diff must change an interface or contract *beyond what the proposal approved*; an interface the propose gates already approved does not re-fire here. ARTIFACT = the checklist + `git diff <default>...HEAD` + the proposal's `## Success criteria`.
+   - **Run review's finding generation alongside it.** In the same message as the Verifier (or the completion panel's first wave), also send out Phase 3 step 3's code review over the same diff. Run Phase 3 step 3's inline minerva audit while they run. These findings are **provisional** until completion passes:
+     - **Completion passes** (Verifier `accept`, or a completion panel at 3/3 or 2/3): Phase 3 uses them as its step 3 output and does not re-run the code review.
+     - **Completion fails** (Verifier `revise`/`reject`, or a completion panel at ≤1/3): go to Phase 2.5 as below. If the replan or resumed implementation changes the diff, discard **both** the code-review and the audit findings, and Phase 3 generates them again against the final diff. If the diff is unchanged, they stand.
    - **Verifier:** one dispatch — no fold-audit re-check, no upward move (`references/decision-protocol.md`, *The Verifier gate is asymmetric*). On `accept`, advance to Phase 3. On a `revise`/`reject` naming an unmet criterion, treat it as a **success-criteria divergence** — auto-trigger Phase 2.5 (replan) to clarify the criteria, then resume implementation.
    - **Panel:** this gate deliberately does **not** run round-table's revision round, although its quorum is 3/3. On `3/3 accept`, advance. On `2/3 accept`, proceed but log the dissent concerns to scratchpad for the review phase to scrutinize. On `≤1/3 accept`, treat it as a success-criteria divergence (Phase 2.5) — skip the standard revise-and-revote.
    - This gate is **never** skipped.
@@ -94,7 +107,7 @@ Replaces the user-interactive triage in `minerva:review`, whose protocol is read
 
 2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution" section.
 
-3. **Generate findings.** Two passes:
+3. **Generate findings.** If Phase 2 step 4 already generated them alongside completion verification and they still stand (the diff has not changed since), use them and skip to step 4. Otherwise, two passes:
    - **Minerva audit** (inline): spec fidelity (does the diff achieve `## Goal`, `## Approach`, `## Success criteria`?) + knowledge compliance (does the diff violate any documented pattern/constraint/decision?).
    - **Code review**: use `code-review:code-review` only for an OPEN PR when installed. Otherwise, use the independent PR/local diff review per `minerva:review`'s "Code review invocation" section and host adapter.
 

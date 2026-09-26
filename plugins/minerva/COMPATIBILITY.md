@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 2.0.0 packages one canonical `skills/` tree for Claude Code and local
+Version 2.1.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host

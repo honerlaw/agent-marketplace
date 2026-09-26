@@ -11,6 +11,10 @@
 
 A decision that moves up from reviewer to panel spends both budgets, so the worst case for one decision is 8 dispatches.
 
+**Propose-wave restart.** When the gate wave's restart check (`references/phases.md` Phase 1) finds whole-proposal's first-wave review stale, that review is discarded. The re-dispatched whole-proposal is a new review of a new artifact, with a fresh per-tier budget of its own. A restarted whole-proposal can therefore spend up to 4 reviewer dispatches in total (2 stale, 2 restarted), or one panel budget on top of the stale wave's dispatches. There is at most **one** restart per run, because the check is made once, after scope and approach are final.
+
+**Provisional review findings.** Code review sent out alongside completion verification (`references/phases.md` Phase 2 step 4) is Phase 3's code-review pass, run early, not an extra reviewer. It is re-run only when a failed completion led to a changed diff.
+
 **Per-phase abort triggers.**
 - Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Most escalations now pass through a panel before reaching the user, so this fires less often than it used to; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
