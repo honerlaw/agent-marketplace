@@ -291,41 +291,38 @@ def test_knowledge_health_is_reported_for_a_real_corpus(tmp_path):
     kd = tmp_path / ".minerva" / "knowledge"
     kd.mkdir(parents=True)
     (kd / "2026-01-01-pattern-a-thing.md").write_text(
-        "# A thing\n\n**Type**: pattern\n\nBody.\n\n## Related\n")
-    (kd / "index.md").write_text("# Knowledge index\n\n## Patterns\n\n- [[2026-01-01-pattern-a-thing]] — a thing\n")
+        "# A thing\n\n**Type**: pattern\n**Theme**: wiki\n**Summary**: s\n\nBody.\n")
+    (kd / "2026-01-02-bug-b.md").write_text("# B\n\n**Type**: bug\n\nBody.\n")
 
     k = workstream_status(tmp_path)["knowledge"]
     assert k["exists"] is True
-    assert k["entries"] == 1
-    assert k["by_type"] == {"pattern": 1}
-    assert k["overview_exists"] is False
-    assert k["unsynthesized"] == 1
-    assert k["link_rot"] == 0
+    assert k["entries"] == 2
+    assert k["by_type"] == {"pattern": 1, "bug": 1}
+    assert (k["themes"], k["unthemed"]) == (1, 1)
+    assert k["legacy_aggregates"] == 0
 
 
-def test_lint_and_link_rot_counts_are_wired_to_real_findings(tmp_path):
+def test_lint_and_legacy_counts_are_wired_to_real_findings(tmp_path):
     """Asserts the VALUES, not their types.
 
     `assert isinstance(lint_errors, int)` passes against an implementation that always
     returns 0, or one that files every error under `warnings` —
     `2026-08-10-pattern-presence-assertions-rot-into-green-lies`. This corpus is built to
-    produce a real finding and a real broken overview link, so a swapped severity filter
-    or a dropped `link_rot` goes red.
+    produce a real error (a dangling link) and two real legacy-aggregate warnings, so a
+    swapped severity filter or a dropped count goes red.
     """
     kd = tmp_path / ".minerva" / "knowledge"
     kd.mkdir(parents=True)
     (kd / "2026-01-01-pattern-a-thing.md").write_text(
-        "# A thing\n\n**Type**: pattern\n\nBody.\n\n"
+        "# A thing\n\n**Type**: pattern\n**Theme**: wiki\n**Summary**: s\n\nBody.\n\n"
         "## Related\n\n- [[2026-01-02-pattern-does-not-exist]] — dangling\n")
     (kd / "index.md").write_text("# Knowledge index\n\n## Patterns\n")
-    (kd / "overview.md").write_text(
-        "# Overview\n\nSee [[2026-09-09-pattern-also-missing]].\n")
+    (kd / "overview.md").write_text("# Overview\n")
 
     k = workstream_status(tmp_path)["knowledge"]
-    assert k["link_rot"] == 1, "overview links a stem with no entry"
-    assert k["lint_errors"] + k["lint_warnings"] > 0, (
-        "a dangling ## Related link and an uncatalogued entry must surface as findings")
-    assert k["overview_exists"] is True
+    assert k["lint_errors"] == 1, "a dangling ## Related link is an error"
+    assert k["legacy_aggregates"] == 2
+    assert k["lint_warnings"] >= 2
 
 
 # --- the live corpus ----------------------------------------------------------

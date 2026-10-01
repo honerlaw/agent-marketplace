@@ -2,8 +2,13 @@
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/knowledge/overview.md` — theme-grouped synthesis of everything known. Read first to orient (absent until `minerva:synthesize` first runs — fall back to the index).
-- `.minerva/knowledge/index.md` — the catalog, one line per entry. Look up specifics here; drill into entries via their `[[YYYY-MM-DD-type-slug]]` links only when a theme bears on your task.
+- `.minerva/knowledge/` — write-once entries (decisions, bugs, patterns, constraints, references), each tagged with a `**Theme**` and a one-line `**Summary**`. Orient by listing the catalog — one `theme | entry | summary` line per entry, grouped by theme — then open only the entries whose theme bears on your task:
+
+  ```sh
+  awk 'function p(){if(f!=""){n=f;sub(/.*\//,"",n);sub(/\.md$/,"",n);print (t==""?"(unthemed)":t)" | "n" | "s};f=FILENAME;t="";s="";q=0} FNR==1{p()} /^[ \t]*(```|~~~)/{q=!q;next} q{next} /^\*\*Theme\*\*:/&&t==""{t=$2} /^\*\*Summary\*\*:/&&s==""{sub(/^\*\*Summary\*\*: */,"");s=$0} END{p()}' .minerva/knowledge/[0-9]*.md | sort
+  ```
+
+  Links between entries are forward-only `## Related` lines; find what links *to* an entry with `grep -l '\[\[<entry>\]\]' .minerva/knowledge/*.md`.
 - `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 

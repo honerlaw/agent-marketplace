@@ -2,8 +2,9 @@
 (`scripts/migration_status.py`).
 
 Exercises the migration-unique signal (`non_conforming_files` — files invisible to the
-ENTRY_RE-globbing wiki tooling), the `RESERVED_NONENTRY` allowlist exemption, the
-index/overview presence bools, and `entries_without_related` — including the load-bearing
+ENTRY_RE-globbing wiki tooling), the legacy-aggregate signal (whose polarity inverted in
+3.0: a present `index.md`/`overview.md` is now the migration need), missing Theme/Summary,
+stale agent-file routing, and `entries_without_related` — including the load-bearing
 case that a malformed conforming-named entry (no `**Type**` / no `## Related`) is COUNTED,
 not crashed on (the exact legacy shape this tool targets). `test_live_corpus_migrated`
 asserts the real, already-migrated `.minerva/knowledge/` reports a clean shape.
@@ -13,7 +14,7 @@ that drags in the unrelated `lib`-dependent modules that abort bare collection.
 """
 from pathlib import Path
 
-from migration_status import RESERVED_NONENTRY, migration_status
+from migration_status import RESERVED_NONENTRY, migration_status, stale_routing_files
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LIVE_KNOWLEDGE = REPO_ROOT / ".minerva" / "knowledge"
@@ -55,8 +56,9 @@ def test_non_conforming_files_flagged(tmp_path):
     assert st["conforming_entry_count"] == 1
 
 
-def test_reserved_nonentry_exempt(tmp_path):
-    # index.md and overview.md don't match ENTRY_RE but must NOT be flagged.
+def test_legacy_aggregates_are_the_migration_need_not_invisible_files(tmp_path):
+    # index.md and overview.md don't match ENTRY_RE; they are reported as the migration
+    # need, never as non-conforming files.
     make_corpus(
         tmp_path,
         {"001-decision-foo.md": entry("decision", "foo", [("001-decision-foo", "see also")])},
@@ -64,17 +66,34 @@ def test_reserved_nonentry_exempt(tmp_path):
         overview=True,
     )
     st = migration_status(tmp_path)
-    assert st["non_conforming_files"] == []  # reserved files exempt
-    assert st["index_present"] is True
-    assert st["overview_present"] is True
+    assert st["non_conforming_files"] == []
+    assert st["legacy_aggregates"] == ["index.md", "overview.md"]
     assert RESERVED_NONENTRY == {"index.md", "overview.md"}
 
 
-def test_presence_bools_false_when_absent(tmp_path):
+def test_absent_aggregates_are_the_migrated_state(tmp_path):
     make_corpus(tmp_path, {"001-decision-foo.md": entry("decision", "foo")})
-    st = migration_status(tmp_path)
-    assert st["index_present"] is False
-    assert st["overview_present"] is False
+    assert migration_status(tmp_path)["legacy_aggregates"] == []
+
+
+def test_entries_missing_metadata(tmp_path):
+    themed = entry("decision", "bar").replace(
+        "**Context**", "**Theme**: wiki\n**Summary**: s\n**Context**")
+    make_corpus(tmp_path, {"001-decision-foo.md": entry("decision", "foo"),
+                           "002-decision-bar.md": themed})
+    assert migration_status(tmp_path)["entries_missing_metadata"] == ["001-decision-foo.md"]
+
+
+def test_stale_routing_is_a_section_naming_a_legacy_aggregate(tmp_path):
+    (tmp_path / "CLAUDE.md").write_text(
+        "# Project\n\n## minerva\n\n- `.minerva/knowledge/overview.md` — read first\n")
+    (tmp_path / "AGENTS.md").write_text(
+        "## minerva\n\n- `.minerva/knowledge/` — entries\n\n## Other\n"
+        "`.minerva/knowledge/index.md` outside the section does not count\n")
+    assert stale_routing_files(tmp_path) == ["CLAUDE.md"]
+    kd = tmp_path / ".minerva" / "knowledge"
+    kd.mkdir(parents=True)
+    assert migration_status(kd)["stale_routing_files"] == ["CLAUDE.md"]
 
 
 # --- entries_without_related -------------------------------------------------
@@ -119,7 +138,7 @@ def test_empty_dir_no_crash(tmp_path):
     assert st["non_conforming_files"] == []
     assert st["entries_without_related"] == []
     assert st["conforming_entry_count"] == 0
-    assert st["index_present"] is False
+    assert st["legacy_aggregates"] == []
 
 
 # --- return shape ------------------------------------------------------------
@@ -130,15 +149,16 @@ def test_returns_plain_primitives_only(tmp_path):
     # JSON-serializable end to end (no Finding namedtuples or other objects)
     json.dumps(st)
     assert set(st) == {
-        "non_conforming_files", "index_present", "overview_present",
-        "entries_without_related", "conforming_entry_count",
+        "non_conforming_files", "legacy_aggregates", "entries_missing_metadata",
+        "entries_without_related", "stale_routing_files", "conforming_entry_count",
     }
 
 
 # --- live corpus -------------------------------------------------------------
 def test_live_corpus_migrated():
-    """The real corpus is already migrated: no non-conforming files, index+overview present."""
+    """The real corpus is fully migrated to the 3.0 shape."""
     st = migration_status(LIVE_KNOWLEDGE)
     assert st["non_conforming_files"] == [], st["non_conforming_files"]
-    assert st["index_present"] is True
-    assert st["overview_present"] is True
+    assert st["legacy_aggregates"] == []
+    assert st["entries_missing_metadata"] == []
+    assert st["stale_routing_files"] == []
