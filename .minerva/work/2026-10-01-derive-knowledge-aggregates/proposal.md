@@ -1,7 +1,7 @@
 # Proposal: derive-knowledge-aggregates
 
 **Date**: 2026-10-01
-**Status**: Draft
+**Status**: Shipped (2026-10-01)
 
 ## Goal
 
@@ -68,7 +68,9 @@ mechanical doc edits.
    symlinked from repo `scripts/` like the others). Default output: entries grouped by
    Theme, each line `[[<stem>]] (<type>) — <Summary>`, with `(superseded by [[X]])`
    when the entry is superseded. **Supersession is the union of three sources, deduped
-   by stem**: another entry's `## Related` `supersedes` edge to it, its own legacy
+   by stem** (an inverted `supersedes` edge — an older entry claiming to retire a newer
+   one — is ignored, reported by `inverted_supersedes` and by lint's `supersession`
+   warning; the live corpus had one, relabelled in this unit): another entry's `## Related` `supersedes` edge to it, its own legacy
    `superseded by` edge, and its own legacy `<!-- superseded-by: -->` banner. Union, not
    precedence, so a stored banner and a derived edge can never double-mark or contradict
    — they name successors, and every named successor is listed once. Flags: `--themes`
@@ -79,10 +81,12 @@ mechanical doc edits.
 
 3. **Routing.** The CLAUDE.md/AGENTS.md routing section (this repo's, and the template in
    `skills/init/references/steps.md`) drops the overview/index lines. The orientation path
-   is the theme-grouped catalog; routing gives a **portable POSIX `awk` one-liner** (no
-   plugin path needed) that prints one `theme | stem | summary` line per entry, sorted by
-   theme — the same content as the catalog script — and names `knowledge_catalog.py
-   --links-to` for backlinks. init's existing stale-routing refresh (template-of-record
+   is the theme-grouped catalog; routing gives a **portable `find … -exec awk … {} + | sort`
+   one-liner** (no plugin path needed; `find` so an empty corpus is not a zsh glob error)
+   that prints one `theme | stem | summary` line per entry, with `(superseded)` derived
+   from the same three sources and inverted-edge guard as the script, CRLF-tolerant — and
+   a `grep -l '\[\[<entry>\]\]'` for backlinks. The template is fenced with `~~~` because
+   it now contains a ```` ``` ```` block. init's existing stale-routing refresh (template-of-record
    markers) detects the old overview/index wording and offers the new section, and
    `minerva:migrate` reports stale routing, so a consumer that upgrades is told rather
    than left with dead links.
@@ -112,8 +116,9 @@ mechanical doc edits.
    - Delete skills `minerva:synthesize` and `minerva:lint-fix` (their only jobs were
      overview refresh and index/reciprocal repair) plus their evals; remove them from the
      three catalog surfaces + `pages/index.md` (`2026-05-21-constraint-minerva-skill-catalog-sync`).
-   - Delete `synthesis_status.py` and `knowledge_edits.py` (its span editors serve only
-     `knowledge_fix.py`; `test_promote_invariant.py`'s editor tests go with it) and their tests. **`knowledge_fix.py` becomes a tombstone**: it
+   - Delete `synthesis_status.py` and `knowledge_edits.py` (its span editors served only
+     `knowledge_fix.py`; `test_promote_invariant.py`'s editor property tests went with it,
+     leaving its add-only prose guards) and their tests. **`knowledge_fix.py` becomes a tombstone**: it
      prints that reconciliation was removed in minerva 3.0, tells the caller to delete the
      CI job and run `minerva:migrate-fix`, and **exits non-zero**. Deliberately not an
      exit-0 stub: a CI job that "succeeds" doing nothing is the silent-success failure this
@@ -125,8 +130,11 @@ mechanical doc edits.
    - `minerva_runtime.py`: never writes the `reconciliation` phase; keeps accepting it when
      reading an existing checkpoint (back-compat for in-flight runs and old traces), with a
      one-line comment and a test.
-   - `run_trace.py` / `run_compatibility_evals.py` / `gh_stub.py`: drop reconcile-specific
-     handling where present.
+   - `run_compatibility_evals.py`: the `reconciliation` scenario became `merged-cleanup`
+     (worktree removed, no `minerva/reconcile` PR, shipped entry preserved, no legacy
+     aggregates); `run_trace.py` keeps its legacy index/overview handling for 2.x traces.
+   - `lint` and `migrate-fix` SKILL.md moved detail verbatim into `references/`
+     (`presentation.md`, `backfill.md`, `upgrading.md`) to stay within the skill budget.
    - `minerva:init`: stops scaffolding/backfilling `index.md` (and never creates
      `overview.md`); the routing template changes per step 3.
    - `knowledge_rename.py` (used by `migrate-fix`) **keeps** its legacy `index.md` /
@@ -150,15 +158,21 @@ mechanical doc edits.
      heading text before its first `:` (leading article dropped); entries the overview
      never linked are reported as `(unthemed)` for hand-assignment;
    - then deletes `index.md` and `overview.md`;
-   - inserts metadata lines only — never modifies other bytes; a corpus with neither
-     legacy file is a no-op (idempotent).
+   - inserts metadata lines only — after the `**Type**`/`**Date**`/H1 line, or after a
+     leading frontmatter block — preserving the file's own line endings (CRLF stays CRLF);
+     never modifies other bytes; a corpus with neither legacy file is a no-op;
+   - its dry run prints each derived theme beside the overview heading it came from, so
+     the gate reviews the names as the script derives them.
    Existing stored back-links and banners are left in place (still valid; read by the
    catalog's supersession union).
 
-7. **This repo.** Run the backfill on `.minerva/knowledge/` (all 49 entries lacking a
-   Summary have an `index.md` line; 9 entries the overview never linked get a theme by
-   hand; 2 multi-section entries take the first), review the generated theme names, delete
-   `index.md` / `overview.md`, update `CLAUDE.md`.
+7. **This repo.** The backfill filled 110 entries (all 49 lacking a Summary had an
+   `index.md` line). The 9 it left unthemed were linked only from a paragraph of the
+   overview's "Silent success" section that an earlier rewrite had pasted into the intro;
+   they were assigned `silent-success` by hand. Three long theme names were shortened
+   (`lifecycle`, `skills-and-catalogs`, `worktrees-and-promote`): 7 themes over 119
+   entries. `index.md` / `overview.md` deleted; `CLAUDE.md` **and `AGENTS.md`** (flagged by
+   the new stale-routing signal) updated.
 
 8. **Release + consumer fallout.** Bump the minerva plugin to **3.0.0** (breaking) in
    both `plugins/minerva/.claude-plugin/plugin.json` and
@@ -184,9 +198,11 @@ mechanical doc edits.
     `test_fence_awareness`, `test_migration_status`, `test_workstream_status`,
     `test_site_catalog`, `test_orchestrator_mode`, `test_plugin_guard_sites`,
     `test_run_trace`, `test_compatibility_evals`, `test_minerva_runtime`,
-    `test_knowledge_rename`); add `tests/test_knowledge_catalog.py` (including a test that
-    runs the routing `awk` one-liner, as written in the init template, against a fixture
-    corpus and asserts it yields the same theme/stem/summary set as the script),
+    `test_knowledge_rename`); add `tests/test_knowledge_catalog.py` (including tests that
+    run the routing one-liner, as written in the init template, against a fixture
+    exercising every supersession source, an inverted edge, CRLF and a multi-word theme,
+    and against the live corpus, asserting the same theme/stem/summary/superseded set as
+    the script; and an empty corpus under `sh` and `zsh`),
     `tests/test_knowledge_backfill.py`, and a stale-reference test (below).
 
 ### Candidates considered
@@ -206,7 +222,7 @@ mechanical doc edits.
 - `.minerva/knowledge/index.md` and `.minerva/knowledge/overview.md` do not exist in this repo; every date-id entry has a `**Theme**` and a `**Summary**` line, and `knowledge_lint` reports zero errors on it.
 - `python3 scripts/knowledge_catalog.py .minerva/knowledge` prints every entry exactly once, grouped by theme; `--links-to <stem>` lists computed backlinks; supersession is derived from the union of `supersedes` edges, legacy `superseded by` edges and legacy banners, each successor listed once (tested).
 - `knowledge_backfill.py` fills Summary/Theme from legacy `index.md`/`overview.md`, deletes them, changes no bytes outside the inserted metadata lines, and is a no-op on a migrated corpus (tested).
-- `knowledge_lint` errors on a missing Summary/Theme for an entry dated on/after 2026-10-01 and warns for an older one, regardless of whether legacy files exist (tested).
+- `knowledge_lint` errors on a missing Summary/Theme for an entry dated on/after 2026-10-01 and warns for an older one, regardless of whether legacy files exist (tested). A 2.x install's post-cutoff entries therefore error until backfilled or hand-themed — documented as such.
 - The routing one-liner in the init template produces the same theme/stem/summary set as `knowledge_catalog.py` on a fixture corpus (tested); `minerva:init` no longer creates `index.md`.
 - `migration_status.py` reports a present `index.md`/`overview.md` as the migration need and absence as migrated (tested).
 - A test (`tests/test_no_reconcile_references.py`) asserts that `reconcil|synthesi[sz]|overview\.md|index-watermark|lint-fix` appears nowhere under `plugins/minerva/`, `README.md`, `pages/`, `CLAUDE.md` (and `.minerva/reference/` if present) except an explicit allowlist of files with historical/back-compat mentions (`COMPATIBILITY.md`'s upgrade section, the `knowledge_fix.py` tombstone, `minerva_runtime.py`'s legacy-phase read, the migrate/migrate-fix/backfill migration docs and `migration_status.py`, `knowledge_lint.py`'s legacy-aggregate warning, `knowledge_rename.py`'s legacy retargeting).
