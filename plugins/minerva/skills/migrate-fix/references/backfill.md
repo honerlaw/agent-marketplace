@@ -34,8 +34,9 @@ lines by hand.)
 
 ## Step 6 — Confirmation gate (REQUIRED)
 
-Show the counts, the files to be deleted, the derived theme names (the overview's `## `
-headings, kebab-cased as above), and both hand-work lists. Ask before proceeding. The theme names deserve a look:
+Show the counts, the files to be deleted, the derived theme names (the dry run's
+`[themes derived from overview.md sections]` block — each theme beside the heading it came
+from, exactly as the script derives it), and both hand-work lists. Ask before proceeding. The theme names deserve a look:
 they become the catalog's grouping, and a heading that kebab-cases badly is cheaper to
 fix now than after the overview it came from is deleted.
 

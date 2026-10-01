@@ -4,7 +4,7 @@
 The one-time migration behind the switch from an allocated sequential id to a date.
 It is a WRITER, which is why it lives here and not in `minerva:migrate` — that skill is
 read-only by contract (knowledge 020/026), and its companion `minerva:migrate-fix`
-wraps this module the way `minerva:lint-fix` wraps the fixer.
+wraps this module behind a confirmation gate.
 
 Two namespaces move together:
 

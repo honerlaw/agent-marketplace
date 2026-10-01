@@ -39,7 +39,7 @@ of the working tree you are in.
 Run the frozen unit-021 detector through its **importable Python API** and read the
 **full** findings list — *including warning-severity findings*. Do **not** branch on
 the CLI exit code: `scripts/knowledge_lint.py` exits 0 when only warnings are
-present (e.g. a stale-slug warning), so the exit code would hide them.
+present (e.g. a `legacy` or `theme` warning), so the exit code would hide them.
 
 Call it with `Bash`, anchoring **both** the `scripts/` import path and the corpus
 path to the current working tree's root (`git rev-parse --show-toplevel`) so it works
@@ -60,8 +60,9 @@ of them as **high-confidence mechanical** findings. The families:
   derived catalog reads. An **error** for an entry whose filename id is a date on or after
   2026-10-01; a **warning** for an older or legacy `NNN` entry. The rule keys on the
   entry's own date, not on whether legacy files exist, so it cannot flip when a stale tool
-  recreates `index.md`: every new entry is enforced and an un-backfilled legacy corpus
-  stays green.
+  recreates `index.md`: every new entry is enforced and older legacy entries only warn
+  (an entry a 2.x install wrote after the cutoff errors until `minerva:migrate-fix` or a
+  hand-written theme fills it).
 - **`legacy`** (warning) — a pre-3.0 `index.md` / `overview.md` is still present. Nothing
   maintains it any more (the catalog is derived on read —
   `2026-10-01-decision-knowledge-aggregates-are-derived-on-read`), so it can only go stale;

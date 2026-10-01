@@ -148,3 +148,33 @@ def test_an_entry_that_already_has_both_lines_is_untouched(tmp_path):
     text = (d / f"{A}.md").read_text()
     assert backfill(d)["edits"] == {}
     assert (d / f"{A}.md").read_text() == text
+
+
+def test_insert_goes_after_frontmatter_never_above_it():
+    """No Type/Date/H1 before the first section: the lines go after the closing `---`, so
+    the frontmatter still parses (and still supplies the entry's type)."""
+    text = "---\nname: x\nmetadata:\n  type: decision\n---\n\nbody\n\n## Finding\nf\n"
+    assert insert_metadata(text, "wiki", "s") == (
+        "---\nname: x\nmetadata:\n  type: decision\n---\n**Theme**: wiki\n**Summary**: s\n"
+        "\nbody\n\n## Finding\nf\n")
+
+
+def test_a_crlf_entry_keeps_every_crlf(tmp_path):
+    crlf = entry("a").replace("\n", "\r\n").encode()
+    d = legacy_corpus(tmp_path, {A: entry("a")})
+    (d / f"{A}.md").write_bytes(crlf)
+    backfill(d)
+    out = (d / f"{A}.md").read_bytes()
+    assert b"\r\n**Theme**: knowledge-wiki\r\n**Summary**: decides a\r\n" in out
+    assert out.count(b"\n") == out.count(b"\r\n")
+    kept = b"".join(ln for ln in out.splitlines(keepends=True)
+                    if not ln.startswith((b"**Theme**: ", b"**Summary**: ")))
+    assert kept == crlf
+
+
+def test_dry_run_shows_the_derived_theme_names(tmp_path, capsys):
+    d = legacy_corpus(tmp_path)
+    assert main([str(d), "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "knowledge-wiki  <-  ## The knowledge wiki: a navigable corpus" in out
+    assert "concurrency  <-  ## Concurrency: what shared state costs" in out

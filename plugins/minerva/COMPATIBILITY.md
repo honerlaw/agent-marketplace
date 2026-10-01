@@ -105,7 +105,7 @@ merged worktrees and prunes branches: it opens no PR.
 **What lint enforces now.** Invalid ids and broken `## Related` links are errors. A missing
 `**Theme**` or `**Summary**` is an **error** for an entry whose filename id is a date on or
 after 2026-10-01 and a **warning** for an older or `NNN` entry — so every entry written
-under 3.0 is enforced and an un-migrated legacy corpus stays green. The rule keys on the
+under 3.0 is enforced and older legacy entries only warn. An entry a 2.x install wrote on or after 2026-10-01 is the exception: it lacks `**Theme**`, so it is an error until migrated — run `minerva:migrate-fix`, which fills it if the old `overview.md` linked it, and hand-assign the theme otherwise. The rule keys on the
 entry's own date, never on whether legacy files exist. A legacy `index.md` / `overview.md`
 still present is a warning pointing at `minerva:migrate-fix`; a theme used by one entry is
 an advisory warning. There are no index-drift, watermark or missing-reciprocal checks.

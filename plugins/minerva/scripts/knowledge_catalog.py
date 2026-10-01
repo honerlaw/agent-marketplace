@@ -29,22 +29,17 @@ CLI:
   python3 knowledge_catalog.py <knowledge-dir> --links-to STEM  # computed backlinks
 Read-only; never writes.
 """
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from knowledge_lint import ENTRY_RE, corpus_id_width, id_sort_key, parse_entry  # noqa: E402
+from knowledge_lint import (  # noqa: E402
+    ENTRY_RE, SUPERSEDED_BY_LABEL_RE, SUPERSEDES_LABEL_RE, corpus_id_width, id_sort_key,
+    parse_entry)
 
 UNTHEMED = "(unthemed)"
 
-# A `## Related` label whose leading term is a supersession claim. The term may be
-# followed by an explanation (`supersedes: catalog surface is now pages/index.md`), so
-# only the leading term is matched — a label that merely mentions superseding somewhere
-# later is a description, not the claim.
-SUPERSEDES_LABEL_RE = re.compile(r"^supersedes(?:\s*[:;,—–-]|$)", re.IGNORECASE)
-SUPERSEDED_BY_LABEL_RE = re.compile(r"^superseded by(?:\s*[:;,—–-]|$)", re.IGNORECASE)
 
 
 def load_entries(knowledge_dir) -> dict:
@@ -57,14 +52,35 @@ def load_entries(knowledge_dir) -> dict:
                        key=lambda kv: (id_sort_key(kv[1]["nnn"], width), kv[0])))
 
 
+def _older(entries: dict, a: str, b: str) -> bool:
+    """True iff entry `a` is strictly older than entry `b` (by id; same-day is not older)."""
+    width = corpus_id_width(e["nnn"] for e in entries.values())
+    return id_sort_key(entries[a]["nnn"], width) < id_sort_key(entries[b]["nnn"], width)
+
+
+def inverted_supersedes(entries: dict) -> list:
+    """`[(stem, target)]` where an entry claims to supersede a NEWER one.
+
+    An entry cannot retire one written after it; such an edge is a mislabelled
+    `superseded by` (a real one, written as a reciprocal, survives in a legacy corpus).
+    `superseded_by` ignores it rather than mark the live entry retired, and
+    `knowledge_lint` warns about the same edge.
+    """
+    return [(stem, target) for stem, e in entries.items() for target, label in e["edges"]
+            if label and SUPERSEDES_LABEL_RE.match(label) and target in entries
+            and _older(entries, stem, target)]
+
+
 def superseded_by(entries: dict) -> dict:
     """`{stem: [successor stems]}` — the union of all three supersession sources."""
+    inverted = set(inverted_supersedes(entries))
     out = {stem: set() for stem in entries}
     for stem, e in entries.items():
         for target, label in e["edges"]:
             if not label:
                 continue
-            if SUPERSEDES_LABEL_RE.match(label) and target in out:
+            if (SUPERSEDES_LABEL_RE.match(label) and target in out
+                    and (stem, target) not in inverted):
                 out[target].add(stem)
             elif SUPERSEDED_BY_LABEL_RE.match(label):
                 out[stem].add(target)

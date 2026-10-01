@@ -329,3 +329,15 @@ def test_a_fenced_related_block_states_no_edges():
     assert related_edges(text) == []
 
 
+
+
+def test_an_inverted_supersedes_edge_is_a_warning(tmp_path):
+    d = make_dir(tmp_path, {
+        "2026-10-02-decision-old.md": entry(
+            "decision", "old", related=[("2026-10-05-decision-new", "supersedes: oops")]),
+        "2026-10-05-decision-new.md": entry("decision", "new"),
+    })
+    f = lint_knowledge(d)
+    assert errors(f) == []
+    assert [x.family for x in f] == ["supersession"]
+    assert "superseded by" in f[0].message

@@ -19,6 +19,8 @@ Checks:
                          older one. Keyed on the entry's own id, never on whether a legacy
                          `index.md` exists: a stale tool can recreate that file, and the
                          rule must not flip with it. Legacy NNN ids count as older.
+  2b. supersession     — a `supersedes` edge pointing at a NEWER entry (warning): almost
+                         always a mislabelled `superseded by`, which the catalog ignores.
   3. legacy aggregate  — `index.md` / `overview.md` still present: a warning pointing at
                          `minerva:migrate-fix`, which folds them into the entries.
   4. singleton theme   — a theme used by exactly one entry. Advisory drift signal only: a
@@ -113,6 +115,11 @@ SUMMARY_RE = re.compile(r"^\*\*Summary\*\*:\s*(.+?)\s*$")
 # hand-written theme sections, so the grouping lives on the entry and no shared file
 # has to change when one is added.
 THEME_RE = re.compile(r"^\*\*Theme\*\*:\s*(.+?)\s*$")
+# A `## Related` label whose leading term is a supersession claim. The term may be
+# followed by an explanation (`superseded by: the surface moved`), so only the leading
+# term is matched — a label that merely mentions superseding later is a description.
+SUPERSEDES_LABEL_RE = re.compile(r"^supersedes(?:\s*[:;,—–-]|$)", re.IGNORECASE)
+SUPERSEDED_BY_LABEL_RE = re.compile(r"^superseded by(?:\s*[:;,—–-]|$)", re.IGNORECASE)
 # The entry's H1 — the catalog's fallback line for an entry with no `**Summary**`.
 TITLE_RE = re.compile(r"^#\s+(.+?)\s*$")
 WIKILINK_RE = re.compile(rf"\[\[({ID_RE_SRC})-[a-z]+-[^\]]+\]\]")
@@ -328,8 +335,21 @@ def lint_knowledge(knowledge_dir) -> list:
             findings.append(Finding(
                 "metadata", "error" if required else "warning",
                 f"entry {stem} has no **{field.title()}** line — the derived catalog "
-                f"reads it" + ("" if required else
-                               " (run minerva:migrate-fix to backfill a legacy corpus)")))
+                f"reads it (on a pre-3.0 corpus, minerva:migrate-fix backfills it; "
+                f"otherwise write it by hand)"))
+
+    # --- 2b. inverted supersession ---------------------------------------------
+    # An entry cannot retire one written after it. `supersedes` pointing at a NEWER entry
+    # is a mislabelled `superseded by`; the derived catalog ignores it rather than mark
+    # the live entry retired, so it is reported here instead of silently dropped.
+    for stem in ordered:
+        for target, label in entries[stem][1]["edges"]:
+            if (label and SUPERSEDES_LABEL_RE.match(label) and target in entry_stems
+                    and by_id(stem) < by_id(target)):
+                findings.append(Finding(
+                    "supersession", "warning",
+                    f"entry {stem} says it supersedes the newer {target} — an entry cannot "
+                    f"retire a later one; did you mean 'superseded by'?"))
 
     # --- 3. legacy aggregates -------------------------------------------------
     for name in LEGACY_AGGREGATES:

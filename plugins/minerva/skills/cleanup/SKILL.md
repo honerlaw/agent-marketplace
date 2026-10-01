@@ -110,7 +110,9 @@ merge: `minerva:promote` writes write-once entries carrying their own `**Theme**
 `knowledge_catalog.py` (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). The
 knowledge update ships complete in the unit's own PR. Earlier versions opened a
 `minerva/reconcile` PR here; do not recreate one. A stale local `minerva/reconcile` branch
-left by a 2.x run is safe to delete with `git branch -d`.
+left by a 2.x run holds only squash-merged machine commits, so `git branch -d` refuses it:
+confirm no PR is open on it (`gh pr list --head minerva/reconcile --state open`), then
+delete it with `git branch -D`.
 
 ## Idempotency
 

@@ -64,10 +64,10 @@ Use this exact template (verbatim, with the appended blank line at the end for r
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/knowledge/` — write-once entries (decisions, bugs, patterns, constraints, references), each tagged with a `**Theme**` and a one-line `**Summary**`. Orient by listing the catalog — one `theme | entry | summary` line per entry, grouped by theme — then open only the entries whose theme bears on your task:
+- `.minerva/knowledge/` — write-once entries (decisions, bugs, patterns, constraints, references), each tagged with a `**Theme**` and a one-line `**Summary**`. Orient by listing the catalog — one `theme | entry | summary` line per entry, grouped by theme, with `(superseded)` on an entry a newer one has retired — then open only the entries whose theme bears on your task:
 
   ```sh
-  awk 'function p(){if(f!=""){n=f;sub(/.*\//,"",n);sub(/\.md$/,"",n);print (t==""?"(unthemed)":t)" | "n" | "s};f=FILENAME;t="";s="";q=0} FNR==1{p()} /^[ \t]*(```|~~~)/{q=!q;next} q{next} /^\*\*Theme\*\*:/&&t==""{t=$2} /^\*\*Summary\*\*:/&&s==""{sub(/^\*\*Summary\*\*: */,"");s=$0} END{p()}' .minerva/knowledge/[0-9]*.md | sort
+  find .minerva/knowledge -name '[0-9]*.md' -exec awk 'function p(){if(f!=""){n=f;sub(/.*\//,"",n);sub(/\.md$/,"",n);N[++c]=n;T[n]=(t==""?"(unthemed)":t);S[n]=s;if(b)X[n]=1};f=FILENAME;t="";s="";q=0;r=0;h=0;b=0} function id(x){sub(/.*\//,"",x);sub(/-[a-z]+-.*/,"",x);return x} function tgt(x){sub(/^- \[\[/,"",x);sub(/\]\].*/,"",x);return x} FNR==1{p()} {sub(/\r$/,"")} /^[ \t]*(```|~~~)/{q=!q;next} q{next} /^## /{h=1;r=($0=="## Related")} !h&&/^<!-- superseded-by: /{b=1} /^\*\*Theme\*\*:/&&t==""{sub(/^\*\*Theme\*\*:[ \t]*/,"");sub(/[ \t]+$/,"");t=$0} /^\*\*Summary\*\*:/&&s==""{sub(/^\*\*Summary\*\*:[ \t]*/,"");sub(/[ \t]+$/,"");s=$0} r&&/^- \[\[[^]]*\]\][ \t]*(—|–|-)[ \t]*/&&!/\]\].*\[\[/{l=tolower($0);sub(/^- \[\[[^]]*\]\][ \t]*(—|–|-)[ \t]*/,"",l);x=tgt($0);if(l~/^superseded by([ \t]*(:|;|,|—|–|-)|[ \t]*$)/)b=1;else if(l~/^supersedes([ \t]*(:|;|,|—|–|-)|[ \t]*$)/&&id(f)>=id(x))Y[x]=1} END{p();for(i=1;i<=c;i++){n=N[i];print T[n]" | "n" | "S[n]((n in X)||(n in Y)?" (superseded)":"")}}' {} + | sort
   ```
 
   Links between entries are forward-only `## Related` lines; find what links *to* an entry with `grep -l '\[\[<entry>\]\]' .minerva/knowledge/*.md`.
@@ -94,9 +94,9 @@ automatic**:
 
 1. **Staleness check (generic, disjunctive).** For each `.minerva/...` path that appears
    in the **current template above** (today: `.minerva/knowledge/`,
-   `.minerva/knowledge/[0-9]*.md` — the catalog one-liner's glob — `.minerva/reference/`,
+   `find .minerva/knowledge -name` — the catalog one-liner — `.minerva/reference/`,
    `.minerva/work/`), check whether the detected section contains that substring. A
-   pre-3.0 section routes to `overview.md` / `index.md` and lacks the catalog glob, so it
+   pre-3.0 section routes to `overview.md` / `index.md` and lacks the catalog one-liner, so it
    is always a candidate — which is how an upgraded consumer learns its routing points at
    files that no longer exist. If **any** is missing, the section is
    a refresh candidate. (Derive the markers from the template-of-record above, never from a hardcoded list.)

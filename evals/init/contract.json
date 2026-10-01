@@ -77,7 +77,7 @@
     },
     {
       "any_of": [
-        ".minerva/knowledge/[0-9]*.md"
+        "find .minerva/knowledge -name"
       ],
       "file": "references/steps.md"
     }

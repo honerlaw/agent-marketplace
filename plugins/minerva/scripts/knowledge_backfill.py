@@ -61,23 +61,34 @@ def index_summaries(index_text: str) -> dict:
     return out
 
 
-def overview_themes(overview_text: str) -> dict:
-    """`{stem: theme}` — the first `## ` section of a legacy `overview.md` linking each stem.
-
-    A header is a `## ` line at the start of the file or after a blank line: a prose line
-    that merely wraps onto `## ` mid-paragraph is not a section.
-    """
-    out = {}
-    theme = None
-    prev = ""
+def _overview_sections(overview_text: str):
+    """Yield `(heading, line)` for each non-fenced line of a legacy `overview.md`, with the
+    `## ` section it sits in (None before the first). A header is a `## ` line at the start
+    of the file or after a blank line: a prose line that wraps onto `## ` mid-paragraph is
+    not a section."""
+    heading, prev = None, ""
     for _, line in _strip_fences(overview_text.splitlines()):
         if SECTION_RE.match(line) and not prev.strip():
-            theme = theme_slug(line[3:])
-        elif theme:
-            for m in WIKILINK_STEM_RE.finditer(line):
-                out.setdefault(m.group(1), theme)
+            heading = line[3:].strip()
+        yield heading, line
         prev = line
+
+
+def overview_themes(overview_text: str) -> dict:
+    """`{stem: theme}` — the first `## ` section of a legacy `overview.md` linking each stem."""
+    out = {}
+    for heading, line in _overview_sections(overview_text):
+        if heading is None:
+            continue
+        for m in WIKILINK_STEM_RE.finditer(line):
+            out.setdefault(m.group(1), theme_slug(heading))
     return out
+
+
+def overview_headings(overview_text: str) -> dict:
+    """`{heading: theme}` for every `## ` section of a legacy `overview.md` — what the
+    confirmation gate shows, so the theme names are reviewed as the script derives them."""
+    return {h: theme_slug(h) for h, _ in _overview_sections(overview_text) if h is not None}
 
 
 def insert_metadata(text: str, theme=None, summary=None) -> str:
@@ -86,7 +97,7 @@ def insert_metadata(text: str, theme=None, summary=None) -> str:
     if not new:
         return text
     lines = text.splitlines(keepends=True)
-    nonfenced = list(_strip_fences([ln.rstrip("\n") for ln in lines]))
+    nonfenced = list(_strip_fences([ln.rstrip("\r\n") for ln in lines]))
     head = []
     for i, line in nonfenced:
         if SECTION_RE.match(line):
@@ -98,12 +109,19 @@ def insert_metadata(text: str, theme=None, summary=None) -> str:
         if anchor is not None:
             break
     if anchor is None:
+        # No Type/Date/H1 in the metadata block: go after a leading frontmatter block, never
+        # above its opening `---`, which would stop it parsing as frontmatter at all.
         anchor = -1
+        if lines and lines[0].rstrip("\r\n") == "---":
+            anchor = next((i for i in range(1, len(lines))
+                           if lines[i].rstrip("\r\n") == "---"), -1)
+    # Match the file's own line ending, so a CRLF entry stays CRLF throughout.
+    eol = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
     if anchor >= 0 and not lines[anchor].endswith("\n"):
-        lines[anchor] += "\n"
-    insert = [ln + "\n" for ln in new]
+        lines[anchor] += eol
+    insert = [ln + eol for ln in new]
     if anchor >= 0 and H1_RE.match(lines[anchor]):
-        insert = ["\n"] + insert  # keep the H1 separated from the metadata block
+        insert = [eol] + insert  # keep the H1 separated from the metadata block
     return "".join(lines[:anchor + 1] + insert + lines[anchor + 1:])
 
 
@@ -119,7 +137,8 @@ def plan(knowledge_dir) -> dict:
     themes = overview_themes((kd / "overview.md").read_text()) if "overview.md" in legacy else {}
     edits, no_summary, no_theme = {}, [], []
     for path in sorted(p for p in kd.glob("*.md") if ENTRY_RE.match(p.name)):
-        stem, text = path.name[:-3], path.read_text()
+        # newline="" on read and write: universal-newline mode would rewrite every CRLF.
+        stem, text = path.name[:-3], path.read_text(newline="")
         theme = summary = None
         if not _has(THEME_RE, text):
             theme = themes.get(stem)
@@ -131,7 +150,8 @@ def plan(knowledge_dir) -> dict:
                 no_summary.append(stem)
         if theme or summary:
             edits[path] = insert_metadata(text, theme, summary)
-    return {"legacy": legacy, "edits": edits,
+    headings = overview_headings((kd / "overview.md").read_text()) if "overview.md" in legacy else {}
+    return {"legacy": legacy, "edits": edits, "themes": headings,
             "no_summary": no_summary if legacy else [], "no_theme": no_theme if legacy else []}
 
 
@@ -143,7 +163,8 @@ def backfill(knowledge_dir, dry_run: bool = False) -> dict:
         return result
     if not dry_run:
         for path, text in result["edits"].items():
-            path.write_text(text)
+            with open(path, "w", newline="") as f:
+                f.write(text)
         for name in result["legacy"]:
             (Path(knowledge_dir) / name).unlink()
     return result
@@ -159,6 +180,10 @@ def main(argv=None) -> int:
         print(f"knowledge-backfill: {knowledge_dir} has no index.md/overview.md — already migrated.")
         return 0
     verb = "would update" if dry_run else "updated"
+    if result["themes"]:
+        print("[themes derived from overview.md sections]")
+        for heading, theme in result["themes"].items():
+            print(f"  {theme}  <-  ## {heading}")
     print(f"knowledge-backfill: {verb} {len(result['edits'])} entr(ies); "
           f"{'would delete' if dry_run else 'deleted'} {', '.join(result['legacy'])}.")
     for label, stems in (("no Summary (write by hand)", result["no_summary"]),

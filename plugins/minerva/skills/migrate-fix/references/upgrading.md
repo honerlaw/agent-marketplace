@@ -29,9 +29,10 @@ them:
 - **Unchanged:** invalid ids and broken `## Related` links stay errors.
 
 An un-backfilled 2.x corpus therefore typically shows **one warning per entry** (missing
-metadata) plus the legacy-aggregate warning, and no errors: the date-keyed rule enforces
-metadata only on entries written under 3.0, so an old corpus stays green until it is
-migrated.
+metadata) plus the legacy-aggregate warning: the rule is keyed on the 2026-10-01 cutoff, so
+entries dated before it only warn. An entry a 2.x install wrote on or after 2026-10-01 is the exception: it lacks `**Theme**`, so it is an error until migrated — run `minerva:migrate-fix`, which fills it if the old `overview.md` linked it, and hand-assign the theme otherwise.
+Upgrading late means more such entries, and a red knowledge-lint gate until they are fixed
+— loud on purpose, since an entry without a theme is invisible in the catalog.
 
 ## What to do on first run after upgrade
 

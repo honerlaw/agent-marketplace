@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from knowledge_catalog import (UNTHEMED, backlinks, load_entries, main, render_catalog,
-                               superseded_by, theme_counts)
+from knowledge_catalog import (UNTHEMED, backlinks, inverted_supersedes, load_entries, main,
+                               render_catalog, superseded_by, theme_counts)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LIVE_KNOWLEDGE = REPO_ROOT / ".minerva" / "knowledge"
@@ -144,10 +144,16 @@ def test_live_corpus_is_fully_themed_and_summarised():
 
 # --- the routing one-liner ---------------------------------------------------------
 def routing_oneliner() -> str:
-    """The `awk` catalog command exactly as the init Routing template writes it."""
+    """The `find … awk` catalog command exactly as the init Routing template writes it."""
     text = INIT_STEPS.read_text()
     template = re.search(r"~~~markdown\n(## minerva\n.*?)\n~~~", text, re.S).group(1)
-    return next(ln.strip() for ln in template.splitlines() if ln.strip().startswith("awk '"))
+    return next(ln.strip() for ln in template.splitlines()
+                if ln.strip().startswith("find .minerva/knowledge"))
+
+
+def run_oneliner(root, shell="sh"):
+    return subprocess.run([shell, "-c", routing_oneliner()], cwd=root, capture_output=True,
+                          text=True, check=True).stdout
 
 
 def test_the_repo_routing_carries_the_template_oneliner():
@@ -157,24 +163,69 @@ def test_the_repo_routing_carries_the_template_oneliner():
 @pytest.mark.skipif(shutil.which("awk") is None, reason="awk not installed")
 @pytest.mark.parametrize("use_live", [False, True])
 def test_routing_oneliner_matches_the_catalog(tmp_path, use_live):
-    """The one-liner is a second reader of the Theme/Summary lines. It must see the same
-    (theme, entry, summary) set as the script — including ignoring a fenced example."""
+    """The one-liner is a second reader of the entries. It must see the same (theme, entry,
+    summary, superseded) set as the script — ignoring a fenced example, reading a whole
+    multi-word theme, tolerating CRLF, and deriving supersession from all three sources
+    while ignoring an inverted `supersedes` edge."""
     if use_live:
         root = REPO_ROOT
     else:
         root = tmp_path
         kd = root / ".minerva" / "knowledge"
         kd.mkdir(parents=True)
+        D, E, F = "2026-10-04-bug-d", "2026-10-05-bug-e", "041-pattern-f"
         corpus(kd, {
             A: entry("a", theme="wiki", summary="first"),
             B: entry("b", theme=None, summary="second",
                      body="\n```\n**Theme**: fenced\n**Summary**: fenced\n```\n"),
-            C: entry("c", typ="pattern", theme="lifecycle", summary="third: with | pipes"),
+            C: entry("c", typ="pattern", theme="lifecycle", summary="third: with | pipes",
+                     related=[(A, "supersedes: replaced it"), (D, "supersedes")]),
+            D: entry("d", typ="bug", theme="knowledge wiki", summary="newer than C"),
+            E: entry("e", typ="bug", related=[(B, "superseded by"), (A, "see also")]),
+            F: entry("f", typ="pattern", banner=A),
         })
+        crlf = kd / f"{D}.md"
+        crlf.write_bytes(crlf.read_bytes().replace(b"\n", b"\r\n"))
         (kd / "index.md").write_text("# Knowledge index\n")
-    out = subprocess.run(["sh", "-c", routing_oneliner()], cwd=root, capture_output=True,
-                         text=True, check=True).stdout
-    got = {tuple(line.split(" | ", 2)) for line in out.splitlines()}
+    got = set()
+    for line in run_oneliner(root).splitlines():
+        theme, stem, summary = line.split(" | ", 2)
+        marked = summary.endswith(" (superseded)")
+        got.add((theme, stem, summary[:-len(" (superseded)")] if marked else summary, marked))
     entries = load_entries(root / ".minerva" / "knowledge")
-    want = {(e["theme"] or UNTHEMED, stem, e["summary"] or "") for stem, e in entries.items()}
+    sup = superseded_by(entries)
+    want = {(e["theme"] or UNTHEMED, stem, e["summary"] or "", stem in sup)
+            for stem, e in entries.items()}
     assert got == want
+    if not use_live:
+        # Pin the fixture so the parity above is not vacuous: A is retired by C's
+        # `supersedes`, E by its own `superseded by`, F by its legacy banner — and D is
+        # NOT, because C is older than D (an inverted edge the catalog must ignore).
+        assert sup == {A: [C], E: [B], F: [A]}
+
+
+@pytest.mark.skipif(shutil.which("awk") is None, reason="awk not installed")
+@pytest.mark.parametrize("shell", ["sh", "zsh"])
+def test_routing_oneliner_on_an_empty_corpus_prints_nothing_and_succeeds(tmp_path, shell):
+    """An unmatched glob aborts the whole command in zsh; `find` makes an empty corpus a
+    clean, empty listing in every shell."""
+    if shutil.which(shell) is None:
+        pytest.skip(f"{shell} not installed")
+    (tmp_path / ".minerva" / "knowledge").mkdir(parents=True)
+    assert run_oneliner(tmp_path, shell) == ""
+
+
+def test_an_older_entry_cannot_supersede_a_newer_one(tmp_path):
+    """A `supersedes` edge pointing forward in time is a mislabelled `superseded by`. Taken
+    literally it marks the live entry retired in favour of the rule it replaced — the live
+    corpus had one (2026-06-10 → 2026-06-13). Ignored here, and reported by lint."""
+    d = corpus(tmp_path, {A: entry("a", related=[(C, "supersedes: the newer one")]),
+                          C: entry("c", typ="pattern")})
+    entries = load_entries(d)
+    assert superseded_by(entries) == {}
+    assert inverted_supersedes(entries) == [(A, C)]
+
+
+def test_a_same_day_supersedes_is_honoured(tmp_path):
+    d = corpus(tmp_path, {A: entry("a"), B: entry("b", related=[(A, "supersedes")])})
+    assert superseded_by(load_entries(d)) == {A: [B]}
