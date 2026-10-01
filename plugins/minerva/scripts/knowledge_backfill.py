@@ -138,7 +138,9 @@ def plan(knowledge_dir) -> dict:
     edits, no_summary, no_theme = {}, [], []
     for path in sorted(p for p in kd.glob("*.md") if ENTRY_RE.match(p.name)):
         # newline="" on read and write: universal-newline mode would rewrite every CRLF.
-        stem, text = path.name[:-3], path.read_text(newline="")
+        stem = path.name[:-3]
+        with open(path, newline="") as f:  # `Path.read_text(newline=)` needs Python 3.13
+            text = f.read()
         theme = summary = None
         if not _has(THEME_RE, text):
             theme = themes.get(stem)
