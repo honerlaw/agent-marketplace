@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-11
 **Type**: constraint
+**Theme**: knowledge-wiki
+**Summary**: fence-aware scans import the single-sourced FENCE_RE grammar (or a parser built on it), whatever the corpus
 **Context**: .minerva/work/2026-06-11-strengthen-pointer-guard
 
 ## Context

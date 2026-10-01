@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-26
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: propose-ship-auto dispatches independent gates together and narrows the interface panel clause to existing, consumed interfaces
 **Context**: .minerva/work/2026-09-26-parallel-gates-narrow-panel-predicate (see git history if the worktree has been cleaned up)
 

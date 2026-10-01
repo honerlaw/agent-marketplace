@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: Deriving consumers from a definition site finds only what that site names; search for the construction instead
 **Context**: .minerva/work/2026-08-28-observable-orchestrator-mode (see git history if the worktree has been cleaned up)
 

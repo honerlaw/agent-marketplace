@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-05
 **Type**: pattern
+**Theme**: concurrency
 **Summary**: gate concurrency on an atomic operation's own success, not on a preceding "is it taken?" read
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 

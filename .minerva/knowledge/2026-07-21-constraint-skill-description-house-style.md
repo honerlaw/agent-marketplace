@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-21
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: descriptions lead with ambient triggers, invocation clause last, ≤1024 chars
 **Context**: .minerva/work/2026-07-21-skill-best-practices-audit (see git history if the worktree has been cleaned up)
 
 ## Context

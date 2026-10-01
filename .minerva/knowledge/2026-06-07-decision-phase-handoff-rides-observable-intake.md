@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-07
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: phase-to-phase skill handoffs ride an observable intake (an inline arg), not a self-judged "did the prior phase converge?" predicate
 **Context**: .minerva/work/2026-06-07-add-explore-skill (see git history if the worktree has been cleaned up)
 
 ## Context

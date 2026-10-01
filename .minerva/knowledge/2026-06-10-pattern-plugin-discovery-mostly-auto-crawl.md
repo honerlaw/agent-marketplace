@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-10
 **Type**: pattern
+**Theme**: skills-and-catalogs
+**Summary**: plugin discoverability is mostly auto-crawl once public + licensed + topic-tagged; manual directories are web-form submissions, not source-vendor lists
 **Context**: .minerva/work/2026-06-10-publish-minerva-to-plugin-directories
 
 ## Context

@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-21
 **Type**: pattern
+**Theme**: skills-and-catalogs
+**Summary**: catalog surfaces drift semantically even during active scrubbing; sweep all four
 **Context**: .minerva/work/2026-07-21-skill-best-practices-audit (see git history if the worktree has been cleaned up)
 
 ## Context

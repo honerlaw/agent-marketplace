@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-09-05
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: a folded Skeptic critique now gets one fold-audit re-check, arbitrated strictly; whole-proposal soundness became a Skeptic gate; `decision_telemetry.py` measures the gate taxonomy
 **Context**: .minerva/work/2026-09-05-balanced-rechecks-folds
 

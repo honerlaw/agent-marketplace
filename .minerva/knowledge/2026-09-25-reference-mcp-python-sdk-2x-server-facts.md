@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: reference
+**Theme**: mcp-servers
 **Summary**: mcp 2.x renamed FastMCP to MCPServer, uses httpx2, caps HTTP bodies at 4 MiB
 **Context**: .minerva/work/2026-09-25-add-openai-mcp-server (see git history if the worktree has been cleaned up)
 

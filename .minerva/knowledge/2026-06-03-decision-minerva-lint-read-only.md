@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: minerva:lint ships read-only (advisory judged dims); the gated fix-applier is deferred to Phase B.3
 **Context**: .minerva/work/2026-06-03-knowledge-lint-skill (see git history if the worktree has been cleaned up)
 
 ## Context

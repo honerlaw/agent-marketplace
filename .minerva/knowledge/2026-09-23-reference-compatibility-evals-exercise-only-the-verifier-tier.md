@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-23
 **Type**: reference
+**Theme**: lifecycle
 **Summary**: Both auto eval scenarios use a trivial fixture; no eval reaches the reviewer-default or panel tier
 **Context**: .minerva/work/2026-09-23-adaptive-propose-ship-auto (see git history if the worktree has been cleaned up)
 

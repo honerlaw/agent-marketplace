@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: Prose explaining a requirement keeps a whole-file presence check green after the enforcement is deleted
 **Context**: .minerva/work/2026-08-27-deferral-cost-model (see git history if the worktree has been cleaned up)
 

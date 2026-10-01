@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-05
 **Type**: constraint
+**Theme**: concurrency
 **Summary**: `{id: record}` silently drops duplicates; build `{id: [records]}` and exclude dupes from every derived edit
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 

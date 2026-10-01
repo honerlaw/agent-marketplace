@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: constraint
+**Theme**: worktrees-and-promote
 **Summary**: It misses squash merges and counts a zero-commit branch as merged; a union inherits both errors
 **Context**: .minerva/work/2026-08-28-workstream-status-skill
 

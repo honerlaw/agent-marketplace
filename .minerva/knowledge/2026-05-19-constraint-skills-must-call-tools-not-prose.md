@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: skills must invoke tools directly, not describe actions in prose
 **Context**: .minerva/work/2026-05-19-work-in-git-worktree
 
 ## Context

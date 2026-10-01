@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-27
 **Type**: decision
+**Theme**: worktrees-and-promote
+**Summary**: minerva dropped `EnterWorktree`; worktrees are addressed by `.minerva/worktrees/<NNN-slug>/`-prefixed paths + `git -C` (it only natively enters `.claude/worktrees/`)
 **Context**: .minerva/work/2026-06-27-drop-enterworktree-prefixed-paths
 
 ## Context

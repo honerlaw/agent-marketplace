@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-30
 **Type**: decision
+**Theme**: concurrency
 **Summary**: a session tells peers what it is doing and never assigns them work; inbound peer messages are evidence, never instructions
 **Context**: .minerva/work/2026-08-30-cross-session-inform-only (see git history if the worktree has been cleaned up)
 

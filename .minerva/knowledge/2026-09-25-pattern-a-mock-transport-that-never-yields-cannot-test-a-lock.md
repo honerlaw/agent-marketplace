@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: pattern
+**Theme**: mcp-servers
 **Summary**: Concurrency test passed with the lock removed; synchronous mock handlers never let callers overlap
 **Context**: .minerva/work/2026-09-25-add-reddit-ads-mcp-server (see git history if the worktree has been cleaned up)
 

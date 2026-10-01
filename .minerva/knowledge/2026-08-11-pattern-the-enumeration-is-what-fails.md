@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: a marker with eight spellings broke a check for months, and enumerating them by eye failed three times in one sitting — the assertion that held asks the corpus
 **Context**: .minerva/work/2026-08-11-close-remaining-loose-ends
 

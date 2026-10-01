@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: constraint
+**Theme**: silent-success
 **Summary**: Dispatch pin can be absent from the Agent tool schema, so gates park despite the enforcing test passing
 **Context**: .minerva/work/2026-08-28-observable-orchestrator-mode (see git history if the worktree has been cleaned up)
 

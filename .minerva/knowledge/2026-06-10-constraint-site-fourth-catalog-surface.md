@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-10
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: the static site’s skills catalog is a fourth, test-enforced catalog surface (bidirectional, site-only), extending 010’s three
 **Context**: .minerva/work/2026-06-10-minerva-static-site (see git history if the worktree has been cleaned up)
 
 ## Context

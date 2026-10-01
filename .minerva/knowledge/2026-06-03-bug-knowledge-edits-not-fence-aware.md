@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: bug
+**Theme**: knowledge-wiki
+**Summary**: the span editors read fenced examples as structure: crash/false-dedupe on any edge into 015 (third fence-trap instance; fixed)
 **Context**: .minerva/work/2026-06-03-related-backfill (see git history if the worktree has been cleaned up)
 
 ## Context

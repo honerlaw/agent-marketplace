@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-11
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: skills keep ≤9KB SKILL.md cores with detail in on-demand references/; contract anchors follow via the `file` field
 **Context**: .minerva/work/2026-06-11-skill-progressive-disclosure
 
 ## Context

@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: plugin skills are auto-discovered from `skills/`; no manifest update needed
 **Context**: .minerva/work/2026-05-19-add-propose-ship-skill
 
 ## Context

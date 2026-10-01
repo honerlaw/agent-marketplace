@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: decision
+**Theme**: mcp-servers
 **Summary**: API-wrapping MCP servers expose generic request tools plus OpenAPI discovery, not per-endpoint tools
 **Context**: .minerva/work/2026-09-25-add-openai-mcp-server (see git history if the worktree has been cleaned up)
 

@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: constraint
+**Theme**: silent-success
 **Summary**: PLUGIN_SCRIPTS symlinks to the primary checkout, so a worktree's edits are not what runs
 **Context**: .minerva/work/2026-08-28-guard-stale-script-resolution (see git history if the worktree has been cleaned up)
 

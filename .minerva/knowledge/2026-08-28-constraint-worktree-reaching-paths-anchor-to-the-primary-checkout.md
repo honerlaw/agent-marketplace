@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: constraint
+**Theme**: worktrees-and-promote
 **Summary**: `--show-toplevel` yields the linked worktree; use `cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd`
 **Context**: .minerva/work/2026-08-27-deferral-cost-model (see git history if the worktree has been cleaned up)
 

@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: A new state's decider and its executors are separate surfaces; updating one leaves the others silently wrong
 **Context**: .minerva/work/2026-08-27-deferral-cost-model (see git history if the worktree has been cleaned up)
 

@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-09
 **Type**: pattern
+**Theme**: knowledge-wiki
 **Context**: .minerva/work/2026-08-09-resolve-entry-type-tolerantly
 
 **Summary**: `parse_entry` read an entry's type from one anchored spelling, `**Type**: x`. Across a 629-entry corpus 42 entries declared it somewhere else — `Type: x` plain (16), `**Type:** x` with the colon inside the bold (13), a prose H1 or nothing (10), frontmatter only (3) — and every one resolved to `None`, which `plan_index` cannot place and the linter reported as `type 'None' but catalogued under a 'constraint' section`: an error naming a mismatch the entry does not have. Fix by resolving through a fallback chain ordered most-deliberate-first (body field in any spelling → frontmatter → filename segment), which makes a fallback able only to fill a gap, never override an author. Before trusting the last resort, MEASURE its concordance: filename type matched declared type 642/642 across two corpora.

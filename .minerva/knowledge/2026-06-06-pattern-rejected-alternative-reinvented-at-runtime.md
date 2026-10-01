@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-06
 **Type**: pattern
+**Theme**: lifecycle
+**Summary**: rejected alternatives recur at runtime; prohibit in skill text, test-anchored
 **Context**: .minerva/work/2026-06-06-no-ceremony-ratification (see git history if the worktree has been cleaned up)
 
 ## Context

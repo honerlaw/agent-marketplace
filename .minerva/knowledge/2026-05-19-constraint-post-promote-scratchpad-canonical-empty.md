@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: constraint
+**Theme**: worktrees-and-promote
+**Summary**: the post-promote scratchpad is the canonical empty state downstream skills expect
 **Context**: .minerva/work/2026-05-19-add-ship-skill
 
 ## Context

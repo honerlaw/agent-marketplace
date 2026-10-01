@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-30
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: anchor the sentence that does the work, not the heading or lead-in that introduces it
 **Context**: .minerva/work/2026-08-30-cross-session-inform-only (see git history if the worktree has been cleaned up)
 

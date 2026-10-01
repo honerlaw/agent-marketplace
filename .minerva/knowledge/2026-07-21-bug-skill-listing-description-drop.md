@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-21
 **Type**: bug
+**Theme**: skills-and-catalogs
+**Summary**: valid frontmatter descriptions dropped from rendered listing; ambient triggering impossible for affected skills
 **Context**: .minerva/work/2026-07-21-skill-best-practices-audit (see git history if the worktree has been cleaned up)
 
 ## Context

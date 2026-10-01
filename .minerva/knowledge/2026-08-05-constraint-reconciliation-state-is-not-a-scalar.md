@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-05
 **Type**: constraint
+**Theme**: concurrency
 **Summary**: a threshold assumes NNN-ordered merges; use a per-record marker, not a scalar floor
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 

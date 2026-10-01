@@ -133,6 +133,13 @@ FRONTMATTER_TYPE_RE = re.compile(r"^\s*type:\s*([a-z]+)\s*$", re.MULTILINE)
 # The entry's own one-line catalog summary. Its presence is what lets the index be
 # rebuilt mechanically instead of needing an LLM to re-condense the Finding.
 SUMMARY_RE = re.compile(r"^\*\*Summary\*\*:\s*(.+?)\s*$")
+# The entry's theme: the single-valued, lowercase kebab-case grouping the derived
+# catalog (`knowledge_catalog.py`) sorts entries under. It replaced `overview.md`'s
+# hand-written theme sections, so the grouping lives on the entry and no shared file
+# has to change when one is added.
+THEME_RE = re.compile(r"^\*\*Theme\*\*:\s*(.+?)\s*$")
+# The entry's H1 — the catalog's fallback line for an entry with no `**Summary**`.
+TITLE_RE = re.compile(r"^#\s+(.+?)\s*$")
 WIKILINK_RE = re.compile(rf"\[\[({ID_RE_SRC})-[a-z]+-[^\]]+\]\]")
 # group(1) = the full stem, group(2) = its NNN.
 CATALOG_LINE_RE = re.compile(rf"^-\s+\[\[(({ID_RE_SRC})-[a-z]+-[^\]]+)\]\]")
@@ -266,6 +273,18 @@ def parse_entry(path: Path):
         if m:
             summary = m.group(1)
             break
+    theme = None
+    for _, line in nonfenced:
+        m = THEME_RE.match(line)
+        if m:
+            theme = m.group(1)
+            break
+    title = None
+    for _, line in nonfenced:
+        m = TITLE_RE.match(line)
+        if m:
+            title = m.group(1)
+            break
 
     # Banner back-links: anchored markers ABOVE the first non-fenced `## ` header.
     first_section_idx = next((i for i, ln in nonfenced if SECTION_RE.match(ln)), None)
@@ -301,6 +320,13 @@ def parse_entry(path: Path):
         "stem": path.name[:-3],
         "declared_type": declared_type,
         "summary": summary,
+        "theme": theme,
+        "title": title,
+        "edges": edges,
+        # Every successor a stored banner names (marker and visible line), for the
+        # catalog's supersession union. Legacy only: entries are write-once now, so no
+        # new banner is ever written — supersession is derived from `supersedes` edges.
+        "banner_stems": sorted(banner_targets | banner_target_stems),
         "related_out": related_out,
         "backlinks": related_out | banner_targets,
         "unlabelled_out_stems": unlabelled_out_stems,

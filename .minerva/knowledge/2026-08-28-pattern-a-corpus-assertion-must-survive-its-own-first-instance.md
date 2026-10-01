@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: "Nothing does X yet" expires on first adoption; assert the property, not the corpus's current contents
 **Context**: .minerva/work/2026-08-27-deferral-cost-model (see git history if the worktree has been cleaned up)
 

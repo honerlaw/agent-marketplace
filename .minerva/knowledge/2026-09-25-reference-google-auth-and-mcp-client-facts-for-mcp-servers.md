@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: reference
+**Theme**: mcp-servers
 **Summary**: google-auth is only partly annotated under mypy --strict; mcp 2.x Client uses snake_case accessors
 **Context**: .minerva/work/2026-09-25-add-google-search-console-mcp-server (see git history if the worktree has been cleaned up)
 

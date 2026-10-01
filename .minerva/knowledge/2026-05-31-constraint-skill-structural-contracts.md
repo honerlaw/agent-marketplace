@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-31
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: every skill carries a declarative structural contract, enforced by an enumerating test
 **Context**: .minerva/work/2026-05-31-skill-contract-eval-floor (see git history if the worktree has been cleaned up)
 
 ## Context

@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-10
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: `assert "x" in prose` cannot fail when x is removed from the codebase; invert it, don't delete it
 **Context**: .minerva/work/2026-08-09-date-prefixed-identity
 

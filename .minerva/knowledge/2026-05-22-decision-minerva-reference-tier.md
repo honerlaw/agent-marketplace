@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-22
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: `.minerva/reference/` is the present-tense operational-doc tier, distinct from knowledge
 **Context**: .minerva/work/2026-05-22-add-triage-skill (see git history if the worktree has been cleaned up)
 
 ## Context

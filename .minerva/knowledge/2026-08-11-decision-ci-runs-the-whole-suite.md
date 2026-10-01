@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: decision
+**Theme**: silent-success
 **Summary**: three dead test files forced an enumerated CI list for months; deleting them dissolved the constraint instead of guarding it
 **Context**: .minerva/work/2026-08-11-close-remaining-loose-ends
 

@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-16
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: a third orchestrator (propose-ship-quick) has the main model decide solo; its fail-closed escalation predicate is the structural inverse of auto's skip predicate
 **Context**: .minerva/work/2026-06-16-add-propose-ship-quick (see git history if the worktree has been cleaned up)
 
 <!-- superseded-by: 2026-09-23-decision-one-orchestrator-picks-each-decisions-tier -->

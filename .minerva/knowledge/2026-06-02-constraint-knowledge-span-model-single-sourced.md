@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-02
 **Type**: constraint
+**Theme**: knowledge-wiki
+**Summary**: the wiki span model is single-sourced in scripts/knowledge_spans.py; import it, never re-derive
 **Context**: .minerva/work/2026-06-02-knowledge-lint-detector (see git history if the worktree has been cleaned up)
 
 ## Context

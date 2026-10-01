@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-09
 **Type**: decision
+**Theme**: knowledge-wiki
 **Context**: .minerva/work/2026-08-09-reference-is-a-fifth-entry-type
 **Summary**: The entry-type vocabulary was four values — `decision` / `bug` / `pattern` / `constraint` — hardcoded in `SECTION_TO_TYPE`, `SECTION_ORDER` and four skill docs. Authors wrote `reference` entries anyway (four of them in one corpus), and the tooling had nowhere to put them: `plan_index` cannot place a line whose declared type has no section, so they were refused indefinitely. Adding `## References` as a fifth section ratifies what authors already do. Two rules fall out: **append a new section, never interleave it** (appending is the only position that leaves every existing index's line order byte-identical), and an empty section renders as its header alone, so the change is inert for every corpus that does not use it.
 

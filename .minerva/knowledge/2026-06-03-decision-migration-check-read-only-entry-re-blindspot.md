@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: minerva:migrate is the read-only migration-shape check; its reason to exist is the ENTRY_RE false-clean blind spot every wiki tool shares
 **Context**: .minerva/work/2026-06-03-migrate-check (see git history if the worktree has been cleaned up)
 
 ## Context

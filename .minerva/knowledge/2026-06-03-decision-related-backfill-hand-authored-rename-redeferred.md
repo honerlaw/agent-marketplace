@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: the initial ## Related backfill was hand-authored (the spike for any future skill); rename-APPLY stays deferred at zero live instances
 **Context**: .minerva/work/2026-06-03-related-backfill (see git history if the worktree has been cleaned up)
 
 ## Context

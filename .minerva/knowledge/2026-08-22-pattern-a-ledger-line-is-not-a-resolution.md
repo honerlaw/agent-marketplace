@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: a record marking work handled must separate decided-and-done from decided-to-wait, or it buries it
 
 **Context**: .minerva/work/2026-08-22-backfill-followups-to-issues (see git history if the worktree has been cleaned up)

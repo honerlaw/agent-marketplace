@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-24
 **Type**: reference
+**Theme**: concurrency
 **Summary**: filter ListAgents on liveness, reply capability, and project-name prefix before messaging — unfiltered fan-out pings unrelated projects
 **Context**: .minerva/work/2026-08-24-cross-session-preflight
 

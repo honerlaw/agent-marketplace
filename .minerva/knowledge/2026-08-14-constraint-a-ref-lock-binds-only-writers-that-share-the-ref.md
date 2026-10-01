@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-14
 **Type**: constraint
+**Theme**: concurrency
 **Summary**: an atomic-push lock excludes nothing from a second writer that pushes a different branch name
 **Context**: .minerva/work/2026-08-14-cleanup-stands-down-for-ci
 

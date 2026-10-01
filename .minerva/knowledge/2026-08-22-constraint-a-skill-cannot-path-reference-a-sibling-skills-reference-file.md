@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: constraint
+**Theme**: skills-and-catalogs
 **Summary**: the pointer gate resolves any `references/<file>.md` substring against the citing skill only
 
 **Context**: .minerva/work/2026-08-22-backfill-followups-to-issues (see git history if the worktree has been cleaned up)

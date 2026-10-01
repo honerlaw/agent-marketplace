@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-26
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: Deletion passes need python -B: same-size edits restored in-second reuse the mutated .pyc
 **Context**: .minerva/work/2026-09-26-trace-orchestrator-run-time (see git history if the worktree has been cleaned up)
 

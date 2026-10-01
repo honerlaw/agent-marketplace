@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-10
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: panel mechanics live in minerva:round-table; orchestrators delegate and keep policy (quorum taxonomy, skip predicates, run-level state)
 **Context**: .minerva/work/2026-06-10-extract-round-table (see git history if the worktree has been cleaned up)
 
 ## Context

@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: concurrency
 **Summary**: guard a retry with the local record; an eventually-consistent index misses what you just wrote
 
 **Context**: .minerva/work/2026-08-22-followups-become-github-issues (see git history if the worktree has been cleaned up)

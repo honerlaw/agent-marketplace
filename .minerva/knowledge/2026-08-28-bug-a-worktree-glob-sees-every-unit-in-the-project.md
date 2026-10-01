@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: bug
+**Theme**: worktrees-and-promote
 **Summary**: Reachable-through-a-worktree and has-a-worktree are different questions; the first is true of everything
 **Context**: .minerva/work/2026-08-28-workstream-status-skill
 

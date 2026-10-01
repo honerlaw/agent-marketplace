@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: minerva:synthesize is wired into both orchestrators as a self-gating post-promote/pre-ship step (delegation, not a panel)
 **Context**: .minerva/work/2026-06-03-wire-synthesize-into-orchestrators (see git history if the worktree has been cleaned up)
 
 ## Context

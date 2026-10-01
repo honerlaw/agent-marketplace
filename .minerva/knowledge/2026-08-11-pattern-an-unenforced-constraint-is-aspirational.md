@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: a knowledge entry stating a rule enforces nothing — this one was violated three times in two months and the first enforcing test caught a live defect immediately
 **Context**: .minerva/work/2026-08-11-enforce-fence-aware-scans
 

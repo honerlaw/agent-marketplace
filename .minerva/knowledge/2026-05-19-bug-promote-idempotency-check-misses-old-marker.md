@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: bug
+**Theme**: worktrees-and-promote
+**Summary**: promote idempotency check missed the old scratchpad marker format
 **Context**: .minerva/work/2026-05-19-migrate-commands-to-skills
 
 ## Context

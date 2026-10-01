@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-21
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: handoffs invoke the target via the Skill tool with argument, never bare prose
 **Context**: .minerva/work/2026-07-21-skill-best-practices-audit (see git history if the worktree has been cleaned up)
 
 ## Context

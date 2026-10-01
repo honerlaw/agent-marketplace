@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: decision
+**Theme**: mcp-servers
 **Summary**: Small, stable APIs get one typed MCP tool per operation; large or fast-moving APIs get generic tools
 **Context**: .minerva/work/2026-09-25-add-google-search-console-mcp-server (see git history if the worktree has been cleaned up)
 

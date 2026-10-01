@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: read the copies before choosing the invariant — a byte-identity test over intentionally-divergent blocks either cannot pass or passes vacuously
 
 **Context**: .minerva/work/2026-08-22-close-open-issue-backlog (see git history if the worktree has been cleaned up)

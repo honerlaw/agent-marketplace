@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: Self-review finds lookup-able rule violations and misses orphaned code and toothless tests
 **Context**: .minerva/work/2026-08-27-deferral-cost-model (see git history if the worktree has been cleaned up)
 

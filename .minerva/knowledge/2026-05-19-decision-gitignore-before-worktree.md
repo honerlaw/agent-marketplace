@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: decision
+**Theme**: worktrees-and-promote
+**Summary**: add `.minerva/worktrees/` to `.gitignore` before running `git worktree add`
 **Context**: .minerva/work/2026-05-19-work-in-git-worktree
 
 ## Context

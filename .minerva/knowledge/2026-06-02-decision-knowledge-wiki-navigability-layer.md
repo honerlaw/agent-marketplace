@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-02
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: knowledge is a navigable wiki: maintained index.md + corpus-scan discovery (X′ over X)
 **Context**: .minerva/work/2026-06-02-knowledge-wiki-navigability (see git history if the worktree has been cleaned up)
 
 ## Context

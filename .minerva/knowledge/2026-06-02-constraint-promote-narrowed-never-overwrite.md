@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-02
 **Type**: constraint
+**Theme**: knowledge-wiki
+**Summary**: promote edits existing entries only within the `## Related`/banner span; bodies are append-only
 **Context**: .minerva/work/2026-06-02-knowledge-wiki-navigability (see git history if the worktree has been cleaned up)
 
 ## Context

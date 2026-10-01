@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-24
 **Type**: pattern
+**Theme**: concurrency
 **Summary**: name the resource an atomic primitive protects, not just the ref — a slug lock does not serialize two sessions working the same goal
 **Context**: .minerva/work/2026-08-24-cross-session-preflight
 

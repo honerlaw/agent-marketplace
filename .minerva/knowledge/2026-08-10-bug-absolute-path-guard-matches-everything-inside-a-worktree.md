@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-10
 **Type**: bug
+**Theme**: silent-success
 **Summary**: test paths relative to the repo root; minerva's own work happens inside the directory such guards exclude
 **Context**: .minerva/work/2026-08-09-date-prefixed-identity
 

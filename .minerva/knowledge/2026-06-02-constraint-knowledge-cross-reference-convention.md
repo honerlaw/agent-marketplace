@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-02
 **Type**: constraint
+**Theme**: knowledge-wiki
+**Summary**: entries cross-reference via a `## Related` block of wiki-links with a closed relationship vocabulary
 **Context**: .minerva/work/2026-06-02-knowledge-wiki-navigability (see git history if the worktree has been cleaned up)
 
 ## Context
