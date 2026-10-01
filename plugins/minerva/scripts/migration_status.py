@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 from knowledge_lint import ENTRY_RE, is_conforming_id, parse_entry
+from knowledge_spans import unfenced
 
 # Pre-3.0 aggregates. Not flagged as non-conforming files — they are reported as the
 # migration need under `legacy_aggregates` instead.
@@ -41,13 +42,15 @@ STALE_ROUTING_MARKERS = (".minerva/knowledge/overview.md", ".minerva/knowledge/i
 
 def _routing_section(text: str):
     """The `## minerva` section of an agent file (to the next `## ` or EOF), or None."""
-    lines = text.splitlines()
-    start = next((i for i, ln in enumerate(lines) if ln.strip() == "## minerva"), None)
+    # Fence-aware: a `## minerva` or `## ` line inside a code block (the section's own
+    # catalog one-liner sits in one) is content, not a section boundary.
+    lines = list(unfenced(text.splitlines()))
+    start = next((k for k, (_, ln) in enumerate(lines) if ln.strip() == "## minerva"), None)
     if start is None:
         return None
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")),
+    end = next((k for k in range(start + 1, len(lines)) if lines[k][1].startswith("## ")),
                len(lines))
-    return "\n".join(lines[start:end])
+    return "\n".join(ln for _, ln in lines[start:end])
 
 
 def stale_routing_files(project_root) -> list:

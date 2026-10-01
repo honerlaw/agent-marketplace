@@ -63,7 +63,7 @@ the catalog still reads but promote never writes.
 ## Wiki maintenance (add-only)
 
 **A promote run writes new entry files and nothing else.** No catalog, no edit to any
-existing entry, no supersession banner, no `index.md` or `overview.md` (neither exists).
+existing entry, no supersession banner, no catalog file (there is none).
 
 This is the invariant that makes concurrent work units safe. A work-unit branch's
 entire `.minerva/` footprint is *newly-added files*, and new files merge cleanly no

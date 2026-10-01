@@ -25,7 +25,7 @@ This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" 
 
 - **review → promote**: hand off automatically once `minerva:review` reaches its natural completion point AND triage is clean (zero pending, all FIX items applied). If review surfaced findings the user routed back to `minerva:replan`, return control to work and re-enter review afterward.
 
-- **promote → ship gate**: this is the single explicit gate. After `minerva:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. Do **not** offer an overview refresh here: `overview.md` and `index.md` are shared aggregates, and writing either on a work-unit branch is what made them the two most-conflicted files in the repo. Both are reconciled at cleanup instead. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `minerva:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
+- **promote → ship gate**: this is the single explicit gate. After `minerva:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. There is no catalog or overview to refresh: both are derived on read from the entries promote just wrote. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `minerva:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
 
 - **ship → cleanup**: after `minerva:ship` returns, the PR may be `OPEN` (auto-merge pending), `MERGED`, or `CLOSED`. Cleanup runs only on `MERGED`. See [Phase 7](#phase-7--cleanup-gate) for the polling rules.
 
@@ -53,8 +53,7 @@ conditional on a real re-entry capability: without it, checkpoint and report
 **pending — manual resume required**, with the exact host-correct
 `--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
 cap at 12 or the original one-hour deadline, whichever comes first. Never reset
-these limits when switching sessions. Reconciliation can remain pending after
-merge; preserve phase `reconciliation` and name every uncatalogued entry.
+these limits when switching sessions.
 
 
 After `minerva:ship` returns, check PR merge state and decide what to do with the worktree:

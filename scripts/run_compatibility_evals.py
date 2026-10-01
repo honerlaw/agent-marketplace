@@ -28,7 +28,7 @@ SCENARIOS = {
     "replan": ("Use minerva:replan to inspect the fixture proposal. The new direction is not decided: the caller needs a choice between a strict integer-only API and Python operator-compatible addition. Present the next user question and stop before writing a divergence entry.", False),
     "grill": ("Use minerva:grill-plan on the fixture proposal. Present one unresolved design question with your recommended answer and stop for the user; do not write anything or fabricate their answer.", False),
     "phased": ("Use minerva:ship 2026-09-12-fixture to ship the implemented first phase, then invoke cleanup only after its PR merges. Local commit/push/fixture PR/merge/cleanup are approved. Phase 2 is outstanding and must not ship or be marked complete. Keep the worktree for phase 2 and name its resume trigger.", True),
-    "reconciliation": ("Use minerva:cleanup 2026-09-12-fixture --yes. The work PR is already merged and the scratchpad promoted. Remove only its merged worktree, reconcile the pending knowledge entry via its separate fixture PR, and preserve the proposal. Local commits/pushes/fixture PRs/merge and cleanup are approved.", True),
+    "merged-cleanup": ("Use minerva:cleanup 2026-09-12-fixture --yes. The work PR is already merged and the scratchpad promoted. Remove only its merged worktree, and preserve the proposal and the knowledge entry it shipped. Local commits/pushes/fixture PRs/merge and cleanup are approved.", True),
     "cancelled-ci": ("Use minerva:ship 2026-09-12-fixture --watch-iteration=3 --auto=propose-ship-auto. Checks are cancelled: checkpoint blocked, report recovery, do not begin another fix, merge, or mark CI green. All prior fix attempts were consumed.", False),
     "exhausted-cleanup": ("Use minerva:propose-ship-auto --cleanup-only 2026-09-12-fixture --retry=12. The work PR is still open with auto-merge enabled. The saved deadline has expired. Report exhaustion and manual recovery without scheduling or deleting the worktree. Do not reset the saved budgets.", False),
     "panel": ("Use minerva:round-table to decide whether calculator.add should return a+b, supported by the supplied test. Convene its independent panel and report the vote. Do not modify any files.", False),
@@ -59,7 +59,7 @@ def fixture(directory: Path, scenario: str):
     (repo / ".gitignore").write_text(".minerva/worktrees/\n__pycache__/\n")
     knowledge = repo / ".minerva" / "knowledge"
     knowledge.mkdir(parents=True)
-    (knowledge / "index.md").write_text("# Knowledge index\n\n## Decisions\n\n## Bugs\n\n## Patterns\n\n## Constraints\n\n## References\n")
+    (knowledge / ".gitkeep").write_text("")
     (repo / ".minerva/work").mkdir()
     (repo / ".minerva/reference").mkdir()
     for name in ("CLAUDE.md", "AGENTS.md"):
@@ -80,12 +80,12 @@ def fixture(directory: Path, scenario: str):
     env = {**os.environ, "PATH": str(binary) + os.pathsep + os.environ["PATH"],
            "MINERVA_FIXTURE_ROOT": str(repo)}
     env.pop("MINERVA_SCRIPTS", None)
-    if scenario in {"review", "manual-resume", "replan", "grill", "cancelled-ci", "exhausted-cleanup", "phased", "reconciliation"}:
+    if scenario in {"review", "manual-resume", "replan", "grill", "cancelled-ci", "exhausted-cleanup", "phased", "merged-cleanup"}:
         git(repo, "switch", "-c", "2026-09-12-fixture")
         (repo / "calculator.py").write_text("def add(a, b):\n    return a + b\n")
         git(repo, "add", "calculator.py")
         git(repo, "commit", "-m", "fix addition")
-    if scenario in {"manual-resume", "replan", "grill", "cancelled-ci", "exhausted-cleanup", "phased", "reconciliation"}:
+    if scenario in {"manual-resume", "replan", "grill", "cancelled-ci", "exhausted-cleanup", "phased", "merged-cleanup"}:
         unit = repo / ".minerva/work/2026-09-12-fixture"
         unit.mkdir()
         (unit / "proposal.md").write_text("# Proposal: fixture\n\n**Status**: Draft\n\n## Goal\n\nCorrect addition.\n\n## Success criteria\n\n- Addition tests pass.\n")
@@ -108,7 +108,7 @@ def fixture(directory: Path, scenario: str):
             state = json.loads(state_path.read_text())
             state["prs"][0]["autoMergeRequest"] = {"enabled": True}
             state_path.write_text(json.dumps(state))
-        if scenario in {"phased", "reconciliation"}:
+        if scenario in {"phased", "merged-cleanup"}:
             git(repo, "switch", "main")
             worktree = repo / ".minerva/worktrees/2026-09-12-fixture"
             git(repo, "worktree", "add", str(worktree), "2026-09-12-fixture")
@@ -117,11 +117,11 @@ def fixture(directory: Path, scenario: str):
                 proposal.write_text(proposal.read_text() + "\n## Phases\n\n1. **Addition** — Implement addition.\n2. **Documentation** — Document supported operators. Not implemented yet.\n")
             else:
                 entry = worktree / ".minerva/knowledge/2026-09-12-bug-addition.md"
-                entry.write_text("# Addition uses addition\n\n**Date**: 2026-09-12\n**Type**: Bug\n**Summary**: Addition was corrected to use the plus operator.\n**Context**: .minerva/work/2026-09-12-fixture/proposal.md\n\n## Finding\n\nThe addition function returned subtraction; it now returns a+b.\n\n## Related\n\n")
+                entry.write_text("# Addition uses addition\n\n**Date**: 2026-09-12\n**Type**: Bug\n**Theme**: arithmetic\n**Summary**: Addition was corrected to use the plus operator.\n**Context**: .minerva/work/2026-09-12-fixture/proposal.md\n\n## Finding\n\nThe addition function returned subtraction; it now returns a+b.\n\n## Related\n\n")
                 (proposal.parent / "scratchpad.md").write_text("Promoted.\n")
             git(worktree, "add", ".minerva")
             git(worktree, "commit", "-m", "record phase or promoted entry")
-            if scenario == "reconciliation":
+            if scenario == "merged-cleanup":
                 subprocess.run([str(binary / "gh"), "pr", "merge", "--auto", "--squash", "1"],
                                cwd=worktree, env=env, check=True, capture_output=True)
     return repo, installed, env
@@ -227,7 +227,7 @@ def resume_fixture(directory: Path, host: str, scenario: str):
     request = (f"Resume this existing lifecycle with {resume_prompt(state, host)}. "
                "The original goal and local commits, pushes, fixture PRs, merge, and single-unit cleanup remain authorized. "
                "Preserve all saved budgets. Do not restart intake or create another work unit. "
-               "Complete the orchestrator handback and reconciliation, then report the final result.")
+               "Complete the orchestrator handback and cleanup, then report the final result.")
     return repo, installed, env, request
 
 
@@ -236,7 +236,7 @@ def run(host: str, scenario: str, timeout: int = 600, resume_directory: Path | N
         raise ValueError(f"{host} CLI is unavailable")
     request, mutating = SCENARIOS[scenario]
     if resume_directory:
-        if scenario not in {"auto-small", "auto", "reconciliation"}:
+        if scenario not in {"auto-small", "auto", "merged-cleanup"}:
             raise ValueError("fixture continuation is supported for lifecycle scenarios only")
         directory = resume_directory.resolve()
         repo, installed, env, request = resume_fixture(directory, host, scenario)
@@ -299,8 +299,8 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
     checks["installed_package_unchanged"] = snapshot(installed) == installed_before
     calls_path = repo / ".git/fixture-gh-calls.jsonl"
     calls = [json.loads(line) for line in calls_path.read_text().splitlines()] if calls_path.exists() else []
-    if scenario in {"read-only", "auto-small", "auto", "manual-resume", "phased", "reconciliation", "cancelled-ci", "exhausted-cleanup"}:
-        checks["fixture_gh_observed"] = len(calls) > (1 if scenario in {"manual-resume", "cancelled-ci", "exhausted-cleanup", "phased", "reconciliation"} else 0)
+    if scenario in {"read-only", "auto-small", "auto", "manual-resume", "phased", "merged-cleanup", "cancelled-ci", "exhausted-cleanup"}:
+        checks["fixture_gh_observed"] = len(calls) > (1 if scenario in {"manual-resume", "cancelled-ci", "exhausted-cleanup", "phased", "merged-cleanup"} else 0)
     if not mutating:
         checks["working_tree_unchanged"] = before == after
         checks["git_refs_unchanged"] = git(repo, "show-ref") == refs_before and git(repo, "rev-parse", "HEAD") == head_before
@@ -309,7 +309,10 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
         tests = subprocess.run([sys.executable, "-m", "unittest"], cwd=repo, capture_output=True)
         checks["tests_pass"] = tests.returncode == 0
         checks["one_pr_per_branch"] = len({p["headRefName"] for p in actions["prs"]}) == len(actions["prs"])
-        checks["work_pr_merged"] = any(p["state"] == "MERGED" and p["headRefName"] != "minerva/reconcile" for p in actions["prs"])
+        checks["work_pr_merged"] = any(p["state"] == "MERGED" for p in actions["prs"])
+        # minerva 3.0 has no post-merge knowledge pass: a reconcile PR is a regression.
+        checks["no_reconcile_pr"] = not any(p["headRefName"].startswith("minerva/reconcile") for p in actions["prs"])
+        checks["no_legacy_aggregates"] = not any((repo / ".minerva/knowledge" / n).exists() for n in ("index.md", "overview.md"))
         checks["proposal_preserved"] = bool(list((repo / ".minerva/work").glob("*/proposal.md")))
     if scenario == "manual-resume":
         checkpoints = list((repo / ".git/minerva/runtime").glob("*/run.json"))
@@ -318,15 +321,15 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
         checks["manual_resume_reported"] = "manual resume" in final.lower() or "manual resumption" in final.lower()
     if scenario == "init":
         checks["both_routing_sections"] = all((repo / name).read_text().count("## minerva") == 1 for name in ("CLAUDE.md", "AGENTS.md"))
-        checks["canonical_index_preserved"] = (repo / ".minerva/knowledge/index.md").read_bytes() == before[".minerva/knowledge/index.md"]
+        checks["no_legacy_aggregates"] = not any((repo / ".minerva/knowledge" / n).exists() for n in ("index.md", "overview.md"))
         checks["original_host_instructions_preserved"] = all(before[name] in (repo / name).read_bytes() for name in ("CLAUDE.md", "AGENTS.md"))
     if scenario == "phased":
         checks["worktree_retained"] = (repo / ".minerva/worktrees/2026-09-12-fixture").is_dir()
         checks["phase_2_not_shipped"] = not any("phase-2" in p["headRefName"] for p in actions["prs"])
         checks["outstanding_phase_reported"] = "phase 2" in final.lower() or "documentation" in final.lower()
-    if scenario == "reconciliation":
-        checks["pending_entry_catalogued"] = "[[2026-09-12-bug-addition]]" in (repo / ".minerva/knowledge/index.md").read_text()
-        checks["reconciliation_pr_merged"] = any(p["state"] == "MERGED" and p["headRefName"] == "minerva/reconcile" for p in actions["prs"])
+    if scenario == "merged-cleanup":
+        checks["worktree_removed"] = not (repo / ".minerva/worktrees/2026-09-12-fixture").exists()
+        checks["shipped_entry_preserved"] = (repo / ".minerva/knowledge/2026-09-12-bug-addition.md").is_file()
     if scenario in {"cancelled-ci", "exhausted-cleanup"}:
         states = [json.loads(p.read_text()) for p in (repo / ".git/minerva/runtime").glob("*/run.json")]
         checks["budget_preserved"] = any(s["fix_iteration"] == 3 if scenario == "cancelled-ci" else s["cleanup_retry"] == 12 and s["cleanup_deadline"] == 1 for s in states)

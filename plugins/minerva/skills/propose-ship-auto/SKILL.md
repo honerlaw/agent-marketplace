@@ -1,6 +1,6 @@
 ---
 name: propose-ship-auto
-description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - ship - cleanup, where `minerva:cleanup` reconciles the knowledge wiki), but each decision gets the adjudication tier it earns — the main model alone when provably small, one fresh-context reviewer by default, a 3-agent `minerva:round-table` panel when ambiguous, high-blast-radius, interface-changing or in tension with knowledge — and moves up a tier instead of stopping. The user is asked only when a panel cannot agree or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `minerva:propose-ship-auto`.
+description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - ship - cleanup), but each decision gets the adjudication tier it earns — the main model alone when provably small, one fresh-context reviewer by default, a 3-agent `minerva:round-table` panel when ambiguous, high-blast-radius, interface-changing or in tension with knowledge — and moves up a tier instead of stopping. The user is asked only when a panel cannot agree or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `minerva:propose-ship-auto`.
 ---
 
 ## Runtime
@@ -52,7 +52,7 @@ Execute the phases in order. The full inline protocols — per-gate artifacts, t
 4. **Promote (inline)** — partition and TODO disposition (solo, reviewer ceiling); apply writes per `minerva:promote` Mode A; archive scratchpad.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
 6. **Ship (delegated)** — invoke `minerva:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never tiered.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes` (which also reconciles the knowledge wiki and opens its auto-merging PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes` (worktree and branch teardown only — the knowledge update already shipped in the unit's PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

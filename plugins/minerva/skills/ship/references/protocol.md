@@ -32,7 +32,7 @@ branch-derived key and never interprets it as a work unit.
 After creating/reusing a PR, write phase `ship`, status `pending`, its PR number,
 branch, caller, and current counters. Checkpoint each attempted fix before
 performing it and before every wait/yield. Before returning to cleanup, write
-phase `cleanup`; only confirmed completion/reconciliation marks this run done.
+phase `cleanup`; only confirmed completion marks this run done.
 Never include checkpoint files in `git add` or commit messages.
 
 ## Phase resolution
@@ -325,7 +325,7 @@ paths applies is decided by an observable fact, not a guess:
   orchestrators document, which skips phases 1-6 and runs their cleanup gate.
 - **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
   invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate
-  twice — a second `minerva:cleanup`, and potentially a second knowledge-reconciliation PR.
+  twice — a second `minerva:cleanup`.
 
 Either way, do not print the "Run `minerva:cleanup` afterward" recommendation: it addresses a human
 who is not driving this run.
@@ -345,5 +345,5 @@ The [Worktree addressing](#worktree-addressing) section above handles entering t
 
 After merge, the worktree and its branch should be cleaned up via `minerva:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
 
-On a **phased** unit the worktree survives between phases: `minerva:cleanup` defers teardown while any declared phase is unmerged, and phase N+1 is cut inside that same worktree. Running cleanup between phases is still correct and still worth doing — it reconciles the knowledge wiki for anything `minerva:promote`'s Mode B landed in the phase that just merged.
+On a **phased** unit the worktree survives between phases: `minerva:cleanup` defers teardown while any declared phase is unmerged, and phase N+1 is cut inside that same worktree. Running cleanup between phases is still correct; it reports the teardown as deferred and changes nothing.
 

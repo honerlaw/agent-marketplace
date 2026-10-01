@@ -37,11 +37,14 @@ def test_phased_fixture_uses_real_phase_parser_and_keeps_second_phase_unimplemen
     assert not progress["complete"]
 
 
-def test_reconciliation_fixture_has_merged_work_pr_and_uncatalogued_entry(tmp_path):
-    repo, _, env = runner.fixture(tmp_path, "reconciliation")
+def test_merged_cleanup_fixture_has_merged_work_pr_and_a_complete_entry(tmp_path):
+    """The shipped entry carries its own Theme/Summary and there is no catalog file: after
+    merge there is nothing left for cleanup to write, only a worktree to remove."""
+    repo, _, env = runner.fixture(tmp_path, "merged-cleanup")
     assert json.loads(gh(repo, env, "pr", "view", "1").stdout)["state"] == "MERGED"
-    assert (repo / ".minerva/knowledge/2026-09-12-bug-addition.md").is_file()
-    assert "[[2026-09-12-bug-addition]]" not in (repo / ".minerva/knowledge/index.md").read_text()
+    entry = (repo / ".minerva/knowledge/2026-09-12-bug-addition.md").read_text()
+    assert "**Theme**: " in entry and "**Summary**: " in entry
+    assert not (repo / ".minerva/knowledge/index.md").exists()
 
 
 @pytest.mark.parametrize("bucket,code", [("pending", 8), ("cancel", 1), ("fail", 1), ("unknown", 1)])
