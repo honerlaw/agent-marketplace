@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-21
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: skill catalogs aren't auto-generated: three doc surfaces must stay synced
 **Context**: .minerva/work/2026-05-21-sync-skill-catalogs (see git history if the worktree has been cleaned up)
 
 ## Context

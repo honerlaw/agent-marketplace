@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: pattern
+**Theme**: mcp-servers
 **Summary**: google-auth's generic loaders accept external_account configs that fetch URLs or run executables; accept only the expected types
 **Context**: .minerva/work/2026-09-25-add-google-search-console-mcp-server (see git history if the worktree has been cleaned up)
 

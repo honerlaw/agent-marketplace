@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: A one-per-site registry asserts there is one; the missing second is invisible at every layer at once
 **Context**: .minerva/work/2026-08-28-guard-stale-script-resolution (see git history if the worktree has been cleaned up)
 

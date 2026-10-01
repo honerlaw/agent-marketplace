@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-31
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: gate per-decision and fail closed, not via an up-front sizing classifier
 **Context**: .minerva/work/2026-05-31-auto-skip-predicate (see git history if the worktree has been cleaned up)
 
 ## Context

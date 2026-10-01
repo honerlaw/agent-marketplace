@@ -22,14 +22,15 @@
     "read-only",
     "git rev-parse --show-toplevel",
     "minerva:lint",
-    "minerva:synthesize",
     {
       "any_of": [
         "shape check",
         "shape"
       ],
       "ignore_case": true
-    }
+    },
+    "legacy_aggregates",
+    "minerva:migrate-fix"
   ],
   "cross_surface": {
     "root_readme": true,

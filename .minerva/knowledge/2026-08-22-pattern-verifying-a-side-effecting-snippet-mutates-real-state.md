@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: exercising a documented mutating command against the live repo leaves real artifacts behind
 
 **Context**: .minerva/work/2026-08-22-followups-become-github-issues (see git history if the worktree has been cleaned up)

@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: the wiki fixer uses two safety models: entry body byte-identity vs index skeleton-preservation
 **Context**: .minerva/work/2026-06-03-knowledge-lint-fix (see git history if the worktree has been cleaned up)
 
 ## Context

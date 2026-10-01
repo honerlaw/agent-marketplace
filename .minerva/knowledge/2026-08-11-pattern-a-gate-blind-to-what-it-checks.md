@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: lint read clean before AND after 182 references broke, because its model of "a reference" was the writer's model; a clean gate is evidence only over what the gate can see
 **Context**: .minerva/work/2026-08-11-close-silent-reference-gaps
 

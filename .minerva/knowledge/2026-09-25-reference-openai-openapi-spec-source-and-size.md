@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: reference
+**Theme**: mcp-servers
 **Summary**: openai-openapi main branch lists 352 operations; manual_spec is stale; deep $ref expansion reaches megabytes
 **Context**: .minerva/work/2026-09-25-add-openai-mcp-server (see git history if the worktree has been cleaned up)
 

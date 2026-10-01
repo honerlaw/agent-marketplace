@@ -41,7 +41,7 @@ This phase replaces the user-interactive intake in `minerva:propose`.
      (d) Fold-audit re-checks for every folded gate go out together, each carrying its own gate's original decision, critique and revised decision.
    - **Log.** Each decision line's `(tier: …)` reason adds `parallel wave`. A restart logs its own line naming the staleness condition that fired. The restart budget is in `references/governance.md`.
 
-4. **Scope check (tiered).** The main model decides: one work unit shipped in one PR, one unit shipped in ordered **phases**, or genuinely separate units? ARTIFACT = the framed scope decision + the recommended pick; CONTEXT = the seed + the draft proposal. **Too big for one PR is a reason to phase, not to decompose** — the panel's default for oversized-but-coherent work is a `## Phases` section (soft ceiling ~3), which keeps one proposal, one record and one promote; see `skills/propose/references/phasing.md`. Frame the cost of splitting explicitly for whoever reviews it: each extra unit re-pays propose, worktree, review, promote, knowledge reconciliation and ship, and re-derives the context the last unit just built; phasing re-runs only review and ship. Decomposition survives only for genuinely independent subsystems. If the decision (at any tier, or from a user escalation) is "decompose", abort the run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
+4. **Scope check (tiered).** The main model decides: one work unit shipped in one PR, one unit shipped in ordered **phases**, or genuinely separate units? ARTIFACT = the framed scope decision + the recommended pick; CONTEXT = the seed + the draft proposal. **Too big for one PR is a reason to phase, not to decompose** — the panel's default for oversized-but-coherent work is a `## Phases` section (soft ceiling ~3), which keeps one proposal, one record and one promote; see `skills/propose/references/phasing.md`. Frame the cost of splitting explicitly for whoever reviews it: each extra unit re-pays propose, worktree, review, promote and ship, and re-derives the context the last unit just built; phasing re-runs only review and ship. Decomposition survives only for genuinely independent subsystems. If the decision (at any tier, or from a user escalation) is "decompose", abort the run cleanly: "scope check resolved to decomposition — re-run with one sub-unit at a time."
 
 5. **Approach selection (tiered).** The main model picks among its 2-3 candidates. ARTIFACT = the candidate approaches + the recommended pick + the stated criteria; CONTEXT = the draft proposal's `## Goal`/`## Approach`. Solo only if ≥2 approaches were enumerated and one is strictly dominant (the solo predicate's action check); the log records the rejected alternatives. Once the decision stands — after any fold and re-check, or a panel accept — the picked approach replaces the draft's `## Approach`.
 
@@ -139,13 +139,10 @@ Replaces the user-interactive partition in `minerva:promote` Mode A, whose proto
 
 8. Continue to Phase 5.
 
-**No synthesis phase here.** Earlier revisions refreshed `overview.md` between promote
-and ship so it could ride the same PR. It no longer does: `overview.md` is a shared
-aggregate, and writing it on a work-unit branch made it the second-most-conflicted
-file in the repo (33% of commits, rewritten wholesale — nothing can merge that). It is
-now written only on the default branch, by `minerva:cleanup`'s reconciliation in
-Phase 7, where there is one writer at a time. Promote is add-only for the same reason;
-do not stage `.minerva/knowledge/index.md` or `overview.md` in Phase 6.
+**No knowledge follow-up after promote.** The entries promote just wrote are the whole
+knowledge update: the catalog, backlinks and supersession are derived on read from their
+`**Theme**` / `**Summary**` lines and forward links, so nothing is refreshed here and nothing
+is left for after merge.
 
 ## Phase 5 — Ship gate
 
@@ -178,14 +175,13 @@ conditional on a real re-entry capability: without it, checkpoint and report
 **pending — manual resume required**, with the exact host-correct
 `--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
 cap at 12 or the original one-hour deadline, whichever comes first. Never reset
-these limits when switching sessions. Reconciliation can remain pending after
-merge; preserve phase `reconciliation` and name every uncatalogued entry.
+these limits when switching sessions.
 
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
 1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`. On resume, use the
    checkpoint's work PR number if its branch has already been pruned.
-2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. Besides removing the worktree, cleanup reconciles the knowledge wiki on the default branch — cataloguing this unit's entries from their `**Summary**` fields, writing their reciprocal links, and refreshing `overview.md` if warranted — and opens a single auto-merging PR for it. Surface that PR (and any reconciliation refusals) in the final report. Report and exit.
+2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. Cleanup removes the worktree and prunes the branch; it opens no PR, because the unit's knowledge entries were complete when its PR merged. Report and exit.
 3. **`OPEN`, auto-merge enabled** → when a scheduler supports re-entry, use the scheduled resume operation with `prompt: minerva:propose-ship-auto --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12. On exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.

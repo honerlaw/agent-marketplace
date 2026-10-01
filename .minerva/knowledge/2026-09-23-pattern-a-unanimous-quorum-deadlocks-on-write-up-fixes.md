@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-23
 **Type**: pattern
+**Theme**: lifecycle
 **Summary**: 3/3 panels escalated decisions all panelists agreed on; round-table gained an accept-with-fixes verdict
 **Context**: .minerva/work/2026-09-23-adaptive-propose-ship-auto (see git history if the worktree has been cleaned up)
 

@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: the synthesis layer is a separate overview.md with a new-scope-only watermark; its content is advisory, never CI-gated
 **Context**: .minerva/work/2026-06-03-synthesize-skill (see git history if the worktree has been cleaned up)
 
 ## Context

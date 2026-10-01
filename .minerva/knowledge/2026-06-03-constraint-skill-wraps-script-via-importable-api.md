@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: a prose skill wraps a sibling Python tool via its importable API, anchored to the working-tree root; not the CLI, not CWD-relative
 **Context**: .minerva/work/2026-06-03-knowledge-lint-skill (see git history if the worktree has been cleaned up)
 
 ## Context

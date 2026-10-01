@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-31
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: behavioral skill-value evals are provisional: don't CI-gate, don't trust deltas yet
 **Context**: .minerva/work/2026-05-31-behavioral-skill-value-runner (see git history if the worktree has been cleaned up)
 
 <!-- superseded-by: 2026-08-22-decision-behavioral-eval-control-real-signal-not-yet -->

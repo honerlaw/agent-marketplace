@@ -49,7 +49,7 @@ buckets after completion; a failed command is not proof that checks are green.
 Use a scheduled resume capability only if the current host exposes one and it
 actually supports re-entry. Otherwise checkpoint and provide the exact resume
 prompt before ending the turn. Ending a Codex turn does not arrange a future
-turn merely because a watcher process exists. Merge and reconciliation waits
+turn merely because a watcher process exists. Merge and cleanup waits
 follow the same explicit fallback and retain all counters and deadlines.
 
 Codex child-agent listing covers this task's agents, not a fleet of unrelated

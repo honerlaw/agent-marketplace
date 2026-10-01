@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-09-05
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: run the reader a unit ships against the unit's own motivating numbers; a free-text grep over-counted the headline finding
 **Context**: .minerva/work/2026-09-05-balanced-rechecks-folds (see git history if the worktree has been cleaned up)
 

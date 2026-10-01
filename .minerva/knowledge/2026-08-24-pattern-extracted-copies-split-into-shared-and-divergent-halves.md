@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-24
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: after extracting a repeated block, byte-identity is right for the shared half and wrong for the rung-specific half; test both
 **Context**: .minerva/work/2026-08-24-cross-session-preflight
 

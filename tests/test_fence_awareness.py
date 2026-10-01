@@ -112,9 +112,6 @@ TOGGLE_RE = re.compile(r"FENCE_RE\.match")
 FENCE_LOOP_EXEMPT = {
     "plugins/minerva/scripts/knowledge_spans.py":
         "defines the shared primitive",
-    "plugins/minerva/scripts/knowledge_edits.py":
-        "classifies EVERY line incl. delimiters as a boolean flag list; the byte-identity "
-        "guard needs a verdict per line, not a filtered subset",
     "plugins/minerva/scripts/knowledge_rename.py":
         "KEEPS fences and fenced content in its output — it rewrites text rather than "
         "filtering it, so dropping lines would corrupt the file",

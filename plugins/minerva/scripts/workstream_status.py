@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from knowledge_lint import ENTRY_RE, lint_knowledge, parse_entry  # noqa: E402
 from knowledge_spans import unfenced  # noqa: E402
-from synthesis_status import synthesis_status  # noqa: E402
+from knowledge_catalog import UNTHEMED, load_entries, theme_counts  # noqa: E402
 from work_status import (  # noqa: E402
     phase_branch,
     phase_progress,
@@ -172,16 +172,17 @@ def _knowledge(kd: Path) -> dict:
         by_type[declared] = by_type.get(declared, 0) + 1
 
     findings = lint_knowledge(kd)
-    synth = synthesis_status(kd)
+    themes = theme_counts(load_entries(kd))
     return {
         "exists": True,
         "entries": sum(by_type.values()),
         "by_type": by_type,
+        "themes": len([t for t in themes if t != UNTHEMED]),
+        "unthemed": themes.get(UNTHEMED, 0),
         "lint_errors": sum(1 for f in findings if f.severity == "error"),
         "lint_warnings": sum(1 for f in findings if f.severity == "warning"),
-        "overview_exists": synth["overview_exists"],
-        "unsynthesized": len(synth["unsynthesized"]),
-        "link_rot": len(synth["link_rot"]),
+        # A pre-3.0 corpus still carrying its legacy aggregates: the migration need.
+        "legacy_aggregates": sum(1 for f in findings if f.family == "legacy"),
     }
 
 

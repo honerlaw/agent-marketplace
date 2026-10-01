@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-02
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: Phase B split: a deterministic knowledge-lint CI gate ships first; the LLM-judged minerva:lint skill is deferred
 **Context**: .minerva/work/2026-06-02-knowledge-lint-detector (see git history if the worktree has been cleaned up)
 
 ## Context

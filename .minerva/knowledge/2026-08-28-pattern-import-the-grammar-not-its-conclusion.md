@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: A fence-scan primitive answers "where are the fences", not "what should I do about them"
 **Context**: .minerva/work/2026-08-28-workstream-status-skill
 

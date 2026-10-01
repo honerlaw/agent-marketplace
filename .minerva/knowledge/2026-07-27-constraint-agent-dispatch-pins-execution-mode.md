@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-27
 **Type**: constraint
+**Theme**: lifecycle
+**Summary**: dispatch instructions pin `run_in_background: false`; the Agent tool backgrounds by default and strands the run
 **Context**: .minerva/work/2026-07-27-pin-agent-dispatch-sync
 
 ## Context

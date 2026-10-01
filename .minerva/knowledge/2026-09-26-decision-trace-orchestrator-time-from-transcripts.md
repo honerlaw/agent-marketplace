@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-26
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: scripts/run_trace.py traces propose-ship-auto time; propose-phase reviewer waits dominate
 **Context**: .minerva/work/2026-09-26-trace-orchestrator-run-time (see git history if the worktree has been cleaned up)
 

@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-26
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: run_trace prices each phase/gate via run_analyzer; subagent gates are ~26% of auto-run cost, panels cost time more than money
 **Context**: .minerva/work/2026-09-26-per-phase-gate-cost (see git history if the worktree has been cleaned up)
 

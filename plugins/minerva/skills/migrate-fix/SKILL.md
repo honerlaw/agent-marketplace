@@ -1,6 +1,6 @@
 ---
 name: migrate-fix
-description: Renames legacy `NNN`-prefixed knowledge entries and work units to date ids (`YYYY-MM-DD-type-slug`) — MUTATES `.minerva/knowledge/` and `.minerva/work/` behind a confirmation gate, deriving each date from the git history of the path itself and retargeting every wikilink, supersession marker and `**Context**` path via the tested `scripts/knowledge_rename.py`. Refuses the whole batch before moving anything if two entries would land on one name. Never renames git branches, and never edits an entry's body `**Date**` field. Use when a corpus still carries `NNN-` filenames and the user asks to migrate to date ids, or when they invoke `minerva:migrate-fix`. The read-only companion that tells you whether a corpus needs this is `minerva:migrate`.
+description: Migrates a legacy knowledge corpus to the current shape — MUTATES `.minerva/knowledge/` and `.minerva/work/` behind confirmation gates. (1) Renames legacy `NNN`-prefixed entries and work units to date ids (`YYYY-MM-DD-type-slug`), dating each from its own git history and retargeting every wikilink, supersession marker and `**Context**` path via `scripts/knowledge_rename.py`; refuses the whole batch if two entries would land on one name. (2) Backfills the `**Theme**` / `**Summary**` lines the 3.0 catalog reads from a pre-3.0 corpus's legacy `index.md` / `overview.md`, then deletes both, via `scripts/knowledge_backfill.py`. Never renames git branches or edits entry bodies. Use when a corpus still carries `NNN-` filenames or legacy `index.md` / `overview.md`, when upgrading from minerva 2.x, or when the user invokes `minerva:migrate-fix`. The read-only companion is `minerva:migrate`.
 allowed-tools:
   - Bash
   - Read
@@ -12,15 +12,27 @@ allowed-tools:
 
 Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
 
-Rename a legacy `NNN`-prefixed corpus to date ids, behind a confirmation gate.
+Move a legacy corpus into the current shape, behind confirmation gates.
 `minerva:migrate-fix` is the **mutating** companion to the read-only `minerva:migrate`:
 where `minerva:migrate` reports that a corpus is off-convention, this skill performs the
-one rename it can do deterministically. **All mutation happens inside the unit-tested
-`scripts/knowledge_rename.py`** — this skill orchestrates and gates; it does not edit
-files directly; always use the helper.
+two migrations it can do deterministically:
+
+- **Part A — rename** legacy `NNN`-prefixed entries and work units to date ids
+  (`scripts/knowledge_rename.py`).
+- **Part B — backfill** the `**Theme**` / `**Summary**` metadata a pre-3.0 corpus keeps in
+  its legacy `index.md` / `overview.md`, then delete those files
+  (`scripts/knowledge_backfill.py`).
+
+**All mutation happens inside the unit-tested helpers** — this skill orchestrates and
+gates; it does not edit files directly; always use the helper. Run only the parts
+`minerva:migrate` reported a need for. **When both are needed, run Part A first:** the
+backfill matches each entry to its legacy catalog line and overview link *by stem*, and
+the rename retargets those legacy lines, so renaming first keeps every stem resolvable.
+Backfilling first would leave the metadata in place but feed the rename files that no
+longer exist.
 
 > This skill **changes files**, including `git mv` of ~100 paths in a typical corpus. It
-> is not read-only. The full plan is shown and applied only after you confirm.
+> is not read-only. Each part's full plan is shown and applied only after you confirm.
 
 ## Why the ids changed
 
@@ -30,6 +42,8 @@ git merged cleanly, shipping a silent duplicate. A date is read off the clock, s
 is allocated and nothing coordinates. **Several entries sharing a date is normal**, because
 identity is the whole `YYYY-MM-DD-<type>-<slug>` stem — and a duplicate stem is the same
 path, which git refuses to merge rather than merging silently.
+
+## Part A — Rename `NNN` ids to date ids
 
 ## Step 1 — Plan (read-only)
 
@@ -49,7 +63,7 @@ need your attention before you gate:
   These are skipped rather than guessed at, because inventing a date mints an id that
   corresponds to nothing. Commit the file first, then re-plan.
 - **A date that surprises you** — the id is the *landing* date, not the authored date.
-  See [What the date means](#what-the-date-means).
+  **Read "What the date means" in `references/upgrading.md`** before trusting a derived date.
 
 ## Step 2 — Confirmation gate (REQUIRED)
 
@@ -85,11 +99,9 @@ python3 "$PLUGIN_SCRIPTS/knowledge_rename.py" --apply
 Order matters and is handled inside the script: every reference is rewritten **before**
 anything moves, so each path in the map still resolves while it is being consulted.
 
-## Step 4 — Verify
+## Step 4 — Verify the rename
 
-Run `minerva:lint`. A migrated corpus should report **zero errors**; pending-reconciliation
-warnings are normal and are `minerva:cleanup`'s job. Then confirm no live legacy link
-survived:
+Confirm no live legacy link survived:
 
 ```bash
 grep -rE '\[\[[0-9]{3,}-' --include='*.md' . \
@@ -106,32 +118,13 @@ width (`ID_RE_SRC`), and loosening it to `+` would start reporting any bracketed
 Remaining hits should only ever be inside fenced examples, or prose in an entry recounting
 an old number. Both are correct: the migration is fence-aware by design.
 
-## After upgrading: expect the finding count to RISE
+## Part B — Backfill entry metadata from the legacy aggregates
 
-The first `minerva:lint` run after upgrading usually reports **more** findings on an
-unchanged corpus, because the `## Related` edge model was unified and the old detector
-could not see extra targets on a shared line. The delta is previously-unreportable
-findings, not new damage — but any pending finding-count comparison must be re-baselined.
-**Read `references/upgrading.md`** before comparing any finding count across the upgrade —
-it covers why the old number was wrong rather than the new one, what to do on the first
-run, and the post-merge surprise this cost a real team.
-
-## What the date means
-
-The id is the **landing** date — the oldest commit touching that path, following renames.
-Under squash-merge that is the day the work shipped; if the repo merges or rebases
-instead, it is the original commit date. The imprecision is deliberate and harmless: a
-date carries no identity and no ordering weight beyond sort.
-
-Two consequences worth stating so nobody later "fixes" them:
-
-- **An entry's date may differ from its work unit's.** They are derived independently, and
-  an entry promoted in a later PR than its proposal legitimately differs. `**Context**`
-  paths are rewritten through a lookup map, never by assuming the two agree.
-- **A filename date may differ from the entry's own `**Date**:` field.** The filename
-  records when the entry *landed*; the body records when it was *authored*. This skill
-  never rewrites the body field — doing so would overwrite authored metadata with a
-  derived value.
+A pre-3.0 corpus keeps its catalog in `index.md` and its theme grouping in `overview.md`.
+Part B moves both onto the entries as `**Summary**` / `**Theme**` lines with
+`scripts/knowledge_backfill.py` — dry run, confirmation gate, apply, verify — and deletes the
+two files. Run Part A first when both are needed: the backfill matches entries by stem. The
+full protocol (Steps 5–8) lives in `references/backfill.md`. **Read it before backfilling.**
 
 ## Out of scope
 
@@ -139,11 +132,12 @@ Two consequences worth stating so nobody later "fixes" them:
   PR's head ref is immutable on the forge, so renaming breaks both for no gain — a branch
   name is not corpus content. Legacy branches keep their `NNN-slug` names forever; only new ones
   take the date form.
-- **Entry bodies.** Only the `**Context**` path, wikilinks and supersession markers are
-  touched. Findings, summaries and `**Date**` fields are left exactly as written.
+- **Entry bodies.** Only the `**Context**` path, wikilinks and supersession markers (Part A)
+  and the inserted `**Theme**` / `**Summary**` lines (Part B) are touched. Findings, summaries and `**Date**` fields are left exactly as written.
 - **Deciding whether a corpus needs migrating.** That is `minerva:migrate`, which is
   read-only and reports the shape. This skill assumes the decision is already made.
-- **Re-running against a migrated corpus.** Already-dated entries AND work directories
+- **Re-running against a migrated corpus.** The backfill is a no-op without legacy files.
+  Already-dated entries AND work directories
   are skipped, so a second run is a no-op rather than a double-rename. Work directories
   were the exception until this was fixed: their pattern matched a bare `NNN` only, so an
   already-migrated `2026-08-07-foo/` read as id `2026` plus slug `08-07-foo` and got
@@ -153,5 +147,6 @@ Two consequences worth stating so nobody later "fixes" them:
 ## Related
 
 - `minerva:migrate` — the read-only shape check; run it first.
-- `minerva:lint` / `minerva:lint-fix` — the ongoing health check and its repairer; run
-  `minerva:lint` after this to confirm the corpus is clean.
+- `minerva:lint` — the ongoing health check; run it after this to confirm the corpus is
+  clean.
+- `minerva:init` — refreshes a stale `## minerva` routing section after the backfill.

@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: decision
+**Theme**: mcp-servers
 **Summary**: mcp.yml's docker smoke test runs each image with --env-file mcp/<server>/ci.env
 **Context**: .minerva/work/2026-09-25-add-reddit-ads-mcp-server (see git history if the worktree has been cleaned up)
 

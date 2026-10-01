@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Removes `.minerva/worktrees/YYYY-MM-DD-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches, and reconciles the knowledge wiki on the default branch — cataloguing entries that add-only promotes left pending, writing their reciprocal links, and refreshing the overview — via a single auto-merging PR. Idempotent; never force-removes unmerged work, and never commits directly to the default branch. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, catalogue pending knowledge entries, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
+description: Removes `.minerva/worktrees/YYYY-MM-DD-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches. Idempotent; never force-removes unmerged work, never commits, and opens no PR — the knowledge wiki needs no post-merge pass because its catalog, backlinks and supersession are derived on read. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, or generally tidy up after shipped work, or when they invoke `minerva:cleanup`.
 ---
 
 ## Runtime
@@ -13,7 +13,7 @@ Tidy up after shipped work — remove `.minerva/worktrees/<date-slug>/` director
 
 - `minerva:cleanup` — sweep all merged worktrees + branches in the current repo
 - `minerva:cleanup 005-add-payments` — clean up only the named work unit (slug or path)
-- `minerva:cleanup --dry-run` — list what would be removed and what reconciliation would do, changing nothing
+- `minerva:cleanup --dry-run` — list what would be removed, changing nothing
 
 ## Target resolution
 
@@ -25,9 +25,14 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 
 ## Checkpoint entry
 
-Unless `--dry-run`, read the unit checkpoint before mutation. Read
-`references/reconciliation.md` for checkpoint transitions and resumption rules;
-revalidate live merge evidence and explicit authorization before proceeding.
+Unless `--dry-run`, read the resolved unit's runtime checkpoint before removal.
+Revalidate live merge evidence and explicit mode arguments — a checkpoint is not
+authorization for `--yes`. Save phase `cleanup` before waiting, and mark this shipping
+pass `done` after safe teardown (or a phased unit's teardown deferral — it can finish this
+pass while keeping its worktree for the next phase). If blocked, retain pending/blocked
+state and provide an exact resume prompt. For multi-unit cleanup, maintain a checkpoint
+per unit. Dry-run writes none. A 2.x checkpoint saved at the legacy `reconciliation` phase
+has nothing left to do: revalidate the merge and mark it `done`.
 
 ## Pre-flight checks
 
@@ -51,7 +56,7 @@ Use the resolved value for all merge checks.
 A worktree is safe to remove only once its branch has merged into the default branch. The full
 detection protocol — including the squash-merge case a plain `git branch --merged` misses —
 lives in `references/merge-detection.md`. **Read it before removing anything.**
-On a phased unit teardown and reconciliation diverge — **read `references/phased-units.md`** before
+On a phased unit teardown waits for the final phase — **read `references/phased-units.md`** before
 tearing anything down. The rule itself is stated once, in `references/merge-detection.md`.
 
 ## Orchestrated mode (`--yes`)
@@ -97,18 +102,22 @@ Remaining worktrees:   N (<list>)
 
 If any worktrees were skipped due to uncommitted changes, recommend the user inspect each (`cd .minerva/worktrees/<slug>; git status`) and decide whether the changes are valuable.
 
-## Knowledge reconciliation
+## No knowledge reconciliation
 
-Because `minerva:promote` is add-only — it writes new knowledge entries on a work-unit branch and touches no aggregate — the `index.md` catalog lines, watermark, reciprocal `## Related` links, supersession banners, and `overview.md` are all written **here**, on the default branch, where there is one writer at a time. This is what makes concurrent minerva PRs conflict-free.
-
-**Run it on every invocation**, decoupled from worktree removal: a merge done through the GitHub UI leaves pending entries with no worktree to remove. It is cheap and silent when nothing is pending. Exception: a repo that reconciles in CI (Step 0).
-
-The full protocol — the deterministic pending/un-synthesized signal, the at-most-one-open-PR rule, the throwaway worktree, the `knowledge_fix` + `minerva:synthesize` pass, and the auto-merging PR — lives in `references/reconciliation.md`. **Read it before reconciling.** Three rules bind even before you read it: never commit to the default branch directly (reconciliation always goes through its own PR); if `gh pr merge --auto` is rejected, report the PR URL and stop rather than merging another way; and **never end a run leaving entries uncatalogued without naming them** — if a reconciliation PR is already open, wait for it and reconcile what remains, and if it never merges, list every still-pending entry stem under `Pending, NOT catalogued`. A run that leaves entries invisible must not report itself clean.
+Cleanup does **not** touch `.minerva/knowledge/`, and it opens no PR. There is nothing to catalogue after a
+merge: `minerva:promote` writes write-once entries carrying their own `**Theme**` and
+`**Summary**`, and the catalog, backlinks and supersession are derived on read by
+`knowledge_catalog.py` (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). The
+knowledge update ships complete in the unit's own PR. Earlier versions opened a
+`minerva/reconcile` PR here; do not recreate one. A stale local `minerva/reconcile` branch
+left by a 2.x run holds only squash-merged machine commits, so `git branch -d` refuses it:
+confirm no PR is open on it (`gh pr list --head minerva/reconcile --state open`), then
+delete it with `git branch -D`.
 
 ## Idempotency
 
 Cleanup rederives candidates from live Git/PR evidence and retains only untracked
-runtime progress. Re-running on a fresh tree finds zero candidates and reports zero removed. Reconciliation is likewise idempotent — `knowledge_fix` is a byte-level no-op on an already-reconciled corpus, so a second run reports nothing pending. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
+runtime progress. Re-running on a fresh tree finds zero candidates and reports zero removed. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
 
 If a user manually removed a worktree directory without running `git worktree remove`, the next `minerva:cleanup` call will see stale worktree metadata; `git worktree prune` at the end of the run handles this.
 

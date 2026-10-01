@@ -3,6 +3,8 @@
 **Date**: 2026-05-20
 **Updated**: 2026-06-27 (work unit 044 — `EnterWorktree` removed from every minerva skill)
 **Type**: constraint
+**Theme**: worktrees-and-promote
+**Summary**: worktree file ops use `.minerva/worktrees/<NNN-slug>/`-prefixed paths, not `EnterWorktree`
 **Context**: .minerva/work/2026-05-20-worktree-creation-in-propose (see git history if the worktree has been cleaned up)
 
 ## Context

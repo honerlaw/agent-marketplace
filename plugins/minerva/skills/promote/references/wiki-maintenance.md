@@ -4,14 +4,34 @@
 
 The `**Context**` field is a stable pointer that should remain meaningful even after the work-unit worktree is removed (`minerva:cleanup`). Use the canonical `.minerva/work/<date-slug>` path even if the actual files currently live in a worktree — after merge + cleanup, the docs are reconstructible from git history at that path on the merge commit.
 
-The `**Summary**` field is **required**. It is the entry's own catalog line — the ≤15-word condensation of its Finding that `index.md` will carry. Because the entry states it, the main-side reconciliation can catalogue the entry mechanically instead of needing an LLM to re-read and re-condense the Finding. Write it in the same voice as a catalog line: declarative, specific, no leading article.
+The `**Theme**` and `**Summary**` fields are **required**. Together they are the entry's
+catalog line: the knowledge catalog is never stored, it is derived on read by
+`knowledge_catalog.py` (and the Routing section's one-liner), which groups entries by
+`**Theme**` and prints each one's `**Summary**`. An entry missing either is invisible to
+orientation, and `knowledge_lint` errors on it for any entry dated on or after 2026-10-01.
+
+- **`**Summary**`** — the ≤15-word condensation of the Finding. Declarative, specific, no
+  leading article.
+- **`**Theme**`** — one lowercase kebab-case name (`knowledge-wiki`, `concurrency`).
+  **Reuse an existing theme**; list them first:
+
+  ```bash
+  ROOT="$(git rev-parse --show-toplevel)"
+  PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+  [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
+  python3 "$PLUGIN_SCRIPTS/knowledge_catalog.py" "$ROOT/.minerva/knowledge" --themes
+  ```
+
+  Coin a new theme only when no existing one fits — a near-duplicate splits a group in
+  the catalog, and lint warns about a theme only one entry uses.
 
 ```markdown
 # <Short, declarative title — what was decided, fixed, or discovered>
 
 **Date**: YYYY-MM-DD
 **Type**: decision | bug | pattern | constraint | reference
-**Summary**: <≤15-word condensation of the Finding — becomes the index catalog line>
+**Theme**: <existing kebab-case theme — see `knowledge_catalog.py --themes`>
+**Summary**: <≤15-word condensation of the Finding — the entry's catalog line>
 **Context**: .minerva/work/<date-slug> (see git history if the worktree has been cleaned up)
 
 ## Context
@@ -33,30 +53,26 @@ things future work has to honor, gotchas to watch for, tradeoffs accepted.
 - [[YYYY-MM-DD-type-slug]] — <relationship>
 ```
 
-The `## Related` block is the canonical cross-reference surface. Omit it from a fresh
-entry that has no neighbors. A superseded entry additionally carries a banner placed
-between its metadata block and the first `## ` header — but promote **never writes
-that banner itself** (see below); reconciliation derives it:
-
-```markdown
-<!-- superseded-by: <superseding-stem> -->
-> **Superseded by [[YYYY-MM-DD-type-slug]]** (YYYY-MM-DD)
-```
+The `## Related` block is the canonical cross-reference surface. It holds **forward links
+only**: the reverse direction is derived (`knowledge_catalog.py --links-to <stem>`), so
+promote never writes a back-link into another entry. To retire an older entry, the new
+entry says so — `- [[<old-stem>]] — supersedes` — and the catalog marks the old one
+superseded. Nothing is written into the old entry; a supersession banner is a legacy form
+the catalog still reads but promote never writes.
 
 ## Wiki maintenance (add-only)
 
-**A promote run writes new entry files and nothing else.** No `index.md` catalog
-line, no watermark bump, no edit to any neighbor entry, no supersession banner.
+**A promote run writes new entry files and nothing else.** No catalog, no edit to any
+existing entry, no supersession banner, no catalog file (there is none).
 
 This is the invariant that makes concurrent work units safe. A work-unit branch's
-entire `.minerva/` footprint becomes *newly-added files*, and new files merge cleanly
-no matter how many PRs are in flight. Every shared surface — `index.md`,
-`overview.md`, and the reverse direction of every cross-link — is written on the
-default branch instead, by the reconciliation step in `minerva:cleanup`, where there
-is exactly one writer at a time.
+entire `.minerva/` footprint is *newly-added files*, and new files merge cleanly no
+matter how many PRs are in flight. There is also nothing left to do after merge: the
+catalog, backlinks and supersession are all computed from the entries when they are
+read, so the knowledge update ships complete in the unit's own PR.
 
-Do not "just add the index line while you're here." That single line is the file that
-appeared in 78% of commits and conflicted on every concurrent pair.
+Do not edit an older entry "while you're here" to add a back-link or a banner. Every
+shared or cross-entry write is a surface two concurrent PRs fight over.
 
 ### Entry naming
 
@@ -84,47 +100,26 @@ really do share a type and slug, they are the same entry and want merging, not r
 
 For **each** newly-written knowledge entry, before the gate:
 
-1. **Neighbor discovery (recall-complete floor).** Read the titles + Findings of
-   the existing `.minerva/knowledge/*.md` entries directly (a full corpus scan)
-   and identify genuine relationships. You MAY read `index.md`'s one-line summaries
-   first as a pre-filter, but **only** to narrow what you read — never as the sole
-   source, since the index legitimately lags the corpus and a pending entry has no
-   line at all. A stale or absent index never blocks discovery — fall back to the full
-   scan. Dedup candidate hits by target **stem**: a date is shared by design, so
-   deduping on the id alone would collapse distinct same-day entries into one.
-2. **Write forward links only.** Record each relationship as a `## Related` line
+1. **Pick the theme.** Run `knowledge_catalog.py --themes` and reuse the theme whose
+   existing entries this one belongs beside.
+2. **Neighbor discovery (recall-complete floor).** List the catalog
+   (`knowledge_catalog.py .minerva/knowledge`) to narrow candidates by theme and summary,
+   then read the Findings of the plausible neighbours and identify genuine relationships.
+   Dedup candidate hits by target **stem**: a date is shared by design, so deduping on the
+   id alone would collapse distinct same-day entries into one.
+3. **Write forward links only.** Record each relationship as a `## Related` line
    **in the new entry**: `- [[YYYY-MM-DD-type-slug]] — <relationship>`.
 
    The label is normally a short sentence saying what the edge *is* — that is what
-   makes the wiki navigable, and it is what the corpora actually contain. Four labels
-   are reserved and matched exactly, because their reciprocal is a claim rather than a
-   pointer: `supersedes` / `superseded by` / `contradicts` / `builds on`. Any other
-   label reciprocates as `see also`. A label that merely *mentions* superseding or
-   contradicting without being the exact term is refused — write that reciprocal by
-   hand rather than letting the fixer guess the direction of a retirement.
+   makes the wiki navigable. `supersedes` is matched as a term: a label that starts with
+   it (optionally followed by `:` and an explanation) retires the target in the derived
+   catalog. Use it only when the new entry genuinely replaces the old one.
 
-   Do **not** write the reciprocal line into the neighbor, and do **not** write a
-   supersession banner. Both are derived on the default branch by
-   `knowledge_fix.plan_reciprocals`, which already turns a `supersedes` forward edge
-   into the neighbor's banner *and* its `superseded by` line. Editing the neighbor
-   here is the second-most-common conflict source after the index, and it is
-   redundant with a step that runs anyway.
-3. **Gate.** Surface the new entry files as concrete diffs in the same confirmation
+   Do **not** write anything into the neighbor.
+4. **Gate.** Surface the new entry files as concrete diffs in the same confirmation
    gate that approves the promote (Mode A step 6 / Mode B step 4). There are no
-   neighbor or index diffs to show — if you find yourself with one, something has
+   neighbor or catalog diffs to show — if you find yourself with one, something has
    gone wrong.
-
-### What reconciliation does with this later
-
-`minerva:cleanup` runs `knowledge_fix.py` on the default branch after the PR merges.
-It adds each entry's catalog line from its `**Summary**`, bumps the watermark to the
-new max, writes every missing reciprocal and banner, and opens a single PR. Until
-then the entries sit above the watermark and `knowledge_lint` reports them as
-`pending reconciliation` **warnings**, so the branch's CI drift gate stays green.
-
-The canonical `index.md` skeleton lives with its sole creator, `minerva:init`.
-Promote no longer creates `index.md` — if it is missing, that is an `minerva:init`
-gap and both the linter and the fixer say so.
 
 ### Idempotency
 
@@ -132,5 +127,5 @@ Re-running promote is a byte-level no-op on an entry that already exists: the fi
 name is derived from the date and slug rather than allocated, and a `## Related` line
 is added only if no existing line in that block references the target **stem**
 (insert-iff-absent, set semantics keyed on the stem — keying on the id would treat two
-same-day entries as one and silently drop the second relationship). Promote never edits an entry body outside the `## Related`
-block of the entry it is currently writing.
+same-day entries as one and silently drop the second relationship). Promote never edits
+any entry other than the one it is currently writing.

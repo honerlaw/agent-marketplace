@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: two derivations plus a comment asserting they match will drift; share one implementation, or the invariant is only a wish
 **Context**: .minerva/work/2026-08-11-close-silent-reference-gaps
 

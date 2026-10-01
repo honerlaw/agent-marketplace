@@ -4,16 +4,19 @@
 The one-time migration behind the switch from an allocated sequential id to a date.
 It is a WRITER, which is why it lives here and not in `minerva:migrate` — that skill is
 read-only by contract (knowledge 020/026), and its companion `minerva:migrate-fix`
-wraps this module the way `minerva:lint-fix` wraps the fixer.
+wraps this module behind a confirmation gate.
 
 Two namespaces move together:
 
   `.minerva/knowledge/NNN-type-slug.md`  ->  `YYYY-MM-DD-type-slug.md`
   `.minerva/work/NNN-slug/`             ->  `YYYY-MM-DD-slug/`
 
-and every reference to them is retargeted: `[[wikilinks]]` in entry bodies, `index.md`
-and `overview.md`; the `<!-- superseded-by: -->` marker and its visible banner line; and
-the `**Context**: .minerva/work/...` field each entry carries.
+and every reference to them is retargeted: `[[wikilinks]]` in entry bodies; the
+`<!-- superseded-by: -->` marker and its visible banner line; the `**Context**:
+.minerva/work/...` field each entry carries; and, in a corpus that still has them, the
+legacy `index.md` / `overview.md` aggregates. That legacy handling (including the watermark
+lines below) stays deliberately: a pre-3.0 corpus is renamed BEFORE `knowledge_backfill.py`
+folds those files into the entries, and the backfill reads them by stem.
 
 Git branches are deliberately NOT renamed. `minerva:cleanup`'s merge detection matches a
 branch by its literal name, and a merged PR's head ref is immutable state on the forge —

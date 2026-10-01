@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: decision
+**Theme**: mcp-servers
 **Summary**: mcp/openai renamed to mcp/openai-ads for the Ads API; general-API server and image retired
 **Context**: .minerva/work/2026-09-25-refocus-openai-mcp-on-ads-api (see git history if the worktree has been cleaned up)
 

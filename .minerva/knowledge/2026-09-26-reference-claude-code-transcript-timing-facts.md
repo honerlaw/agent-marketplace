@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-26
 **Type**: reference
+**Theme**: lifecycle
 **Summary**: durationMs is not per-turn wall time; subagents live in sidecar files; notifications carry true durations
 **Context**: .minerva/work/2026-09-26-trace-orchestrator-run-time (see git history if the worktree has been cleaned up)
 

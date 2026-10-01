@@ -1,1 +1,0 @@
-../plugins/minerva/scripts/synthesis_status.py

@@ -253,7 +253,6 @@ Default = the tier when no predicate fires. Floor and ceiling clamp whatever the
 | Review | Replan-vs-FIX | panel | **panel** | panel | — | 2/3 |
 | Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | solo | solo | **reviewer** | Skeptic | — |
 | Promote | TODO disposition | solo | solo | **reviewer** | Skeptic | — |
-| Cleanup | Knowledge reconciliation | Delegated to `minerva:cleanup`, self-gating | — | — | — | — |
 | Ship | Commit message / PR title + body | Operational — main model accepts draft | — | — | — | — |
 | Ship | CI auto-fix `other` bail | Hardcoded user escalation | — | — | — | — |
 | Cleanup gate | PR state polling + cleanup | No decision | — | — | — | — |

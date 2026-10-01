@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-11
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: new test modules are invisible to CI until appended to the enumerated pytest list
 **Context**: .minerva/work/2026-06-11-skill-progressive-disclosure
 
 

@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-23
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: propose-ship-auto routes each decision solo/reviewer/panel and escalates up a tier; quick and balanced deleted
 **Context**: .minerva/work/2026-09-23-adaptive-propose-ship-auto (see git history if the worktree has been cleaned up)
 

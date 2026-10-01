@@ -19,7 +19,7 @@ Invoked as one line at each `PLUGIN_SCRIPTS=` site::
 
 **It compares the whole scripts directory, not one named module.** A per-module check was the
 first design and it had two holes, both found by review: a site can invoke more than one script
-(`cleanup/references/reconciliation.md` runs `knowledge_lint` *and* `synthesis_status`), and every
+(`migrate-fix` runs `knowledge_backfill` *and* `knowledge_lint`), and every
 module imports siblings — `workstream_status` imports `work_status`, and most modules import
 `knowledge_lint`/`knowledge_spans` — so naming one module leaves its transitive dependencies
 unchecked. Comparing the directory makes both unrepresentable rather than patched, and removes the

@@ -22,6 +22,9 @@ from plugin_guard import divergence, working_tree_root
 
 VERSION = 1
 COUNTERS = ("fix_iteration", "cleanup_retry", "escalations", "decisions", "reviewers")
+# `reconciliation` is legacy: minerva 3.0 removed the post-merge knowledge reconciliation, so
+# nothing writes this phase any more. It stays readable so a checkpoint saved mid-run by a 2.x
+# session (and old run traces) still loads instead of failing as invalid state.
 PHASES = {"ship", "cleanup", "reconciliation", "done"}
 FIELDS = {"version", "repository", "unit", "revision", "branch", "caller", "phase",
           "pr", "cleanup_deadline", "status", *COUNTERS}
@@ -37,10 +40,10 @@ def canonical_caller(caller):
     """The live orchestrator a caller resumes through; legacy names map to `propose-ship-auto`."""
     return LEGACY_CALLERS.get(caller, caller)
 REQUIRED_MODULES = {
-    "decision_telemetry.py", "knowledge_fix.py", "knowledge_lint.py",
-    "knowledge_rename.py", "knowledge_edits.py", "knowledge_spans.py",
+    "decision_telemetry.py", "knowledge_backfill.py", "knowledge_catalog.py",
+    "knowledge_fix.py", "knowledge_lint.py", "knowledge_rename.py", "knowledge_spans.py",
     "minerva_runtime.py", "migration_status.py", "plugin_guard.py",
-    "synthesis_status.py", "work_status.py", "workstream_status.py",
+    "work_status.py", "workstream_status.py",
 }
 
 

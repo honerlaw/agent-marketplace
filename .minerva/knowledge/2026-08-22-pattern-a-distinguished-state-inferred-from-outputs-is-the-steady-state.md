@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: gating on "outputs look like X" instead of an explicit flag catches the resting state, not the failure
 
 **Context**: .minerva/work/2026-08-22-close-open-issue-backlog (see git history if the worktree has been cleaned up)

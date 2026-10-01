@@ -704,13 +704,14 @@ _QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")  # may span lines (commit message
 _PY_KNOWLEDGE_WRITE_RE = re.compile(
     r"\.minerva/knowledge/[^\"'\s]+\.md[\"']\s*\)?\s*\.write_text"
     r"|open\(\s*[\"'][^\"']*\.minerva/knowledge/[^\"']+\.md[\"']\s*,\s*[\"'][wa]")
-# index.md / overview.md are the catalog and synthesis — reconciliation, not promote.
+# index.md / overview.md were the pre-3.0 catalog and synthesis, written by reconciliation,
+# not promote. Kept so traces of 2.x runs still classify correctly.
 _NOT_AN_ENTRY = ("index.md", "overview.md")
 
 
 # A work unit's worktree is created with a NEW branch, `-b <date-slug>`
 # (propose's on-approval step), with options/path in any order git accepts.
-# minerva's own maintenance worktrees (`-B minerva/reconcile`, `-b minerva/synthesize`)
+# minerva's own (pre-3.0) maintenance worktrees (`-B minerva/reconcile`, `-b minerva/synthesize`)
 # live in the `minerva/` branch namespace and must not read as the start of `work`.
 _GIT_WORKTREE_ADD_RE = re.compile(
     r"\bgit\s+(?:-[Cc]\s+\S+\s+)*worktree\s+add\b[^\n;&|]*?\s-b\s+(?!minerva/)")

@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-11
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: permissiveness and scope are separate dials; widening what a parser accepts without bounding where it looks turns a gap-filler into a false reading
 **Context**: .minerva/work/2026-08-11-close-the-followups
 

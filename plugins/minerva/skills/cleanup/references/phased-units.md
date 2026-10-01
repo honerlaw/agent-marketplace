@@ -1,8 +1,8 @@
 # cleanup — phased work units
 
 A unit whose `proposal.md` declares a `## Phases` section ships **one PR per phase** while
-keeping a single record. That splits cleanup's two jobs apart, because they no longer happen at
-the same moment.
+keeping a single record. A merged phase therefore does not mean the unit is finished, and
+cleanup's one job — worktree and branch teardown — must wait for the final phase.
 
 **Read this before tearing down any worktree.** A unit with no `## Phases` section is unphased —
 the normal case — and nothing here applies to it.
@@ -10,26 +10,11 @@ the normal case — and nothing here applies to it.
 Background, branch topology and the soft ceiling live in
 `skills/propose/references/phasing.md`.
 
-## The split
+Knowledge needs no per-phase handling: an entry `minerva:promote`'s Mode B lands in a phase's PR
+is complete when that PR merges, because the catalog is derived on read from the entries
+themselves. Nothing is deferred to the final phase or to cleanup.
 
-| Job | When it runs on a phased unit |
-|---|---|
-| Knowledge reconciliation | **Every invocation**, exactly as today — ungated |
-| Worktree + branch teardown | **Only once the final phase has merged** |
-
-### Reconciliation is never gated on phase completion
-
-`minerva:promote`'s Mode B lands knowledge entries in the PR of whichever phase discovered them.
-An entry that merged with phase 1 must be catalogued when phase 1 merges — not held until the
-last phase, which may be days away or may never come.
-
-Deferring it re-creates the exact failure
-`2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` documents: entries sitting
-on the default branch, present but uncatalogued and therefore invisible to a reader, while the
-run that skipped them reports itself successful. That happened six times in two days on this
-project, and every one was found by accident.
-
-### Teardown waits
+## Teardown waits
 
 Removing the worktree between phases destroys the workspace the remaining phases are cut in.
 

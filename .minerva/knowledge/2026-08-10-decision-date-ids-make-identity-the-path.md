@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-10
 **Type**: decision
+**Theme**: concurrency
 **Summary**: an unallocated id plus full-stem identity turns silent duplicate-merges into loud add/add conflicts
 **Context**: .minerva/work/2026-08-09-date-prefixed-identity
 

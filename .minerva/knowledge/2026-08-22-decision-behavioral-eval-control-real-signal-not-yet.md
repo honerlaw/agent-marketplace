@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: decision
+**Theme**: lifecycle
 **Summary**: the suppression control works via `--plugin-dir` minus one skill, but the measured delta (+0.5) sits inside the noise (sd 0.96), so per-skill backfill stays gated
 
 **Context**: .minerva/work/2026-08-22-validate-behavioral-eval-control (see git history if the worktree has been cleaned up)

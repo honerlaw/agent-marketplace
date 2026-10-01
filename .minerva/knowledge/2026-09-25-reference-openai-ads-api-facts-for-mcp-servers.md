@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: reference
+**Theme**: mcp-servers
 **Summary**: OpenAI Ads API v1 publishes openapi.json; per-account bearer keys; cursor pagination; micros; two upload endpoints
 **Context**: .minerva/work/2026-09-25-refocus-openai-mcp-on-ads-api (see git history if the worktree has been cleaned up)
 

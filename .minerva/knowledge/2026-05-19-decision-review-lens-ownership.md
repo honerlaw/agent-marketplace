@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-19
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: minerva owns spec/knowledge review lenses; code-review owns quality
 **Context**: .minerva/work/2026-05-19-review-calls-code-review
 
 ## Context

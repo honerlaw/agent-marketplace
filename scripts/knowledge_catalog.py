@@ -1,0 +1,1 @@
+../plugins/minerva/scripts/knowledge_catalog.py

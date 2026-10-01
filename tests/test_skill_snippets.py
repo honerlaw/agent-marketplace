@@ -153,7 +153,7 @@ def orphan_program() -> str:
     own logic is executed exactly as it ships.
     """
     blocks = [b for b in fenced_blocks(SKILLS / "lint" / "SKILL.md", "bash")
-              if "inbound=" in b]
+              if "load_entries" in b]
     assert len(blocks) == 1, f"expected exactly one orphan block, found {len(blocks)}"
     m = re.search(r'python3 -c "(.*?)" "\$PLUGIN_SCRIPTS" "\$ROOT/.minerva/knowledge"\s*$', blocks[0], re.S)
     assert m, "could not locate the python3 -c program in the orphan snippet"

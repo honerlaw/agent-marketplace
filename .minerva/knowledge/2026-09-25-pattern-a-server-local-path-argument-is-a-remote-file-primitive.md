@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: pattern
+**Theme**: mcp-servers
 **Summary**: Tool args naming server-local paths are safe over stdio, arbitrary file read/write over HTTP
 **Context**: .minerva/work/2026-09-25-add-openai-mcp-server (see git history if the worktree has been cleaned up)
 

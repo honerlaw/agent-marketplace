@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: decision
+**Theme**: skills-and-catalogs
 **Summary**: the pointer gate now resolves `plugins/minerva/skills/<skill>/references/<f>.md` against the NAMED skill, dissolving the constraint that made cross-skill citation unrepresentable
 
 **Context**: .minerva/work/2026-08-22-close-open-issue-backlog (see git history if the worktree has been cleaned up)

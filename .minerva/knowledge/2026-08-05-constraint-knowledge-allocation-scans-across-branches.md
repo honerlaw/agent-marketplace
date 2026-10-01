@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-05
 **Type**: constraint
+**Theme**: concurrency
 **Summary**: new-file id collisions merge cleanly with no conflict, so the allocator is the only backstop
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 

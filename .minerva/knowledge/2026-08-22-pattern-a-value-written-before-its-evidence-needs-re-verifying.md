@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-22
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: a field authored ahead of its evidence is a claim; re-verify it at every consumer, not just the nearest
 **Context**: .minerva/work/2026-08-22-intake-matches-open-issues (see git history if the worktree has been cleaned up)
 

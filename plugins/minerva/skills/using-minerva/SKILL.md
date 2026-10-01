@@ -46,12 +46,10 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | Ready to commit, open a PR, watch CI, and merge | `minerva:ship` |
 | PR merged — tidy up the worktree and branch | `minerva:cleanup` |
 | Something is broken — investigate a live incident or a dev bug end-to-end | `minerva:debug` |
-| Health-check the `.minerva/knowledge/` wiki (index drift, broken links, orphans, contradictions, stale claims) | `minerva:lint` (read-only — reports; repairs by hand or the gated path) |
-| Apply the mechanical wiki fixes `minerva:lint` reported (stale/misfiled catalog lines, missing reciprocals) | `minerva:lint-fix` (mutating — gated; deterministic fixes only) |
-| Corpus still has `NNN-` filenames and should move to date ids | `minerva:migrate-fix` (mutating — gated; `minerva:migrate` reports whether it is needed) |
-| On the **default branch**, build a theme-grouped overview of the knowledge corpus | `minerva:synthesize` (read-mostly; `minerva:cleanup` runs it during reconciliation) |
+| Health-check the `.minerva/knowledge/` wiki (broken links, missing Theme/Summary, orphans, contradictions, stale claims) | `minerva:lint` (read-only — reports; repairs by hand) |
+| Corpus still has `NNN-` filenames, or legacy pre-3.0 aggregate files whose data should move onto the entries | `minerva:migrate-fix` (mutating — gated; renames to date ids and backfills `**Theme**` / `**Summary**`; `minerva:migrate` reports whether it is needed) |
 | Orienting: where things stand, what to do next | `minerva:status` (read-only) |
-| A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, missing index/overview, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist; renames + cross-ref authoring are judgment calls done by hand) |
+| A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, legacy aggregate files, entries missing Theme/Summary, stale routing, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist naming `minerva:migrate-fix` / `minerva:init` / hand work per gap) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
 | Run the whole lifecycle end-to-end without human gates, any size of change — each decision gets the tier it earns: the main model alone when provably small, one reviewer by default, a `minerva:round-table` panel when ambiguous or high-stakes | `minerva:propose-ship-auto` |
 

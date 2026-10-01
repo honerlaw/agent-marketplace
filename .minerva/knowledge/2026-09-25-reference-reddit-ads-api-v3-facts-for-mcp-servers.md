@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: reference
+**Theme**: mcp-servers
 **Summary**: Reddit Ads v3 publishes openapi.json; OAuth refresh tokens; follow next_url; four POST paginators
 **Context**: .minerva/work/2026-09-25-add-reddit-ads-mcp-server (see git history if the worktree has been cleaned up)
 

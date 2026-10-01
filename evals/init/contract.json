@@ -31,12 +31,6 @@
     "AGENTS.md",
     {
       "any_of": [
-        "overview.md"
-      ],
-      "file": "references/steps.md"
-    },
-    {
-      "any_of": [
         "you may have customized it"
       ],
       "file": "references/steps.md"
@@ -71,22 +65,21 @@
     },
     {
       "any_of": [
-        "index.md"
+        "No `index.md`, no `overview.md`"
       ],
       "file": "references/steps.md"
     },
     {
       "any_of": [
-        "no watermark"
+        "**Theme**"
       ],
       "file": "references/steps.md"
     },
     {
       "any_of": [
-        "backfill"
+        "find .minerva/knowledge -name"
       ],
-      "file": "references/steps.md",
-      "ignore_case": true
+      "file": "references/steps.md"
     }
   ],
   "cross_surface": {

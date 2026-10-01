@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: decision
+**Theme**: knowledge-wiki
+**Summary**: the Routing section teaches the wiki reading protocol; stale sections get a gated refresh with markers derived from the template-of-record
 **Context**: .minerva/work/2026-06-03-init-routing-wiki-protocol (see git history if the worktree has been cleaned up)
 
 ## Context

@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-05
 **Type**: decision
+**Theme**: knowledge-wiki
 **Summary**: promote writes only new entry files; index, watermark, reciprocals and overview reconcile on the default branch
 **Context**: .minerva/work/2026-08-05-add-only-knowledge-writes (see git history if the worktree has been cleaned up)
 

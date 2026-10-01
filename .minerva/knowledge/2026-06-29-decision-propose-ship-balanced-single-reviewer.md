@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-29
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: a fourth orchestrator (propose-ship-balanced) runs one advisory reviewer at the telemetry-selected high-signal gates, arbitrated inline — between quick (solo) and auto (panels), not a round-table panel
 **Context**: .minerva/work/2026-06-29-add-propose-ship-balanced (see git history if the worktree has been cleaned up)
 
 <!-- superseded-by: 2026-09-23-decision-one-orchestrator-picks-each-decisions-tier -->

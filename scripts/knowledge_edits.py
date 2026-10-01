@@ -1,1 +1,0 @@
-../plugins/minerva/scripts/knowledge_edits.py

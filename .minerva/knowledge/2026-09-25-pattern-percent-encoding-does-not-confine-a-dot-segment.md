@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-25
 **Type**: pattern
+**Theme**: mcp-servers
 **Summary**: quote(value, safe="") leaves "." and ".." intact; URL resolution collapses them into another endpoint
 **Context**: .minerva/work/2026-09-25-add-google-search-console-mcp-server (see git history if the worktree has been cleaned up)
 

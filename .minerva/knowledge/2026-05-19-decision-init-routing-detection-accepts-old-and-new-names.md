@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-18
 **Type**: decision
+**Theme**: lifecycle
+**Summary**: init's Routing-section detection accepts both old and new directory names
 **Context**: .minerva/work/2026-05-19-broaden-promote-knowledge-artifacts
 
 ## Context

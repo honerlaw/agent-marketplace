@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-13
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: site catalog surface is now pages/index.md (MkDocs source); site/ is gitignored build output; test reads source directly
 **Context**: .minerva/work/2026-06-13-mkdocs-site (see git history if the worktree has been cleaned up)
 
 ## Context

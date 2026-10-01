@@ -2,6 +2,7 @@
 
 **Date**: 2026-09-23
 **Type**: decision
+**Theme**: silent-success
 **Summary**: Follow-up issues need failure scenario, critical/high priority, and too-large-to-absorb; small defects fixed in-unit
 **Context**: .minerva/work/2026-09-23-follow-ups-must-earn-filing (see git history if the worktree has been cleaned up)
 

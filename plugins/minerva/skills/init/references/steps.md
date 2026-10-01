@@ -7,56 +7,18 @@ If `.minerva/` doesn't exist, create:
 - `.minerva/work/`
 - `.minerva/work/.gitkeep` (empty file, so git tracks the empty directory)
 - `.minerva/knowledge/`
-- `.minerva/knowledge/index.md` — the knowledge catalog, written with the canonical
-  skeleton below (watermark `000`). A non-empty `index.md` already makes the
-  directory tracked by git, so **only** create `.minerva/knowledge/.gitkeep` when
-  `index.md` is absent (and never both).
+- `.minerva/knowledge/.gitkeep` (empty file, so git tracks the empty directory)
 - `.minerva/reference/` — the present-tense operational-doc tier.
 - `.minerva/reference/.gitkeep` (empty file, so git tracks the empty directory)
 
-**Canonical `index.md` skeleton** — `minerva:init` is the **sole** creator of this
-file. `minerva:promote` is add-only and never writes `index.md` at all; the catalog
-is maintained on the default branch by `minerva:cleanup`'s reconciliation, which
-refuses to run against a missing index rather than fabricating one. So if this file
-is absent, that is an init gap, and both `knowledge_lint` and `knowledge_fix` say so.
-Emit this **exact** content:
-
-```markdown
-# Knowledge index
-<!-- index-watermark: 000 -->
-
-## Decisions
-
-## Bugs
-
-## Patterns
-
-## Constraints
-
-## References
-```
-
-The catalog carries no watermark: an entry is pending iff it has no catalog line.
-(`000` for a fresh scaffold); it is a content freshness signal preferred over file
-mtime (mtime is unreliable across git checkouts and worktrees).
+**No `index.md`, no `overview.md`.** The knowledge catalog is derived on read from each
+entry's `**Theme**` and `**Summary**` lines (the Routing section's one-liner, or
+`knowledge_catalog.py`), so there is no shared file to scaffold, maintain or reconcile.
+Never create either file. A corpus that still has them is a pre-3.0 corpus:
+`minerva:migrate` reports it and `minerva:migrate-fix` folds them into the entries.
 
 If `.minerva/` already exists, skip whichever pieces are already in place. Don't
-overwrite an existing `index.md`, `.gitkeep`, or `.minerva/reference/`.
-
-### Step 1b — index backfill offer (idempotent mode)
-
-If `.minerva/knowledge/` already holds entries (`<YYYY-MM-DD>-<type>-<slug>.md` files) but
-`index.md` is missing or empty, **offer** to backfill it:
-
-> "`.minerva/knowledge/` has N entries but no populated `index.md`. Generate the
-> catalog from the existing entries now?"
-
-On acceptance, write `index.md` from the canonical skeleton, add one
-`- [[YYYY-MM-DD-type-slug]] — <≤15-word summary>` line per entry under its Type section
-(title from the entry H1, summary condensed from its Finding), and set the watermark
-from the entries on disk. **Cross-reference backfill** (adding `## Related` blocks
-across existing entries) is a separate, judgment-heavy pass — offer it only if the
-user asks; it is not part of the index backfill.
+overwrite an existing `.gitkeep` or `.minerva/reference/`.
 
 ## Step 2 — gitignore check
 
@@ -95,20 +57,25 @@ An existing customized Routing section still uses the gated refresh below.
 
 ### Routing section content
 
-Use this exact template (verbatim, with the appended blank line at the end for readability):
+Use this exact template (verbatim, with the appended blank line at the end for readability). It is fenced with `~~~` because it contains a ` ``` ` block of its own:
 
-```markdown
+~~~markdown
 ## minerva
 
 This project uses [minerva](https://github.com/honerlaw/agent-marketplace/tree/main/plugins/minerva) for durable record discipline.
 
-- `.minerva/knowledge/overview.md` — theme-grouped synthesis of everything known. Read first to orient (absent until `minerva:synthesize` first runs — fall back to the index).
-- `.minerva/knowledge/index.md` — the catalog, one line per entry. Look up specifics here; drill into entries via their `[[YYYY-MM-DD-type-slug]]` links only when a theme bears on your task.
+- `.minerva/knowledge/` — write-once entries (decisions, bugs, patterns, constraints, references), each tagged with a `**Theme**` and a one-line `**Summary**`. Orient by listing the catalog — one `theme | entry | summary` line per entry, grouped by theme, with `(superseded)` on an entry a newer one has retired — then open only the entries whose theme bears on your task:
+
+  ```sh
+  find .minerva/knowledge -name '[0-9]*.md' -exec awk 'function p(){if(f!=""){n=f;sub(/.*\//,"",n);sub(/\.md$/,"",n);N[++c]=n;T[n]=(t==""?"(unthemed)":t);S[n]=s;if(b)X[n]=1};f=FILENAME;t="";s="";q=0;r=0;h=0;b=0} function id(x){sub(/.*\//,"",x);sub(/-[a-z]+-.*/,"",x);return x} function tgt(x){sub(/^- \[\[/,"",x);sub(/\]\].*/,"",x);return x} FNR==1{p()} {sub(/\r$/,"")} /^[ \t]*(```|~~~)/{q=!q;next} q{next} /^## /{h=1;r=($0=="## Related")} !h&&/^<!-- superseded-by: /{b=1} /^\*\*Theme\*\*:/&&t==""{sub(/^\*\*Theme\*\*:[ \t]*/,"");sub(/[ \t]+$/,"");t=$0} /^\*\*Summary\*\*:/&&s==""{sub(/^\*\*Summary\*\*:[ \t]*/,"");sub(/[ \t]+$/,"");s=$0} r&&/^- \[\[[^]]*\]\][ \t]*(—|–|-)[ \t]*/&&!/\]\].*\[\[/{l=tolower($0);sub(/^- \[\[[^]]*\]\][ \t]*(—|–|-)[ \t]*/,"",l);x=tgt($0);if(l~/^superseded by([ \t]*(:|;|,|—|–|-)|[ \t]*$)/)b=1;else if(l~/^supersedes([ \t]*(:|;|,|—|–|-)|[ \t]*$)/&&id(f)>=id(x))Y[x]=1} END{p();for(i=1;i<=c;i++){n=N[i];print T[n]" | "n" | "S[n]((n in X)||(n in Y)?" (superseded)":"")}}' {} + | sort
+  ```
+
+  Links between entries are forward-only `## Related` lines; find what links *to* an entry with `grep -l '\[\[<entry>\]\]' .minerva/knowledge/*.md`.
 - `.minerva/reference/` — present-tense operational docs (architecture, glossary, conventions): how the system works now. Read on demand.
 - `.minerva/work/` — historical proposals and replans. Grep when you need the reasoning behind a past feature.
 
 Active work units live at `.minerva/work/<date-slug>/`. Load the installed `minerva:using-minerva` skill for the full methodology using your host's skill loader. In Claude Code use `/minerva:using-minerva`; in Codex select `$minerva:using-minerva`. Follow the loaded plugin's runtime contract for tools and installed paths.
-```
+~~~
 
 Append the Routing section at the end of the file (don't try to find a "right" spot — end is fine and is easy to detect on re-runs).
 
@@ -126,9 +93,12 @@ template** is never revisited. The refresh offer closes that gap — **gated, ne
 automatic**:
 
 1. **Staleness check (generic, disjunctive).** For each `.minerva/...` path that appears
-   as a bullet in the **current template above** (today: `.minerva/knowledge/overview.md`,
-   `.minerva/knowledge/index.md`, `.minerva/reference/`, `.minerva/work/`), check whether
-   the detected section contains that substring. If **any** is missing, the section is
+   in the **current template above** (today: `.minerva/knowledge/`,
+   `find .minerva/knowledge -name` — the catalog one-liner — `.minerva/reference/`,
+   `.minerva/work/`), check whether the detected section contains that substring. A
+   pre-3.0 section routes to `overview.md` / `index.md` and lacks the catalog one-liner, so it
+   is always a candidate — which is how an upgraded consumer learns its routing points at
+   files that no longer exist. If **any** is missing, the section is
    a refresh candidate. (Derive the markers from the template-of-record above, never from a hardcoded list.)
    Also offer this gated refresh when the routing still requires the Claude-only
    `Skill` tool or omits the current runtime-contract guidance. Preserve custom
@@ -163,7 +133,7 @@ If any files were newly created **or refreshed** in steps 1–3 (a Routing-secti
 modifies an existing agent file — it must be offered for commit too, or a refresh-only
 run leaves the change dangling uncommitted), offer to commit them:
 
-> "Created/updated `.minerva/{work,knowledge,reference}` (incl. `knowledge/index.md`) + Routing section in `<files>`. Stage and commit now?"
+> "Created/updated `.minerva/{work,knowledge,reference}` + Routing section in `<files>`. Stage and commit now?"
 
 If the user agrees:
 ```
@@ -179,7 +149,6 @@ Print a status block:
 
 ```
 .minerva/ layout       ✓ created (or: already present)
-.minerva/knowledge/index.md  ✓ scaffolded (or: ✓ backfilled from N entries; or: ✓ already present)
 .minerva/reference/    ✓ created (or: ✓ already present)
 .gitignore             ✓ ok       (or: skipped — not a git repo; or: ⚠ <pattern at file:line> would exclude .minerva/)
 .minerva/worktrees/    ✓ added to .gitignore (or: ✓ already ignored; or: — not a git repo)

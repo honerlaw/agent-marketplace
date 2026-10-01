@@ -2,6 +2,7 @@
 
 **Date**: 2026-08-10
 **Type**: bug
+**Theme**: silent-success
 **Summary**: --follow reports a creation as a rename, so pairing it with --diff-filter=A filters every commit away
 **Context**: .minerva/work/2026-08-09-date-prefixed-identity
 

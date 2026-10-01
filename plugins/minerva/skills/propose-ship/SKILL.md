@@ -15,7 +15,7 @@ Orchestrate the full minerva lifecycle in one invocation by delegating to each s
 minerva:propose → minerva:work → minerva:review → minerva:promote → minerva:ship → minerva:cleanup
 ```
 
-`minerva:cleanup` closes the lifecycle by reconciling the knowledge wiki on the default branch — cataloguing the entries promote left pending, writing their reciprocal links, and refreshing `overview.md` when warranted — in a single auto-merging PR. None of that happens on the work-unit branch, which is what keeps concurrent minerva PRs conflict-free.
+`minerva:cleanup` closes the lifecycle by removing the merged worktree and branch. It writes nothing to the knowledge wiki: promote's write-once entries are the whole knowledge update, and the catalog, backlinks and supersession are derived on read — which is what keeps concurrent minerva PRs conflict-free with no post-merge pass.
 
 Invoke each phase via the skill loader in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 

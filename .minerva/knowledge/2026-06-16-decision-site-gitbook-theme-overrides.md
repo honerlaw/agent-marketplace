@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-16
 **Type**: decision
+**Theme**: skills-and-catalogs
+**Summary**: gitbook-theme site chrome is customized via `theme.custom_dir → overrides/`, never the installed theme; the dead search-results block is CSS-hidden
 **Context**: .minerva/work/2026-06-16-clean-site-footer-nav (see git history if the worktree has been cleaned up)
 
 ## Context

@@ -2,6 +2,8 @@
 
 **Date**: 2026-05-20
 **Type**: constraint
+**Theme**: skills-and-catalogs
+**Summary**: marketplace registry isn't auto-discovered: update `marketplace.json` + README
 **Context**: .minerva/work/2026-05-20-swap-financials-for-utils-plugin (see git history if the worktree has been cleaned up)
 
 ## Context

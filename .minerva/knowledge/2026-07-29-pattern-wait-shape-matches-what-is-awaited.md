@@ -2,6 +2,8 @@
 
 **Date**: 2026-07-28
 **Type**: pattern
+**Theme**: lifecycle
+**Summary**: size a wait to what's awaited (CI-shaped vs queue-shaped); prefer the CLI's own blocking primitive over a poll loop
 **Context**: .minerva/work/2026-07-29-right-size-lifecycle-waits
 
 ## Context

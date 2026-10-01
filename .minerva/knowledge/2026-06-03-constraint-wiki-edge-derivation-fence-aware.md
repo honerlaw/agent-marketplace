@@ -2,6 +2,8 @@
 
 **Date**: 2026-06-03
 **Type**: constraint
+**Theme**: knowledge-wiki
+**Summary**: any tool deriving wiki cross-ref edges must be fence-aware (a fenced `## Related` example is not a real edge)
 **Context**: .minerva/work/2026-06-03-knowledge-lint-fix (see git history if the worktree has been cleaned up)
 
 ## Context

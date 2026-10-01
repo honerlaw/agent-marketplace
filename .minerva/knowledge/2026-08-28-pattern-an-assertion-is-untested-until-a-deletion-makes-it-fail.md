@@ -9,6 +9,7 @@ metadata:
 
 **Date**: 2026-08-28
 **Type**: pattern
+**Theme**: silent-success
 **Summary**: Budget a deletion pass per assertion; five vacuous checks in one unit all read clean
 **Context**: .minerva/work/2026-08-28-observable-orchestrator-mode (see git history if the worktree has been cleaned up)
 

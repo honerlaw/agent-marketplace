@@ -167,8 +167,7 @@ def unit_state(unit_dir) -> dict:
 # A work unit that is too big for one PR declares an ordered `## Phases` section and
 # ships as one PR per phase, keeping a SINGLE record — one proposal, one scratchpad, one
 # promote. The alternative minerva used before this was to decompose into N work units,
-# which multiplies every per-unit cost (proposal, worktree, review, promote, knowledge
-# reconciliation) by N and was judged one-sidedly: the prose stated a cost of NOT
+# which multiplies every per-unit cost (proposal, worktree, review, promote, ship) by N and was judged one-sidedly: the prose stated a cost of NOT
 # splitting and none for splitting.
 #
 # **A unit with no `## Phases` section is unphased and nothing here applies to it.** That
