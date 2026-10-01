@@ -30,6 +30,7 @@ REGISTERED_SITES = {
     "propose/references/on-approval.md",
     "lint/SKILL.md",
     "migrate-fix/SKILL.md",
+    "migrate-fix/references/backfill.md",
     "status/SKILL.md",
     "cleanup/references/phased-units.md",
     "migrate/SKILL.md",

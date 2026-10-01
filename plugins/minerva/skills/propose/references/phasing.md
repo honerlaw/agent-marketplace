@@ -12,8 +12,8 @@ up a unit that declares them.**
 
 minerva's previous answer to "too big" was to decompose into N separate work units and abort
 the run: *"scope check resolved to decomposition — re-run with one sub-unit at a time."* That
-multiplies every per-unit cost by N — propose, worktree, review, promote, knowledge
-reconciliation, ship, cleanup, and a human gate at each transition — and each new unit
+multiplies every per-unit cost by N — propose, worktree, review, promote, ship, cleanup,
+and a human gate at each transition — and each new unit
 re-derives the project context the previous one just built.
 
 The judgment was also one-sided by construction: the prose stated a cost of **not** splitting
@@ -59,7 +59,7 @@ phase — it is the first half of one.
 **A unit with no `## Phases` section is unphased**, and every consumer behaves exactly as it did
 before this mechanism existed. That inertness is what made phasing safe to add to `ship`,
 `cleanup`, `work_status` and four orchestrators at once — the same argument
-`2026-08-09-decision-reference-is-a-fifth-entry-type` made for appending an empty index section.
+`2026-08-09-decision-reference-is-a-fifth-entry-type` made for adding an initially empty entry type.
 
 ## Branch topology — sequential off the default branch
 
@@ -153,14 +153,13 @@ Two rules ride with the loop:
 outstanding phases (see [Reporting](#reporting-never-let-a-pending-phase-be-silent) above). A
 loop whose exit is silent is indistinguishable from a loop that completed.
 
-## Cleanup: reconcile every phase, tear down once
+## Cleanup: tear down once
 
-`minerva:cleanup` does two unrelated jobs, and phasing separates them:
+Knowledge needs nothing from cleanup: each phase's PR carries its own entries complete, and the
+catalog is derived on read, so an entry that lands in phase 1's PR is visible the moment it
+merges (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). What phasing changes is
+teardown:
 
-- **Knowledge reconciliation** runs on every invocation, exactly as it does now. A Mode B entry
-  that landed in phase 1's PR must be catalogued then, not after the final phase — otherwise it
-  sits on the default branch present but uncatalogued, which is the precise stranding failure
-  `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` describes.
 - **Worktree teardown is deferred** while any declared phase is unmerged, and the unit's merged
   phase branches are pruned only once the final phase lands.
 

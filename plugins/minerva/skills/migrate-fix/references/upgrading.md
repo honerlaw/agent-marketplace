@@ -41,3 +41,20 @@ migrated.
    any number recorded before the upgrade.
 3. Hand-fill the metadata the backfill reported it could not derive, then re-run
    `minerva:lint`. What remains is genuine.
+
+## What the date means
+
+The id is the **landing** date — the oldest commit touching that path, following renames.
+Under squash-merge that is the day the work shipped; if the repo merges or rebases
+instead, it is the original commit date. The imprecision is deliberate and harmless: a
+date carries no identity and no ordering weight beyond sort.
+
+Two consequences worth stating so nobody later "fixes" them:
+
+- **An entry's date may differ from its work unit's.** They are derived independently, and
+  an entry promoted in a later PR than its proposal legitimately differs. `**Context**`
+  paths are rewritten through a lookup map, never by assuming the two agree.
+- **A filename date may differ from the entry's own `**Date**:` field.** The filename
+  records when the entry *landed*; the body records when it was *authored*. This skill
+  never rewrites the body field — doing so would overwrite authored metadata with a
+  derived value.

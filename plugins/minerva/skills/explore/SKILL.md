@@ -28,7 +28,7 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 ## The process
 
-1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from `index.md`, the catalog), and a couple of recent `.minerva/work/*/proposal.md` files. Understand what already exists before exploring what might.
+1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from the derived catalog — the Routing section's one-liner, grouped by theme), and a couple of recent `.minerva/work/*/proposal.md` files. Understand what already exists before exploring what might.
 
 2. **Ask questions one at a time.** Prefer multiple-choice, but open-ended is fine. Only one question per message — if a topic needs more exploration, break it into several questions across several messages. Focus on understanding the *problem*: who has it, why it matters, what constrains it, what "better" would look like. Resist jumping to solutions.
 

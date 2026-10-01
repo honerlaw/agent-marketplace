@@ -29,7 +29,7 @@ def test_both_manifests_expose_the_same_canonical_skill_tree_and_version():
     assert claude["name"] == codex["name"] == "minerva"
     assert claude["version"] == codex["version"] == "3.0.0"
     assert (PLUGIN / codex["skills"]).resolve() == SKILLS
-    assert len(list(SKILLS.glob("*/SKILL.md"))) == 21
+    assert len(list(SKILLS.glob("*/SKILL.md"))) == 19
     catalog = json.loads((REPO / ".agents/plugins/marketplace.json").read_text())
     entry = next(p for p in catalog["plugins"] if p["name"] == "minerva")
     assert (REPO / entry["source"]["path"]).resolve() == PLUGIN

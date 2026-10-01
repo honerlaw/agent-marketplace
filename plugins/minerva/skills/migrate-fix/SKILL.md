@@ -1,6 +1,6 @@
 ---
 name: migrate-fix
-description: Migrates a legacy knowledge corpus to the current shape — MUTATES `.minerva/knowledge/` and `.minerva/work/` behind confirmation gates. (1) Renames legacy `NNN`-prefixed entries and work units to date ids (`YYYY-MM-DD-type-slug`), deriving each date from the git history of the path itself and retargeting every wikilink, supersession marker and `**Context**` path via the tested `scripts/knowledge_rename.py`; refuses the whole batch before moving anything if two entries would land on one name. (2) Backfills the `**Theme**` / `**Summary**` lines minerva 3.0 derives its catalog from, out of a pre-3.0 corpus's legacy `index.md` / `overview.md`, then deletes both files, via the tested `scripts/knowledge_backfill.py` (dry-run first; reports entries it could not fill for hand-writing). Never renames git branches, never edits an entry's body `**Date**` field, and never changes entry bytes beyond the inserted metadata lines. Use when a corpus still carries `NNN-` filenames or legacy `index.md` / `overview.md` files, when upgrading a corpus written by minerva 2.x, when the user asks to migrate to date ids or backfill entry metadata, or when they invoke `minerva:migrate-fix`. The read-only companion that tells you whether a corpus needs this is `minerva:migrate`.
+description: Migrates a legacy knowledge corpus to the current shape — MUTATES `.minerva/knowledge/` and `.minerva/work/` behind confirmation gates. (1) Renames legacy `NNN`-prefixed entries and work units to date ids (`YYYY-MM-DD-type-slug`), dating each from its own git history and retargeting every wikilink, supersession marker and `**Context**` path via `scripts/knowledge_rename.py`; refuses the whole batch if two entries would land on one name. (2) Backfills the `**Theme**` / `**Summary**` lines the 3.0 catalog reads from a pre-3.0 corpus's legacy `index.md` / `overview.md`, then deletes both, via `scripts/knowledge_backfill.py`. Never renames git branches or edits entry bodies. Use when a corpus still carries `NNN-` filenames or legacy `index.md` / `overview.md`, when upgrading from minerva 2.x, or when the user invokes `minerva:migrate-fix`. The read-only companion is `minerva:migrate`.
 allowed-tools:
   - Bash
   - Read
@@ -63,7 +63,7 @@ need your attention before you gate:
   These are skipped rather than guessed at, because inventing a date mints an id that
   corresponds to nothing. Commit the file first, then re-plan.
 - **A date that surprises you** — the id is the *landing* date, not the authored date.
-  See [What the date means](#what-the-date-means).
+  **Read "What the date means" in `references/upgrading.md`** before trusting a derived date.
 
 ## Step 2 — Confirmation gate (REQUIRED)
 
@@ -120,85 +120,11 @@ an old number. Both are correct: the migration is fence-aware by design.
 
 ## Part B — Backfill entry metadata from the legacy aggregates
 
-Before 3.0 the wiki stored a catalog (`index.md`, one summary line per entry) and a
-theme-grouped narrative (`overview.md`) beside the entries. 3.0 derives both on read from
-two lines every entry carries — `**Theme**` and `**Summary**` — so nothing shared is ever
-written and there is nothing to keep current after a merge
-(`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). A pre-3.0 corpus holds
-that data in the legacy files instead; the backfill moves it onto the entries once.
-
-## Step 5 — Plan (dry run, read-only)
-
-```bash
-ROOT="$(git rev-parse --show-toplevel)"
-PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
-[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-python3 "$PLUGIN_SCRIPTS/knowledge_backfill.py" "$ROOT/.minerva/knowledge" --dry-run
-```
-
-It reports how many entries would gain metadata, which legacy files would be deleted, and
-two hand-work lists:
-
-- **`no Summary (write by hand)`** — entries with no `**Summary**` and no `index.md`
-  catalog line to fill it from.
-- **`no Theme (assign by hand)`** — entries with no `**Theme**` that no `overview.md`
-  section links. Theme is single-valued, so an entry several sections link takes the
-  first; the heading text before its first `:` is kebab-cased with a leading article
-  dropped (`## The knowledge wiki: a navigable corpus` → `knowledge-wiki`).
-
-A corpus with neither legacy file prints `already migrated` and is a no-op — skip to
-Step 8. (Entries that still lack metadata there have nothing to fill from; write their
-lines by hand.)
-
-## Step 6 — Confirmation gate (REQUIRED)
-
-Show the counts, the files to be deleted, the derived theme names (the overview's `## `
-headings, kebab-cased as above), and both hand-work lists. Ask before proceeding. The theme names deserve a look:
-they become the catalog's grouping, and a heading that kebab-cases badly is cheaper to
-fix now than after the overview it came from is deleted.
-
-## Step 7 — Apply and report
-
-```bash
-python3 "$PLUGIN_SCRIPTS/knowledge_backfill.py" "$ROOT/.minerva/knowledge"
-```
-
-It inserts only the missing metadata lines — directly after each entry's `**Type**` line
-(else `**Date**`, else the H1), Theme before Summary — and changes no other byte. Entry
-bodies, `## Related` blocks and any stored back-links or supersession banners are left in
-place: they are still valid, and the catalog still reads legacy banners when deriving
-supersession. It then deletes `index.md` and `overview.md`.
-
-Report the hand-work lists to the user and write those lines by hand (a `**Summary**` is
-one line; a `**Theme**` is a single lowercase kebab-case name — reuse an existing one from
-`knowledge_catalog.py --themes` unless none fits). Then re-run `minerva:init` if
-`minerva:migrate` reported stale routing: the old `## minerva` section still names the
-deleted files.
-
-## Step 8 — Verify
-
-Run `minerva:lint`. A migrated corpus should report **zero errors**. Expect advisory
-warnings: a theme used by only one entry, and missing metadata on older entries you have
-not yet hand-filled. **Read `references/upgrading.md`** before comparing a finding count
-across the upgrade — the 3.0 detector checks different things, so the old number is not a
-baseline.
-
-## What the date means
-
-The id is the **landing** date — the oldest commit touching that path, following renames.
-Under squash-merge that is the day the work shipped; if the repo merges or rebases
-instead, it is the original commit date. The imprecision is deliberate and harmless: a
-date carries no identity and no ordering weight beyond sort.
-
-Two consequences worth stating so nobody later "fixes" them:
-
-- **An entry's date may differ from its work unit's.** They are derived independently, and
-  an entry promoted in a later PR than its proposal legitimately differs. `**Context**`
-  paths are rewritten through a lookup map, never by assuming the two agree.
-- **A filename date may differ from the entry's own `**Date**:` field.** The filename
-  records when the entry *landed*; the body records when it was *authored*. This skill
-  never rewrites the body field — doing so would overwrite authored metadata with a
-  derived value.
+A pre-3.0 corpus keeps its catalog in `index.md` and its theme grouping in `overview.md`.
+Part B moves both onto the entries as `**Summary**` / `**Theme**` lines with
+`scripts/knowledge_backfill.py` — dry run, confirmation gate, apply, verify — and deletes the
+two files. Run Part A first when both are needed: the backfill matches entries by stem. The
+full protocol (Steps 5–8) lives in `references/backfill.md`. **Read it before backfilling.**
 
 ## Out of scope
 

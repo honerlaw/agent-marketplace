@@ -69,7 +69,7 @@ Count `accept` votes (including `accept with fixes`) against the **required quor
 
 ## Revision round
 
-On consensus failure, the main LLM (not a new panel) synthesizes a revised draft using:
+On consensus failure, the main LLM (not a new panel) writes a revised draft using:
 - The Skeptic's load-bearing critiques as the primary input.
 - The Arbiter's reasoning to disambiguate which critiques mattered.
 - The original artifact, modified to address those critiques without overcorrecting.

@@ -40,6 +40,7 @@ ALLOWED = {
     "plugins/minerva/skills/migrate/SKILL.md": "reports the legacy aggregates a corpus still has",
     "plugins/minerva/skills/migrate-fix/SKILL.md": "runs the backfill that removes them",
     "plugins/minerva/skills/migrate-fix/references/upgrading.md": "the upgrade procedure",
+    "plugins/minerva/skills/migrate-fix/references/backfill.md": "the backfill protocol itself",
     "plugins/minerva/skills/lint/SKILL.md": "documents the legacy-aggregate warning",
     "plugins/minerva/skills/init/references/steps.md":
         "tells init never to create the legacy files and how stale routing is detected",
