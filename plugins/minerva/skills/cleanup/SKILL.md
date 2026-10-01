@@ -104,7 +104,7 @@ If any worktrees were skipped due to uncommitted changes, recommend the user ins
 
 ## No knowledge reconciliation
 
-Cleanup does **not** touch `.minerva/knowledge/`. There is nothing to catalogue after a
+Cleanup does **not** touch `.minerva/knowledge/`, and it opens no PR. There is nothing to catalogue after a
 merge: `minerva:promote` writes write-once entries carrying their own `**Theme**` and
 `**Summary**`, and the catalog, backlinks and supersession are derived on read by
 `knowledge_catalog.py` (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). The

@@ -216,6 +216,8 @@ def test_corrupt_state_is_not_silently_reset(consumer):
 
 
 @pytest.mark.parametrize("host,prefix", [("claude", "/"), ("codex", "$")])
+# `reconciliation` is a legacy phase: nothing writes it since 3.0, but a 2.x checkpoint saved
+# there must still load and resume through the cleanup gate.
 @pytest.mark.parametrize("phase", ["ship", "cleanup", "reconciliation"])
 def test_resume_prompts_preserve_caller_and_budgets(consumer, host, prefix, phase):
     state = runtime.write_state(UNIT, initial(phase=phase, fix_iteration=2, cleanup_retry=5), consumer)
@@ -297,7 +299,7 @@ def test_stale_install_requires_complete_explicit_override(consumer, installed, 
 
 
 @pytest.mark.parametrize("skill,signal", [
-    ("lint", "severity"), ("migrate", "index_present"), ("synthesize", "unsynthesized"),
+    ("lint", "severity"), ("migrate", "legacy_aggregates"),
 ])
 def test_shipped_read_only_signal_snippets_run_in_consumer_project(consumer, installed, skill, signal):
     knowledge = consumer / ".minerva" / "knowledge"

@@ -53,18 +53,28 @@ One line per fact, so it stays readable in a terminal.
 
 ## Table 3 — Knowledge health
 
-Straight from `knowledge`. When `knowledge.exists` is false, render one line — *"no
-`.minerva/knowledge/` in this checkout"* — and no table: an absent corpus and a clean one
-are different states, and only one is good news.
+Straight from `knowledge` (keys: `entries`, `by_type`, `themes`, `unthemed`,
+`lint_errors`, `lint_warnings`, `legacy_aggregates`). When `knowledge.exists` is false,
+render one line — *"no `.minerva/knowledge/` in this checkout"* — and no table: an absent
+corpus and a clean one are different states, and only one is good news.
 
 | | |
 |---|---|
 | Entries | 82 (decision 27 · constraint 25 · pattern 24 · bug 5 · reference 1) |
-| Lint | 0 errors · 0 warnings — `minerva:lint` |
-| Overview | present · 2 entries unsynthesized — `minerva:synthesize` |
-| Link rot | 0 |
+| Themes | 14 · 2 entries unthemed — `minerva:lint` |
+| Lint | 0 errors · 3 warnings — `minerva:lint` |
+| Legacy aggregates | 2 pre-3.0 aggregate files — `minerva:migrate-fix` |
+
+- **Themes** — `themes` distinct theme names; `unthemed` entries carry no `**Theme**` line
+  and land in the derived catalog's `(unthemed)` group. Omit the unthemed clause at zero.
+- **Legacy aggregates** — a pre-3.0 corpus still holding its stored catalog and overview files, which
+  nothing maintains any more; `minerva:migrate-fix` backfills their data into the entries
+  and deletes them. Omit the row at zero.
 
 Name the skill that closes each gap; do not run it, and do not reproduce its findings.
+There is no post-merge knowledge step to wait for: each unit's PR carries its own
+knowledge entries, so a merged unit's next step is `minerva:cleanup` (worktree and branch
+teardown) or nothing.
 
 ## The Next step mapping
 

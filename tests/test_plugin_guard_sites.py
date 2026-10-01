@@ -22,8 +22,8 @@ SKILLS = REPO / "plugins" / "minerva" / "skills"
 # until the guard is actually present.
 #
 # Deliberately files, not (file, module) pairs. The first version of this set paired each file with
-# one module name, which made a real hole invisible: `cleanup/references/reconciliation.md` runs
-# BOTH `knowledge_lint` and `synthesis_status`, and only the first was registered or guarded. The
+# one module name, which made a real hole invisible: a (since removed) cleanup reference ran
+# BOTH `knowledge_lint` and a second status module, and only the first was registered or guarded. The
 # guard now compares the whole scripts directory, so there is no module to pair and no second
 # module to forget.
 REGISTERED_SITES = {
@@ -31,12 +31,10 @@ REGISTERED_SITES = {
     "lint/SKILL.md",
     "migrate-fix/SKILL.md",
     "status/SKILL.md",
-    "cleanup/references/reconciliation.md",
     "cleanup/references/phased-units.md",
     "migrate/SKILL.md",
-    "lint-fix/SKILL.md",
     "ship/references/protocol.md",
-    "synthesize/SKILL.md",
+    "promote/references/wiki-maintenance.md",
 }
 
 _RESOLVE_RE = re.compile(r'PLUGIN_SCRIPTS="\$\(python3 "\$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime\.py" resolve')
@@ -64,7 +62,7 @@ def test_the_registered_set_matches_reality():
 @pytest.mark.parametrize("rel", sorted(REGISTERED_SITES))
 def test_every_resolution_is_guarded(rel):
     """One guard per resolution. Counted, not merely present: a file with two resolution sites
-    (`lint/SKILL.md`, `lint-fix/SKILL.md`) must carry two guards, or one path is unprotected."""
+    (e.g. `lint/SKILL.md`) must carry two guards, or one path is unprotected."""
     text = (SKILLS / rel).read_text()
     assert len(_GUARD_RE.findall(text)) == len(_RESOLVE_RE.findall(text)), (
         f"{rel}: {len(_RESOLVE_RE.findall(text))} resolution site(s) but "

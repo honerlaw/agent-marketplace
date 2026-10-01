@@ -130,10 +130,12 @@ to state here:
   `cleanup`. The action it *names* is the one way it can still cause damage — see the
   phase-first ordering in the Next step mapping.
 - **Re-deriving lifecycle state.** `unit_state`, `read_phases`, `phase_progress` and
-  `phase_branch` are imported from `work_status`; `synthesis_status` and `lint_knowledge`
-  own wiki health. A status surface that restates any of them is a copy that drifts.
-- **Judging wiki health.** The counts come from `minerva:lint` / `minerva:synthesize`'s
-  own signals; interpreting them is those skills' job, and this table only points at them.
-- **Reconciling a stale checkout.** The walk reads files, so it reports whatever the
+  `phase_branch` are imported from `work_status`; `lint_knowledge` and
+  `knowledge_catalog` own wiki health. A status surface that restates any of them is a
+  copy that drifts.
+- **Judging wiki health.** The counts come from `minerva:lint`'s and the derived
+  catalog's own signals; interpreting them is `minerva:lint`'s (and, for a legacy corpus,
+  `minerva:migrate`'s) job, and this table only points at them.
+- **Updating a stale checkout.** The walk reads files, so it reports whatever the
   primary checkout is on. Step 2 fetches and the rollup prints HEAD beside
   `origin/<default>` so a stale tree is *visible* — but this skill never pulls.
