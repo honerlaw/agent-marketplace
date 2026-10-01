@@ -17,7 +17,7 @@ The reasoning behind a design — what was tried, what was rejected, why — liv
 
 **2. Knowledge lives only in chat**
 
-Hard-won facts — "the gitignore entry must land *before* `git worktree add`", "this registry is not auto-discovered" — are learned, used once, and lost. minerva promotes them to `.minerva/knowledge/`, a cross-referenced wiki with an index, an advisory overview, and CI-gated link integrity.
+Hard-won facts — "the gitignore entry must land *before* `git worktree add`", "this registry is not auto-discovered" — are learned, used once, and lost. minerva promotes them to `.minerva/knowledge/`, a cross-referenced wiki of write-once entries whose theme-grouped catalog and backlinks are derived on read — nothing aggregate is stored, so nothing drifts — with CI-gated link and metadata integrity.
 
 **3. Plans drift silently from reality**
 
@@ -51,9 +51,8 @@ The lifecycle is a rail with stations. You can board anywhere, but each skill as
 3. **work** — implement against the proposal, scratchpad live; *replan* fires when reality drifts in a load-bearing way
 4. **review** — audit the diff against the spec and the knowledge wiki, then triage findings
 5. **promote** — partition the scratchpad; durable knowledge up, proposal rewritten to match reality, the rest archived
-6. **synthesize** — refresh the wiki's theme-grouped overview when enough new scope accumulated; self-gating
-7. **ship** — commit, open the PR, observe CI through a tracked watcher; resume through an available scheduler or an exact checkpointed manual prompt, bounded auto-fix, auto-merge where permitted
-8. **cleanup** — after merge: remove the worktree, prune the branch
+6. **ship** — commit, open the PR, observe CI through a tracked watcher; resume through an available scheduler or an exact checkpointed manual prompt, bounded auto-fix, auto-merge where permitted
+7. **cleanup** — after merge: remove the worktree, prune the branch
 
 Two orchestrators run the whole rail end-to-end, differing in who adjudicates decisions — `minerva:propose-ship`'s human gates, or `minerva:propose-ship-auto`, which gives each decision the tier it earns: the main model alone, one fresh-context reviewer, or a three-agent consensus panel (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
 
@@ -88,9 +87,6 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 **`minerva:promote`**
 : Promotes durable knowledge to `.minerva/knowledge/`, rewrites `proposal.md` to match reality, and archives the scratchpad. Forward-looking TODOs aren't silently discarded. Idempotent.
 
-**`minerva:synthesize`**
-: Reports the deterministic un-synthesized-scope signal, then drafts the theme-grouped `overview.md` and — behind a confirmation gate — writes it and bumps the synthesis watermark. The overview is advisory; only the mechanical link-rot signal is deterministic.
-
 **`minerva:ship`**
 : Commits outstanding changes to a branch, opens a pull request, watches CI, fixes CI failures, and enables auto-merge. A tracked watcher observes CI while the session is active; an available scheduler or checkpointed manual prompt resumes a later session. Closes the lifecycle after work, promote, and review.
 
@@ -114,16 +110,13 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 : Investigates a bug end-to-end — gathers evidence first, then diagnoses root cause grounded in that evidence, and reports with a mechanically-derived confidence score. Stays read-only against any system other users depend on.
 
 **`minerva:lint`**
-: Read-only health-check of the knowledge wiki: a deterministic detector for mechanical defects (index drift, broken links, missing reciprocals) plus LLM-judged advisory findings (orphans, contradictions, stale claims). It never edits files; it reports.
-
-**`minerva:lint-fix`**
-: The mutating companion to `minerva:lint` — behind a confirmation gate, applies the deterministically-repairable findings via a tested script. It does not touch entry bodies, and it does not auto-fix judgment calls.
+: Read-only health-check of the knowledge wiki: a deterministic detector for mechanical defects (broken links, missing Theme/Summary metadata, legacy aggregate files) plus LLM-judged advisory findings (orphans, contradictions, stale claims). It never edits files; it reports.
 
 **`minerva:migrate`**
-: Read-only migration check for a pre-conventions knowledge corpus — inventories the non-conforming files invisible to the wiki tooling and emits a checklist naming the existing skills that close each gap.
+: Read-only migration check for a pre-conventions or pre-3.0 knowledge corpus — inventories the non-conforming files invisible to the wiki tooling, legacy aggregate files, entries missing Theme/Summary metadata and stale routing, and emits a checklist naming the skill that closes each gap.
 
 **`minerva:migrate-fix`**
-: The mutating companion to `minerva:migrate` — behind a confirmation gate, renames legacy `NNN-`prefixed entries and work units to date ids, deriving each date from git and retargeting every reference. Refuses the whole batch before moving anything if two entries would collide.
+: The mutating companion to `minerva:migrate` — behind a confirmation gate, renames legacy `NNN-`prefixed entries and work units to date ids, deriving each date from git and retargeting every reference, and backfills a pre-3.0 corpus's Theme/Summary metadata from its legacy aggregate files. Refuses the whole rename batch before moving anything if two entries would collide.
 
 **`minerva:status`**
 : A read-only status check for the whole workstream. Walks every work unit in the primary checkout and its worktrees, derives each one's lifecycle stage and phase progress from the records that already exist, joins branch and PR state, and renders three tables — active units with the next lifecycle step to run, a rollup, and knowledge-wiki health. It names the next skill and stops.
@@ -151,8 +144,8 @@ minerva is opinionated, and the opinions are load-bearing. Each entry below name
 **Interrogate the plan** — Plans are not approved on vibes. A drafted design is questioned one question at a time, recommended answer first, until shared understanding — not until the user gets tired.
 *source: `minerva:grill-plan`*
 
-**Gates before mutation** — Anything that rewrites the durable record asks first. The wiki fixer, the synthesis layer, and promotion all sit behind explicit confirmation gates; every mutating path has a read-only companion or a gate that shows its hand before writing.
-*source: `minerva:lint-fix`, `minerva:synthesize`, `minerva:promote`*
+**Gates before mutation** — Anything that rewrites the durable record asks first. Migration and promotion both sit behind explicit confirmation gates; every mutating path has a read-only companion or a gate that shows its hand before writing.
+*source: `minerva:migrate-fix`, `minerva:promote`*
 
 **Observable over self-judged** — Skills hand off on signals that can be checked — an inline argument was passed, a file exists — never on a model's own claim that "the prior phase converged". Self-assessment is treated as gameable; actions are not.
 *source: knowledge 031 (observable intake) · knowledge 014*

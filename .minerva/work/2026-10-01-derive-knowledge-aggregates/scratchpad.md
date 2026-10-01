@@ -20,3 +20,12 @@
 - [reviewed — clean] whole-proposal (first wave): discarded as stale — restart (tier: reviewer; parallel wave)
 - [reviewed — folded] whole-proposal (restart): approach/scope folds rewrote Success criteria; re-reviewed accept; folded knowledge_rename.py legacy handling, migration_status polarity inversion, both plugin manifests, awk-vs-catalog test (tier: reviewer — interface/knowledge clauses already approved by the approach panel)
 - [rechecked — clean] whole-proposal: fold-audit addressed 1–8; new concerns (cutoff date source, mixed-version wording) folded as clarifications
+
+## Work notes 2026-10-01
+- overview.md was corrupted on main: a "Silent success" paragraph had been pasted into the intro mid-sentence (`see \`Three later findings…`), leaving 9 entries linked from no theme section. Backfill reported them unthemed; assigned `silent-success` by hand (their prose is that cluster). Evidence for the decision entry: a wholesale LLM rewrite of a shared aggregate rots silently.
+- Theme names after backfill shortened by hand: lifecycle-and-its-automation→lifecycle, skills-plugins-and-catalogs→skills-and-catalogs, git-worktrees-and-promote-scratchpad-mechanics→worktrees-and-promote. 7 themes, 119 entries, catalog ~24.7 KB.
+- Own mistake: a hand-assign loop used `open(p,'w').write(f(open(p).read()))` — the write-open truncates before the read, wiping 9 files. Restored from `git show HEAD:` and redone. Pattern-worthy? It is a generic Python footgun, not minerva knowledge — discard.
+- init routing template now nests a ```sh block, so the template's own fence became `~~~markdown` (an inner ``` line at ≤3-space indent would close an outer ``` fence).
+- migration_status found this repo's AGENTS.md still routed to overview/index — updated to the template (copy of CLAUDE.md).
+- knowledge_edits.py was also used by test_promote_invariant's editor property tests; those tests went with it (the editors have no caller once entries are write-once).
+- compatibility eval scenario `reconciliation` repurposed as `merged-cleanup` (worktree removed, no reconcile PR, shipped entry preserved, no legacy aggregates).

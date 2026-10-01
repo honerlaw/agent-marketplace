@@ -12,12 +12,11 @@ Alongside the constants, this module owns the one *fence-scan primitive*
 (`unfenced` / `unfenced_lines`) that every "lines outside code fences" reader derives
 from. The grammar was already single-sourced here; the loop around it was not, and four
 independent copies of it had accumulated. See `unfenced`'s docstring for which readers
-converged on it and — just as importantly — which three deliberately did not.
+converged on it and — just as importantly — which deliberately did not.
 
-The span *editors* (add_related_link, add_supersede_banner, body_complement) live in
-`scripts/knowledge_edits.py` (moved there in work unit 023 so the fixer and the
-invariant guard share one implementation); the read-only linter builds its own
-fence-aware parser on top of these primitives and imports no editors.
+Nothing edits these spans any more: entries are write-once, and back-links and
+supersession are derived on read (`knowledge_catalog.py`). The banner grammar stays because
+legacy entries still carry banners, and the catalog reads them.
 """
 import re
 
@@ -51,13 +50,9 @@ def unfenced(lines):
     `tests/test_skill_budget.py` and `tests/test_skill_contracts.py`. All four now
     derive from this.
 
-    **Three other `FENCE_RE` readers deliberately do NOT, and must not be "finished".**
+    **Other `FENCE_RE` readers deliberately do NOT, and must not be "finished".**
     They look like the same loop and are not:
 
-    - `knowledge_edits._fence_flags` returns a per-line boolean *including* the
-      delimiter lines as fenced, because the byte-identity guard needs to classify
-      every line rather than drop any. Its own docstring says it is deliberately not a
-      content filter.
     - `knowledge_rename` *keeps* fence delimiters and fenced content in its output — it
       rewrites text rather than filtering it, so dropping lines would corrupt the file.
     - `tests/test_skill_dispatch._fence_of` measures the fence's run length for

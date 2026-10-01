@@ -30,7 +30,7 @@ instructions. Do not send the full authoring history to an independent reviewer.
 Wait for results through the available wait/status tools. Parallel Proponent
 and Skeptic agents must both finish before Arbiter starts. For a wave of
 independent decisions, start every first-wave agent before waiting, then wait
-on all of them; reconcile only once every result is in. A fold-audit
+on all of them; combine them only once every result is in. A fold-audit
 uses a new agent and excludes the author's arbitration reasoning. Close or
 release completed agents where supported. No background handle is a verdict.
 
@@ -49,7 +49,7 @@ buckets after completion; a failed command is not proof that checks are green.
 Use a scheduled resume capability only if the current host exposes one and it
 actually supports re-entry. Otherwise checkpoint and provide the exact resume
 prompt before ending the turn. Ending a Codex turn does not arrange a future
-turn merely because a watcher process exists. Merge and reconciliation waits
+turn merely because a watcher process exists. Merge and cleanup waits
 follow the same explicit fallback and retain all counters and deadlines.
 
 Codex child-agent listing covers this task's agents, not a fleet of unrelated

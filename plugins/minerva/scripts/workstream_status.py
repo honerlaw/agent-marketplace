@@ -181,7 +181,7 @@ def _knowledge(kd: Path) -> dict:
         "unthemed": themes.get(UNTHEMED, 0),
         "lint_errors": sum(1 for f in findings if f.severity == "error"),
         "lint_warnings": sum(1 for f in findings if f.severity == "warning"),
-        # A pre-3.0 corpus still carrying `index.md` / `overview.md`: the migration need.
+        # A pre-3.0 corpus still carrying its legacy aggregates: the migration need.
         "legacy_aggregates": sum(1 for f in findings if f.family == "legacy"),
     }
 

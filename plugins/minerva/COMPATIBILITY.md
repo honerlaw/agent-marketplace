@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 2.1.0 packages one canonical `skills/` tree for Claude Code and local
+Version 3.0.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host
@@ -42,8 +42,7 @@ requires recovery rather than an automatic reset.
 
 CI fixes consume an attempt before execution and stop at 3. Cleanup merge waits
 stop at 12 retries or the original one-hour deadline, whichever comes first.
-Reconciliation rereads remaining pending entries after a competing PR merges.
-Completion requires live merge/reconciliation evidence; a completed checkpoint
+Completion requires live merge evidence; a completed checkpoint
 must be explicitly cleared before an independent new run. The next declared
 phase uses `write --start-phase`, renewing only phase-local CI/merge budgets while
 retaining aggregate escalation, decision, and reviewer counts. Standalone resume prompts never
@@ -61,6 +60,68 @@ fails after Claude succeeds, the error reports partial success and the retry
 command. Reload Claude plugins and start a new Codex conversation after updates.
 Existing host-neutral routing remains; legacy Claude-only routing gets an
 offered, diffed refresh through `minerva:init`.
+
+## Upgrading to 3.0
+
+3.0 is a **breaking** release. The knowledge wiki stores entries and nothing else: the
+`index.md` catalog and its `index-watermark`, reciprocal `## Related` back-links,
+supersession banners and `overview.md` are no longer written. Each was a cache of data the
+entries already hold, and each was a shared file concurrent PRs fought over, which is why
+a post-merge reconciliation pass existed. 3.0 derives all of them on read
+(`scripts/knowledge_catalog.py`, or the Routing section's `awk` one-liner) from two
+metadata lines every entry now carries — `**Theme**` (one lowercase kebab-case name) and
+`**Summary**` — plus forward-only `## Related` links
+(`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). Entries are write-once,
+each work unit's PR carries its knowledge complete, and `minerva:cleanup` only removes
+merged worktrees and prunes branches: it opens no PR.
+
+**Removed.**
+
+- `minerva:synthesize` and `minerva:lint-fix` are deleted; invoking either reports
+  "skill not found". There is nothing left for them to maintain: the overview is the
+  derived theme-grouped catalog, and catalog lines and reciprocals are no longer stored.
+- `scripts/knowledge_fix.py` is a **tombstone**: it prints migration instructions and
+  **exits non-zero**. That is deliberate — a CI job that "succeeds" doing nothing would
+  hide the change. `synthesis_status.py` and `knowledge_edits.py` are gone.
+- `minerva:cleanup`'s knowledge reconciliation (and its `minerva/reconcile` PR).
+
+**Upgrade steps, in order.**
+
+1. **Delete any CI job or script that calls `knowledge_fix.py`** (a post-merge
+   "reconcile knowledge" workflow). It now fails on every run.
+2. Run **`minerva:migrate`** (read-only). It reports legacy `index.md` / `overview.md`
+   still present, entries missing `**Theme**` / `**Summary**`, legacy `NNN-` ids, and
+   agent files whose routing still names the legacy files.
+3. Run **`minerva:migrate-fix`**. It renames `NNN-` ids first if needed, then backfills:
+   each missing `**Summary**` from the entry's `index.md` line, each missing `**Theme**`
+   from the first `overview.md` section linking the entry, then deletes both files. It
+   inserts only those metadata lines, runs as a dry run first, applies behind a
+   confirmation gate, and lists entries it could not fill for hand-writing.
+4. Re-run **`minerva:init`**. It detects the stale `## minerva` Routing section and offers
+   a gated refresh to the catalog one-liner.
+5. Run `minerva:lint` and treat its count as a new baseline
+   (`skills/migrate-fix/references/upgrading.md`).
+
+**What lint enforces now.** Invalid ids and broken `## Related` links are errors. A missing
+`**Theme**` or `**Summary**` is an **error** for an entry whose filename id is a date on or
+after 2026-10-01 and a **warning** for an older or `NNN` entry — so every entry written
+under 3.0 is enforced and an un-migrated legacy corpus stays green. The rule keys on the
+entry's own date, never on whether legacy files exist. A legacy `index.md` / `overview.md`
+still present is a warning pointing at `minerva:migrate-fix`; a theme used by one entry is
+an advisory warning. There are no index-drift, watermark or missing-reciprocal checks.
+
+**Legacy content is left in place and still read.** Existing stored back-links and
+`<!-- superseded-by: -->` banners are not removed: they remain valid links, and the
+catalog derives supersession from the union of another entry's `supersedes` edge, the
+entry's own legacy `superseded by` edge, and its legacy banner — each successor listed
+once. In-flight lifecycle checkpoints written by 2.x with a `reconciliation` phase are
+still read and resume as `cleanup`.
+
+**Mixed versions.** Every collaborator should upgrade. Until they do, a collaborator still
+on 2.x whose cleanup recreates `index.md` only produces the legacy-aggregate lint warning —
+never an error, and no textual conflict, since 3.x never writes that file. A 2.x cleanup
+may also write back-links into older entries, which is harmless. A 2.x CI job calling
+`knowledge_fix.py` fails on the tombstone (step 1).
 
 ## Regression evidence
 
@@ -109,7 +170,7 @@ python3 scripts/run_compatibility_evals.py --host both --scenario auto
 ```
 
 Scenarios cover read-only readers, init, human gates, grill/replan, standalone
-panels/review, the autonomous orchestrator at two change sizes, phased shipping, reconciliation, manual
+panels/review, the autonomous orchestrator at two change sizes, phased shipping, manual
 resume, cancelled CI, and exhausted cleanup. Acceptance checks inspect artifacts,
 fixture actions, checkpoints, and actual structured dispatch events rather than
 scoring final prose alone. Live conformance results and any remaining app/IDE
