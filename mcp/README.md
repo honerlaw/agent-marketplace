@@ -10,6 +10,7 @@ deployed as a container.
 | [`google-search-console`](google-search-console/) | Full access to the Google Search Console API via ten typed tools, one per operation (optional read-only mode) |
 | [`reddit-ads`](reddit-ads/) | Full access to the Reddit Ads API (v3) via four generic, spec-driven tools, with OAuth token refresh |
 | [`google-ads`](google-ads/) | Full access to the Google Ads API (REST, v26) via four generic tools driven by Google's Discovery document, including Demand Gen and YouTube Shorts campaigns |
+| [`meta-ads`](meta-ads/) | Full access to Meta's Marketing API (Graph `v26.0`) via six generic tools driven by Meta's codegen endpoint specs, with credentials kept out of every result and log |
 
 ## Contract for every server
 
