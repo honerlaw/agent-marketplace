@@ -56,7 +56,12 @@ async def test_a_read_goes_to_graph_with_the_token_in_the_header(
     arguments = {
         "method": "GET",
         "path": "/act_1/campaigns",
-        "query": {"fields": "name,status", "limit": 2, "effective_status": ["ACTIVE", "PAUSED"]},
+        "query": {
+            "fields": "name,status",
+            "limit": 2,
+            "effective_status": ["ACTIVE", "PAUSED"],
+            "time_range": {"since": "2026-10-01", "until": "2026-10-18"},
+        },
     }
     result = await call(settings, fake, "meta_ads_request", arguments)
     assert result.structured_content == {
@@ -74,8 +79,8 @@ async def test_a_read_goes_to_graph_with_the_token_in_the_header(
     assert query_of(request) == [
         ("fields", "name,status"),
         ("limit", "2"),
-        ("effective_status", "ACTIVE"),
-        ("effective_status", "PAUSED"),
+        ("effective_status", '["ACTIVE", "PAUSED"]'),
+        ("time_range", '{"since": "2026-10-01", "until": "2026-10-18"}'),
         ("appsecret_proof", PROOF),
     ]
     assert TOKEN not in str(request.url)
@@ -118,7 +123,9 @@ async def test_query_booleans_are_lowercase(settings: Settings, fake: FakeGraph)
 
 
 @pytest.mark.parametrize("where", ["query", "body"])
-@pytest.mark.parametrize("name", ["access_token", "Batch", "method", "callback[0]"])
+@pytest.mark.parametrize(
+    "name", ["access_token", "Batch", "adbatch", "method", "callback[0]", "access.token"]
+)
 async def test_refused_parameters_are_refused_in_query_and_body(
     settings: Settings, fake: FakeGraph, where: str, name: str
 ) -> None:
@@ -170,6 +177,14 @@ async def test_errors_and_text_bodies_pass_through(settings: Settings) -> None:
     text = await call(settings, fake, "meta_ads_request", {"method": "GET", "path": "/text"})
     assert text.structured_content is not None
     assert text.structured_content["text"] == "plain"
+
+
+async def test_json_under_another_content_type_is_still_json(settings: Settings) -> None:
+    body = b'{"data": [{"access_token": "page"}]}'
+    fake = FakeGraph(lambda _r: httpx2.Response(200, content=body, headers={"content-type": "x"}))
+    result = await call(settings, fake, "meta_ads_request", {"method": "GET", "path": "/me"})
+    assert result.structured_content is not None
+    assert result.structured_content["json"] == {"data": [{"access_token": "[redacted]"}]}
 
 
 async def test_a_body_that_is_not_json_comes_back_as_text(settings: Settings) -> None:

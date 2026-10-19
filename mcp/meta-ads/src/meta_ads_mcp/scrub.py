@@ -8,12 +8,18 @@ Three layers, applied to every tool result and every error message:
 2. URLs under a `paging` object lose their `access_token` and `appsecret_proof`
    parameters, which Meta writes into `next` / `previous`; other strings are never
    rewritten, so ad data such as a creative's link comes back as it was.
-3. The value of any JSON key named `access_token` is replaced: page tokens and minted
-   tokens are credentials too, and the system user already holds the assets.
+3. The value of any JSON key named `access_token` is replaced, and so is any string
+   shaped like a Meta access token (`EAA` and a long alphanumeric run) wherever it
+   appears, so an aliased field (`fields=access_token.as(x)`) or a token inside a JSON
+   string is caught too: page tokens and minted tokens are credentials, and the system
+   user already holds the assets.
+
+Keys are scrubbed like values.
 """
 
 import hashlib
 import hmac
+import re
 from collections.abc import Iterable
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
@@ -21,6 +27,7 @@ REDACTED = "[redacted]"
 TOKEN_KEY = "access_token"  # noqa: S105 - the JSON key name, not a credential
 PAGING_KEY = "paging"
 PAGING_CREDENTIALS = frozenset({"access_token", "appsecret_proof"})
+META_TOKEN_SHAPE = re.compile(r"EAA[A-Za-z0-9]{20,}")
 
 
 def appsecret_proof(access_token: str, app_secret: str) -> str:
@@ -39,20 +46,32 @@ class Scrubber:
         """Return `text` with every credential literal replaced."""
         for literal in self._literals:
             text = text.replace(literal, REDACTED)
-        return text
+        return META_TOKEN_SHAPE.sub(REDACTED, text)
 
     def value(self, value: object) -> object:
         """Return a JSON-like value with all three layers applied."""
         return self._walk(value, in_paging=False)
 
+    def mapping(self, value: dict[str, object]) -> dict[str, object]:
+        """Return a JSON object with all three layers applied, keys included."""
+        return {
+            self.text(key): self._entry(key, item, in_paging=False) for key, item in value.items()
+        }
+
     def _walk(self, value: object, *, in_paging: bool) -> object:
         if isinstance(value, dict):
-            return {key: self._entry(key, item, in_paging=in_paging) for key, item in value.items()}
+            return {
+                self._key(key): self._entry(key, item, in_paging=in_paging)
+                for key, item in value.items()
+            }
         if isinstance(value, list):
             return [self._walk(item, in_paging=in_paging) for item in value]
         if isinstance(value, str):
             return self.text(_without_credentials(value) if in_paging else value)
         return value
+
+    def _key(self, key: object) -> object:
+        return self.text(key) if isinstance(key, str) else key
 
     def _entry(self, key: object, item: object, *, in_paging: bool) -> object:
         if isinstance(key, str) and key.lower() == TOKEN_KEY:

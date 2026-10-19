@@ -29,6 +29,7 @@ ECHOES = {
     "nested": {"data": {"note": f"proof {PROOF}", "deep": [{"s": f"x{APP_SECRET}y"}]}},
     "json-string": {"body": json.dumps({"echo": TOKEN, "url": f"/x?t={TOKEN}"})},
     "page-tokens": {"data": [{"id": "9", "access_token": "EAApagetoken", "name": "Page"}]},
+    "aliased-token": {"id": "9", "tok": "EAAB" + "Zx9" * 20},
 }
 TOOL_CALLS: tuple[tuple[str, dict[str, object]], ...] = (
     ("meta_ads_request", {"method": "GET", "path": "/act_1/campaigns"}),
@@ -115,7 +116,13 @@ async def test_without_quieting_the_client_would_log_the_proof(
 ) -> None:
     """The negative control: the loggers really do print URLs at INFO."""
     caplog.set_level(logging.DEBUG)
-    for name in ("httpx", "httpx2", "httpcore", "httpcore2"):
-        logging.getLogger(name).setLevel(logging.DEBUG)
-    await call(settings, answering({}), *TOOL_CALLS[0])
+    names = ("httpx", "httpx2", "httpcore", "httpcore2")
+    levels = {name: logging.getLogger(name).level for name in names}
+    try:
+        for name in names:
+            logging.getLogger(name).setLevel(logging.DEBUG)
+        await call(settings, answering({}), *TOOL_CALLS[0])
+    finally:
+        for name, level in levels.items():
+            logging.getLogger(name).setLevel(level)
     assert PROOF in caplog.text

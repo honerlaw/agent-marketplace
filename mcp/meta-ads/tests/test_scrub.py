@@ -43,6 +43,24 @@ def test_access_token_fields_are_redacted_at_any_depth() -> None:
     }
 
 
+def test_token_shaped_strings_and_keys_are_redacted() -> None:
+    page_token = "EAAB" + "x1" * 30
+    value = {"tok": page_token, "note": f"use {page_token} now", TOKEN: 1, "EAAshort": 2}
+    assert Scrubber(SECRETS).value(value) == {
+        "tok": REDACTED,
+        "note": f"use {REDACTED} now",
+        REDACTED: 1,
+        "EAAshort": 2,
+    }
+
+
+def test_mapping_scrubs_a_top_level_object() -> None:
+    assert Scrubber(SECRETS).mapping({TOKEN: TOKEN, "paging": {}}) == {
+        REDACTED: REDACTED,
+        "paging": {},
+    }
+
+
 def test_secrets_inside_json_strings_are_replaced() -> None:
     nested = json.dumps({"echo": TOKEN})
     scrubbed = Scrubber(SECRETS).value({"body": nested, "n": 3, "ok": True})

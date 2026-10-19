@@ -50,6 +50,11 @@ def test_other_paths_are_refused(path: str) -> None:
         "callback",
         "access_token[0]",
         " batch",
+        "adbatch",
+        "access.token",
+        "access token",
+        "access[token",
+        "suppress.http.code",
     ],
 )
 def test_refused_parameters(name: str) -> None:

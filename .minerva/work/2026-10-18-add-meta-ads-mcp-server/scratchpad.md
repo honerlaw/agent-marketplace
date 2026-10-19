@@ -22,6 +22,8 @@
     - fix: describe on a concrete path errors toward list_endpoints; 50 KB is a test budget on named outputs; request size bounded by MCP_MAX_REQUEST_BYTES only
     - fix: README notes (ids=, non-hermetic build, logging); tests: nested key passes, ids/include_headers pass, spend warning in description, duplicate pair, token_status without app creds
 - live facts 2026-10-18 (owner's Doppler token injected, nothing printed): debug_token with app|secret bearer → SYSTEM_USER, never expires, scopes incl. ads_management; GET /me/adaccounts with bearer + proof → 200 (act_1883284226381771, USD); /me with bearer only → 200
+- [reviewed — clean] completion verification: Verifier accepted — criteria 2–7 reproduced (pytest 148/100%, ruff, mypy, test inventory); 1 (CI/3.11), 8 (knowledge entry at promote) and 9 (owner-approved live write) honestly deferred (tier: reviewer floor — the diff adds the approved tool surface only)
+- [solo] review triage: 11 FIX / 0 SUGGEST / 1 IGNORE (tier: default-solo row — each finding had one defensible disposition; the medium ones have writable failure scenarios; IGNORE = proposal-text drift, which promote rewrites)
 
 ## Work notes
 - httpx2 2.14 logs on logger `httpx2` (only name found in its source); httpcore2 2.14 present.
@@ -33,3 +35,19 @@
 - Docker (local desktop-linux): build OK (spec stage verified the content hash), /app/specs has 1,104 *.json + LICENSE, uid 10001, /healthz ok with ci.env only, /mcp 401 without bearer.
 - Python 3.11 not run locally (the venv command was denied); CI's 3.11 matrix covers it.
 - Repo-level: python -m pytest tests/ → 1087 passed; knowledge_lint clean.
+
+## Review triage 2026-10-18
+Code review (local-diff mode, fresh-context subagent): no path found for the configured token/secret/proof to leak or be redirected.
+1. medium — list query values went out as repeated keys; Graph wants JSON arrays (last-wins → incomplete reads) → FIX: list/dict query values JSON-encoded (QueryValue type); live re-check: effective_status ["ACTIVE","PAUSED","ARCHIVED"] → 200
+2. medium — layer-3 scrub bypassable via field aliases (fields=access_token.as(x)), non-JSON content type, async-batch JSON strings → FIX: bodies that parse as JSON object/array are `json` whatever the content type; token-shaped strings (EAA + 20+ alnum) redacted anywhere; tests (aliased key, non-JSON content type)
+3. low — refused names not normalized PHP-style (access.token, access[token) → FIX
+4. low — async_batch_requests' `adbatch` carries unguarded items → FIX: `adbatch` refused; README
+5. low — `_send` fell back to the unscrubbed value on a non-dict → FIX: Scrubber.mapping (fails closed, typed)
+6. low — dict keys not scrubbed → FIX
+7. low — zlib.error not caught; download not size-capped → FIX (+ tests)
+8. low — README promised `ids=` multi-read but bare `/` is refused → FIX (README: not available)
+9. low — README "never in a URL" vs debug_token's input_token → FIX (README states the exception)
+10. low — cut_specs docstring named `python -m …spec_fetch` → FIX; proposal text → IGNORE here (promote rewrites); knowledge entry → promote
+11. low — negative-control test left HTTP loggers at DEBUG (order-dependent) → FIX (restores levels; the leaked log line seen in one run confirmed it)
+12. low — test gaps → FIX (tests added for 1, 2, 3, 4, 6, 7)
+Result: make check 165 passed, 100% line+branch.

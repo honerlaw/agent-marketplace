@@ -2,7 +2,7 @@
 
 Run once, by hand, when the pin changes:
 
-    python -m tests.cut_specs <directory written by `python -m meta_ads_mcp.spec_fetch`>
+    python -m tests.cut_specs <directory written by `meta-ads-fetch-specs`>
 
 It keeps a few node types whole (the ones the tests and the README's worked sequence use,
 plus `IntegrityAppeal`, whose operations have a `basePath`), only the enums they refer to,

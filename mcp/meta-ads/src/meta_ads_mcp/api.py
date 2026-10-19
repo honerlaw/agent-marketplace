@@ -13,7 +13,7 @@ from meta_ads_mcp.safety import check_page_url, check_params, check_path, param_
 from meta_ads_mcp.scrub import Scrubber, appsecret_proof
 
 JsonObject = dict[str, object]
-FormValue = str | int | float | bool | list[str]
+QueryValue = str | int | float | bool | list[object] | dict[str, object]
 BodyFormat = Literal["json", "form"]
 
 FORWARDED_HEADERS = frozenset(
@@ -35,7 +35,7 @@ class GraphRequest:
 
     method: str
     path: str
-    query: Mapping[str, FormValue] | None = None
+    query: Mapping[str, QueryValue] | None = None
     body: JsonObject | None = None
     body_format: BodyFormat = "json"
 
@@ -97,9 +97,7 @@ class MetaAdsApi:
         except httpx2.HTTPError as error:
             message = f"request to the Graph API failed: {type(error).__name__}: {error}"
             raise ToolError(self.scrubber.text(message)) from error
-        described = describe_response(response, body)
-        scrubbed = self.scrubber.value(described)
-        return scrubbed if isinstance(scrubbed, dict) else described
+        return self.scrubber.mapping(describe_response(response, body))
 
     async def _request(self, outgoing: _Outgoing, bearer: str) -> tuple[bytes, httpx2.Response]:
         params = httpx2.QueryParams([*outgoing.params, *self._proof_param(bearer)])
@@ -139,13 +137,16 @@ class MetaAdsApi:
 
 
 def describe_response(response: httpx2.Response, body: bytes) -> JsonObject:
-    """Turn an HTTP response into a JSON-friendly result for the model."""
+    """Turn an HTTP response into a JSON-friendly result for the model.
+
+    A body that parses as a JSON object or array is returned as `json` whatever its
+    content type, so the scrub's key-level redaction always sees its structure.
+    """
     result: JsonObject = {"status": response.status_code, "headers": _forwarded(response)}
     text = body.decode("utf-8", errors="replace")
-    if "json" in response.headers.get("content-type", ""):
-        result["json"] = _json_or_text(text)
-    else:
-        result["text"] = text
+    parsed = _json_or_text(text)
+    declared = "json" in response.headers.get("content-type", "")
+    result["json" if declared or isinstance(parsed, (dict, list)) else "text"] = parsed
     return result
 
 
@@ -168,18 +169,13 @@ def _form_value(value: object) -> str:
     return json.dumps(value)
 
 
-def _pairs(query: Mapping[str, FormValue] | None) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-    for name, value in (query or {}).items():
-        values = value if isinstance(value, list) else [value]
-        pairs.extend((name, _query_value(item)) for item in values)
-    return pairs
+def _pairs(query: Mapping[str, QueryValue] | None) -> list[tuple[str, str]]:
+    return [(name, _query_value(value)) for name, value in (query or {}).items()]
 
 
 def _query_value(value: object) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
+    """Graph's query convention: text as is, everything else (lists, objects) as JSON."""
+    return value if isinstance(value, str) else json.dumps(value)
 
 
 def _proof(settings: Settings) -> str | None:

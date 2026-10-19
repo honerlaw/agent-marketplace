@@ -209,9 +209,18 @@ def test_read_archive_caps_its_size(monkeypatch: pytest.MonkeyPatch) -> None:
         read_archive(archive_of({"Big.json": b"x" * 20}))
 
 
-def test_a_corrupt_archive_is_a_tool_error() -> None:
+@pytest.mark.parametrize("archive", [b"not a tarball", b"\x1f\x8b\x08\x00" + b"\xff" * 64])
+def test_a_corrupt_archive_is_a_tool_error(archive: bytes) -> None:
     with pytest.raises(ToolError, match="could not be read"):
-        read_archive(b"not a tarball")
+        read_archive(archive)
+
+
+@pytest.mark.anyio
+async def test_an_oversized_download_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(spec_fetch, "MAX_ARCHIVE_BYTES", 10)
+    fake = FakeGraph(lambda _request: httpx2.Response(200, content=b"x" * 20))
+    with pytest.raises(ToolError, match="larger than 10 bytes"):
+        await fetch_archive(fake.transport)
 
 
 def test_content_hash_and_verified() -> None:

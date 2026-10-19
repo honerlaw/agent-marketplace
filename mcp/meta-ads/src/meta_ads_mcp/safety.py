@@ -14,11 +14,21 @@ from mcp.server.mcpserver.exceptions import ToolError
 from meta_ads_mcp.config import API_HOST
 
 # Parameters the server owns, or that would bypass the guards: credentials (the server
-# sets them), `batch` (each item carries its own unguarded relative URL), `method` (Graph
-# turns a request into another verb), and `suppress_http_code` / `callback` (they change
-# what a response means). Graph reads them as top-level names, also with a `[...]` suffix.
+# sets them), `batch` and `adbatch` (each item carries its own unguarded relative URL and
+# body), `method` (Graph turns a request into another verb), and `suppress_http_code` /
+# `callback` (they change what a response means). Graph reads them as top-level names;
+# names are normalized the way PHP-style parsers do (`.` and spaces become `_`, a `[...]`
+# suffix is dropped, an unmatched `[` becomes `_`) before they are compared.
 REFUSED_PARAMS = frozenset(
-    {"access_token", "appsecret_proof", "batch", "method", "suppress_http_code", "callback"}
+    {
+        "access_token",
+        "appsecret_proof",
+        "batch",
+        "adbatch",
+        "method",
+        "suppress_http_code",
+        "callback",
+    }
 )
 # Meta writes its own credentials into pagination URLs; they are dropped and re-added.
 CREDENTIAL_PARAMS = frozenset({"access_token", "appsecret_proof"})
@@ -94,4 +104,7 @@ def param_names(params: Mapping[str, object] | None) -> list[str]:
 
 
 def _base_name(name: str) -> str:
-    return name.split("[", 1)[0].strip().lower()
+    normalized = name.strip().lower()
+    if "]" not in normalized:
+        normalized = normalized.replace("[", "_")
+    return normalized.split("[", 1)[0].replace(".", "_").replace(" ", "_")

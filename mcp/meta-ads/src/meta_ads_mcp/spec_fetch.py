@@ -14,6 +14,7 @@ import hashlib
 import io
 import sys
 import tarfile
+import zlib
 from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 
@@ -26,6 +27,7 @@ SPEC_CONTENT_HASH = "618ff17fe424d41c681e0a92ace962fac839413c0e9a837aedf601f78f0
 SPEC_URL = f"https://codeload.github.com/{SPEC_REPO}/tar.gz/{SPEC_COMMIT}"
 SPEC_DIRECTORY = ("api_specs", "specs")
 MAX_SPEC_BYTES = 16 * 1024 * 1024
+MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 FETCH_TIMEOUT_SECONDS = 120
 LICENSE_NAME = "LICENSE"
 SpecFiles = dict[str, bytes]
@@ -60,13 +62,28 @@ def verified(files: SpecFiles, expected_hash: str) -> SpecFiles:
 async def fetch_archive(transport: httpx2.AsyncBaseTransport | None = None) -> SpecArchive:
     """Download the pinned archive and read the specs from it, without any credential."""
     try:
-        async with httpx2.AsyncClient(transport=transport, timeout=FETCH_TIMEOUT_SECONDS) as client:
-            response = await client.get(SPEC_URL, follow_redirects=True)
+        async with (
+            httpx2.AsyncClient(transport=transport, timeout=FETCH_TIMEOUT_SECONDS) as client,
+            client.stream("GET", SPEC_URL, follow_redirects=True) as response,
+        ):
             response.raise_for_status()
+            archive = await _read_capped(response)
     except httpx2.HTTPError as error:
         message = f"could not download the Meta API specs from {SPEC_URL}: {error}"
         raise ToolError(message) from error
-    return read_archive(response.content)
+    return read_archive(archive)
+
+
+async def _read_capped(response: httpx2.Response) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in response.aiter_bytes():
+        size += len(chunk)
+        if size > MAX_ARCHIVE_BYTES:
+            message = f"the Meta API spec archive is larger than {MAX_ARCHIVE_BYTES} bytes"
+            raise ToolError(message)
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def read_archive(archive: bytes) -> SpecArchive:
@@ -78,7 +95,7 @@ def read_archive(archive: bytes) -> SpecArchive:
     try:
         with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
             return _collect(tar)
-    except (tarfile.TarError, OSError, EOFError) as error:
+    except (tarfile.TarError, OSError, EOFError, zlib.error) as error:
         message = f"the Meta API spec archive could not be read: {error}"
         raise ToolError(message) from error
 

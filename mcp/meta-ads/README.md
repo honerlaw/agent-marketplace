@@ -31,7 +31,10 @@ Choose fields with the `fields` query parameter and page with `meta_ads_follow_p
 
 Performance comes from the `insights` edge (`GET /act_123/insights` with `fields`,
 `date_preset` or `time_range`, and `level`); `meta_ads_describe_type AdsInsights` lists its
-fields. `ids=1,2,3` on a read fetches several objects at once, outside the edge catalog.
+fields. List and object query values are sent as JSON, as Graph expects:
+`{"effective_status": ["ACTIVE"], "time_range": {"since": "2026-10-01", "until": "2026-10-18"}}`.
+Graph's multi-object read (`GET /?ids=1,2,3`) is not available, because the bare `/` path is
+refused (it is also the batch endpoint); read objects one at a time.
 
 ## Changing things
 
@@ -157,23 +160,28 @@ about two years after release.
 
 ## Security model
 
-- **The token only goes to Meta, and never in a URL.** There is no base-URL setting. The token
-  travels in the `Authorization` header to `https://graph.facebook.com/<version>`; `path` must
+- **The token only goes to Meta.** There is no base-URL setting. The token travels in the
+  `Authorization` header to `https://graph.facebook.com/<version>`, never in a URL, with one
+  exception: `meta_ads_token_status` sends it as `debug_token`'s `input_token` query
+  parameter, the only way Graph accepts it there; `path` must
   be a plain relative path (no scheme, host, `//`, query, fragment, or `.`/`..` segment,
   including percent-encoded and double-encoded forms).
 - **The server owns the credential parameters.** A caller may not set `access_token`,
-  `appsecret_proof`, `batch`, `method`, `suppress_http_code` or `callback` (any case, also with
-  a `[...]` suffix) in the query or the body, and may set no headers at all. `batch` would carry
-  unguarded relative URLs and `method` silently changes the verb. Graph batch requests (and the
-  bare `/` path) are therefore refused.
+  `appsecret_proof`, `batch`, `adbatch`, `method`, `suppress_http_code` or `callback` in the
+  query or the body (compared after normalizing case, `.` and spaces to `_`, and `[...]`
+  suffixes), and may set no headers at all. `batch` and `adbatch` (the async batch edge) would
+  carry unguarded relative URLs and bodies, and `method` silently changes the verb. Graph batch
+  requests, sync and async, and the bare `/` path are therefore refused.
 - **Pagination URLs are checked.** `meta_ads_follow_page` accepts only `https` on
   `graph.facebook.com` under the configured version, with no userinfo, port or fragment; Meta's
   own credential parameters are dropped and the server's re-added.
 - **Credentials never reach the model.** Every result and every error is scrubbed: the token,
   the app secret and the proof are replaced wherever they appear; `paging` URLs lose Meta's
-  credential parameters; and any JSON field named `access_token` is redacted. That last rule
-  means page tokens and minted tokens can't be obtained through this server, by design: the
-  system user already holds the assets.
+  credential parameters; any JSON field named `access_token`, and any string shaped like a Meta
+  access token (`EAA` and a long alphanumeric run, which catches aliased fields such as
+  `fields=access_token.as(x)`), is redacted. Bodies that parse as JSON are treated as JSON
+  whatever their content type, so the key rule always applies. Page tokens and minted tokens
+  can't be obtained through this server, by design: the system user already holds the assets.
 - **Logs carry no credential.** The HTTP client libraries log full request URLs at INFO, and
   every URL carries `appsecret_proof` (`debug_token`'s carries the token), so the server holds
   those loggers at WARNING.
@@ -187,7 +195,7 @@ about two years after release.
 
 ## Limitations
 
-- **No batch requests** and no chunked video upload (that runs on `graph-video.facebook.com`);
+- **No batch requests** (sync or async), no `GET /?ids=` multi-read, and no chunked video upload (that runs on `graph-video.facebook.com`);
   use `file_url` for videos.
 - **Writes are unverified live**: request shapes are tested against mocks; JSON bodies on every
   write endpoint are assumed (use `body_format: "form"` if one refuses JSON).
@@ -195,7 +203,8 @@ about two years after release.
   not retry. Rate limits are Graph errors 4, 17, 613 and 80000-80014, and the
   `x-business-use-case-usage` / `x-ad-account-usage` headers show how close you are. A new app
   starts on Meta's rate-limited development tier.
-- **Any `access_token` field in a response is redacted**, including page tokens.
+- **Any `access_token` field, and any token-shaped string, in a response is redacted**,
+  including page tokens.
 
 ## Development
 

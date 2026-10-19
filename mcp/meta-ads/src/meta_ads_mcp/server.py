@@ -9,7 +9,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from meta_ads_mcp.api import BodyFormat, FormValue, GraphRequest, JsonObject, MetaAdsApi
+from meta_ads_mcp.api import BodyFormat, GraphRequest, JsonObject, MetaAdsApi, QueryValue
 from meta_ads_mcp.config import Settings
 from meta_ads_mcp.scrub import Scrubber
 from meta_ads_mcp.spec_catalog import SpecCatalog
@@ -65,7 +65,7 @@ def _add_api_tools(server: MCPServer, api: MetaAdsApi, settings: Settings) -> No
     async def meta_ads_request(
         method: HttpMethod,
         path: str,
-        query: dict[str, FormValue] | None = None,
+        query: dict[str, QueryValue] | None = None,
         body: JsonObject | None = None,
         body_format: BodyFormat = "json",
     ) -> JsonObject:
@@ -74,6 +74,9 @@ def _add_api_tools(server: MCPServer, api: MetaAdsApi, settings: Settings) -> No
         `path` is relative to the versioned base URL with real ids filled in, e.g.
         "/act_1234567890/campaigns" or "/120200000000000000". Choose read fields with
         query {"fields": "name,status,daily_budget"} and page with meta_ads_follow_page.
+        List and object query values are sent as JSON, as Graph expects, e.g.
+        {"effective_status": ["ACTIVE"], "time_range": {"since": "2026-10-01",
+        "until": "2026-10-18"}}.
         Writes are POST (create on an edge, update on the object) or DELETE. Writes change
         live campaigns and SPEND REAL MONEY: create campaigns, ad sets and ads with
         "status": "PAUSED" and confirm activation and budget changes with the user first.
@@ -81,8 +84,8 @@ def _add_api_tools(server: MCPServer, api: MetaAdsApi, settings: Settings) -> No
         sends form fields (nested values as JSON), needed to upload an image to
         /act_<id>/adimages as base64 "bytes". Rate limits come back as Graph errors 4,
         17, 613 or 80000-80014; wait before retrying. Batch requests and the
-        access_token, appsecret_proof, batch, method, suppress_http_code and callback
-        parameters are refused. Returns the status, Meta's trace and usage headers, and
+        access_token, appsecret_proof, batch, adbatch, method, suppress_http_code and
+        callback parameters are refused. Returns the status, Meta's trace and usage headers, and
         the body; credentials never appear in it.
         """
         request = GraphRequest(method, path, query, body, body_format)
