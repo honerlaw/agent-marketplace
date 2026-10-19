@@ -23,6 +23,7 @@ KEEP_METHODS = {
     ("customers", "adGroups"): {"mutate"},
     ("customers", "operations"): {"get", "list", "delete"},
     ("googleAdsFields",): {"get"},
+    ("v26",): {"listPlannableLocations"},
 }
 KEEP_SCHEMAS = {
     f"{PREFIX}Services__ListAccessibleCustomersResponse",
@@ -41,6 +42,9 @@ KEEP_SCHEMAS = {
     f"{PREFIX}Resources_AdGroupDemandGenAdGroupSettings_DemandGenChannelControls",
     f"{PREFIX}Resources_AdGroupDemandGenAdGroupSettingsDemandGenChannelControls_DemandGenSelectedChannels",
     f"{PREFIX}Resources__GoogleAdsField",
+    f"{PREFIX}Services__ListPlannableLocationsRequest",
+    f"{PREFIX}Services__ListPlannableLocationsResponse",
+    f"{PREFIX}Services__PlannableLocation",
     "GoogleLongrunning__Operation",
     "GoogleLongrunning__ListOperationsResponse",
     "GoogleProtobuf__Empty",

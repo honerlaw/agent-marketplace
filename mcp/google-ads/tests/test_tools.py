@@ -1,6 +1,7 @@
 """The request tool, exercised end to end through an in-process MCP client."""
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import replace
 
 import httpx2
@@ -73,19 +74,31 @@ async def test_query_parameters_are_sent(settings: Settings, fake: FakeGoogleAds
 
 
 @pytest.mark.parametrize(
-    "arguments",
+    ("arguments", "refusal"),
     [
-        {"method": "GET", "path": "https://evil.test/customers"},
-        {"method": "GET", "path": "/customers", "headers": {"Authorization": "Bearer x"}},
-        {"method": "GET", "path": "/customers", "headers": {"login-customer-id": "boss"}},
+        ({"method": "GET", "path": "https://evil.test/customers"}, "path must start"),
+        (
+            {"method": "GET", "path": "/customers", "headers": {"Authorization": "Bearer x"}},
+            "these are the server's: ['authorization']",
+        ),
+        (
+            {"method": "GET", "path": "/customers", "headers": {"login-customer-id": "boss"}},
+            "must be a customer id",
+        ),
     ],
 )
 async def test_unsafe_requests_never_reach_the_network(
-    settings: Settings, fake: FakeGoogleAds, arguments: dict[str, object]
+    settings: Settings, fake: FakeGoogleAds, arguments: dict[str, object], refusal: str
 ) -> None:
     result = await call(settings, fake, "google_ads_request", arguments)
-    assert result.is_error
+    assert refusal in error_text(result)
     assert fake.requests == []
+
+
+async def test_a_version_level_method_has_no_slash(settings: Settings, fake: FakeGoogleAds) -> None:
+    arguments = {"method": "POST", "path": ":listPlannableLocations", "body": {}}
+    await call(settings, fake, "google_ads_request", arguments)
+    assert str(fake.last.url) == "https://googleads.googleapis.com/v26:listPlannableLocations"
 
 
 async def test_google_errors_are_returned_as_results(settings: Settings) -> None:
@@ -119,12 +132,20 @@ async def test_non_json_bodies_come_back_as_text(
 
 
 async def test_an_oversized_response_is_refused_not_truncated(settings: Settings) -> None:
-    small = replace(settings, max_response_bytes=10)
-    fake = FakeGoogleAds(handler=lambda _request: httpx2.Response(200, json={"rows": "x" * 50}))
+    pulled: list[int] = []
+
+    async def chunks() -> AsyncIterator[bytes]:
+        for index in range(1000):
+            pulled.append(index)
+            yield b"x" * 1000
+
+    small = replace(settings, max_response_bytes=5000)
+    fake = FakeGoogleAds(handler=lambda _request: httpx2.Response(200, content=chunks()))
     result = await call(small, fake, "google_ads_request", {"method": "POST", "path": SEARCH})
     message = error_text(result)
-    assert "larger than 10 bytes" in message
+    assert "larger than 5000 bytes" in message
     assert "googleAds:search" in message
+    assert len(pulled) < 10  # reading stopped at the limit, not after the whole body
 
 
 async def test_a_response_at_the_limit_is_returned(settings: Settings) -> None:

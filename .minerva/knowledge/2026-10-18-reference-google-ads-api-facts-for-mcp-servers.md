@@ -18,9 +18,18 @@ API description. The facts below shaped it. They were measured on 2026-10-18 aga
   - Methods sit in nested `resources`. Each has a `path` with the version and reserved
     expansion (`v26/customers/{+customerId}/googleAds:search`) and a `flatPath` with different
     parameter names (`customers/{customersId}/...`).
+  - Nine methods sit at the version level with a colon, not a slash:
+    `v26:listPlannableLocations` and the other Reach planning and Benchmarks methods (resource
+    `v26` in the document). Their URL is `https://googleads.googleapis.com/v26:<verb>`, which
+    httpx's `base_url` joining cannot produce (it yields `v26/:<verb>`), so a client must join the
+    URL as text. Stripping a `v\d+/` prefix misses them. Found by code review, not by the author.
   - Some paths are catch-alls: `v26/{+name}` is both `operations.get` and `operations.list`
     (GET), and `v26/{+resourceName}` serves several resources. A concrete path can fit several
-    templates, and two methods can share one (method, template) pair.
+    templates, and three (method, template) pairs are shared by two methods each (`GET /{name}`,
+    `POST /{resourceName}:run`, `POST /{resourceName}:addOperations`).
+  - Expanding a `$ref` must keep the property's sibling `description`: it carries usage rules
+    the referenced schema's own description lacks (e.g. `selectedChannels` "should be set with
+    at least one true value when present").
   - Schemas are referenced by bare name, often with a sibling `description` next to the `$ref`.
   - Parsing the whole document takes about 0.02 s. Most schemas at one level of expansion are a
     few KB, but `Common__Metrics` (~114 KB), `Common__Segments` (~70 KB) and

@@ -135,7 +135,6 @@ async def test_authenticated_tool_call_over_http(guarded_url: str, fake: FakeGoo
     assert fake.last.url.path == "/v26/customers/2"
 
 
-@pytest.mark.anyio
 def test_bearer_scheme_is_case_insensitive(guarded_url: str) -> None:
     response = httpx2.get(f"{guarded_url}/mcp", headers={"Authorization": f"bearer {TOKEN}"})
     assert response.status_code != 401

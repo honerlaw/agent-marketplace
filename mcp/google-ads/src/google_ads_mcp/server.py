@@ -65,9 +65,13 @@ def _add_api_tools(server: MCPServer, api: GoogleAdsApi) -> None:
         `path` is relative to the versioned base URL with real ids filled in, e.g.
         "/customers/1234567890/campaigns:mutate". For GAQL reads POST
         "/customers/<id>/googleAds:search" with {"query": "...", "pageSize": 1000}.
+        Version-level methods have no slash: path ":listPlannableLocations".
         Add "validateOnly": true to a mutate body to check it without applying it.
-        `headers` may set "login-customer-id" (a manager account id). Returns the status,
-        the request-id header, and the body as json or text.
+        Creating or enabling campaigns, ad groups and ads, and raising budgets or bids,
+        spends real money: confirm those calls with the user first.
+        `headers` may set only "login-customer-id" (a manager account id) and
+        "linked-customer-id". Returns the status, the request-id header, and the body as
+        json or text.
         """
         return await api.send_json(JsonRequest(method, path, query, body, headers))
 

@@ -1,7 +1,7 @@
 # Proposal: add-google-ads-mcp-server
 
 **Date**: 2026-10-18
-**Status**: Draft
+**Status**: Shipped (2026-10-18)
 
 ## Goal
 
@@ -76,6 +76,26 @@ from third-party source.
   credentials, so expect ~2,000-2,500. One PR is still right: no independent subsystem.
 
 ## Approach
+
+**What shipped** (as planned below, plus review fixes): four tools, `google_ads_request`,
+`google_ads_list_endpoints`, `google_ads_describe_endpoint`, `google_ads_describe_schema`.
+Changes from the plan, all from building or from code review:
+- **Version-level methods.** Nine methods (Reach planning, Benchmarks) live at `v26:<verb>`, not
+  under `v26/`. Their template and path is `:<verb>`; the request URL is joined as text
+  (`base_url + path`), because httpx's `base_url` joining yields `v26/:<verb>`; the path guard
+  admits exactly `:[A-Za-z]+` besides `/...` paths.
+- **Shared templates.** Three (method, template) pairs are shared by two methods each
+  (`GET /{name}` and two `POST /{resourceName}:<verb>`), so describe returns every match.
+- **Headers are an allowlist**: only `login-customer-id` and `linked-customer-id`, each normalized
+  to digits (ASCII only); every other header is refused. Paths must be printable ASCII.
+- **Expanded `$ref`s keep the property's own description.** Describe output over
+  `GOOGLE_ADS_MAX_RESPONSE_BYTES` is refused like an oversized API response.
+- Numeric settings must be positive and finite. The spend-confirmation line is in the request
+  tool's own description, since a gateway may drop server instructions. The README hedges the
+  developer-token sunset as read from Google's docs, not proven by a call.
+- The test fixture is cut by `tests/cut_discovery.py` from the real document.
+
+The plan as approved:
 
 Copy `mcp/reddit-ads/`'s layout and gates, with `mcp/google-search-console/`'s credentials module:
 
@@ -186,6 +206,9 @@ Post-merge check (outside the unit's pass/fail): `mcp.yml`'s `publish` job pushe
 package public once, which the seekless unit needs before it can pull the image; the PR body says so.
 
 ## Open Questions
+
+- **Not run locally:** the Docker build and `/healthz` (the local `docker` context is a remote
+  droplet); the PR's `mcp.yml` `docker` job is the proof.
 
 - **No live call is made in this unit.** There are no Google Ads credentials yet; the first real
   `listAccessibleCustomers` and the Shorts sequence run in the seekless wiring unit, once the owner

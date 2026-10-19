@@ -1,6 +1,7 @@
 """Server settings, read once from environment variables."""
 
 import json
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -9,8 +10,8 @@ API_HOST = "https://googleads.googleapis.com"
 DEFAULT_API_VERSION = "v26"
 MIB = 1024 * 1024
 TRUE_VALUES = frozenset({"1", "true", "yes"})
-API_VERSION_SHAPE = re.compile(r"v\d+")
-CUSTOMER_ID_SHAPE = re.compile(r"\d+")
+API_VERSION_SHAPE = re.compile(r"v[0-9]+")
+CUSTOMER_ID_SHAPE = re.compile(r"[0-9]+")
 CredentialsInfo = dict[str, object]
 
 
@@ -119,10 +120,14 @@ def _flag(env: Mapping[str, str], name: str) -> bool:
 def _number(env: Mapping[str, str], name: str, default: float) -> float:
     value = env.get(name) or str(default)
     try:
-        return float(value)
+        number = float(value)
     except ValueError as error:
         message = f"{name} must be a number, got {value!r}"
         raise ConfigError(message) from error
+    if not math.isfinite(number) or number <= 0:
+        message = f"{name} must be a positive number, got {value!r}"
+        raise ConfigError(message)
+    return number
 
 
 def _check_transport(settings: Settings) -> None:

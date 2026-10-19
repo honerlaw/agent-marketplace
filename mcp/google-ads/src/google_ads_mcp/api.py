@@ -38,11 +38,11 @@ class GoogleAdsApi:
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         """Create the client; `transport` is injectable for tests."""
+        self._base_url = settings.base_url
         self._default_headers = _default_headers(settings)
         self._max_response_bytes = settings.max_response_bytes
         self._tokens = tokens
         self._client = httpx2.AsyncClient(
-            base_url=settings.base_url,
             headers={"User-Agent": USER_AGENT},
             timeout=settings.timeout_seconds,
             transport=transport,
@@ -51,12 +51,14 @@ class GoogleAdsApi:
     async def send_json(self, request: JsonRequest) -> JsonObject:
         """Send a JSON request and describe the response."""
         headers = {**self._default_headers, **check_headers(request.headers)}
-        path = check_path(request.path)
+        # Joined as text, not by httpx's base_url: a version-level method is `v26:verb`,
+        # which `base_url` joining would turn into `v26/:verb`. The host is a fixed prefix.
+        url = self._base_url + check_path(request.path)
         token = await self._tokens.token()
         try:
             async with self._client.stream(
                 request.method,
-                path,
+                url,
                 params=request.query,
                 json=request.body,
                 headers={**headers, "Authorization": f"Bearer {token}"},

@@ -21,7 +21,7 @@ from google_ads_mcp.config import Settings
 
 MAX_REF_DEPTH = 6
 SUMMARY_LENGTH = 100
-VERSION_PREFIX = re.compile(r"^v\d+/")
+VERSION_PREFIX = re.compile(r"^v[0-9]+(?=[/:])")
 FIRST_SENTENCE = re.compile(r"^(.*?[.!?])(\s|$)", re.DOTALL)
 Spec = dict[str, object]
 Node = object
@@ -45,6 +45,7 @@ class SpecCatalog:
         """Remember where the document lives; nothing is loaded until it is needed."""
         self._path = settings.discovery_path
         self._url = settings.discovery_url
+        self._max_bytes = settings.max_response_bytes
         self._transport = transport
         self._spec: Spec | None = None
 
@@ -67,8 +68,8 @@ class SpecCatalog:
         schemas, bounded = _schemas(spec), _bounded(depth)
         described = [_as_dict(resolve_refs(_described(op), schemas, bounded)) for op in matches]
         if len(described) == 1:
-            return described[0]
-        return {"method": method.upper(), "path": path, "operations": described}
+            return self._capped(described[0])
+        return self._capped({"method": method.upper(), "path": path, "operations": described})
 
     async def describe_schema(self, name: str, depth: int) -> dict[str, Node]:
         """Return one named schema with its `$ref`s expanded `depth` levels."""
@@ -77,7 +78,19 @@ class SpecCatalog:
         if name not in schemas:
             message = f"no schema {name!r} in the Discovery document"
             raise ToolError(message)
-        return _as_dict(resolve_refs({"$ref": name}, schemas, _bounded(depth)))
+        return self._capped(_as_dict(resolve_refs({"$ref": name}, schemas, _bounded(depth))))
+
+    def _capped(self, described: dict[str, Node]) -> dict[str, Node]:
+        """Refuse a description too large for the model, the way large responses are."""
+        size = len(json.dumps(described))
+        if size > self._max_bytes:
+            message = (
+                f"the description is {size} bytes, over {self._max_bytes} "
+                "(GOOGLE_ADS_MAX_RESPONSE_BYTES). Use a lower depth and open nested schemas "
+                "one at a time with google_ads_describe_schema."
+            )
+            raise ToolError(message)
+        return described
 
     async def _load(self) -> Spec:
         if self._spec is None:
@@ -116,8 +129,12 @@ def operations(spec: Spec) -> Iterator[Operation]:
 
 
 def display_template(path: str) -> str:
-    """Turn `v26/customers/{+customerId}/x:y` into `/customers/{customerId}/x:y`."""
-    return "/" + VERSION_PREFIX.sub("", path).replace("{+", "{")
+    """Turn `v26/customers/{+customerId}/x:y` into `/customers/{customerId}/x:y`.
+
+    A version-level method such as `v26:listPlannableLocations` becomes
+    `:listPlannableLocations`, which is also the path the request tool takes for it.
+    """
+    return VERSION_PREFIX.sub("", path).replace("{+", "{")
 
 
 def resolve_refs(node: Node, schemas: dict[str, Node], depth: int) -> Node:
@@ -128,7 +145,10 @@ def resolve_refs(node: Node, schemas: dict[str, Node], depth: int) -> Node:
         return node
     ref = node.get("$ref")
     if isinstance(ref, str) and depth > 0 and ref in schemas:
-        return resolve_refs(schemas[ref], schemas, depth - 1)
+        # A property's own keys (its description says how this field is used) win over
+        # the referenced schema's generic ones.
+        siblings = {key: value for key, value in node.items() if key != "$ref"}
+        return {**_as_dict(resolve_refs(schemas[ref], schemas, depth - 1)), **siblings}
     return {key: resolve_refs(value, schemas, depth) for key, value in node.items()}
 
 

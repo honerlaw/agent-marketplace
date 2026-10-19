@@ -34,6 +34,7 @@ SELECTED_CHANNELS = (
         ("v26/customers:listAccessibleCustomers", "/customers:listAccessibleCustomers"),
         ("v26/{+name}", "/{name}"),
         ("v27/{+resourceName}", "/{resourceName}"),
+        ("v26:listPlannableLocations", ":listPlannableLocations"),
     ],
 )
 def test_templates_drop_the_version_and_reserved_expansion(path: str, expected: str) -> None:
@@ -47,13 +48,15 @@ async def test_endpoints_are_listed_in_one_spelling(
     assert result.structured_content is not None
     lines = result.structured_content["result"]
     assert isinstance(lines, list)
-    assert len(lines) == 9
+    assert len(lines) == 10
     assert (
         "GET /customers:listAccessibleCustomers — Returns resource names of customers "
         in (lines[0])
     )
     assert any(line.startswith(f"POST {AD_GROUP_MUTATE} — ") for line in lines)
-    assert not any("{+" in line or "v26/" in line for line in lines)
+    plannable = "POST :listPlannableLocations — Returns the list of plannable locations"
+    assert any(line.startswith(plannable) for line in lines)
+    assert not any("{+" in line or "v26" in line for line in lines)
     assert fake.requests == []
 
 
@@ -160,6 +163,22 @@ async def test_unknown_names_are_tool_errors(
     assert message in error_text(result)
 
 
+def test_a_property_keeps_its_own_description_when_expanded() -> None:
+    node = {"$ref": "Known", "description": "How this field is used."}
+    schemas: dict[str, object] = {"Known": {"type": "object", "description": "Generic."}}
+    assert resolve_refs(node, schemas, 1) == {
+        "type": "object",
+        "description": "How this field is used.",
+    }
+
+
+async def test_an_oversized_description_is_refused(settings: Settings, fake: FakeGoogleAds) -> None:
+    small = replace(settings, max_response_bytes=100)
+    arguments = {"method": "POST", "path": AD_GROUP_MUTATE}
+    result = await call(small, fake, "google_ads_describe_endpoint", arguments)
+    assert "over 100 (GOOGLE_ADS_MAX_RESPONSE_BYTES)" in error_text(result)
+
+
 def test_refs_to_unknown_schemas_stay_as_markers() -> None:
     node = {"a": [{"$ref": "Missing"}], "b": {"$ref": "Known"}}
     resolved = resolve_refs(node, {"Known": {"type": "string"}}, 1)
@@ -179,6 +198,7 @@ async def test_the_document_is_fetched_from_google_once(settings: Settings) -> N
     }
     (request,) = fake.requests
     assert str(request.url) == "https://googleads.googleapis.com/$discovery/rest?version=v26"
+    assert "authorization" not in request.headers
 
 
 async def test_an_unreachable_document_is_a_tool_error(settings: Settings) -> None:

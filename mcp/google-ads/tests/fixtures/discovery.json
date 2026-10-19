@@ -248,6 +248,28 @@
     }
    }
   },
+  "v26": {
+   "methods": {
+    "listPlannableLocations": {
+     "flatPath": "v26:listPlannableLocations",
+     "scopes": [
+      "https://www.googleapis.com/auth/adwords"
+     ],
+     "description": "Returns the list of plannable locations (for example, countries). List of thrown errors: [AuthenticationError]() [AuthorizationError]() [HeaderError]() [InternalError]() [QuotaError]() [RequestError]()",
+     "id": "googleads.listPlannableLocations",
+     "request": {
+      "$ref": "GoogleAdsGoogleadsV26Services__ListPlannableLocationsRequest"
+     },
+     "parameters": {},
+     "httpMethod": "POST",
+     "path": "v26:listPlannableLocations",
+     "parameterOrder": [],
+     "response": {
+      "$ref": "GoogleAdsGoogleadsV26Services__ListPlannableLocationsResponse"
+     }
+    }
+   }
+  },
   "googleAdsFields": {
    "methods": {
     "get": {
@@ -1049,6 +1071,26 @@
     }
    }
   },
+  "GoogleAdsGoogleadsV26Services__ListPlannableLocationsRequest": {
+   "properties": {},
+   "type": "object",
+   "description": "Request message for ReachPlanService.ListPlannableLocations.",
+   "id": "GoogleAdsGoogleadsV26Services__ListPlannableLocationsRequest"
+  },
+  "GoogleAdsGoogleadsV26Services__ListPlannableLocationsResponse": {
+   "description": "The list of plannable locations.",
+   "type": "object",
+   "properties": {
+    "plannableLocations": {
+     "type": "array",
+     "description": "The list of locations available for planning. See https://developers.google.com/google-ads/api/reference/data/geotargets for sample locations.",
+     "items": {
+      "$ref": "GoogleAdsGoogleadsV26Services__PlannableLocation"
+     }
+    }
+   },
+   "id": "GoogleAdsGoogleadsV26Services__ListPlannableLocationsResponse"
+  },
   "GoogleAdsGoogleadsV26Services__MutateAdGroupResult": {
    "properties": {
     "resourceName": {
@@ -1157,6 +1199,34 @@
     }
    },
    "description": "Response message for GoogleAdsService.Mutate."
+  },
+  "GoogleAdsGoogleadsV26Services__PlannableLocation": {
+   "properties": {
+    "parentCountryId": {
+     "format": "int64",
+     "description": "The parent country (not present if location is a country). If present, will always be a GeoTargetConstant ID. Additional information such as country name is provided by ReachPlanService.ListPlannableLocations or GoogleAdsService.Search/SearchStream.",
+     "type": "string"
+    },
+    "id": {
+     "description": "The location identifier.",
+     "type": "string"
+    },
+    "name": {
+     "description": "The unique location name in English.",
+     "type": "string"
+    },
+    "locationType": {
+     "description": "The location's type. Location types correspond to target_type returned by searching location type in GoogleAdsService.Search/SearchStream.",
+     "type": "string"
+    },
+    "countryCode": {
+     "type": "string",
+     "description": "The ISO-3166-1 alpha-2 country code that is associated with the location."
+    }
+   },
+   "id": "GoogleAdsGoogleadsV26Services__PlannableLocation",
+   "description": "A plannable location: country, metro region, province, etc.",
+   "type": "object"
   },
   "GoogleAdsGoogleadsV26Services__SearchGoogleAdsRequest": {
    "type": "object",

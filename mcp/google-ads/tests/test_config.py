@@ -70,6 +70,12 @@ def test_a_non_number_is_refused() -> None:
         load_settings({"MCP_PORT": "eighty"})
 
 
+@pytest.mark.parametrize("value", ["inf", "1e400", "nan", "0", "-5"])
+def test_a_number_must_be_positive_and_finite(value: str) -> None:
+    with pytest.raises(ConfigError, match="GOOGLE_ADS_MAX_RESPONSE_BYTES must be a positive"):
+        load_settings({"GOOGLE_ADS_MAX_RESPONSE_BYTES": value})
+
+
 def test_an_unknown_transport_is_refused() -> None:
     with pytest.raises(ConfigError, match="MCP_TRANSPORT"):
         load_settings({"MCP_TRANSPORT": "sse"})
