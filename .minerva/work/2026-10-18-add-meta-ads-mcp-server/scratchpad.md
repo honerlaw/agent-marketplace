@@ -25,3 +25,11 @@
 
 ## Work notes
 - httpx2 2.14 logs on logger `httpx2` (only name found in its source); httpcore2 2.14 present.
+- Criterion 5 (real pinned specs, META_ADS_SPEC_PATH, real content hash; load ~0.5 s): list_endpoints(empty) = 1,503 lines, 87,102 bytes (under 2 MiB); 0 duplicate lines; POST /{AdAccount}/campaigns → `objective` type adaccountcampaigns_objective_enum_param with 21 enum values, 4,729 bytes; describe_type Campaign has daily_budget, 3,580 bytes; GET /integrity/appeals/ads/eligibility resolves to 2 operations (same template, different returns — the duplicate pair the fixture tests); describe_type AdAccount 10.7 KB, Page 14.2 KB, User 4.8 KB, AdsInsights 14.6 KB; a concrete path errors toward list_endpoints.
+- Criterion 7 (manual, live, read-only; Doppler-injected token, nothing printed): token_status → SYSTEM_USER, valid, expires_at never, data_access never, 9 scopes + granular_scopes; GET /me/adaccounts → act_1883284226381771 "Seekless" USD; GET /act_…/campaigns → 200, data [] (no campaigns yet, so no paging to follow); secret_in_output_or_log False. Usage header shows `ads_api_access_tier: development_access` (rate-limited tier).
+- Implementation choice: the spec command is a console script `meta-ads-fetch-specs` (pyproject [project.scripts]) instead of `python -m meta_ads_mcp.spec_fetch`: the repo uses no coverage pragmas, and a `__main__` guard would be the one uncovered line. Same for extractfile's impossible None (`or io.BytesIO()`, no branch).
+- Single-flight test: the mock handler is async and sleeps, so callers overlap; negative control (lock replaced by a no-op) fails the test (knowledge: a mock transport that never yields cannot test a lock).
+- Log test: negative control (loggers left at DEBUG) shows the proof IS logged; with quiet_http_loggers it is not. httpx2 2.14 logs on `httpx2`.
+- Docker (local desktop-linux): build OK (spec stage verified the content hash), /app/specs has 1,104 *.json + LICENSE, uid 10001, /healthz ok with ci.env only, /mcp 401 without bearer.
+- Python 3.11 not run locally (the venv command was denied); CI's 3.11 matrix covers it.
+- Repo-level: python -m pytest tests/ → 1087 passed; knowledge_lint clean.
