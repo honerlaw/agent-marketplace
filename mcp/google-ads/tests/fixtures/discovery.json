@@ -1,0 +1,1355 @@
+{
+ "kind": "discovery#restDescription",
+ "discoveryVersion": "v1",
+ "id": "googleads:v26",
+ "name": "googleads",
+ "version": "v26",
+ "revision": "20261014",
+ "rootUrl": "https://googleads.googleapis.com/",
+ "resources": {
+  "customers": {
+   "methods": {
+    "listAccessibleCustomers": {
+     "id": "googleads.customers.listAccessibleCustomers",
+     "description": "Returns resource names of customers directly accessible by the user authenticating the call. List of thrown errors: [AuthenticationError]() [AuthorizationError]() [HeaderError]() [InternalError]() [QuotaError]() [RequestError]()",
+     "response": {
+      "$ref": "GoogleAdsGoogleadsV26Services__ListAccessibleCustomersResponse"
+     },
+     "path": "v26/customers:listAccessibleCustomers",
+     "parameterOrder": [],
+     "parameters": {},
+     "scopes": [
+      "https://www.googleapis.com/auth/adwords"
+     ],
+     "httpMethod": "GET",
+     "flatPath": "v26/customers:listAccessibleCustomers"
+    }
+   },
+   "resources": {
+    "googleAds": {
+     "methods": {
+      "mutate": {
+       "description": "Executes mutate and actions operations. Mutate operations create, update, or remove resources. Actions perform custom operations. This method supports atomic transactions with multiple types of resources and actions. For example, you can atomically create a campaign and a campaign budget, or perform up to thousands of mutates atomically. This method is essentially a wrapper around a series of mutate methods. The only features it offers over calling those methods directly are: - Atomic transactions - Temp resource names (described below) - Somewhat reduced latency over making a series of mutate calls Note: Only resources that support atomic transactions are included, so this method can't replace all calls to individual services. ## Atomic Transaction Benefits Atomicity makes error handling much easier. If you're making a series of changes and one fails, it can leave your account in an inconsistent state. With atomicity, you either reach the chosen state directly, or the request fails and you can retry. ## Temp Resource Names Temp resource names are a special type of resource name used to create a resource and reference that resource in the same request. For example, if a campaign budget is created with `resource_name` equal to `customers/123/campaignBudgets/-1`, that resource name can be reused in the `Campaign.budget` field in the same request. That way, the two resources are created and linked atomically. To create a temp resource name, put a negative number in the part of the name that the server would normally allocate. Note: - Resources must be created with a temp name before the name can be reused. For example, the previous CampaignBudget+Campaign example would fail if the mutate order was reversed. - Temp names are not remembered across requests. - There's no limit to the number of temp names in a request. - Each temp name must use a unique negative number, even if the resource types differ. ## Latency It's important to group mutates by resource type or the request may time out and fail. Latency is roughly equal to a series of calls to individual mutate methods, where each change in resource type is a new call. For example, mutating 10 campaigns then 10 ad groups is like 2 calls, while mutating 1 campaign, 1 ad group, 1 campaign, 1 ad group is like 4 calls. List of thrown errors: [AdCustomizerError]() [AdError]() [AdGroupAdError]() [AdGroupCriterionError]() [AdGroupError]() [AssetError]() [AuthenticationError]() [AuthorizationError]() [BiddingError]() [CampaignBudgetError]() [CampaignCriterionError]() [CampaignError]() [CampaignExperimentError]() [CampaignSharedSetError]() [CollectionSizeError]() [ContextError]() [ConversionActionError]() [CriterionError]() [CustomerFeedError]() [DatabaseError]() [DateError]() [DateRangeError]() [DistinctError]() [ExtensionFeedItemError]() [ExtensionSettingError]() [FeedAttributeReferenceError]() [FeedError]() [FeedItemError]() [FeedItemSetError]() [FieldError]() [FieldMaskError]() [FunctionParsingError]() [HeaderError]() [ImageError]() [InternalError]() [KeywordPlanAdGroupKeywordError]() [KeywordPlanCampaignError]() [KeywordPlanError]() [LabelError]() [ListOperationError]() [MediaUploadError]() [MutateError]() [NewResourceCreationError]() [NullError]() [OperationAccessDeniedError]() [PolicyFindingError]() [PolicyViolationError]() [QuotaError]() [RangeError]() [RequestError]() [ResourceCountLimitExceededError]() [SettingError]() [SharedSetError]() [SizeLimitError]() [StringFormatError]() [StringLengthError]() [UrlFieldError]() [UserListError]() [YoutubeVideoRegistrationError]()",
+       "flatPath": "v26/customers/{customersId}/googleAds:mutate",
+       "parameterOrder": [
+        "customerId"
+       ],
+       "request": {
+        "$ref": "GoogleAdsGoogleadsV26Services__MutateGoogleAdsRequest"
+       },
+       "parameters": {
+        "customerId": {
+         "location": "path",
+         "description": "Required. The ID of the customer whose resources are being modified.",
+         "type": "string",
+         "pattern": "^[^/]+$",
+         "required": true
+        }
+       },
+       "httpMethod": "POST",
+       "id": "googleads.customers.googleAds.mutate",
+       "response": {
+        "$ref": "GoogleAdsGoogleadsV26Services__MutateGoogleAdsResponse"
+       },
+       "path": "v26/customers/{+customerId}/googleAds:mutate",
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ]
+      },
+      "search": {
+       "description": "Returns all rows that match the search query. List of thrown errors: [AuthenticationError]() [AuthorizationError]() [ChangeEventError]() [ChangeStatusError]() [ClickViewError]() [HeaderError]() [InternalError]() [QueryError]() [QuotaError]() [RequestError]()",
+       "response": {
+        "$ref": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsResponse"
+       },
+       "path": "v26/customers/{+customerId}/googleAds:search",
+       "parameterOrder": [
+        "customerId"
+       ],
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "parameters": {
+        "customerId": {
+         "description": "Required. The ID of the customer being queried.",
+         "required": true,
+         "type": "string",
+         "location": "path",
+         "pattern": "^[^/]+$"
+        }
+       },
+       "httpMethod": "POST",
+       "request": {
+        "$ref": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsRequest"
+       },
+       "id": "googleads.customers.googleAds.search",
+       "flatPath": "v26/customers/{customersId}/googleAds:search"
+      },
+      "searchStream": {
+       "description": "Returns all rows that match the search stream query. List of thrown errors: [AuthenticationError]() [AuthorizationError]() [ChangeEventError]() [ChangeStatusError]() [ClickViewError]() [HeaderError]() [InternalError]() [QueryError]() [QuotaError]() [RequestError]()",
+       "request": {
+        "$ref": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamRequest"
+       },
+       "id": "googleads.customers.googleAds.searchStream",
+       "flatPath": "v26/customers/{customersId}/googleAds:searchStream",
+       "parameterOrder": [
+        "customerId"
+       ],
+       "response": {
+        "$ref": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamResponse"
+       },
+       "path": "v26/customers/{+customerId}/googleAds:searchStream",
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "parameters": {
+        "customerId": {
+         "required": true,
+         "type": "string",
+         "description": "Required. The ID of the customer being queried.",
+         "location": "path",
+         "pattern": "^[^/]+$"
+        }
+       },
+       "httpMethod": "POST"
+      }
+     }
+    },
+    "operations": {
+     "methods": {
+      "delete": {
+       "description": "Deletes a long-running operation. This method indicates that the client is no longer interested in the operation result. It does not cancel the operation. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`.",
+       "id": "googleads.customers.operations.delete",
+       "flatPath": "v26/customers/{customersId}/operations/{operationsId}",
+       "parameters": {
+        "name": {
+         "type": "string",
+         "required": true,
+         "location": "path",
+         "pattern": "^customers/[^/]+/operations/[^/]+$",
+         "description": "The name of the operation resource to be deleted."
+        }
+       },
+       "httpMethod": "DELETE",
+       "parameterOrder": [
+        "name"
+       ],
+       "response": {
+        "$ref": "GoogleProtobuf__Empty"
+       },
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "path": "v26/{+name}"
+      },
+      "get": {
+       "description": "Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.",
+       "flatPath": "v26/customers/{customersId}/operations/{operationsId}",
+       "parameterOrder": [
+        "name"
+       ],
+       "id": "googleads.customers.operations.get",
+       "path": "v26/{+name}",
+       "httpMethod": "GET",
+       "response": {
+        "$ref": "GoogleLongrunning__Operation"
+       },
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "parameters": {
+        "name": {
+         "pattern": "^customers/[^/]+/operations/[^/]+$",
+         "location": "path",
+         "type": "string",
+         "description": "The name of the operation resource.",
+         "required": true
+        }
+       }
+      },
+      "list": {
+       "response": {
+        "$ref": "GoogleLongrunning__ListOperationsResponse"
+       },
+       "path": "v26/{+name}",
+       "id": "googleads.customers.operations.list",
+       "parameterOrder": [
+        "name"
+       ],
+       "flatPath": "v26/customers/{customersId}/operations",
+       "description": "Lists operations that match the specified filter in the request. If the server doesn't support this method, it returns `UNIMPLEMENTED`.",
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "parameters": {
+        "name": {
+         "location": "path",
+         "type": "string",
+         "pattern": "^customers/[^/]+/operations$",
+         "description": "The name of the operation's parent resource.",
+         "required": true
+        },
+        "returnPartialSuccess": {
+         "type": "boolean",
+         "location": "query",
+         "description": "When set to `true`, operations that are reachable are returned as normal, and those that are unreachable are returned in the ListOperationsResponse.unreachable field. This can only be `true` when reading across collections. For example, when `parent` is set to `\"projects/example/locations/-\"`. This field is not supported by default and will result in an `UNIMPLEMENTED` error if set unless explicitly documented otherwise in service or product specific documentation."
+        },
+        "pageSize": {
+         "type": "integer",
+         "description": "The standard list page size.",
+         "format": "int32",
+         "location": "query"
+        },
+        "pageToken": {
+         "type": "string",
+         "location": "query",
+         "description": "The standard list page token."
+        },
+        "filter": {
+         "type": "string",
+         "description": "The standard list filter.",
+         "location": "query"
+        }
+       },
+       "httpMethod": "GET"
+      }
+     }
+    },
+    "adGroups": {
+     "methods": {
+      "mutate": {
+       "scopes": [
+        "https://www.googleapis.com/auth/adwords"
+       ],
+       "response": {
+        "$ref": "GoogleAdsGoogleadsV26Services__MutateAdGroupsResponse"
+       },
+       "request": {
+        "$ref": "GoogleAdsGoogleadsV26Services__MutateAdGroupsRequest"
+       },
+       "parameters": {
+        "customerId": {
+         "required": true,
+         "type": "string",
+         "description": "Required. The ID of the customer whose ad groups are being modified.",
+         "pattern": "^[^/]+$",
+         "location": "path"
+        }
+       },
+       "description": "Creates, updates, or removes ad groups. Operation statuses are returned. List of thrown errors: [AdGroupError]() [AdxError]() [AuthenticationError]() [AuthorizationError]() [BiddingError]() [BiddingStrategyError]() [DatabaseError]() [DateError]() [DistinctError]() [FieldError]() [FieldMaskError]() [HeaderError]() [IdError]() [InternalError]() [ListOperationError]() [MultiplierError]() [MutateError]() [NewResourceCreationError]() [NotEmptyError]() [NullError]() [OperationAccessDeniedError]() [OperatorError]() [QuotaError]() [RangeError]() [RequestError]() [ResourceCountLimitExceededError]() [SettingError]() [SizeLimitError]() [StringFormatError]() [StringLengthError]() [UrlFieldError]()",
+       "path": "v26/customers/{+customerId}/adGroups:mutate",
+       "httpMethod": "POST",
+       "parameterOrder": [
+        "customerId"
+       ],
+       "id": "googleads.customers.adGroups.mutate",
+       "flatPath": "v26/customers/{customersId}/adGroups:mutate"
+      }
+     }
+    }
+   }
+  },
+  "googleAdsFields": {
+   "methods": {
+    "get": {
+     "parameterOrder": [
+      "resourceName"
+     ],
+     "id": "googleads.googleAdsFields.get",
+     "description": "Returns just the requested field. List of thrown errors: [AuthenticationError]() [AuthorizationError]() [HeaderError]() [InternalError]() [QuotaError]() [RequestError]()",
+     "httpMethod": "GET",
+     "parameters": {
+      "resourceName": {
+       "pattern": "^googleAdsFields/[^/]+$",
+       "required": true,
+       "description": "Required. The resource name of the field to get.",
+       "type": "string",
+       "location": "path"
+      }
+     },
+     "flatPath": "v26/googleAdsFields/{googleAdsFieldsId}",
+     "scopes": [
+      "https://www.googleapis.com/auth/adwords"
+     ],
+     "path": "v26/{+resourceName}",
+     "response": {
+      "$ref": "GoogleAdsGoogleadsV26Resources__GoogleAdsField"
+     }
+    }
+   }
+  }
+ },
+ "schemas": {
+  "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettingsDemandGenChannelControls_DemandGenSelectedChannels": {
+   "description": "Explicitly selected channels for channel controls in Demand Gen ad groups.",
+   "id": "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettingsDemandGenChannelControls_DemandGenSelectedChannels",
+   "type": "object",
+   "properties": {
+    "display": {
+     "description": "Whether to enable ads on the Display channel.",
+     "type": "boolean"
+    },
+    "youtubeShorts": {
+     "description": "Whether to enable ads on the YouTube Shorts channel.",
+     "type": "boolean"
+    },
+    "gmail": {
+     "type": "boolean",
+     "description": "Whether to enable ads on the Gmail channel."
+    },
+    "youtubeInStream": {
+     "description": "Whether to enable ads on the YouTube In-Stream channel.",
+     "type": "boolean"
+    },
+    "discover": {
+     "description": "Whether to enable ads on the Discover channel.",
+     "type": "boolean"
+    },
+    "maps": {
+     "description": "Whether to enable ads on the Maps channel.",
+     "type": "boolean"
+    },
+    "youtubeInFeed": {
+     "description": "Whether to enable ads on the YouTube In-Feed channel.",
+     "type": "boolean"
+    }
+   }
+  },
+  "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettings_DemandGenChannelControls": {
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettings_DemandGenChannelControls",
+   "properties": {
+    "channelStrategy": {
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "ALL_CHANNELS",
+      "ALL_OWNED_AND_OPERATED_CHANNELS"
+     ],
+     "enumDescriptions": [
+      "Not specified.",
+      "The value is unknown in this version.",
+      "All channels are enabled.",
+      "All Google-owned and operated channels are enabled; third-party channels (e.g., Display) are disabled."
+     ],
+     "description": "High level channel strategy.",
+     "type": "string"
+    },
+    "selectedChannels": {
+     "$ref": "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettingsDemandGenChannelControls_DemandGenSelectedChannels",
+     "description": "Explicitly selected channels. This field should be set with at least one true value when present."
+    },
+    "channelConfig": {
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "CHANNEL_STRATEGY",
+      "SELECTED_CHANNELS"
+     ],
+     "enumDescriptions": [
+      "Not specified.",
+      "The value is unknown in this version.",
+      "The channel controls configuration uses a general channel strategy; individual channels are not configured separately.",
+      "The channel controls configuration explicitly defines the selected channels."
+     ],
+     "description": "Output only. Channel configuration reflecting which field in the oneof is populated.",
+     "readOnly": true
+    }
+   },
+   "description": "Channel controls for Demand Gen ad groups."
+  },
+  "GoogleAdsGoogleadsV26Resources_AdGroup_DemandGenAdGroupSettings": {
+   "properties": {
+    "channelControls": {
+     "$ref": "GoogleAdsGoogleadsV26Resources_AdGroupDemandGenAdGroupSettings_DemandGenChannelControls",
+     "description": "Channel controls for Demand Gen ad groups."
+    }
+   },
+   "description": "Settings for Demand Gen ad groups.",
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Resources_AdGroup_DemandGenAdGroupSettings"
+  },
+  "GoogleAdsGoogleadsV26Resources__AdGroup": {
+   "description": "An ad group.",
+   "id": "GoogleAdsGoogleadsV26Resources__AdGroup",
+   "properties": {
+    "effectiveTargetCpaSource": {
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "CAMPAIGN_BIDDING_STRATEGY",
+      "AD_GROUP",
+      "AD_GROUP_CRITERION"
+     ],
+     "type": "string",
+     "readOnly": true,
+     "description": "Output only. Source of the effective target CPA. This field is read-only.",
+     "enumDescriptions": [
+      "Not specified.",
+      "Used for return value only. Represents value unknown in this version.",
+      "Effective bid or target is inherited from campaign bidding strategy.",
+      "The bid or target is defined on the ad group.",
+      "The bid or target is defined on the ad group criterion."
+     ]
+    },
+    "effectiveTargetCpaMicros": {
+     "type": "string",
+     "readOnly": true,
+     "description": "Output only. The effective target CPA (cost-per-acquisition). This field is read-only.",
+     "format": "int64"
+    },
+    "finalUrlSuffix": {
+     "description": "URL template for appending params to Final URL.",
+     "type": "string"
+    },
+    "excludedParentAssetSetTypes": {
+     "description": "The asset set types that should be excluded from this ad group. Asset set links with these types will not be inherited by this ad group from the upper levels. Location group types (GMB_DYNAMIC_LOCATION_GROUP, CHAIN_DYNAMIC_LOCATION_GROUP, and STATIC_LOCATION_GROUP) are child types of LOCATION_SYNC. Therefore, if LOCATION_SYNC is set for this field, all location group asset sets are not allowed to be linked to this ad group, and all Location Extension (LE) and Affiliate Location Extensions (ALE) will not be served under this ad group. Only LOCATION_SYNC is currently supported.",
+     "type": "array",
+     "items": {
+      "enum": [
+       "UNSPECIFIED",
+       "UNKNOWN",
+       "PAGE_FEED",
+       "DYNAMIC_EDUCATION",
+       "MERCHANT_CENTER_FEED",
+       "DYNAMIC_REAL_ESTATE",
+       "DYNAMIC_CUSTOM",
+       "DYNAMIC_HOTELS_AND_RENTALS",
+       "DYNAMIC_FLIGHTS",
+       "DYNAMIC_TRAVEL",
+       "DYNAMIC_LOCAL",
+       "DYNAMIC_JOBS",
+       "LOCATION_SYNC",
+       "BUSINESS_PROFILE_DYNAMIC_LOCATION_GROUP",
+       "CHAIN_DYNAMIC_LOCATION_GROUP",
+       "STATIC_LOCATION_GROUP",
+       "HOTEL_PROPERTY",
+       "TRAVEL_FEED"
+      ],
+      "enumDescriptions": [
+       "Not specified.",
+       "Used for return value only. Represents value unknown in this version.",
+       "Page asset set.",
+       "Dynamic education asset set.",
+       "Google Merchant Center asset set.",
+       "Dynamic real estate asset set.",
+       "Dynamic custom asset set.",
+       "Dynamic hotels and rentals asset set.",
+       "Dynamic flights asset set.",
+       "Dynamic travel asset set.",
+       "Dynamic local asset set.",
+       "Dynamic jobs asset set.",
+       "Location sync level asset set.",
+       "Business Profile location group asset set.",
+       "Chain location group asset set which can be used for both owned locations and affiliate locations.",
+       "Static location group asset set which can be used for both owned locations and affiliate locations.",
+       "Hotel Property asset set which is used to link a hotel property feed to Performance Max for travel goals campaigns.",
+       "Travel Feed asset set type. Can represent either a Hotel feed or a Things to Do (activities) feed."
+      ],
+      "type": "string"
+     }
+    },
+    "percentCpcBidMicros": {
+     "type": "string",
+     "format": "int64",
+     "description": "The percent cpc bid amount, expressed as a fraction of the advertised price for some good or service. The valid range for the fraction is [0,1) and the value stored here is 1,000,000 * [fraction]."
+    },
+    "primaryStatusReasons": {
+     "readOnly": true,
+     "description": "Output only. Provides reasons for why an ad group is not serving or not serving optimally.",
+     "items": {
+      "enum": [
+       "UNSPECIFIED",
+       "UNKNOWN",
+       "CAMPAIGN_REMOVED",
+       "CAMPAIGN_PAUSED",
+       "CAMPAIGN_PENDING",
+       "CAMPAIGN_ENDED",
+       "AD_GROUP_PAUSED",
+       "AD_GROUP_REMOVED",
+       "AD_GROUP_INCOMPLETE",
+       "KEYWORDS_PAUSED",
+       "NO_KEYWORDS",
+       "AD_GROUP_ADS_PAUSED",
+       "NO_AD_GROUP_ADS",
+       "HAS_ADS_DISAPPROVED",
+       "HAS_ADS_LIMITED_BY_POLICY",
+       "MOST_ADS_UNDER_REVIEW",
+       "CAMPAIGN_DRAFT",
+       "AD_GROUP_PAUSED_DUE_TO_LOW_ACTIVITY"
+      ],
+      "type": "string",
+      "enumDescriptions": [
+       "Not specified.",
+       "Used for return value only. Represents value unknown in this version.",
+       "The user-specified campaign status is removed. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "The user-specified campaign status is paused. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "The user-specified time for this campaign to start is in the future. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE",
+       "The user-specified time for this campaign to end has passed. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "The user-specified ad group status is paused. Contributes to AdGroupPrimaryStatus.PAUSED.",
+       "The user-specified ad group status is removed. Contributes to AdGroupPrimaryStatus.REMOVED.",
+       "The construction of this ad group is not yet complete. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "The user-specified keyword statuses in this ad group are all paused. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "No eligible keywords exist in this ad group. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "The user-specified ad group ads statuses in this ad group are all paused. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "No eligible ad group ads exist in this ad group. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "Policy status reason when at least one ad is disapproved. Contributes to multiple AdGroupPrimaryStatus.",
+       "Policy status reason when at least one ad is limited by policy. Contributes to multiple AdGroupPrimaryStatus.",
+       "Policy status reason when most ads are pending review. Contributes to AdGroupPrimaryStatus.PENDING.",
+       "The AdGroup belongs to a Draft campaign. Contributes to AdGroupPrimaryStatus.NOT_ELIGIBLE.",
+       "Ad group has been paused due to prolonged low activity in serving. Contributes to AdGroupPrimaryStatus.PAUSED."
+      ]
+     },
+     "type": "array"
+    },
+    "displayCustomBidDimension": {
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "KEYWORD",
+      "AUDIENCE",
+      "TOPIC",
+      "GENDER",
+      "AGE_RANGE",
+      "PLACEMENT",
+      "PARENTAL_STATUS",
+      "INCOME_RANGE"
+     ],
+     "type": "string",
+     "description": "Lets advertisers specify a targeting dimension on which to place absolute bids. This is only applicable for campaigns that target only the display network and not search.",
+     "enumDescriptions": [
+      "Not specified.",
+      "Used for return value only. Represents value unknown in this version.",
+      "Keyword criteria, for example, 'mars cruise'. KEYWORD may be used as a custom bid dimension. Keywords are always a targeting dimension, so may not be set as a target \"ALL\" dimension with TargetRestriction.",
+      "Audience criteria, which include user list, user interest, custom affinity, and custom in market.",
+      "Topic criteria for targeting categories of content, for example, 'category::Animals>Pets' Used for Display and Video targeting.",
+      "Criteria for targeting gender.",
+      "Criteria for targeting age ranges.",
+      "Placement criteria, which include websites like 'www.flowers4sale.com', as well as mobile applications, mobile app categories, YouTube videos, and YouTube channels.",
+      "Criteria for parental status targeting.",
+      "Criteria for income range targeting."
+     ]
+    },
+    "campaign": {
+     "description": "Immutable. The campaign to which the ad group belongs.",
+     "type": "string"
+    },
+    "name": {
+     "type": "string",
+     "description": "The name of the ad group. This field is required and should not be empty when creating new ad groups. It must contain fewer than 255 UTF-8 full-width characters. It must not contain any null (code point 0x0), NL line feed (code point 0xA) or carriage return (code point 0xD) characters."
+    },
+    "cpmBidMicros": {
+     "description": "The maximum CPM (cost-per-thousand viewable impressions) bid.",
+     "format": "int64",
+     "type": "string"
+    },
+    "cpcBidMicros": {
+     "description": "The maximum CPC (cost-per-click) bid. This field is used when the ad group's effective bidding strategy is Manual CPC. This field is not applicable and will be ignored if the ad group's campaign is using a portfolio bidding strategy.",
+     "type": "string",
+     "format": "int64"
+    },
+    "effectiveTargetRoas": {
+     "description": "Output only. The effective target ROAS (return-on-ad-spend). This field is read-only.",
+     "readOnly": true,
+     "type": "number",
+     "format": "double"
+    },
+    "demandGenAdGroupSettings": {
+     "description": "Settings for Demand Gen ad groups.",
+     "$ref": "GoogleAdsGoogleadsV26Resources_AdGroup_DemandGenAdGroupSettings"
+    },
+    "effectiveTargetCpc": {
+     "format": "int64",
+     "type": "string",
+     "description": "Output only. The effective target CPC (cost-per-click). This field is read-only.",
+     "readOnly": true
+    },
+    "id": {
+     "readOnly": true,
+     "format": "int64",
+     "type": "string",
+     "description": "Output only. The ID of the ad group."
+    },
+    "trackingUrlTemplate": {
+     "description": "The URL template for constructing a tracking URL.",
+     "type": "string"
+    },
+    "targetCpvMicros": {
+     "type": "string",
+     "format": "int64",
+     "description": "Average amount in micros that the advertiser is willing to pay for every ad view."
+    },
+    "targetCpaMicros": {
+     "type": "string",
+     "description": "The target CPA (cost-per-acquisition). If the ad group's campaign bidding strategy is TargetCpa or MaximizeConversions (with its target_cpa field set), then this field overrides the target CPA specified in the campaign's bidding strategy. Otherwise, this value is ignored.",
+     "format": "int64"
+    },
+    "labels": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Output only. The resource names of labels attached to this ad group.",
+     "readOnly": true
+    },
+    "type": {
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "SEARCH_STANDARD",
+      "DISPLAY_STANDARD",
+      "SHOPPING_PRODUCT_ADS",
+      "HOTEL_ADS",
+      "SHOPPING_SMART_ADS",
+      "VIDEO_BUMPER",
+      "VIDEO_TRUE_VIEW_IN_STREAM",
+      "VIDEO_TRUE_VIEW_IN_DISPLAY",
+      "VIDEO_NON_SKIPPABLE_IN_STREAM",
+      "SEARCH_DYNAMIC_ADS",
+      "SHOPPING_COMPARISON_LISTING_ADS",
+      "PROMOTED_HOTEL_ADS",
+      "VIDEO_RESPONSIVE",
+      "VIDEO_EFFICIENT_REACH",
+      "SMART_CAMPAIGN_ADS",
+      "TRAVEL_ADS",
+      "YOUTUBE_AUDIO"
+     ],
+     "enumDescriptions": [
+      "The type has not been specified.",
+      "The received value is not known in this version. This is a response-only value.",
+      "The default ad group type for Search campaigns.",
+      "The default ad group type for Display campaigns.",
+      "The ad group type for Shopping campaigns serving standard product ads.",
+      "The default ad group type for Hotel campaigns.",
+      "The type for ad groups in Smart Shopping campaigns.",
+      "Short unskippable in-stream video ads.",
+      "TrueView (skippable) in-stream video ads.",
+      "TrueView in-display video ads.",
+      "Unskippable in-stream video ads.",
+      "Ad group type for Dynamic Search Ads ad groups.",
+      "The type for ad groups in Shopping Comparison Listing campaigns.",
+      "The ad group type for Promoted Hotel ad groups.",
+      "Video responsive ad groups.",
+      "Video efficient reach ad groups.",
+      "Ad group type for Smart campaigns.",
+      "Ad group type for Travel campaigns.",
+      "Ad group type for YouTube Audio campaigns."
+     ],
+     "description": "Immutable. The type of the ad group.",
+     "type": "string"
+    },
+    "optimizedTargetingEnabled": {
+     "description": "True if optimized targeting is enabled. Optimized Targeting is the replacement for Audience Expansion.",
+     "type": "boolean"
+    },
+    "status": {
+     "enumDescriptions": [
+      "The status has not been specified.",
+      "The received value is not known in this version. This is a response-only value.",
+      "The ad group is enabled.",
+      "The ad group is paused.",
+      "The ad group is removed."
+     ],
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "ENABLED",
+      "PAUSED",
+      "REMOVED"
+     ],
+     "description": "The status of the ad group."
+    },
+    "targetRoas": {
+     "format": "double",
+     "type": "number",
+     "description": "The target ROAS (return-on-ad-spend) for this ad group. This field lets you override the target ROAS specified in the campaign's bidding strategy, but only if the campaign is using a standard (not portfolio) `TargetRoas` strategy or a standard `MaximizeConversionValue` strategy with its `target_roas` field set. If the campaign is using a portfolio bidding strategy, this field cannot be set and attempting to do so will result in an error. For any other bidding strategies, this value is ignored. To see the actual target ROAS being used by the ad group, considering potential overrides, query the `effective_target_roas` and `effective_target_roas_source` fields."
+    },
+    "excludeDemographicExpansion": {
+     "description": "When this value is true, demographics will be excluded from the types of targeting which are expanded when optimized_targeting_enabled is true. When optimized_targeting_enabled is false, this field is ignored. Default is false.",
+     "type": "boolean"
+    },
+    "fixedCpmMicros": {
+     "type": "string",
+     "description": "The fixed amount in micros that the advertiser pays for every thousand impressions of the ad.",
+     "format": "int64"
+    },
+    "targetCpmMicros": {
+     "type": "string",
+     "description": "Average amount in micros that the advertiser is willing to pay for every thousand times the ad is shown.",
+     "format": "int64"
+    },
+    "effectiveTargetCpcSource": {
+     "enumDescriptions": [
+      "Not specified.",
+      "Used for return value only. Represents value unknown in this version.",
+      "Effective bid or target is inherited from campaign bidding strategy.",
+      "The bid or target is defined on the ad group.",
+      "The bid or target is defined on the ad group criterion."
+     ],
+     "type": "string",
+     "description": "Output only. Source of the effective target CPC. This field is read-only.",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "CAMPAIGN_BIDDING_STRATEGY",
+      "AD_GROUP",
+      "AD_GROUP_CRITERION"
+     ],
+     "readOnly": true
+    },
+    "effectiveCpcBidMicros": {
+     "readOnly": true,
+     "format": "int64",
+     "description": "Output only. Value will be same as that of the CPC (cost-per-click) bid value when the bidding strategy is one of manual cpc, enhanced cpc, page one promoted or target outrank share, otherwise the value will be null.",
+     "type": "string"
+    },
+    "cpvBidMicros": {
+     "description": "The CPV (cost-per-view) bid.",
+     "type": "string",
+     "format": "int64"
+    },
+    "resourceName": {
+     "type": "string",
+     "description": "Immutable. The resource name of the ad group. Ad group resource names have the form: `customers/{customer_id}/adGroups/{ad_group_id}`"
+    },
+    "baseAdGroup": {
+     "description": "Output only. For draft or experiment ad groups, this field is the resource name of the base ad group from which this ad group was created. If a draft or experiment ad group does not have a base ad group, then this field is null. For base ad groups, this field equals the ad group resource name. This field is read-only.",
+     "readOnly": true,
+     "type": "string"
+    },
+    "adRotationMode": {
+     "description": "The ad rotation mode of the ad group.",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "OPTIMIZE",
+      "ROTATE_FOREVER"
+     ],
+     "type": "string",
+     "enumDescriptions": [
+      "The ad rotation mode has not been specified.",
+      "The received value is not known in this version. This is a response-only value.",
+      "Optimize ad group ads based on clicks or conversions.",
+      "Rotate evenly forever."
+     ]
+    },
+    "primaryStatus": {
+     "description": "Output only. Provides aggregated view into why an ad group is not serving or not serving optimally.",
+     "enumDescriptions": [
+      "Not specified.",
+      "Used for return value only. Represents value unknown in this version.",
+      "The ad group is eligible to serve.",
+      "The ad group is paused.",
+      "The ad group is removed.",
+      "The ad group may serve in the future.",
+      "The ad group is not eligible to serve.",
+      "The ad group has limited servability."
+     ],
+     "readOnly": true,
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "ELIGIBLE",
+      "PAUSED",
+      "REMOVED",
+      "PENDING",
+      "NOT_ELIGIBLE",
+      "LIMITED"
+     ]
+    },
+    "effectiveTargetRoasSource": {
+     "readOnly": true,
+     "enumDescriptions": [
+      "Not specified.",
+      "Used for return value only. Represents value unknown in this version.",
+      "Effective bid or target is inherited from campaign bidding strategy.",
+      "The bid or target is defined on the ad group.",
+      "The bid or target is defined on the ad group criterion."
+     ],
+     "type": "string",
+     "description": "Output only. Source of the effective target ROAS. This field is read-only.",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "CAMPAIGN_BIDDING_STRATEGY",
+      "AD_GROUP",
+      "AD_GROUP_CRITERION"
+     ]
+    },
+    "excludedParentAssetFieldTypes": {
+     "description": "The asset field types that should be excluded from this ad group. Asset links with these field types will not be inherited by this ad group from the upper levels.",
+     "type": "array",
+     "items": {
+      "type": "string",
+      "enumDescriptions": [
+       "Not specified.",
+       "Used for return value only. Represents value unknown in this version.",
+       "The asset is linked for use as a headline.",
+       "The asset is linked for use as a description.",
+       "The asset is linked for use as mandatory ad text.",
+       "The asset is linked for use as a marketing image.",
+       "The asset is linked for use as a media bundle.",
+       "The asset is linked for use as a YouTube video.",
+       "The asset is linked to indicate that a hotels campaign is \"Book on Google\" enabled.",
+       "The asset is linked for use as a Lead Form extension.",
+       "The asset is linked for use as a Promotion extension.",
+       "The asset is linked for use as a Callout extension.",
+       "The asset is linked for use as a Structured Snippet extension.",
+       "The asset is linked for use as a Sitelink.",
+       "The asset is linked for use as a Mobile App extension.",
+       "The asset is linked for use as a Hotel Callout extension.",
+       "The asset is linked for use as a Call extension.",
+       "The asset is linked for use as a Price extension.",
+       "The asset is linked for use as a long headline.",
+       "The asset is linked for use as a business name.",
+       "The asset is linked for use as a square marketing image.",
+       "The asset is linked for use as a portrait marketing image.",
+       "The asset is linked for use as a logo.",
+       "The asset is linked for use as a landscape logo.",
+       "The asset is linked for use as a non YouTube logo.",
+       "The asset is linked for use to select a call-to-action.",
+       "The asset is linked for use to select an ad image.",
+       "The asset is linked for use as a business logo.",
+       "The asset is linked for use as a hotel property in a Performance Max for travel goals campaign.",
+       "The asset is linked for use as a Demand Gen carousel card.",
+       "The asset is linked for use as a Business Message.",
+       "The asset is linked for use as a tall portrait marketing image.",
+       "The asset is linked for use as related YouTube videos.",
+       "The asset is linked for use as a landing page preview image.",
+       "The asset is linked for use as a long description.",
+       "The asset is linked for use as a call-to-action.",
+       "The asset is linked for use as a classic display image.",
+       "The asset is linked for use as a text disclaimer."
+      ],
+      "enum": [
+       "UNSPECIFIED",
+       "UNKNOWN",
+       "HEADLINE",
+       "DESCRIPTION",
+       "MANDATORY_AD_TEXT",
+       "MARKETING_IMAGE",
+       "MEDIA_BUNDLE",
+       "YOUTUBE_VIDEO",
+       "BOOK_ON_GOOGLE",
+       "LEAD_FORM",
+       "PROMOTION",
+       "CALLOUT",
+       "STRUCTURED_SNIPPET",
+       "SITELINK",
+       "MOBILE_APP",
+       "HOTEL_CALLOUT",
+       "CALL",
+       "PRICE",
+       "LONG_HEADLINE",
+       "BUSINESS_NAME",
+       "SQUARE_MARKETING_IMAGE",
+       "PORTRAIT_MARKETING_IMAGE",
+       "LOGO",
+       "LANDSCAPE_LOGO",
+       "VIDEO",
+       "CALL_TO_ACTION_SELECTION",
+       "AD_IMAGE",
+       "BUSINESS_LOGO",
+       "HOTEL_PROPERTY",
+       "DEMAND_GEN_CAROUSEL_CARD",
+       "BUSINESS_MESSAGE",
+       "TALL_PORTRAIT_MARKETING_IMAGE",
+       "RELATED_YOUTUBE_VIDEOS",
+       "LANDING_PAGE_PREVIEW",
+       "LONG_DESCRIPTION",
+       "CALL_TO_ACTION",
+       "CLASSIC_DISPLAY_IMAGE",
+       "TEXT_DISCLAIMER"
+      ]
+     }
+    },
+    "targetCpcMicros": {
+     "description": "Average amount in micros that the advertiser is willing to pay for every ad click. Overrides the target CPC configured at the campaign level.",
+     "type": "string",
+     "format": "int64"
+    }
+   },
+   "type": "object"
+  },
+  "GoogleAdsGoogleadsV26Resources__GoogleAdsField": {
+   "id": "GoogleAdsGoogleadsV26Resources__GoogleAdsField",
+   "type": "object",
+   "properties": {
+    "name": {
+     "readOnly": true,
+     "type": "string",
+     "description": "Output only. The name of the artifact."
+    },
+    "selectable": {
+     "readOnly": true,
+     "description": "Output only. Whether the artifact can be used in a SELECT clause in search queries.",
+     "type": "boolean"
+    },
+    "typeUrl": {
+     "readOnly": true,
+     "description": "Output only. The URL of proto describing the artifact's data type.",
+     "type": "string"
+    },
+    "dataType": {
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "BOOLEAN",
+      "DATE",
+      "DOUBLE",
+      "ENUM",
+      "FLOAT",
+      "INT32",
+      "INT64",
+      "MESSAGE",
+      "RESOURCE_NAME",
+      "STRING",
+      "UINT64"
+     ],
+     "description": "Output only. This field determines the operators that can be used with the artifact in WHERE clauses.",
+     "readOnly": true,
+     "enumDescriptions": [
+      "Unspecified",
+      "Unknown",
+      "Maps to google.protobuf.BoolValue Applicable operators: =, !=",
+      "Maps to google.protobuf.StringValue. It can be compared using the set of operators specific to dates however. Applicable operators: =, <, >, <=, >=, BETWEEN, DURING, and IN",
+      "Maps to google.protobuf.DoubleValue Applicable operators: =, !=, <, >, IN, NOT IN",
+      "Maps to an enum. It's specific definition can be found at type_url. Applicable operators: =, !=, IN, NOT IN",
+      "Maps to google.protobuf.FloatValue Applicable operators: =, !=, <, >, IN, NOT IN",
+      "Maps to google.protobuf.Int32Value Applicable operators: =, !=, <, >, <=, >=, BETWEEN, IN, NOT IN",
+      "Maps to google.protobuf.Int64Value Applicable operators: =, !=, <, >, <=, >=, BETWEEN, IN, NOT IN",
+      "Maps to a protocol buffer message type. The data type's details can be found in type_url. No operators work with MESSAGE fields.",
+      "Maps to google.protobuf.StringValue. Represents the resource name (unique id) of a resource or one of its foreign keys. No operators work with RESOURCE_NAME fields.",
+      "Maps to google.protobuf.StringValue. Applicable operators: =, !=, LIKE, NOT LIKE, IN, NOT IN",
+      "Maps to google.protobuf.UInt64Value Applicable operators: =, !=, <, >, <=, >=, BETWEEN, IN, NOT IN"
+     ]
+    },
+    "resourceName": {
+     "readOnly": true,
+     "type": "string",
+     "description": "Output only. The resource name of the artifact. Artifact resource names have the form: `googleAdsFields/{name}`"
+    },
+    "attributeResources": {
+     "type": "array",
+     "description": "Output only. The names of all resources that are selectable with the described artifact. Fields from these resources do not segment metrics when included in search queries. This field is only set for artifacts whose category is RESOURCE.",
+     "items": {
+      "type": "string"
+     },
+     "readOnly": true
+    },
+    "enumValues": {
+     "description": "Output only. Values the artifact can assume if it is a field of type ENUM. This field is only set for artifacts of category SEGMENT or ATTRIBUTE.",
+     "readOnly": true,
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "category": {
+     "type": "string",
+     "enumDescriptions": [
+      "Unspecified",
+      "Unknown",
+      "The described artifact is a resource.",
+      "The described artifact is a field and is an attribute of a resource. Including a resource attribute field in a query may segment the query if the resource to which it is attributed segments the resource found in the FROM clause.",
+      "The described artifact is a field and always segments search queries.",
+      "The described artifact is a field and is a metric. It never segments search queries."
+     ],
+     "readOnly": true,
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "RESOURCE",
+      "ATTRIBUTE",
+      "SEGMENT",
+      "METRIC"
+     ],
+     "description": "Output only. The category of the artifact."
+    },
+    "selectableWith": {
+     "items": {
+      "type": "string"
+     },
+     "description": "Output only. The names of all resources, segments, and metrics that are selectable with the described artifact.",
+     "readOnly": true,
+     "type": "array"
+    },
+    "sortable": {
+     "description": "Output only. Whether the artifact can be used in a ORDER BY clause in search queries.",
+     "readOnly": true,
+     "type": "boolean"
+    },
+    "isRepeated": {
+     "type": "boolean",
+     "readOnly": true,
+     "description": "Output only. Whether the field artifact is repeated."
+    },
+    "filterable": {
+     "type": "boolean",
+     "description": "Output only. Whether the artifact can be used in a WHERE clause in search queries.",
+     "readOnly": true
+    },
+    "segments": {
+     "readOnly": true,
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Output only. This field lists the names of all artifacts, whether a segment or another resource, that segment metrics when included in search queries and when the described artifact is used in the FROM clause. It is only set for artifacts whose category is RESOURCE."
+    },
+    "metrics": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array",
+     "description": "Output only. This field lists the names of all metrics that are selectable with the described artifact when it is used in the FROM clause. It is only set for artifacts whose category is RESOURCE.",
+     "readOnly": true
+    }
+   },
+   "description": "A field or resource (artifact) used by GoogleAdsService."
+  },
+  "GoogleAdsGoogleadsV26Services__AdGroupOperation": {
+   "id": "GoogleAdsGoogleadsV26Services__AdGroupOperation",
+   "properties": {
+    "update": {
+     "$ref": "GoogleAdsGoogleadsV26Resources__AdGroup",
+     "description": "Update operation: The ad group is expected to have a valid resource name."
+    },
+    "remove": {
+     "description": "Remove operation: A resource name for the removed ad group is expected, in this format: `customers/{customer_id}/adGroups/{ad_group_id}`",
+     "type": "string"
+    },
+    "updateMask": {
+     "type": "string",
+     "description": "FieldMask that determines which resource fields are modified in an update.",
+     "format": "google-fieldmask"
+    },
+    "create": {
+     "$ref": "GoogleAdsGoogleadsV26Resources__AdGroup",
+     "description": "Create operation: No resource name is expected for the new ad group."
+    }
+   },
+   "type": "object",
+   "description": "A single operation (create, update, remove) on an ad group."
+  },
+  "GoogleAdsGoogleadsV26Services__ListAccessibleCustomersResponse": {
+   "id": "GoogleAdsGoogleadsV26Services__ListAccessibleCustomersResponse",
+   "description": "Response message for CustomerService.ListAccessibleCustomers.",
+   "type": "object",
+   "properties": {
+    "resourceNames": {
+     "description": "Resource name of customers directly accessible by the user authenticating the call.",
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "GoogleAdsGoogleadsV26Services__MutateAdGroupResult": {
+   "properties": {
+    "resourceName": {
+     "type": "string",
+     "description": "Returned for successful operations."
+    },
+    "adGroup": {
+     "description": "The mutated ad group with only mutable fields after mutate. The field will only be returned when response_content_type is set to \"MUTABLE_RESOURCE\".",
+     "$ref": "GoogleAdsGoogleadsV26Resources__AdGroup"
+    }
+   },
+   "description": "The result for the ad group mutate.",
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Services__MutateAdGroupResult"
+  },
+  "GoogleAdsGoogleadsV26Services__MutateAdGroupsRequest": {
+   "properties": {
+    "validateOnly": {
+     "description": "If true, the request is validated but not executed. Only errors are returned, not results.",
+     "type": "boolean"
+    },
+    "operations": {
+     "description": "Required. The list of operations to perform on individual ad groups.",
+     "type": "array",
+     "items": {
+      "$ref": "GoogleAdsGoogleadsV26Services__AdGroupOperation"
+     }
+    },
+    "partialFailure": {
+     "type": "boolean",
+     "description": "If true, successful operations will be carried out and invalid operations will return errors. If false, all operations will be carried out in one transaction if and only if they are all valid. Default is false."
+    },
+    "responseContentType": {
+     "enumDescriptions": [
+      "Not specified. Will return the resource name only in the response.",
+      "The mutate response will be the resource name.",
+      "The mutate response will contain the resource name and the resource with mutable fields if possible. Otherwise, only the resource name will be returned."
+     ],
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "RESOURCE_NAME_ONLY",
+      "MUTABLE_RESOURCE"
+     ],
+     "description": "The response content type setting. Determines whether the mutable resource or just the resource name should be returned post mutation."
+    }
+   },
+   "description": "Request message for AdGroupService.MutateAdGroups.",
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Services__MutateAdGroupsRequest"
+  },
+  "GoogleAdsGoogleadsV26Services__MutateAdGroupsResponse": {
+   "type": "object",
+   "properties": {
+    "partialFailureError": {
+     "description": "Errors that pertain to operation failures in the partial failure mode. Returned only when partial_failure = true and all errors occur inside the operations. If any errors occur outside the operations (for example, auth errors), we return an RPC level error.",
+     "$ref": "GoogleRpc__Status"
+    },
+    "results": {
+     "type": "array",
+     "description": "All results for the mutate.",
+     "items": {
+      "$ref": "GoogleAdsGoogleadsV26Services__MutateAdGroupResult"
+     }
+    }
+   },
+   "description": "Response message for an ad group mutate.",
+   "id": "GoogleAdsGoogleadsV26Services__MutateAdGroupsResponse"
+  },
+  "GoogleAdsGoogleadsV26Services__MutateGoogleAdsRequest": {
+   "properties": {
+    "responseContentType": {
+     "type": "string",
+     "description": "The response content type setting. Determines whether the mutable resource or just the resource name should be returned post mutation. The mutable resource will only be returned if the resource has the appropriate response field. For example, MutateCampaignResult.campaign.",
+     "enum": [
+      "UNSPECIFIED",
+      "RESOURCE_NAME_ONLY",
+      "MUTABLE_RESOURCE"
+     ],
+     "enumDescriptions": [
+      "Not specified. Will return the resource name only in the response.",
+      "The mutate response will be the resource name.",
+      "The mutate response will contain the resource name and the resource with mutable fields if possible. Otherwise, only the resource name will be returned."
+     ]
+    },
+    "partialFailure": {
+     "description": "If true, successful operations will be carried out and invalid operations will return errors. If false, all operations will be carried out in one transaction if and only if they are all valid. Default is false.",
+     "type": "boolean"
+    },
+    "validateOnly": {
+     "type": "boolean",
+     "description": "If true, the request is validated but not executed. Mutates only return errors, not results. Actions return results and errors."
+    }
+   },
+   "description": "Request message for GoogleAdsService.Mutate.",
+   "id": "GoogleAdsGoogleadsV26Services__MutateGoogleAdsRequest",
+   "type": "object"
+  },
+  "GoogleAdsGoogleadsV26Services__MutateGoogleAdsResponse": {
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Services__MutateGoogleAdsResponse",
+   "properties": {
+    "partialFailureError": {
+     "description": "Errors that pertain to operation failures in the partial failure mode. Returned only when partial_failure = true and all errors occur inside the operations. If any errors occur outside the operations (for example, auth errors), we return an RPC level error.",
+     "$ref": "GoogleRpc__Status"
+    }
+   },
+   "description": "Response message for GoogleAdsService.Mutate."
+  },
+  "GoogleAdsGoogleadsV26Services__SearchGoogleAdsRequest": {
+   "type": "object",
+   "id": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsRequest",
+   "description": "Request message for GoogleAdsService.Search.",
+   "properties": {
+    "pageToken": {
+     "description": "Token of the page to retrieve. If not specified, the first page of results will be returned. Use the value obtained from `next_page_token` in the previous response in order to request the next page of results.",
+     "type": "string"
+    },
+    "query": {
+     "description": "Required. The query string.",
+     "type": "string"
+    },
+    "validateOnly": {
+     "type": "boolean",
+     "description": "If true, the request is validated but not executed."
+    },
+    "pageSize": {
+     "type": "integer",
+     "format": "int32",
+     "description": "This field is deprecated and will be removed in a future version of the API. Google Ads API returns a `PAGE_SIZE_NOT_SUPPORTED` error if this field is set in the request body."
+    }
+   }
+  },
+  "GoogleAdsGoogleadsV26Services__SearchGoogleAdsResponse": {
+   "id": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsResponse",
+   "description": "Response message for GoogleAdsService.Search.",
+   "type": "object",
+   "properties": {
+    "nextPageToken": {
+     "description": "Pagination token used to retrieve the next page of results. Pass the content of this string as the `page_token` attribute of the next request. `next_page_token` is not returned for the last page.",
+     "type": "string"
+    },
+    "queryResourceConsumption": {
+     "description": "The amount of resources consumed to serve the query.",
+     "type": "string",
+     "format": "int64"
+    },
+    "fieldMask": {
+     "description": "FieldMask that represents what fields were requested by the user.",
+     "format": "google-fieldmask",
+     "type": "string"
+    },
+    "totalResultsCount": {
+     "type": "string",
+     "description": "Total number of results that match the query ignoring the LIMIT clause.",
+     "format": "int64"
+    }
+   }
+  },
+  "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamRequest": {
+   "type": "object",
+   "description": "Request message for GoogleAdsService.SearchStream.",
+   "properties": {
+    "summaryRowSetting": {
+     "enumDescriptions": [
+      "Not specified.",
+      "Represent unknown values of return summary row.",
+      "Do not return summary row.",
+      "Return summary row along with results. The summary row will be returned in the last batch alone (last batch will contain no results).",
+      "Return summary row only and return no results."
+     ],
+     "type": "string",
+     "enum": [
+      "UNSPECIFIED",
+      "UNKNOWN",
+      "NO_SUMMARY_ROW",
+      "SUMMARY_ROW_WITH_RESULTS",
+      "SUMMARY_ROW_ONLY"
+     ],
+     "description": "Determines whether a summary row will be returned. By default, summary row is not returned. If requested, the summary row will be sent in a response by itself after all other query results are returned."
+    },
+    "query": {
+     "type": "string",
+     "description": "Required. The query string."
+    }
+   },
+   "id": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamRequest"
+  },
+  "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamResponse": {
+   "type": "object",
+   "description": "Response message for GoogleAdsService.SearchStream.",
+   "id": "GoogleAdsGoogleadsV26Services__SearchGoogleAdsStreamResponse",
+   "properties": {
+    "queryResourceConsumption": {
+     "type": "string",
+     "format": "int64",
+     "description": "The amount of resources consumed to serve the query. query_resource_consumption for the Summary row and non-Summary responses are returned separately in their respective rows. query_resource_consumption for non-Summary responses is returned in the final batch of results."
+    },
+    "requestId": {
+     "type": "string",
+     "description": "The unique id of the request that is used for debugging purposes."
+    },
+    "fieldMask": {
+     "format": "google-fieldmask",
+     "type": "string",
+     "description": "FieldMask that represents what fields were requested by the user."
+    }
+   }
+  },
+  "GoogleLongrunning__ListOperationsResponse": {
+   "type": "object",
+   "id": "GoogleLongrunning__ListOperationsResponse",
+   "description": "The response message for Operations.ListOperations.",
+   "properties": {
+    "unreachable": {
+     "description": "Unordered list. Unreachable resources. Populated when the request sets `ListOperationsRequest.return_partial_success` and reads across collections. For example, when attempting to list all resources across all supported locations.",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "nextPageToken": {
+     "description": "The standard List next-page token.",
+     "type": "string"
+    },
+    "operations": {
+     "items": {
+      "$ref": "GoogleLongrunning__Operation"
+     },
+     "type": "array",
+     "description": "A list of operations that matches the specified filter in the request."
+    }
+   }
+  },
+  "GoogleLongrunning__Operation": {
+   "id": "GoogleLongrunning__Operation",
+   "description": "This resource represents a long-running operation that is the result of a network API call.",
+   "type": "object",
+   "properties": {
+    "done": {
+     "description": "If the value is `false`, it means the operation is still in progress. If `true`, the operation is completed, and either `error` or `response` is available.",
+     "type": "boolean"
+    },
+    "name": {
+     "description": "The server-assigned name, which is only unique within the same service that originally returns it. If you use the default HTTP mapping, the `name` should be a resource name ending with `operations/{unique_id}`.",
+     "type": "string"
+    },
+    "metadata": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "any",
+      "description": "Properties of the object. Contains field @type with type URL."
+     },
+     "description": "Service-specific metadata associated with the operation. It typically contains progress information and common metadata such as create time. Some services might not provide such metadata. Any method that returns a long-running operation should document the metadata type, if any."
+    },
+    "error": {
+     "description": "The error result of the operation in case of failure or cancellation.",
+     "$ref": "GoogleRpc__Status"
+    },
+    "response": {
+     "type": "object",
+     "additionalProperties": {
+      "description": "Properties of the object. Contains field @type with type URL.",
+      "type": "any"
+     },
+     "description": "The normal, successful response of the operation. If the original method returns no data on success, such as `Delete`, the response is `google.protobuf.Empty`. If the original method is standard `Get`/`Create`/`Update`, the response should be the resource. For other methods, the response should have the type `XxxResponse`, where `Xxx` is the original method name. For example, if the original method name is `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`."
+    }
+   }
+  },
+  "GoogleProtobuf__Empty": {
+   "description": "A generic empty message that you can re-use to avoid defining duplicated empty messages in your APIs. A typical example is to use it as the request or the response type of an API method. For instance: service Foo { rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty); }",
+   "id": "GoogleProtobuf__Empty",
+   "type": "object",
+   "properties": {}
+  },
+  "GoogleRpc__Status": {
+   "properties": {
+    "message": {
+     "type": "string",
+     "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the google.rpc.Status.details field, or localized by the client."
+    },
+    "details": {
+     "type": "array",
+     "description": "A list of messages that carry the error details. There is a common set of message types for APIs to use.",
+     "items": {
+      "additionalProperties": {
+       "description": "Properties of the object. Contains field @type with type URL.",
+       "type": "any"
+      },
+      "type": "object"
+     }
+    },
+    "code": {
+     "format": "int32",
+     "type": "integer",
+     "description": "The status code, which should be an enum value of google.rpc.Code."
+    }
+   },
+   "description": "The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).",
+   "type": "object",
+   "id": "GoogleRpc__Status"
+  }
+ }
+}

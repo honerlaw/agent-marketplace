@@ -9,6 +9,7 @@ deployed as a container.
 | [`openai-ads`](openai-ads/) | Manage ChatGPT ads through the OpenAI Ads (Advertiser) API via four generic, spec-driven tools |
 | [`google-search-console`](google-search-console/) | Full access to the Google Search Console API via ten typed tools, one per operation (optional read-only mode) |
 | [`reddit-ads`](reddit-ads/) | Full access to the Reddit Ads API (v3) via four generic, spec-driven tools, with OAuth token refresh |
+| [`google-ads`](google-ads/) | Full access to the Google Ads API (REST, v26) via four generic tools driven by Google's Discovery document, including Demand Gen and YouTube Shorts campaigns |
 
 ## Contract for every server
 
