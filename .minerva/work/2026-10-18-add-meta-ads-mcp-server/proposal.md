@@ -1,7 +1,7 @@
 # Proposal: add-meta-ads-mcp-server
 
 **Date**: 2026-10-18
-**Status**: Draft
+**Status**: Shipped (2026-10-18)
 
 ## Goal
 `mcp/meta-ads/`: an MCP server that gives an LLM full read and write access to Meta's Marketing API
@@ -52,6 +52,26 @@ Facts from sources:
 - System-user tokens: "Never expires" or 60 days; refresh call documented (README only).
 
 ## Approach
+
+**What shipped** (as planned below, plus review fixes):
+- The spec command is a console script, `meta-ads-fetch-specs <dir>` (not `python -m
+  meta_ads_mcp.spec_fetch`): the repo uses no coverage pragmas and a `__main__` guard would be
+  the one uncovered line. The Dockerfile runs it after `pip install`.
+- From code review: list and object **query** values are JSON-encoded (Graph reads repeated keys
+  last-wins; a JSON-array filter was verified live → 200); a body that parses as a JSON object or
+  array is returned as `json` whatever its content type, so the key rule always applies;
+  token-shaped strings (`EAA` + 20+ alphanumerics) and dict keys are scrubbed too (catches
+  `fields=access_token.as(x)` aliases); `adbatch` (async batch) joins the refused parameters, and
+  names are normalized PHP-style (`.`, spaces, an unmatched `[` → `_`); the scrub fails closed
+  (`Scrubber.mapping`); a corrupt (`zlib.error`) or oversized (32 MiB) spec download is a clean
+  `ToolError`; the README states that `GET /?ids=` multi-read is not available (bare `/` refused)
+  and that `debug_token` sends the token as `input_token`.
+- The test fixture's `.gitignore` rule was anchored (`/specs/`) after `specs/` silently ignored
+  `tests/fixtures/specs/`; a clean `git archive HEAD` export now passes `make check`.
+- Criterion 9 (a live, owner-approved, zero-spend write) is **pending the owner's answer**;
+  writes are documented as unverified live until it runs.
+
+The plan as approved:
 Copy the strict blocks and contract from `mcp/openai-ads/` (as `mcp/README.md` says) and the layout of
 `mcp/google-ads/`, adapted to the Graph API:
 
