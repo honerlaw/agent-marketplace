@@ -1,0 +1,7 @@
+services:
+  r2-uploads-mcp:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
