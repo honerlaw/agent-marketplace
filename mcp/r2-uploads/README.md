@@ -87,6 +87,8 @@ claude mcp add r2-uploads --env R2_ACCOUNT_ID=… --env R2_BUCKET=… \
 - **HTTP mode is closed by default.** The server won't start without `MCP_AUTH_TOKEN` unless
   you set `MCP_ALLOW_UNAUTHENTICATED=true`. Tokens are compared in constant time. The secret
   and the token are left out of the settings' `repr`.
+- **No URL reaches the logs.** The HTTP client libraries log full request URLs at INFO, and the
+  listing URL is presigned, so their loggers are held at WARNING.
 - **Accepted risk: anyone with an upload URL can store any file of any size at that key** until
   it expires (15 minutes by default). Presigned PUTs can't cap the size on R2. The lifecycle
   rule removes it.
