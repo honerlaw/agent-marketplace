@@ -100,3 +100,41 @@ def test_secrets_are_not_in_the_settings_repr() -> None:
     settings = load_settings({**REQUIRED, "MCP_AUTH_TOKEN": "bearer-value"})
     assert "secret" not in repr(settings)
     assert "bearer-value" not in repr(settings)
+
+
+def test_no_public_base_url_by_default() -> None:
+    assert load_settings(REQUIRED).public_base_url is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://files.example.com", "https://files.example.com"),
+        ("https://files.example.com/", "https://files.example.com"),
+        ("https://files.example.com:8443", "https://files.example.com:8443"),
+    ],
+)
+def test_public_base_url_is_a_bare_https_host(value: str, expected: str) -> None:
+    settings = load_settings({**REQUIRED, "R2_PUBLIC_BASE_URL": value})
+    assert settings.public_base_url == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "http://files.example.com",
+        "files.example.com",
+        "https://",
+        "https://files.example.com/uploads",
+        "https://files.example.com?x=1",
+        "https://files.example.com#top",
+        "https://user:pass@files.example.com",
+    ],
+)
+def test_public_base_url_refuses_anything_but_a_host(value: str) -> None:
+    with pytest.raises(ConfigError, match="R2_PUBLIC_BASE_URL must be https://<host>"):
+        load_settings({**REQUIRED, "R2_PUBLIC_BASE_URL": value})
+
+
+def test_blank_public_base_url_means_none() -> None:
+    assert load_settings({**REQUIRED, "R2_PUBLIC_BASE_URL": ""}).public_base_url is None

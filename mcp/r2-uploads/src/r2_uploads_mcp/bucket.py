@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import PurePosixPath
+from urllib.parse import quote
 from xml.etree.ElementTree import Element
 
 import httpx2
@@ -37,6 +38,11 @@ def safe_filename(name: str) -> str:
 def object_key(filename: str, now: datetime, token: str) -> str:
     """Return `<date>/<token>/<filename>`: sorted by day, and never overwriting another upload."""
     return f"{now:%Y-%m-%d}/{token}/{safe_filename(filename)}"
+
+
+def public_url(base_url: str, key: str) -> str:
+    """Return the object's unsigned URL on the bucket's public hostname (`base_url`)."""
+    return f"{base_url}/{quote(key, safe='/')}"
 
 
 @dataclass(frozen=True)

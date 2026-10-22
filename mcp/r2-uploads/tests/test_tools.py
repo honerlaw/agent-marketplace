@@ -2,13 +2,14 @@
 
 import re
 import shlex
+from dataclasses import replace
 from urllib.parse import parse_qs, urlsplit
 
 import httpx2
 import pytest
 from mcp import Client
 
-from r2_uploads_mcp.bucket import Bucket, object_key, parse_listing, safe_filename
+from r2_uploads_mcp.bucket import Bucket, object_key, parse_listing, public_url, safe_filename
 from r2_uploads_mcp.config import Settings
 from r2_uploads_mcp.presign import Credentials, S3Request, presign
 from r2_uploads_mcp.server import build_server
@@ -179,3 +180,45 @@ async def test_listing_without_a_namespace_or_fields_still_parses() -> None:
 async def test_bucket_signs_any_method(settings: Settings) -> None:
     url = Bucket(settings).url("HEAD", "k", NOW, 5)
     assert url.startswith(f"https://{ENDPOINT}/ad-uploads/k?")
+
+
+PUBLIC = "https://files.example.com"
+
+
+async def test_without_a_public_hostname_there_is_no_public_url(
+    settings: Settings, fake: FakeR2
+) -> None:
+    created = await call(settings, fake, "r2_create_upload", {"path": "brand-b.mp4"})
+    fake.handler = lambda _request: httpx2.Response(200, content=LISTING)
+    listed = await call(settings, fake, "r2_list_uploads", {})
+    assert created.structured_content is not None
+    assert listed.structured_content is not None
+    assert "public_url" not in created.structured_content
+    objects = listed.structured_content["objects"]
+    assert isinstance(objects, list)
+    assert all("public_url" not in item for item in objects)
+
+
+async def test_create_upload_adds_an_unsigned_public_url(settings: Settings, fake: FakeR2) -> None:
+    public = replace(settings, public_base_url=PUBLIC)
+    result = await call(public, fake, "r2_create_upload", {"path": "/renders/brand-b.mp4"})
+    upload = result.structured_content
+    assert upload is not None
+    assert upload["public_url"] == f"{PUBLIC}/{upload['key']}"
+    assert urlsplit(str(upload["download_url"])).netloc == ENDPOINT
+
+
+async def test_list_uploads_adds_a_public_url_per_object(settings: Settings, fake: FakeR2) -> None:
+    fake.handler = lambda _request: httpx2.Response(200, content=LISTING)
+    result = await call(replace(settings, public_base_url=PUBLIC), fake, "r2_list_uploads", {})
+    assert result.structured_content is not None
+    objects = result.structured_content["objects"]
+    assert isinstance(objects, list)
+    assert [item["public_url"] for item in objects] == [
+        f"{PUBLIC}/2026-10-19/abc/brand-b.mp4",
+        f"{PUBLIC}/2026-10-19/def/poster.png",
+    ]
+
+
+async def test_public_url_percent_encodes_the_key() -> None:
+    assert public_url(PUBLIC, "2026-10-19/abc/a b.mp4") == f"{PUBLIC}/2026-10-19/abc/a%20b.mp4"
