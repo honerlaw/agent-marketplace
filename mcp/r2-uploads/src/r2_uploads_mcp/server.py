@@ -10,7 +10,7 @@ from mcp.server.mcpserver import MCPServer
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from r2_uploads_mcp.bucket import Bucket, Clock, object_key
+from r2_uploads_mcp.bucket import Bucket, Clock, object_key, public_url
 from r2_uploads_mcp.config import Settings
 
 INSTRUCTIONS = """\
@@ -19,9 +19,13 @@ Temporary file hosting in a Cloudflare R2 bucket, for services that fetch a file
 1. Call r2_create_upload with the local file's path.
 2. Run the returned upload_command in a shell on the machine that has the file.
    It exits non-zero if the upload failed.
-3. Give the returned download_url to the service that needs the file.
-r2_list_uploads shows what is in the bucket, each with a fresh download_url.
-The bucket deletes old objects on its own; links expire at the times given.
+3. Give the service that needs the file a link to it. download_url is a presigned GET: it
+   expires at the time given and answers GET only (a HEAD request is refused). When the
+   deployment configures a public hostname, results also carry public_url: an unsigned link
+   that answers HEAD and GET until the bucket's own lifecycle rule deletes the object. Use
+   public_url for a service that fetches later or checks the link with HEAD first.
+r2_list_uploads shows what is in the bucket, each with a fresh download_url (and public_url).
+The bucket deletes old objects on its own.
 """
 
 JsonObject = dict[str, object]
@@ -61,13 +65,22 @@ def _expires_at(now: datetime, seconds: int) -> str:
     return (now + timedelta(seconds=seconds)).isoformat(timespec="seconds")
 
 
+def _public(settings: Settings, key: str) -> JsonObject:
+    """`{"public_url": …}` when the deployment configures a public hostname, else nothing."""
+    if settings.public_base_url is None:
+        return {}
+    return {"public_url": public_url(settings.public_base_url, key)}
+
+
 def _add_tools(server: MCPServer, bucket: Bucket, settings: Settings, clock: Clock) -> None:
     @server.tool()
     async def r2_create_upload(path: str) -> JsonObject:
         """Reserve a new object for a local file and return a presigned upload URL.
 
         `path` is the file's local path; only its base name is kept in the object key. Run
-        `upload_command` in a shell where that path exists, then share `download_url`.
+        `upload_command` in a shell where that path exists, then share a link: `download_url`
+        (presigned GET, expires, refuses HEAD) or, when present, `public_url` (unsigned, answers
+        HEAD and GET until the bucket deletes the object).
         """
         now = clock()
         key = object_key(path, now, secrets.token_hex(8))
@@ -79,11 +92,14 @@ def _add_tools(server: MCPServer, bucket: Bucket, settings: Settings, clock: Clo
             "upload_command": upload_command(path, upload_url),
             "download_url": bucket.url("GET", key, now, settings.download_expires_seconds),
             "download_expires_at": _expires_at(now, settings.download_expires_seconds),
+            **_public(settings, key),
         }
 
     @server.tool()
     async def r2_list_uploads(prefix: str = "") -> JsonObject:
         """List objects in the bucket (up to 1,000), each with a fresh presigned download URL.
+
+        Each object also carries `public_url` when the deployment configures a public hostname.
 
         `prefix` narrows the listing, e.g. "2026-10-19/" for one day's uploads.
         """
@@ -96,6 +112,7 @@ def _add_tools(server: MCPServer, bucket: Bucket, settings: Settings, clock: Clo
                 "size_bytes": item.size_bytes,
                 "last_modified": item.last_modified,
                 "download_url": bucket.url("GET", item.key, now, expires),
+                **_public(settings, item.key),
             }
             for item in listing.objects
         ]

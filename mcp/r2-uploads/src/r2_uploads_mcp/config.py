@@ -1,12 +1,13 @@
 """Server settings, read once from environment variables.
 
-Nothing about the bucket is built in: the account, bucket, key pair and URL lifetimes all come
-from the deployment's environment.
+Nothing about the bucket is built in: the account, bucket, key pair, URL lifetimes and any
+public hostname all come from the deployment's environment.
 """
 
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from r2_uploads_mcp.presign import MAX_EXPIRES_SECONDS
 
@@ -40,6 +41,7 @@ class Settings:
     allow_unauthenticated: bool = False
     max_request_bytes: int = 4 * MIB
     stateless: bool = False
+    public_base_url: str | None = None
 
     @property
     def endpoint_host(self) -> str:
@@ -68,6 +70,7 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         allow_unauthenticated=_flag(env, "MCP_ALLOW_UNAUTHENTICATED"),
         max_request_bytes=int(_number(env, "MCP_MAX_REQUEST_BYTES", 4 * MIB)),
         stateless=_flag(env, "MCP_STATELESS"),
+        public_base_url=_public_base_url(env.get("R2_PUBLIC_BASE_URL") or None),
     )
     _check_bucket(settings)
     _check_transport(settings)
@@ -93,6 +96,18 @@ def _expiry(env: Mapping[str, str], name: str, default: int) -> int:
         message = f"{name} must be between 1 and {MAX_EXPIRES_SECONDS} seconds (7 days)"
         raise ConfigError(message)
     return seconds
+
+
+def _public_base_url(value: str | None) -> str | None:
+    """Return `https://<host>` from R2_PUBLIC_BASE_URL, refusing anything more than a host."""
+    if value is None:
+        return None
+    parts = urlsplit(value)
+    bare = parts.scheme == "https" and parts.hostname and "@" not in parts.netloc
+    if not bare or parts.path not in {"", "/"} or parts.query or parts.fragment:
+        message = f"R2_PUBLIC_BASE_URL must be https://<host> and nothing else, got {value!r}"
+        raise ConfigError(message)
+    return f"https://{parts.netloc}"
 
 
 def _check_bucket(settings: Settings) -> None:
