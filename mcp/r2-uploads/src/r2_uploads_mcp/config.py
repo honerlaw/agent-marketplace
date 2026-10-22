@@ -7,7 +7,6 @@ public hostname all come from the deployment's environment.
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
 
 from r2_uploads_mcp.presign import MAX_EXPIRES_SECONDS
 
@@ -17,6 +16,13 @@ REQUIRED = ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUC
 # The account id becomes part of the endpoint's hostname, so it must be exactly an id.
 ACCOUNT_ID = re.compile(r"[0-9a-f]{32}")
 BUCKET_NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,61}[a-z0-9]")
+# `https://` + a DNS hostname of two or more labels + an optional port + at most one trailing slash.
+# Spelled out rather than parsed with urlsplit, which accepts a backslash, `%`, spaces, bad ports.
+DNS_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+PUBLIC_BASE_URL = re.compile(
+    rf"https://({DNS_LABEL}(?:\.{DNS_LABEL})+)(?::(\d{{1,5}}))?/?", re.IGNORECASE
+)
+MAX_PORT = 65535
 
 
 class ConfigError(ValueError):
@@ -102,12 +108,11 @@ def _public_base_url(value: str | None) -> str | None:
     """Return `https://<host>` from R2_PUBLIC_BASE_URL, refusing anything more than a host."""
     if value is None:
         return None
-    parts = urlsplit(value)
-    bare = parts.scheme == "https" and parts.hostname and "@" not in parts.netloc
-    if not bare or parts.path not in {"", "/"} or parts.query or parts.fragment:
+    match = PUBLIC_BASE_URL.fullmatch(value)
+    if match is None or int(match.group(2) or MAX_PORT) > MAX_PORT:
         message = f"R2_PUBLIC_BASE_URL must be https://<host> and nothing else, got {value!r}"
         raise ConfigError(message)
-    return f"https://{parts.netloc}"
+    return value.removesuffix("/")
 
 
 def _check_bucket(settings: Settings) -> None:

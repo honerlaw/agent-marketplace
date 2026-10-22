@@ -129,6 +129,14 @@ def test_public_base_url_is_a_bare_https_host(value: str, expected: str) -> None
         "https://files.example.com?x=1",
         "https://files.example.com#top",
         "https://user:pass@files.example.com",
+        "https://files.example.com\\evil",
+        "https://files.example.com:abc",
+        "https://files.example.com:99999",
+        "https://a b.com",
+        "https://files.example.com%2f..",
+        "https://files.example.com ",
+        "https://localhost",
+        "https://-bad.example.com",
     ],
 )
 def test_public_base_url_refuses_anything_but_a_host(value: str) -> None:

@@ -48,7 +48,7 @@ Nothing about the bucket is built in. The deployment supplies all of it:
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | **required** | An R2 API token's S3 credentials, scoped to that one bucket (Object Read & Write) |
 | `R2_UPLOAD_EXPIRES_SECONDS` | `900` (15 min) | How long an upload URL works, 1 s to 7 days |
 | `R2_DOWNLOAD_EXPIRES_SECONDS` | `86400` (24 h) | How long a download URL works, 1 s to 7 days |
-| `R2_PUBLIC_BASE_URL` | unset | The bucket's public custom domain as `https://<host>` (nothing after the host). When set, both tools add `public_url = <base>/<key>`. Leave it unset for a private bucket |
+| `R2_PUBLIC_BASE_URL` | unset | The bucket's public custom domain as `https://<host>` (nothing after the host). When set, both tools add `public_url = <base>/<key>`. It only names the domain: the bucket is public as soon as the custom domain is connected, set or not |
 | `R2_TIMEOUT_SECONDS` | `30` | Timeout of the listing request |
 | `MCP_TRANSPORT` | `stdio` (`http` in Docker) | `stdio` or `http` |
 | `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` (`0.0.0.0` in Docker) | HTTP bind address |
@@ -114,7 +114,8 @@ claude mcp add r2-uploads --env R2_ACCOUNT_ID=… --env R2_BUCKET=… \
   or `public_url` can fetch it until the lifecycle rule deletes it (and a CDN may keep serving a
   cached copy for its cache lifetime after that); `download_url`'s expiry then bounds nothing for
   that object. Nothing can be listed through the custom domain, and the key's 64 random bits make
-  a URL unguessable. Leave the setting unset to keep the bucket private.
+  a URL unguessable. Only disconnecting the custom domain makes the bucket private again; unsetting
+  `R2_PUBLIC_BASE_URL` just stops the server from printing `public_url`.
 
 ## Limitations
 
