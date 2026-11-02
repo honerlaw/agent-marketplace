@@ -1,0 +1,32 @@
+{
+  "skill": "one-by-one",
+  "frontmatter": {
+    "required_keys": [
+      "name",
+      "description"
+    ],
+    "values": {
+      "name": "one-by-one"
+    },
+    "non_empty": [
+      "description"
+    ]
+  },
+  "anchors": [
+    "Gather every question still open in this session",
+    "Ask exactly one question per turn and wait for the answer before asking the next.",
+    "Put `Question k of N` inside the question itself, on every question",
+    "Offer three to five concrete options on every question.",
+    "Never drop a real option to fit the tool.",
+    "Mark exactly one option `(Recommended)`",
+    "When you have no recommendation, write `No recommendation — <why>` in the question",
+    "Always accept the user's own direction in place of any option",
+    "The total never changes silently.",
+    "Then stop acting."
+  ],
+  "cross_surface": {
+    "root_readme": true,
+    "plugin_readme": true,
+    "using_minerva_body": true
+  }
+}

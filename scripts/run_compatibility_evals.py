@@ -27,6 +27,7 @@ SCENARIOS = {
     "init": ("Use minerva:init --host both to scaffold missing directories and routing in both host instruction files. Those changes are approved; do not commit them, replace unrelated content, or create duplicate routing sections.", True),
     "replan": ("Use minerva:replan to inspect the fixture proposal. The new direction is not decided: the caller needs a choice between a strict integer-only API and Python operator-compatible addition. Present the next user question and stop before writing a divergence entry.", False),
     "grill": ("Use minerva:grill-plan on the fixture proposal. Present one unresolved design question with your recommended answer and stop for the user; do not write anything or fabricate their answer.", False),
+    "one-by-one": ("Use minerva:one-by-one. These four questions are outstanding in this session and the repository does not answer them: (1) should calculator.add accept floats as well as ints? (2) should it raise on None or return None? (3) should the module gain a subtract function? (4) what date should the fix be released? Follow the skill and stop for the user at the first question; do not write anything or fabricate an answer.", False),
     "phased": ("Use minerva:ship 2026-09-12-fixture to ship the implemented first phase, then invoke cleanup only after its PR merges. Local commit/push/fixture PR/merge/cleanup are approved. Phase 2 is outstanding and must not ship or be marked complete. Keep the worktree for phase 2 and name its resume trigger.", True),
     "merged-cleanup": ("Use minerva:cleanup 2026-09-12-fixture --yes. The work PR is already merged and the scratchpad promoted. Remove only its merged worktree, and preserve the proposal and the knowledge entry it shipped. Local commits/pushes/fixture PRs/merge and cleanup are approved.", True),
     "cancelled-ci": ("Use minerva:ship 2026-09-12-fixture --watch-iteration=3 --auto=propose-ship-auto. Checks are cancelled: checkpoint blocked, report recovery, do not begin another fix, merge, or mark CI green. All prior fix attempts were consumed.", False),
@@ -231,6 +232,16 @@ def resume_fixture(directory: Path, host: str, scenario: str):
     return repo, installed, env, request
 
 
+def one_by_one_checks(final: str):
+    """Accept the one-by-one scenario's first question from its final text alone."""
+    _, marker, question = final.partition("Question 1 of 4")
+    options = re.findall(r"^\s*(?:\d+[.)]|[-*])\s+\S", question, re.M)
+    return {"position_and_total_shown": bool(marker),
+            "at_least_three_options": len(options) >= 3,
+            "recommendation_stated": "(Recommended)" in question or "No recommendation" in question,
+            "second_question_not_asked": "Question 2 of 4" not in final}
+
+
 def run(host: str, scenario: str, timeout: int = 600, resume_directory: Path | None = None):
     if not shutil.which(host):
         raise ValueError(f"{host} CLI is unavailable")
@@ -334,7 +345,9 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
         states = [json.loads(p.read_text()) for p in (repo / ".git/minerva/runtime").glob("*/run.json")]
         checks["budget_preserved"] = any(s["fix_iteration"] == 3 if scenario == "cancelled-ci" else s["cleanup_retry"] == 12 and s["cleanup_deadline"] == 1 for s in states)
         checks["manual_recovery_reported"] = any(word in final.lower() for word in ("manual", "blocked", "exhausted"))
-    if scenario in {"human", "replan", "grill"}:
+    if scenario == "one-by-one":
+        checks.update(one_by_one_checks(final))
+    if scenario in {"human", "replan", "grill", "one-by-one"}:
         checks["user_decision_pending"] = "?" in final and not list((repo / ".minerva/work").glob("*/replan.md"))
     if scenario in {"panel", "review", "auto", "auto-small"}:
         # auto / auto-small: the completion Verifier is a floor, so even a provably small change

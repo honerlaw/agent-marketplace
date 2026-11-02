@@ -11,3 +11,8 @@
 - [reviewed — clean] approach: option A, question operation when it fits, direct message otherwise; rejected B (plain text only, departs from the adapter's preference) and C (tool only, cannot carry five options); Skeptic hardening notes applied, none load-bearing (tier: reviewer — new skill surface; parallel wave)
 - [reviewed — folded] whole-proposal: added the compatibility-eval scenario surface, named the fallback anchor, stated the deletion-pass mechanism; also hand back instead of resuming work (tier: reviewer; parallel wave)
 - [rechecked — residual folded] whole-proposal: item 7 not addressed, low severity, folded into criterion 1 (trigger separated from grill-plan); fold-audit new-concern 2 folded into Files changed
+
+## Work notes
+- Deletion pass (criterion 2): all 10 contract anchors and the run() wiring call each failed the tests when removed; baseline green. Script used `python -B`.
+- Live eval (criterion 6): `run_compatibility_evals.py --host claude --scenario one-by-one` passed, cost about $0.29, 27 s. AskUserQuestion is unavailable in `-p`, so the run exercised the direct-message path; the dialog path has no live evidence. Codex not run.
+- First test of `one_by_one_checks` over-asserted: with the marker missing every check that reads the question text fails too, which is correct.

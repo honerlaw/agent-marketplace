@@ -103,6 +103,9 @@ Each entry below is excerpted from the skill's own `description:` frontmatter â€
 
 ### The utilities
 
+**`minerva:one-by-one`**
+: Walks the user through the questions already outstanding in the current session, one at a time, showing the running position and total ("Question 3 of 10") and waiting for each answer before the next. Every question offers three to five concrete options, marks a recommended answer or says there is none, and always accepts the user's own direction instead.
+
 **`minerva:round-table`**
 : Dispatches a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents over a decision or drafted artifact, counts accept votes against a caller-specified quorum (default 2/3), runs at most one revision round, and escalates to the user when consensus fails twice. Usable standalone for any decision.
 

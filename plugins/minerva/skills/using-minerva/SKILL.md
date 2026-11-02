@@ -38,6 +38,7 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | The plan still holds — keep going | (no skill — continue work normally) |
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
 | Just drafted a plan and want to stress-test it before approving | `minerva:grill-plan` (auto-invoked by `minerva:propose` and `minerva:replan`; usable standalone on any drafted plan) |
+| Several questions are outstanding and answering them in one reply would be awkward | `minerva:one-by-one` (asks a finite existing list one at a time, showing `Question k of N`; `minerva:grill-plan` generates new questions about a plan) |
 | Want an independent multi-agent verdict on a decision or drafted artifact — agents argue it out rather than interviewing you | `minerva:round-table` (delegated to by `minerva:propose-ship-auto` for its panel decisions; usable standalone, default quorum 2/3) |
 | Approved a proposal but want to tweak it before coding starts | `minerva:replan` (pre-work amendment mode) |
 | Just hit something that's clearly a durable decision, mid-work | `minerva:promote "<short description>"` |

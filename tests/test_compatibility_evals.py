@@ -109,6 +109,51 @@ def test_empty_or_tool_free_host_run_cannot_pass_read_only_acceptance(tmp_path, 
     assert (tmp_path / "report.json").is_file()
 
 
+ONE_BY_ONE_FINAL = """Four questions: floats, None handling, subtract, release date.
+
+Question 1 of 4 — Floats
+
+Should calculator.add accept floats as well as ints?
+
+1. Yes (Recommended) — matches Python's own addition
+2. Ints only — raise on anything else
+3. Decide later — keep the current behaviour
+"""
+
+
+def test_one_by_one_checks_accept_a_well_formed_first_question():
+    checks = runner.one_by_one_checks(ONE_BY_ONE_FINAL)
+    assert len(checks) == 4 and all(checks.values())
+    no_recommendation = ONE_BY_ONE_FINAL.replace(" (Recommended)", "").replace(
+        "Should calculator.add", "No recommendation — your call.\n\nShould calculator.add")
+    assert all(runner.one_by_one_checks(no_recommendation).values())
+
+
+@pytest.mark.parametrize("final,failed", [
+    (ONE_BY_ONE_FINAL.replace("Question 1 of 4", "Floats"), "position_and_total_shown"),
+    (ONE_BY_ONE_FINAL.replace("3. Decide later — keep the current behaviour\n", ""), "at_least_three_options"),
+    (ONE_BY_ONE_FINAL.replace(" (Recommended)", ""), "recommendation_stated"),
+    (ONE_BY_ONE_FINAL + "\nQuestion 2 of 4 — None\n", "second_question_not_asked"),
+], ids=["position", "options", "recommendation", "second-question"])
+def test_one_by_one_checks_reject_each_missing_requirement(final, failed):
+    assert not runner.one_by_one_checks(final)[failed]
+
+
+def test_one_by_one_scenario_applies_its_checks_in_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner.tempfile, "mkdtemp", lambda **kwargs: str(tmp_path))
+    monkeypatch.setattr(runner.shutil, "which", lambda tool: "/fixture/" + tool)
+    actual_run = runner.subprocess.run
+    output = json.dumps({"type": "result", "result": "Does this have any questions?"})
+    def stub(command, **kwargs):
+        if command[0] == "claude":
+            return SimpleNamespace(returncode=0, stdout=output, stderr="")
+        return actual_run(command, **kwargs)
+    monkeypatch.setattr(runner.subprocess, "run", stub)
+    report = runner.run("claude", "one-by-one")
+    assert not report["passed"]
+    assert not report["checks"]["position_and_total_shown"]
+
+
 def test_timeout_keeps_diagnostic_artifacts(tmp_path, monkeypatch):
     monkeypatch.setattr(runner.tempfile, "mkdtemp", lambda **kwargs: str(tmp_path))
     monkeypatch.setattr(runner.shutil, "which", lambda tool: "/fixture/" + tool)
