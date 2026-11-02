@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 3.0.0 packages one canonical `skills/` tree for Claude Code and local
+Version 3.1.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host
@@ -169,7 +169,7 @@ python3 scripts/run_compatibility_evals.py --host both --scenario manual-resume
 python3 scripts/run_compatibility_evals.py --host both --scenario auto
 ```
 
-Scenarios cover read-only readers, init, human gates, grill/replan, standalone
+Scenarios cover read-only readers, init, human gates, grill/replan, one-by-one, standalone
 panels/review, the autonomous orchestrator at two change sizes, phased shipping, manual
 resume, cancelled CI, and exhausted cleanup. Acceptance checks inspect artifacts,
 fixture actions, checkpoints, and actual structured dispatch events rather than
