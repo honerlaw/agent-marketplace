@@ -232,14 +232,28 @@ def resume_fixture(directory: Path, host: str, scenario: str):
     return repo, installed, env, request
 
 
+OPTION_LINE = re.compile(r"\s*\**\s*(?:\d+[.)]|[A-Ea-e][.)]|[-*+•])\**\s+\S")
+
+
 def one_by_one_checks(final: str):
     """Accept the one-by-one scenario's first question from its final text alone."""
-    _, marker, question = final.partition("Question 1 of 4")
-    options = re.findall(r"^\s*(?:\d+[.)]|[-*])\s+\S", question, re.M)
+    # The last marker, so a topic list using the same label is not read as the question;
+    # dropped to the next line, so a heading's "- topic" is not read as an option.
+    _, marker, question = final.rpartition("Question 1 of 4")
+    question = question.partition("\n")[2]
+    options = 0
+    for line in question.splitlines():
+        if OPTION_LINE.match(line):
+            options += 1
+        elif options and line.strip():
+            break  # only the first block counts; later bullets are not this question's options
+    marked = len(re.findall(r"\(recommended\)", question, re.I))
+    declined = "no recommendation" in question.lower()
+    batched = re.search(r"\bQuestion 2\b", question) or all(t in question for t in ("subtract", "release"))
     return {"position_and_total_shown": bool(marker),
-            "at_least_three_options": len(options) >= 3,
-            "recommendation_stated": "(Recommended)" in question or "No recommendation" in question,
-            "second_question_not_asked": "Question 2 of 4" not in final}
+            "three_to_five_options": 3 <= options <= 5,
+            "recommendation_stated": (marked == 1) != declined and marked <= 1,
+            "second_question_not_asked": not batched}
 
 
 def run(host: str, scenario: str, timeout: int = 600, resume_directory: Path | None = None):

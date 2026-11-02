@@ -131,27 +131,52 @@ def test_one_by_one_checks_accept_a_well_formed_first_question():
 
 @pytest.mark.parametrize("final,failed", [
     (ONE_BY_ONE_FINAL.replace("Question 1 of 4", "Floats"), "position_and_total_shown"),
-    (ONE_BY_ONE_FINAL.replace("3. Decide later — keep the current behaviour\n", ""), "at_least_three_options"),
+    (ONE_BY_ONE_FINAL.replace("3. Decide later — keep the current behaviour\n", ""), "three_to_five_options"),
+    (ONE_BY_ONE_FINAL.replace("Question 1 of 4 — Floats", "Question 1 of 4 - Floats").replace(
+        "3. Decide later — keep the current behaviour\n", ""), "three_to_five_options"),
+    (ONE_BY_ONE_FINAL.replace("3. Decide later — keep the current behaviour\n", "\nContext:\n\n- ints only today\n"),
+     "three_to_five_options"),
+    (ONE_BY_ONE_FINAL + "4. A\n5. B\n6. C\n", "three_to_five_options"),
     (ONE_BY_ONE_FINAL.replace(" (Recommended)", ""), "recommendation_stated"),
+    (ONE_BY_ONE_FINAL + "4. Both (Recommended)\n", "recommendation_stated"),
+    (ONE_BY_ONE_FINAL + "No recommendation — your call.\n", "recommendation_stated"),
     (ONE_BY_ONE_FINAL + "\nQuestion 2 of 4 — None\n", "second_question_not_asked"),
-], ids=["position", "options", "recommendation", "second-question"])
+    (ONE_BY_ONE_FINAL + "\nQuestion 2 — None?\n", "second_question_not_asked"),
+    (ONE_BY_ONE_FINAL + "\nAlso: gain subtract? Which release date?\n", "second_question_not_asked"),
+], ids=["position", "options", "heading-hyphen", "later-bullet", "six-options", "no-mark", "two-marks",
+        "both-marks", "second-question", "unnumbered-second", "unlabelled-rest"])
 def test_one_by_one_checks_reject_each_missing_requirement(final, failed):
     assert not runner.one_by_one_checks(final)[failed]
 
 
-def test_one_by_one_scenario_applies_its_checks_in_run(tmp_path, monkeypatch):
+@pytest.mark.parametrize("final", [
+    ONE_BY_ONE_FINAL.replace("Question 1 of 4 — Floats", "Question 1 of 4 - Floats"),
+    ONE_BY_ONE_FINAL.replace("(Recommended)", "(recommended)"),
+    ONE_BY_ONE_FINAL.replace("Four questions:", "Question 1 of 4: floats. Question 2 of 4: None.\nFour questions:"),
+    ONE_BY_ONE_FINAL.replace("1. Yes", "**1.** Yes").replace("2. Ints", "**2.** Ints").replace("3. Decide", "**3.** Decide"),
+    ONE_BY_ONE_FINAL.replace("1. Yes", "**1. Yes").replace("2. Ints", "**2. Ints").replace("3. Decide", "**3. Decide"),
+    ONE_BY_ONE_FINAL.replace("1. Yes", "A. Yes").replace("2. Ints", "B. Ints").replace("3. Decide", "C. Decide"),
+    ONE_BY_ONE_FINAL.replace("1. Yes", "• Yes").replace("2. Ints", "• Ints").replace("3. Decide", "• Decide"),
+], ids=["heading-hyphen", "lowercase-mark", "labelled-topic-list", "bold-number", "bold-line", "letters", "bullets"])
+def test_one_by_one_checks_accept_other_well_formed_shapes(final):
+    checks = runner.one_by_one_checks(final)
+    assert all(checks.values()), checks
+
+
+@pytest.mark.parametrize("result,passed", [("Does this have any questions?", False), (ONE_BY_ONE_FINAL + "Which?", True)])
+def test_one_by_one_scenario_applies_its_checks_in_run(tmp_path, monkeypatch, result, passed):
     monkeypatch.setattr(runner.tempfile, "mkdtemp", lambda **kwargs: str(tmp_path))
     monkeypatch.setattr(runner.shutil, "which", lambda tool: "/fixture/" + tool)
     actual_run = runner.subprocess.run
-    output = json.dumps({"type": "result", "result": "Does this have any questions?"})
+    output = json.dumps({"type": "result", "result": result})
     def stub(command, **kwargs):
         if command[0] == "claude":
             return SimpleNamespace(returncode=0, stdout=output, stderr="")
         return actual_run(command, **kwargs)
     monkeypatch.setattr(runner.subprocess, "run", stub)
     report = runner.run("claude", "one-by-one")
-    assert not report["passed"]
-    assert not report["checks"]["position_and_total_shown"]
+    assert report["passed"] is passed
+    assert report["checks"]["position_and_total_shown"] is passed
 
 
 def test_timeout_keeps_diagnostic_artifacts(tmp_path, monkeypatch):

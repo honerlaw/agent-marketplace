@@ -169,7 +169,7 @@ python3 scripts/run_compatibility_evals.py --host both --scenario manual-resume
 python3 scripts/run_compatibility_evals.py --host both --scenario auto
 ```
 
-Scenarios cover read-only readers, init, human gates, grill/replan, standalone
+Scenarios cover read-only readers, init, human gates, grill/replan, one-by-one, standalone
 panels/review, the autonomous orchestrator at two change sizes, phased shipping, manual
 resume, cancelled CI, and exhausted cleanup. Acceptance checks inspect artifacts,
 fixture actions, checkpoints, and actual structured dispatch events rather than

@@ -13,7 +13,7 @@
     ]
   },
   "anchors": [
-    "Gather every question still open in this session",
+    "gather every question still open in this session",
     "Ask exactly one question per turn and wait for the answer before asking the next.",
     "Put `Question k of N` inside the question itself, on every question",
     "Offer three to five concrete options on every question.",
@@ -22,7 +22,9 @@
     "When you have no recommendation, write `No recommendation — <why>` in the question",
     "Always accept the user's own direction in place of any option",
     "The total never changes silently.",
-    "Then stop acting."
+    "Still ask each `No recommendation` question.",
+    "A dismissal is not an answer, and nothing is assumed.",
+    "The skill ends there and takes no action of its own."
   ],
   "cross_surface": {
     "root_readme": true,
