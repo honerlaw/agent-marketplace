@@ -294,8 +294,10 @@ Polymorphic types are described with the `"Type"` value to send:
 
 ## Limitations
 
-- **Writes are unverified live.** Every write path is tested against a mock of Microsoft. No
-  write had run against a real account when this was written.
+- **Not yet run against a live account.** The live smoke run (`GetUser`,
+  `GetCampaignsByAccountId`, a one-day report download) and a live zero-spend write are pending
+  credentials. Every path, reads and writes, is tested against a mock of Microsoft only, so
+  sign-in, the sandbox scope and the request shapes are as documented, not as observed.
 - **Downloads are unverified live.** The report download path is tested the same way, and the
   default download allowlist is a guess (see the security model).
 - **11 operations have no Microsoft Learn reference page.** They are in the SDK, but their REST
