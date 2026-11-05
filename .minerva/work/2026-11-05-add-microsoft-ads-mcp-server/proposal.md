@@ -1,7 +1,7 @@
 # Proposal: add-microsoft-ads-mcp-server
 
 **Date**: 2026-11-05
-**Status**: Draft
+**Status**: Shipped (2026-11-05)
 
 ## Goal
 `mcp/microsoft-ads/`: an MCP server that gives an LLM read and write access to the Microsoft
@@ -117,7 +117,7 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
 
 **A committed operation catalog, built from the pinned `msads` sdist.**
 - `src/microsoft_ads_mcp/catalog_build.py` (console script `microsoft-ads-build-catalog
-  <sdist.tar.gz> <out.json>`) builds it.
+  <sdist.tar.gz> <package dir>`) builds it, with the extraction itself in `catalog_extract.py`.
   - It reads the sdist **as a tarball in memory with `ast`**; it never imports or executes SDK
     code, and the SDK is not a dependency.
   - It verifies the sdist's sha256 against the pinned constant.
@@ -133,14 +133,17 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
     constants. A test asserts that these equal the constants in `catalog_build.py`, which ties the
     committed file to the pin. Hand edits beyond that are guarded by review only, and the README
     says so.
-  - **operations**: name (PascalCase, e.g. `AddCampaigns`, derived from the generated method name),
-    service, HTTP method, path, request type, response type. The **operation name is the key**,
+  - **operations**: name (PascalCase, e.g. `AddCampaigns`, taken from the request model minus
+    `Request`, else the response model minus `Response`; 16 operations take or return a bare
+    `object`), service, HTTP method, path, request type, response type. The **operation name is the key**,
     because a path is shared across verbs.
   - **types**: per service, fields as wire name and type text, base type, and subtypes with their
     `Type` discriminator values (taken from the base's `from_dict` branches). The value that
     appears in the base's `Type` enum is listed as the documented one; any other value is marked as
     an SDK alias.
-  - **enums**: per service, values.
+  - **enums**: per service, values; `Flag` enums are marked and carry the wire names from the
+    SDK's `_to_str` mapping.
+  - The committed file is 621,261 bytes (indent 1, sorted keys): 1,228 types and 272 enums.
 - The builder fails loudly on an unexpected shape. That covers an operation without a literal
   method or path, a field without an alias, and **two operations whose normalized names collide**.
   It does not skip, because silent skips are how an enumeration goes dark.
@@ -191,8 +194,10 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
   - the expiry margin; the rotated refresh token kept **in memory**;
   - one re-refresh and retry, only when the response is HTTP 401 **and** its body is an
     `AdApiFaultDetail` whose first error code is 105 (`InvalidCredentials`) or 109 (expired
-    token). Any other 401 is returned as is. A truly invalid credential costs one extra refresh,
-    capped at one.
+    token), and the rejected token is more than a minute old. 105 also means an inactive account
+    or developer token, which no refresh fixes, so a brand-new token is not refreshed. Any other
+    401 is returned as is. Concurrent rejections share one refresh (`invalidate` compares
+    before dropping).
 - A `invalid_grant` refusal says to re-run the consent flow in the README.
 - The README states the operational fact: Microsoft returns a new refresh token on **every**
   refresh, and the server keeps it only in memory. After a restart it uses the env refresh token
@@ -200,8 +205,9 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
   token needs durable state and is out of scope.
 - **Secret scrub.** Every tool output and every `ToolError` / exception text has exact-literal
   occurrences of the access token, refresh token, client secret and developer token replaced with
-  `[redacted]`, as meta-ads does. A rotated refresh token joins the set when it arrives. Empty or
-  unset values are never in the set.
+  `[redacted]`, as meta-ads does. Every rotated refresh token joins the set when it arrives and
+  stays (Microsoft does not revoke old ones); each issued access token stays until it expires.
+  Empty or unset values are never in the set.
 - No secret is ever in a URL. Tokens go only in headers or the token POST body.
 - `main.py` raises `httpx` / `httpcore` (and httpx2's) loggers to WARNING, as meta-ads does
   (the seekless httpx-logs-URLs constraint).
@@ -209,7 +215,8 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
 **Result files** (`download.py`):
 - `microsoft_ads_download_file(url)` fetches a `ReportDownloadUrl` or bulk download `ResultFileUrl`
   **with no credentials** and `follow_redirects=False`.
-- The URL must use `https` and have no userinfo, port or fragment. Its hostname, lower-cased, must
+- The URL must be printable ASCII with no spaces (`urlsplit` silently drops tabs and newlines
+  that httpx2 rejects), use `https`, and have no userinfo, port or fragment. Its hostname, lower-cased, must
   equal an allowlisted domain or end with `.` plus that domain. That is a dot-boundary match, so
   `evilbingads.microsoft.com` and `x.blob.core.windows.net.evil.com` fail.
   - The provisional default is `blob.core.windows.net` and `bingads.microsoft.com`.
@@ -221,9 +228,11 @@ of `mcp/google-ads/` and `mcp/meta-ads/`, adapted as follows.
     the variable to the measured host. Once criterion 7 measures it, the default is narrowed to that
     host's storage account, in this unit if measured before ship, else as an expected follow-up.
 - The body is read bounded. A zip must hold exactly one member, read with a decompressed-size cap;
-  a gzip is read with a cap. The result is the decoded text with its BOM stripped, refused (not
-  truncated) over `MICROSOFT_ADS_MAX_RESPONSE_BYTES`, with a message to narrow the report's
-  columns or dates.
+  a gzip is read with a cap. A corrupt, encrypted or unsupported archive is a clear `ToolError`.
+  The result is the decoded text with its BOM stripped, refused (not truncated) over
+  `MICROSOFT_ADS_MAX_RESPONSE_BYTES`, with a message to narrow the report or bulk download, or
+  raise the limit.
+- The API client and the downloader share one capped stream reader (`transfer.py`).
 - The real download host is unverified until criterion 7 runs. The README says so, and says how to
   widen the allowlist.
 
@@ -271,8 +280,8 @@ says so.
   - egress hosts;
   - limitations: no bulk upload; refresh-token re-issue; unpaged Gets, with bulk download for large
     accounts; catalog staleness and re-pin;
-  - a worked Paused campaign → budget → ad group → keywords → RSA sequence, unverified against a
-    live write.
+  - a worked Paused campaign (inline daily budget) → ad group → keywords → RSA sequence, then
+    enabling all three levels, unverified against a live write.
 - A row in `mcp/README.md`.
 
 **Knowledge followed:**
@@ -286,8 +295,10 @@ says so.
 - the mock-transport-lock entry, for the token-refresh concurrency test;
 - the meta-ads scrub and log precedent.
 
-**Knowledge to write:** a `reference` entry (Theme `mcp-servers`, with a Summary) holding the
-Microsoft facts above.
+**Knowledge written** (Theme `mcp-servers`):
+- `2026-11-05-reference-microsoft-advertising-api-facts-for-mcp-servers` — the Microsoft facts;
+- `2026-11-05-decision-mcp-servers-dispatch-by-operation-name-when-every-path-is-fixed`;
+- `2026-11-05-pattern-validate-a-url-with-the-parser-that-fetches-it` — from code review.
 
 **Tests** run with no network:
 - the builder over a small fixture sdist (a tar.gz built in the test from trimmed generated files,
@@ -313,7 +324,7 @@ Microsoft facts above.
   - it is non-hermetic;
   - CI tests could not read the real catalog without network;
   - local stdio would need a runtime fetch or a `make` step;
-  - at 344 KB, committing is cheap, and a re-pin shows up as a reviewable diff.
+  - at about 600 KB, committing is cheap, and a re-pin shows up as a reviewable diff.
 - **F. Proxy Microsoft's hosted MCP server.** Rejected because it is read and reporting only, which
   fails the goal.
 - **G. Parse the WSDLs instead of `msads`.** Rejected because they carry no REST paths or verbs, so
@@ -358,8 +369,8 @@ Microsoft facts above.
      scope for each environment, and `client_secret` only when configured;
    - a rotated refresh token is used for the next refresh;
    - two concurrent first calls trigger one refresh (with callers that actually overlap);
-   - a 401 `AdApiFaultDetail` with code 105 or 109 triggers exactly one re-refresh and retry,
-     while a 401 with another body is returned without a retry;
+   - a 401 `AdApiFaultDetail` with code 105 or 109 triggers exactly one re-refresh and retry
+     (when the token is not brand new), while a 401 with another body is returned without a retry;
    - `invalid_grant` gives the re-consent message;
    - a malformed tenant or environment is refused at start.
 5. **Secret containment.** For every tool, over mock responses of each shape (success, both fault
@@ -395,6 +406,8 @@ Microsoft facts above.
      download host.
 
    If the owner has no credentials yet, record this as pending and say so in the README.
+
+   **Outcome: pending.** No credentials were available at ship; the README's Limitations says so.
 8. The README documents:
    - the Entra app registration, consent and refresh-token steps, and the developer token;
    - sandbox setup;
@@ -409,8 +422,11 @@ Microsoft facts above.
    zero-spend live write. Create a `Paused` campaign (sandbox if the owner has a sandbox account,
    otherwise production), read it back, delete it, and put the output in the scratchpad.
 
+   **Outcome: unverified.** Asked at completion; the owner chose to record it as unverified.
+
 ## Open Questions
 - The real host of `ReportDownloadUrl` (criterion 7). The default allowlist is a guess from Azure
   blob conventions.
-- Whether the sandbox OAuth scope `si.ads.microsoft.com` is current. The docs and SDK disagree; the
-  README names both, and sandbox auth stays unverified until a sandbox call succeeds.
+- Whether the sandbox OAuth scope `si.ads.microsoft.com` is current. The server uses the SDK's
+  default; the README notes that older documentation names others, and sandbox auth stays
+  unverified until a sandbox call succeeds.

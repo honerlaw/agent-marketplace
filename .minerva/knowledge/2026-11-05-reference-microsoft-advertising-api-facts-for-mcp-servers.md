@@ -27,7 +27,9 @@ credentials were available), so treat the auth and download facts as documented,
   no caller path at all.
 - **SDK quirks:** 16 operations (e.g. SetAccountProperties, DeleteUser) take or return a bare
   `object` (a dict), so name an operation from its request model, falling back to its response; one annotation is `StrictDict[str, Str]` (a generator bug)
-  and must map to `object`.
+  and must map to `object`. `Flag` enums (`auto()` members) keep their wire names only in
+  `_to_str`'s `_NAME_MAPPING`; polymorphic bases such as `Ad` have no fields of their own; each
+  subtype (e.g. `ResponsiveSearchAd`) repeats the common fields (`Id`, `Status`, `Type`...).
 - **Headers:** `Authorization: Bearer <access token>`, `DeveloperToken`, `CustomerId`,
   `CustomerAccountId`. Ids are JSON strings; money is in account currency (not micros).
 - **Polymorphism** uses a `"Type"` field. The SDK's `from_dict` accepts several spellings; the
@@ -59,3 +61,4 @@ credentials were available), so treat the auth and download facts as documented,
 ## Related
 - [[2026-10-18-reference-meta-marketing-api-facts-for-mcp-servers]] — the sibling ads server's facts, and the scrub precedent
 - [[2026-10-18-reference-google-ads-api-facts-for-mcp-servers]] — another spec-driven ads server
+- [[2026-11-05-decision-mcp-servers-dispatch-by-operation-name-when-every-path-is-fixed]] — the tool shape these facts led to
