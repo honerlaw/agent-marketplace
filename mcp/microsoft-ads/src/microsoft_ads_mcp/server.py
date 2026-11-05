@@ -9,11 +9,12 @@ from mcp.server.mcpserver.exceptions import ToolError
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from microsoft_ads_mcp.api import ApiRequest, JsonObject, MicrosoftAdsApi
+from microsoft_ads_mcp.api import ApiRequest, MicrosoftAdsApi
 from microsoft_ads_mcp.catalog import OperationCatalog, load_catalog
 from microsoft_ads_mcp.config import Settings
 from microsoft_ads_mcp.download import Downloader
 from microsoft_ads_mcp.scrub import Scrubber
+from microsoft_ads_mcp.transfer import JsonObject
 
 INSTRUCTIONS = """\
 Full access to the Microsoft Advertising API (Bing Ads API v13, REST) with the operator's

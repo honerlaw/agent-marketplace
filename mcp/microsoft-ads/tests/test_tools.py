@@ -1,17 +1,24 @@
 """The request tool: operation-name dispatch, identity headers, retries and limits."""
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import replace
 
+import anyio
 import httpx2
 import pytest
 from mcp import Client
 
+from microsoft_ads_mcp.api import ApiRequest, MicrosoftAdsApi
+from microsoft_ads_mcp.auth import FRESH_SECONDS
+from microsoft_ads_mcp.catalog import OperationCatalog, load_catalog
 from microsoft_ads_mcp.config import Credentials, Settings
 from microsoft_ads_mcp.server import build_server
 from tests.conftest import (
     DEVELOPER_TOKEN,
     ISSUED_ACCESS,
+    TOKEN_HOST,
+    Clock,
     FakeMicrosoft,
     call,
     error_text,
@@ -147,12 +154,18 @@ def fault(code: int) -> httpx2.Response:
     return httpx2.Response(401, json=body)
 
 
+def aged_fault(clock: Clock, code: int) -> httpx2.Response:
+    """Reject the token after it has been in use for longer than a minute."""
+    clock.now += FRESH_SECONDS
+    return fault(code)
+
+
 @pytest.mark.parametrize("code", [105, 109])
 async def test_a_rejected_token_is_refreshed_and_retried_once(
-    settings: Settings, fake: FakeMicrosoft, code: int
+    settings: Settings, fake: FakeMicrosoft, clock: Clock, code: int
 ) -> None:
-    answers = [fault(code), httpx2.Response(200, json={"ok": True})]
-    fake.api_handler = lambda _request: answers.pop(0)
+    answers = [lambda: aged_fault(clock, code), lambda: httpx2.Response(200, json={"ok": True})]
+    fake.api_handler = lambda _request: answers.pop(0)()
     result = await call(settings, fake, REQUEST, {"operation": "GetUser"})
     assert structured(result)["status"] == 200
     assert len(fake.token_requests) == 2
@@ -161,12 +174,50 @@ async def test_a_rejected_token_is_refreshed_and_retried_once(
 
 
 async def test_a_second_rejection_is_returned_not_looped(
-    settings: Settings, fake: FakeMicrosoft
+    settings: Settings, fake: FakeMicrosoft, clock: Clock
 ) -> None:
-    fake.api_handler = lambda _request: fault(109)
+    fake.api_handler = lambda _request: aged_fault(clock, 109)
     result = await call(settings, fake, REQUEST, {"operation": "GetUser"})
     assert structured(result)["status"] == 401
     assert len(fake.api_requests) == 2
+
+
+async def test_a_brand_new_token_that_is_rejected_is_not_refreshed(
+    settings: Settings, fake: FakeMicrosoft
+) -> None:
+    # 105 also means an inactive account or developer token; a new token would not help.
+    fake.api_handler = lambda _request: fault(105)
+    result = await call(settings, fake, REQUEST, {"operation": "GetUser"})
+    assert structured(result)["status"] == 401
+    assert len(fake.api_requests) == 1
+    assert len(fake.token_requests) == 1
+
+
+async def test_concurrent_rejections_share_one_refresh(settings: Settings, clock: Clock) -> None:
+    refreshes: list[int] = []
+
+    async def microsoft(request: httpx2.Request) -> httpx2.Response:
+        if request.url.host == TOKEN_HOST:
+            refreshes.append(1)
+            return httpx2.Response(200, json={"access_token": f"access-{len(refreshes)}"})
+        if request.headers["Authorization"] == "Bearer access-1":
+            clock.now = 2 * FRESH_SECONDS
+            await anyio.sleep(0.01)  # both calls are rejected before either refreshes
+            return fault(109)
+        return httpx2.Response(200, json={"ok": True})
+
+    catalog = OperationCatalog(load_catalog(), settings.max_response_bytes)
+    api = MicrosoftAdsApi(settings, catalog, httpx2.MockTransport(microsoft))
+    statuses: list[object] = []
+
+    async def get_user() -> None:
+        statuses.append((await api.call(ApiRequest("GetUser")))["status"])
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(get_user)
+        group.start_soon(get_user)
+    assert statuses == [200, 200]
+    assert len(refreshes) == 2  # the first token, then one shared refresh
 
 
 @pytest.mark.parametrize(
@@ -195,11 +246,28 @@ async def test_a_non_json_body_comes_back_as_text(settings: Settings, fake: Fake
     assert structured(result) == {"status": 502, "text": "Bad gateway"}
 
 
+async def test_an_over_limit_body_stops_reading_at_the_cap(
+    settings: Settings, fake: FakeMicrosoft
+) -> None:
+    sent: list[int] = []
+
+    async def endless() -> AsyncIterator[bytes]:
+        for _ in range(1000):
+            sent.append(1)
+            yield b"x" * 500
+
+    fake.api_handler = lambda _request: httpx2.Response(200, content=endless())
+    small = replace(settings, max_response_bytes=1000)
+    result = await call(small, fake, REQUEST, {"operation": "GetUser"})
+    assert "MICROSOFT_ADS_MAX_RESPONSE_BYTES" in error_text(result)
+    assert len(sent) <= 3  # 3 chunks of 500 pass the 1000-byte cap
+
+
 async def test_an_over_limit_body_is_refused(settings: Settings, fake: FakeMicrosoft) -> None:
     fake.api_handler = lambda _request: httpx2.Response(200, json={"x": "y" * 2000})
     small = replace(settings, max_response_bytes=1000)
     result = await call(small, fake, REQUEST, {"operation": "GetUser"})
-    assert "DownloadCampaignsByAccountIds" in error_text(result)
+    assert "DownloadCampaignsByCampaignIds" in error_text(result)
 
 
 async def test_an_unreachable_api_is_a_clear_error(settings: Settings, fake: FakeMicrosoft) -> None:

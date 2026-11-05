@@ -3,6 +3,7 @@
 import gzip
 import io
 import zipfile
+from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 
 import httpx2
@@ -28,6 +29,17 @@ def zipped(*members: tuple[str, bytes]) -> bytes:
     return buffer.getvalue()
 
 
+def patched(archive: bytes, flag: int = 0, method: int | None = None) -> bytes:
+    """Set general-purpose `flag` bits and, optionally, the compression method in both headers."""
+    data = bytearray(archive)
+    for signature, at in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
+        start = data.index(signature) + at
+        data[start] |= flag
+        if method is not None:
+            data[start + 2 : start + 4] = method.to_bytes(2, "little")
+    return bytes(data)
+
+
 def serving(body: bytes, status: int = 200) -> FakeMicrosoft:
     """Return a fake that answers every API-host request with `body`."""
     return FakeMicrosoft(api_handler=lambda _request: httpx2.Response(status, content=body))
@@ -47,6 +59,10 @@ def serving(body: bytes, status: int = 200) -> FakeMicrosoft:
         "https://[::1]/r.zip",
         "https:///r.zip",
         "/relative/r.zip",
+        "https://ev\til.blob.core.windows.net/r.zip",
+        "https://bingadsstore.blob.core.windows.net/r\n.zip",
+        "https://bingadsstore.blob.core.windows.net/r .zip",
+        "https://b\u00fccher.blob.core.windows.net/r.zip",
     ],
 )
 def test_urls_off_the_allowlist_are_refused(url: str) -> None:
@@ -125,10 +141,60 @@ async def test_over_cap_content_is_refused(settings: Settings, body: bytes) -> N
     assert "MICROSOFT_ADS_MAX_RESPONSE_BYTES" in error_text(result)
 
 
-@pytest.mark.parametrize("body", [b"PK\x03\x04broken", b"\x1f\x8bbroken"])
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"PK\x03\x04broken",
+        b"\x1f\x8bbroken",
+        patched(zipped(("r.csv", b"x" * 100)), flag=1),  # encrypted
+        patched(zipped(("r.csv", b"x" * 100)), method=99),  # an unsupported method
+    ],
+)
 async def test_a_corrupt_archive_is_a_clear_error(settings: Settings, body: bytes) -> None:
     result = await call(settings, serving(body), DOWNLOAD, {"url": BLOB})
     assert "could not be unpacked" in error_text(result)
+
+
+async def test_a_download_stops_reading_at_the_cap(settings: Settings) -> None:
+    sent: list[int] = []
+
+    async def endless() -> AsyncIterator[bytes]:
+        for _ in range(1000):
+            sent.append(1)
+            yield b"x" * 500
+
+    fake = FakeMicrosoft(api_handler=lambda _r: httpx2.Response(200, content=endless()))
+    small = replace(settings, max_response_bytes=1000)
+    result = await call(small, fake, DOWNLOAD, {"url": BLOB})
+    assert "MICROSOFT_ADS_MAX_RESPONSE_BYTES" in error_text(result)
+    assert len(sent) <= 3  # 3 chunks of 500 pass the 1000-byte cap
+
+
+@pytest.mark.parametrize(
+    ("body", "reader"),
+    [
+        (zipped(("big.csv", b"x" * 1_000_000)), zipfile.ZipExtFile),
+        (gzip.compress(b"x" * 1_000_000), gzip.GzipFile),
+    ],
+)
+async def test_an_archive_is_unpacked_only_up_to_the_cap(
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    body: bytes,
+    reader: type[io.BufferedIOBase],
+) -> None:
+    sizes: list[int] = []
+    original: Callable[..., bytes] = reader.read
+
+    def spy(self: object, size: int = -1) -> bytes:
+        sizes.append(size)
+        return original(self, size)
+
+    monkeypatch.setattr(reader, "read", spy)
+    small = replace(settings, max_response_bytes=5000)  # the packed file fits; its content does not
+    result = await call(small, serving(body), DOWNLOAD, {"url": BLOB})
+    assert "MICROSOFT_ADS_MAX_RESPONSE_BYTES" in error_text(result)
+    assert sizes == [5001]
 
 
 async def test_a_failed_download_is_a_clear_error(settings: Settings) -> None:

@@ -36,9 +36,12 @@ Things the model needs to know (also in the tool descriptions):
 
 Most `Get…` operations are **not paged**. `GetKeywordsByAdGroupId`, for example, returns the
 whole ad group in one response. For a large account, download the entities instead with
-`DownloadCampaignsByAccountIds` (Bulk), poll `GetBulkDownloadStatus`, and read the file with
-`microsoft_ads_download_file`. A response larger than `MICROSOFT_ADS_MAX_RESPONSE_BYTES`
-(2 MiB by default) is refused, not truncated.
+`DownloadCampaignsByAccountIds` or `DownloadCampaignsByCampaignIds` (Bulk), poll
+`GetBulkDownloadStatus`, and read the file with `microsoft_ads_download_file`.
+
+A response or unpacked file larger than `MICROSOFT_ADS_MAX_RESPONSE_BYTES` (2 MiB by default)
+is refused, not truncated. Bulk files are wide (100+ columns), so for a big account download a
+few campaigns at a time and only the `DownloadEntities` you need, or raise the limit.
 
 **Reports** run asynchronously:
 1. `SubmitGenerateReport` with a `ReportRequest` whose `"Type"` names the report, e.g.
@@ -95,8 +98,14 @@ yet been run against a live account (see [Limitations](#limitations)).
      "Descriptions": [{"Asset": {"Type": "TextAsset", "Text": "Shoes for every run."}},
                       {"Asset": {"Type": "TextAsset", "Text": "Order today."}}]}]}
    ```
-5. Review the setup with the person you are working for, then enable it with
-   `UpdateCampaigns` and `UpdateAdGroups`, sending `{"Id": "...", "Status": "Active"}`.
+5. Review the setup with the person you are working for. Then enable all three levels, since
+   a paused ad under an active campaign serves nothing:
+   - `UpdateCampaigns`:
+     `{"AccountId": "123", "Campaigns": [{"Id": "<campaign id>", "Status": "Active"}]}`
+   - `UpdateAdGroups`:
+     `{"CampaignId": "<campaign id>", "AdGroups": [{"Id": "<ad group id>", "Status": "Active"}]}`
+   - `UpdateAds`: `{"AdGroupId": "<ad group id>", "Ads": [{"Type": "ResponsiveSearch",
+     "Id": "<ad id>", "Status": "Active"}]}`
 
 To undo, call `DeleteCampaigns` with `{"AccountId": "123", "CampaignIds": ["<id>"]}`.
 
@@ -235,7 +244,8 @@ missing variables. Values that are set are checked at start.
 - **Per-call ids are validated** as digits before they become headers.
 - **Credentials never reach the model.** Every tool result and error has every credential
   literal replaced with `[redacted]`: the client secret, the developer token, the configured
-  refresh token, and each access and refresh token issued since start. No credential is
+  refresh token, every refresh token issued since start (Microsoft does not revoke the
+  old ones), and every issued access token until it expires. No credential is
   ever put in a URL, and the HTTP client libraries' loggers are held at WARNING.
 - **Result-file downloads carry no credentials.** `microsoft_ads_download_file` fetches
   Microsoft's self-authorizing report and bulk URLs:

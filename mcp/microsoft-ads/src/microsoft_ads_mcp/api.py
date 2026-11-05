@@ -14,12 +14,12 @@ from microsoft_ads_mcp.auth import AccessTokens
 from microsoft_ads_mcp.catalog import OperationCatalog
 from microsoft_ads_mcp.config import Settings
 from microsoft_ads_mcp.safety import check_id
+from microsoft_ads_mcp.transfer import USER_AGENT, JsonObject, read_bounded
 
-JsonObject = dict[str, object]
-USER_AGENT = "microsoft-ads-mcp/0.1.0"
 TRACKING_HEADER = "x-ms-trackingid"
 # AdApiFaultDetail codes meaning the access token was not accepted: 105
-# InvalidCredentials and 109 (the token expired). One refresh and retry is worth it.
+# InvalidCredentials and 109 (the token expired). One refresh and retry is worth it, unless
+# the token is brand new: 105 also means an inactive account, which no refresh fixes.
 TOKEN_REJECTED_CODES = frozenset({105, 109})
 
 
@@ -59,8 +59,7 @@ class MicrosoftAdsApi:
         headers = self._identity(request)
         token = await self.tokens.get()
         response, body = await self._send(entry["method"], url, headers, request.body, token)
-        if _token_rejected(response, body):
-            self.tokens.invalidate(token)
+        if _token_rejected(response, body) and self.tokens.invalidate(token):
             token = await self.tokens.get()
             response, body = await self._send(entry["method"], url, headers, request.body, token)
         return describe_response(response, body)
@@ -87,22 +86,11 @@ class MicrosoftAdsApi:
                 json=body if body is not None else {},
                 headers={**headers, "Authorization": f"Bearer {token}"},
             ) as response:
-                return response, await self._read_bounded(response)
+                limit = self._settings.max_response_bytes
+                return response, await read_bounded(response, limit, lambda: _too_large(limit))
         except httpx2.HTTPError as error:
             message = f"request to Microsoft Advertising failed: {type(error).__name__}: {error}"
             raise ToolError(message) from error
-
-    async def _read_bounded(self, response: httpx2.Response) -> bytes:
-        """Read the body, giving up as soon as it passes the configured limit."""
-        limit = self._settings.max_response_bytes
-        chunks: list[bytes] = []
-        size = 0
-        async for chunk in response.aiter_bytes():
-            size += len(chunk)
-            if size > limit:
-                raise _too_large(limit)
-            chunks.append(chunk)
-        return b"".join(chunks)
 
 
 def describe_response(response: httpx2.Response, body: bytes) -> JsonObject:
@@ -141,8 +129,9 @@ def _json_or_none(text: str) -> object:
 def _too_large(limit: int) -> ToolError:
     message = (
         f"the response was larger than {limit} bytes (MICROSOFT_ADS_MAX_RESPONSE_BYTES), so "
-        "it was not returned. Ask for fewer ids per call, or for a large account download "
-        "the entities with DownloadCampaignsByAccountIds (Bulk) and read the file with "
-        "microsoft_ads_download_file."
+        "it was not returned. Ask for fewer ids per call. For a large account, use Bulk's "
+        "DownloadCampaignsByCampaignIds for a few campaigns at a time with only the "
+        "DownloadEntities you need, and read the file with microsoft_ads_download_file "
+        "(the same limit applies to the unpacked file); or raise the limit."
     )
     return ToolError(message)

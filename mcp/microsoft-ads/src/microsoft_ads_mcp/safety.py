@@ -28,11 +28,20 @@ def check_download_url(url: str, allowed: tuple[str, ...]) -> str:
 
     The host must equal an allowed domain or end in "." plus one, so neither
     `evilbingads.microsoft.com` nor `x.blob.core.windows.net.evil.com` passes. The
-    authority must be the bare host: no userinfo and no port. No fragment either.
+    authority must be the bare host: no userinfo and no port. No fragment either. The URL
+    must be printable ASCII with no spaces, because `urlsplit` silently drops tabs and
+    newlines that the HTTP client would read differently.
     """
     parts = urlsplit(url)
     host = (parts.hostname or "").lower()
-    plain = parts.scheme == "https" and parts.netloc.lower() == host and not parts.fragment
+    plain = (
+        url.isascii()
+        and url.isprintable()
+        and " " not in url
+        and parts.scheme == "https"
+        and parts.netloc.lower() == host
+        and not parts.fragment
+    )
     on_list = any(host == domain or host.endswith(f".{domain}") for domain in allowed)
     if not (host and plain and on_list):
         message = (

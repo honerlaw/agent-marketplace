@@ -72,11 +72,12 @@ async def test_a_token_is_reused_until_near_expiry(
     assert len(fake.token_requests) == 2
 
 
-async def test_the_rotated_refresh_token_is_used_next(settings: Settings) -> None:
+async def test_the_rotated_refresh_token_is_used_next(settings: Settings, clock: Clock) -> None:
     fake = FakeMicrosoft()
     tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
     first = await tokens.get()
-    tokens.invalidate(first)
+    clock.now = auth.FRESH_SECONDS
+    assert tokens.invalidate(first)
     await tokens.get()
     assert [form(request)["refresh_token"] for request in fake.token_requests] == [
         REFRESH_TOKEN,
@@ -87,22 +88,49 @@ async def test_the_rotated_refresh_token_is_used_next(settings: Settings) -> Non
 
 
 async def test_a_response_without_a_new_refresh_token_keeps_the_old_one(
-    settings: Settings,
+    settings: Settings, clock: Clock
 ) -> None:
     fake = FakeMicrosoft(token_handler=lambda _r: httpx2.Response(200, json={"access_token": "a"}))
     tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
-    tokens.invalidate(await tokens.get())
+    token = await tokens.get()
+    clock.now = auth.FRESH_SECONDS
+    tokens.invalidate(token)
     await tokens.get()
     assert [form(r)["refresh_token"] for r in fake.token_requests] == [REFRESH_TOKEN] * 2
 
 
-async def test_invalidate_drops_only_the_rejected_token(settings: Settings) -> None:
+async def test_invalidate_drops_only_the_rejected_token(settings: Settings, clock: Clock) -> None:
     fake = FakeMicrosoft()
     tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
     current = await tokens.get()
-    tokens.invalidate("an older token")
+    clock.now = auth.FRESH_SECONDS
+    assert tokens.invalidate("an older token")  # replaced already: retry with the current one
     assert await tokens.get() == current
     assert len(fake.token_requests) == 1
+
+
+async def test_a_brand_new_token_is_kept_and_no_retry_is_offered(settings: Settings) -> None:
+    fake = FakeMicrosoft()
+    tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
+    current = await tokens.get()
+    assert not tokens.invalidate(current)
+    assert await tokens.get() == current
+    assert len(fake.token_requests) == 1
+
+
+async def test_every_rotated_refresh_token_and_every_live_access_token_is_scrubbed(
+    settings: Settings, clock: Clock
+) -> None:
+    fake = FakeMicrosoft()
+    tokens = auth.AccessTokens(settings, httpx2.AsyncClient(transport=fake.transport))
+    for refresh in range(30):
+        clock.now = refresh * 3550.0  # just past each token's reuse window
+        await tokens.get()
+    secrets = tokens.secrets()
+    assert all(f"{ISSUED_REFRESH}{n}" in secrets for n in range(1, 31))
+    assert f"{ISSUED_ACCESS}30" in secrets
+    assert f"{ISSUED_ACCESS}29" in secrets  # replaced, but valid for 50 more seconds
+    assert f"{ISSUED_ACCESS}28" not in secrets  # expired
 
 
 async def test_concurrent_first_calls_share_one_refresh(settings: Settings) -> None:

@@ -1,8 +1,9 @@
 """Keeps the operator's credentials out of everything the model sees.
 
 Every tool result and every error message has each credential literal replaced, wherever
-it appears: the client secret, the developer token, the configured refresh token, and
-every access and refresh token Microsoft has issued since the server started. The set is
+it appears: the client secret, the developer token, the configured refresh token, every
+refresh token Microsoft has issued since the server started, and every issued access token
+until it expires (auth.py). The set is
 read at the moment of scrubbing, so a token rotated a second ago is covered.
 """
 

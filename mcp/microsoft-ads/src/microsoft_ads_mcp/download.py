@@ -15,11 +15,20 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from microsoft_ads_mcp.config import Settings
 from microsoft_ads_mcp.safety import check_download_url
+from microsoft_ads_mcp.transfer import USER_AGENT, JsonObject, read_bounded
 
-JsonObject = dict[str, object]
 ZIP_MAGIC = b"PK\x03\x04"
 GZIP_MAGIC = b"\x1f\x8b"
-USER_AGENT = "microsoft-ads-mcp/0.1.0"
+# What a damaged or unusual archive raises: encrypted zip members raise RuntimeError and
+# unsupported compression methods NotImplementedError.
+UNPACK_ERRORS = (
+    zipfile.BadZipFile,
+    OSError,
+    EOFError,
+    zlib.error,
+    RuntimeError,
+    NotImplementedError,
+)
 
 
 class Downloader:
@@ -41,8 +50,8 @@ class Downloader:
         check_download_url(url, self._allowed)
         try:
             async with self._client.stream("GET", url) as response:
-                body = await self._read_bounded(response)
-        except httpx2.HTTPError as error:
+                body = await read_bounded(response, self._limit, self._too_large)
+        except (httpx2.HTTPError, httpx2.InvalidURL) as error:
             message = f"downloading the file failed: {type(error).__name__}: {error}"
             raise ToolError(message) from error
         if response.status_code != httpx2.codes.OK:
@@ -51,16 +60,6 @@ class Downloader:
         name, raw = self._unpack(body)
         return {"status": response.status_code, "file": name, "text": self._text(raw)}
 
-    async def _read_bounded(self, response: httpx2.Response) -> bytes:
-        chunks: list[bytes] = []
-        size = 0
-        async for chunk in response.aiter_bytes():
-            size += len(chunk)
-            if size > self._limit:
-                raise self._too_large()
-            chunks.append(chunk)
-        return b"".join(chunks)
-
     def _unpack(self, body: bytes) -> tuple[str | None, bytes]:
         try:
             if body.startswith(ZIP_MAGIC):
@@ -68,7 +67,7 @@ class Downloader:
             if body.startswith(GZIP_MAGIC):
                 with gzip.GzipFile(fileobj=io.BytesIO(body)) as packed:
                     return None, self._bounded(packed.read(self._limit + 1))
-        except (zipfile.BadZipFile, OSError, EOFError, zlib.error) as error:
+        except UNPACK_ERRORS as error:
             message = f"the file could not be unpacked: {type(error).__name__}"
             raise ToolError(message) from error
         return None, body
@@ -94,7 +93,8 @@ class Downloader:
     def _too_large(self) -> ToolError:
         message = (
             f"the file is larger than {self._limit} bytes (MICROSOFT_ADS_MAX_RESPONSE_BYTES) "
-            "once unpacked, so it was not returned. Ask for fewer columns, a shorter date "
-            "range or a coarser aggregation."
+            "once unpacked, so it was not returned. For a report, ask for fewer columns, a "
+            "shorter date range or a coarser aggregation; for a bulk download, fewer campaigns "
+            "or DownloadEntities. Or raise the limit."
         )
         return ToolError(message)

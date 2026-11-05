@@ -38,8 +38,9 @@ credentials were available), so treat the auth and download facts as documented,
   `https://ads.microsoft.com/msads.manage offline_access` (sandbox, per the SDK default:
   `https://si.ads.microsoft.com/msads.manage`). **Every refresh returns a new refresh token**;
   refresh tokens have no fixed lifetime and can be revoked at any time. A Web app sends its
-  client secret; a public client must not. Error codes 105/109 mean the access token was
-  rejected. The universal sandbox developer token is `BBD37VB98`.
+  client secret; a public client must not. A 401 with error code 109 means the access token
+  expired; 105 (InvalidCredentials) means a rejected token **or** an inactive account or
+  developer token, so refreshing on 105 helps only when the token is not brand new. The universal sandbox developer token is `BBD37VB98`.
 - **Errors:** `AdApiFaultDetail` (`Errors[{Code, Message}]`) or `ApiFaultDetail`
   (`BatchErrors` / `OperationErrors`); writes partly succeed with `PartialErrors` and `null` ids.
   Throttling: 117 (Campaign/Ad Insight), 207 (Reporting), 4204 (Bulk).
