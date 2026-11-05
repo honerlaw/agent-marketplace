@@ -1,0 +1,13 @@
+# Scratchpad: add-microsoft-ads-mcp-server
+
+> **Ephemeral working memory.** Most of what lands here is noise — small
+> decisions that don't matter, dead ends, momentary confusion. At feature
+> completion, run `minerva:promote`: significant items get promoted to
+> `.minerva/knowledge/`, `proposal.md` gets updated to match reality, and
+> the raw scratchpad is archived.
+
+## Decisions 2026-11-05
+- [reviewed — clean] scope check: one unit, one PR (tier: reviewer — new mcp/microsoft-ads tool surface, no existing interface, bounded new directory; parallel wave). Skeptic noted: unit is large (flag generated catalog.json as non-hand-reviewed); the offline-catalog vs live-API seam exists but phase 1 alone would not serve "create campaigns"; a follow-up narrowing the download allowlist is expected. None load-bearing.
+- [reviewed — clean] approach: A — committed ast-extracted catalog from sha-pinned msads 13.0.30.1 sdist + operation-name dispatch + credential-free download tool (tier: reviewer — introduces a new tool surface, no existing consumer; parallel wave). Rejected: B typed ~25 tools (fails "full", knowledge tool-shape decision), C path + validator (dominated on safety at equal reach), D msads runtime dep (enum34/SOAP deps, executes vendor code, hides HTTP), E build-time catalog fetch (non-hermetic, tests can't read real catalog), F proxy Microsoft's hosted MCP (read-only), G WSDLs (no REST paths/verbs), H bulk upload (credentials to returned URL). Skeptic answered author's doubts: committing is not strictly dominant but clearly preferred; name dispatch is not in tension with the generic-tools decision (it constrains shape, not path-taking). Noted, absorbed as non-decision-changing details: catalog `source` provenance test; builder asserts normalized-name uniqueness (measured: 291 unique, no collision).
+- [reviewed — folded] whole-proposal: folded 7 items — dot-boundary download allowlist + suffix-confusion tests + disclosed blob-suffix breadth; Goal names 11 undocumented ops and the unverified download path; criterion 1 reworded to gate-blocks-identical; catalog `source` pin test; describe_operation depth and 2 MiB default stated; scrub skips empty secrets; 401 retry only on AdApiFaultDetail 105/109; discriminator settled from Learn AddAds REST example (short enum form); ast-extractor complexity risk named (tier: reviewer; parallel wave; restart check: no staleness condition fired — approach/scope unchanged, no fold rewrote Goal/criteria before whole-proposal's result)
+- [rechecked — clean] whole-proposal: fold-audit confirmed items 1–7 addressed; new low note (11 vs 12 undocumented) resolved factually — PutMetricData is absent from msads, so not in the catalog; one clarifying sentence added
