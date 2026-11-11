@@ -1,7 +1,7 @@
 # Proposal: 2026-11-10-add-clerk-mcp-server
 
 **Date**: 2026-11-10
-**Status**: Proposed
+**Status**: Shipped (2026-11-10)
 
 ## Goal
 `mcp/clerk/`: an MCP server that gives an LLM read and write access to the **Clerk Backend API**
@@ -102,7 +102,8 @@ dependency, no startup dependency on GitHub, and the spec cannot change under a 
   client actually sent: host `api.clerk.com`, prefix `/v1`.
 - Redirects are never followed (`follow_redirects=False`, asserted by a test), so the bearer key
   cannot travel to another host; a 3xx comes back as a result.
-- A result's body is capped at `MAX_BODY_CHARS` (256 KiB of text), applied **after** the key is
+- A result's body is capped at `MAX_BODY_CHARS` (64 KiB of compact text as shipped; 256 KiB as first
+  proposed, see "What shipped"), applied **after** the key is
   scrubbed so a cut can never leave part of the key. Past it the body is cut and the result says so
   with the full length, so a 500-user page cannot flood the model's context; the
   README recommends small `limit`s.
@@ -137,8 +138,10 @@ that flows into the model's context and the client's logs, and names the **promp
 user-controlled text, and the same session holds write tools. Clients should never auto-allow
 `clerk_request`.
 
-**Config.** `CLERK_SECRET_KEY` is required and must start with `sk_`. `CLERK_READ_ONLY` is optional
-(`true`/`false`, default `false`). The standard `MCP_*` variables
+**Config.** `CLERK_SECRET_KEY` is required; surrounding whitespace is stripped and it must then
+match `sk_(live|test)_[A-Za-z0-9]+` (as first proposed: "must start with `sk_`"). `CLERK_READ_ONLY` is optional
+(default `false`). Every switch (`CLERK_READ_ONLY`, `MCP_ALLOW_UNAUTHENTICATED`, `MCP_STATELESS`)
+accepts only true/false, 1/0, yes/no, on/off; anything else stops startup. The standard `MCP_*` variables
 as in `openai-ads`. `ci.env` holds dummy values (`CLERK_SECRET_KEY=sk_test_ci`).
 
 **Discovery marks the gaps.** `clerk_list_endpoints` and `clerk_describe_endpoint` mark the three
@@ -163,6 +166,31 @@ Considered and rejected:
 digest, a `moved` block from the OAuth `clerk` server, the credentials-map line, Doppler keys set by
 the owner, docs). It is a separate unit in the seekless repo that starts once this image is
 published, because it needs the digest.
+
+### What shipped
+Built as approved, with three changes from code review (all in the PR):
+- **Key shape, not prefix.** A key with a trailing newline passed `startswith("sk_")`, then h11
+  rejected the header and the error's bytes repr carried the whole key past the literal scrubber.
+  The key is now stripped and must match `sk_(live|test)_[A-Za-z0-9]+`; `Settings` hides the key
+  and the auth token from `repr`.
+- **Strict switches.** `CLERK_READ_ONLY=on` (or any typo) used to mean read-write. Switches now
+  accept a true set and a false set and refuse anything else at startup.
+- **64 KiB, not 256 KiB.** MCP returns a dict result twice (structured content and a pretty text
+  copy, about 3x the compact size), so the cap was lowered and the README says what it counts.
+- Also: `VENDORED_SHA256` pins `bapi.json`'s bytes in a test, and each refusal test asserts its
+  guard's message.
+
+Result: 134 tests, 100% line and branch coverage on Python 3.13 and 3.11; each guard was deleted
+in turn and a test failed every time. The image builds, answers `/healthz`, refuses `/mcp` without
+a bearer, loads the spec (2026-08-20, 264 operations) and runs as uid 10001. No live Clerk call was
+made. Knowledge: `2026-11-10-reference-clerk-backend-api-facts-for-mcp-servers`,
+`2026-11-10-pattern-parse-a-credential-or-a-safety-switch-strictly-at-startup`,
+`2026-11-10-reference-an-mcp-result-reaches-the-model-twice`.
+
+Next unit (seekless, not started): wire `ghcr.io/honerlaw/clerk-mcp` into the gateway as container
+upstream `clerk`. That means a `moved` block from the OAuth server, `clerk=container:CLERK_MCP_AUTH_TOKEN`,
+and Doppler keys the owner sets. The owner also chooses read-only or read-write; the recommendation
+is read-only first.
 
 ## Success criteria
 1. `make install && make check` in `mcp/clerk/` passes: `ruff check` (ALL), `ruff format --check`,
