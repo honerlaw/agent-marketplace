@@ -1,0 +1,27 @@
+Clerk Backend API OpenAPI specification (bapi.json)
+
+Source: https://github.com/clerk/openapi-specs, file bapi/2026-08-20.yml
+  commit  af85fe9443c550f6de08634ab26abe95d78e6f7e (the file's last change, 2026-11-05)
+  blob    c57d7c310abdda048583ae536692f872988f6c04
+  sha256  952872280f03c096952687098bf91925669488d662324ffea27d4efb415ab4e0 (the YAML as downloaded)
+Converted from YAML to compact JSON, content unchanged.
+
+Copyright (c) 2025 Clerk
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.

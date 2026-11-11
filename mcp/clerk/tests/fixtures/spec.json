@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Fixture", "version": "2026-08-20"},
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "GetUserList",
+        "summary": "List all users",
+        "parameters": [{"$ref": "#/components/parameters/Limit"}],
+        "responses": {
+          "200": {"description": "ok", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Users"}}}},
+          "400": {"description": "bad"}
+        }
+      },
+      "post": {
+        "operationId": "CreateUser",
+        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/User"}}}},
+        "responses": {"200": {"description": "ok"}}
+      }
+    },
+    "/users/{user_id}/profile_image": {
+      "post": {
+        "summary": "Set user profile image",
+        "requestBody": {"content": {"multipart/form-data": {"schema": {"type": "object"}}}},
+        "responses": {"200": {"description": "ok"}}
+      },
+      "parameters": [{"name": "user_id", "in": "path", "required": true}]
+    }
+  },
+  "components": {
+    "parameters": {"Limit": {"name": "limit", "in": "query", "schema": {"type": "integer"}}},
+    "schemas": {
+      "Users": {"type": "array", "items": {"$ref": "#/components/schemas/User"}},
+      "User": {"type": "object", "properties": {"id": {"type": "string"}}}
+    }
+  }
+}
