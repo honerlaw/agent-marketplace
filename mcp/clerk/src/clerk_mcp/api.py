@@ -12,7 +12,10 @@ from clerk_mcp.scrub import Scrubber
 from clerk_mcp.spec import CLERK_API_VERSION
 
 BASE_URL = "https://api.clerk.com/v1"
-MAX_BODY_CHARS = 256 * 1024
+# The compact JSON (or text) body is cut past this. MCP clients receive a result both as
+# structured content and as a pretty-printed text copy, so what reaches the model can be
+# about three times this; 64 KiB keeps one user page well inside a context window.
+MAX_BODY_CHARS = 64 * 1024
 JsonObject = dict[str, object]
 
 FORWARDED_HEADERS = frozenset({"content-type", "retry-after"})

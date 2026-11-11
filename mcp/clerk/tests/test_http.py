@@ -133,7 +133,6 @@ async def test_authenticated_request_over_http(guarded_url: str, fake: FakeClerk
     assert fake.last.url.path == "/v1/users"
 
 
-@pytest.mark.anyio
 def test_bearer_scheme_is_case_insensitive(guarded_url: str) -> None:
     response = httpx2.get(f"{guarded_url}/mcp", headers={"Authorization": f"bearer {TOKEN}"})
     assert response.status_code != 401

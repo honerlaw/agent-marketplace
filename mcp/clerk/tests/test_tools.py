@@ -80,31 +80,37 @@ async def test_json_body_is_sent(settings: Settings, fake: FakeClerk) -> None:
 
 
 @pytest.mark.parametrize(
-    "arguments",
+    ("arguments", "reason"),
     [
-        {"method": "GET", "path": "/users/.."},
-        {"method": "GET", "path": "/users/%2e%2e"},
-        {"method": "GET", "path": "/users/%252e%252e/instance"},
-        {"method": "GET", "path": "/users%2f..%2finstance"},
-        {"method": "GET", "path": "/users%5c..%5cinstance"},
-        {"method": "GET", "path": "/users/."},
-        {"method": "GET", "path": "//evil.test/users"},
-        {"method": "GET", "path": "https://evil.test/users"},
-        {"method": "GET", "path": "/users?limit=1"},
-        {"method": "GET", "path": "/users#x"},
-        {"method": "GET", "path": "/users\\x"},
-        {"method": "GET", "path": "/users/ x"},
-        {"method": "GET", "path": "/users", "query": {"__clerk_api_version": "2021-02-05"}},
-        {"method": "GET", "path": "/users", "query": {"__CLERK_API_VERSION": "2021-02-05"}},
-        {"method": "HEAD", "path": "/users"},
-        {"method": "TRACE", "path": "/users"},
+        ({"method": "GET", "path": "/users/.."}, "segments"),
+        ({"method": "GET", "path": "/users/%2e%2e"}, "must not contain"),
+        ({"method": "GET", "path": "/users/%252e%252e/instance"}, "must not contain"),
+        ({"method": "GET", "path": "/users%2f..%2finstance"}, "must not contain"),
+        ({"method": "GET", "path": "/users%5c..%5cinstance"}, "must not contain"),
+        ({"method": "GET", "path": "/users/."}, "segments"),
+        ({"method": "GET", "path": "//evil.test/users"}, "segments"),
+        ({"method": "GET", "path": "https://evil.test/users"}, "start with '/'"),
+        ({"method": "GET", "path": "/users?limit=1"}, "must not contain"),
+        ({"method": "GET", "path": "/users#x"}, "must not contain"),
+        ({"method": "GET", "path": "/users\\x"}, "must not contain"),
+        ({"method": "GET", "path": "/users/ x"}, "must not contain"),
+        (
+            {"method": "GET", "path": "/users", "query": {"__clerk_api_version": "2021-02-05"}},
+            "pins the API version",
+        ),
+        (
+            {"method": "GET", "path": "/users", "query": {"__CLERK_API_VERSION": "2021-02-05"}},
+            "pins the API version",
+        ),
+        ({"method": "HEAD", "path": "/users"}, "method must be one of"),
+        ({"method": "TRACE", "path": "/users"}, "method must be one of"),
     ],
 )
 async def test_refused_requests_never_go_out(
-    settings: Settings, fake: FakeClerk, arguments: dict[str, object]
+    settings: Settings, fake: FakeClerk, arguments: dict[str, object], reason: str
 ) -> None:
     result = await call(settings, fake, "clerk_request", arguments)
-    assert result.is_error
+    assert reason in error_text(result)
     assert fake.requests == []
 
 

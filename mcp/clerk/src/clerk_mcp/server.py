@@ -57,7 +57,7 @@ def _add_api_tool(server: MCPServer, api: ClerkApi) -> None:
 
         `method` is GET, POST, PUT, PATCH or DELETE. `path` is relative to /v1, e.g.
         "/users" or "/users/{user_id}/ban", with ids filled in. Returns the status, key
-        response headers and the body as json or text (cut past 256 KiB; ask for less).
+        response headers and the body as json or text (cut past 64 KiB; ask for less).
         """
         return await api.send(ClerkRequest(method, path, query, body))
 

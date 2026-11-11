@@ -16,7 +16,7 @@ in Clerk's published spec.
 Paths are relative to `https://api.clerk.com/v1`, so `/users` means
 `https://api.clerk.com/v1/users`. `method` is `GET`, `POST`, `PUT`, `PATCH` or `DELETE`, in
 any case. Lists page with `limit` (1–500, default 10) and `offset`. Keep `limit` small:
-user records are large, and a result's body is cut at 256 KiB.
+user records are large, and a result's body is cut at 64 KiB of compact JSON.
 
 ## Reading users
 
@@ -108,8 +108,8 @@ balancers can call it. CI publishes the image as `ghcr.io/<owner>/clerk-mcp` (se
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `CLERK_SECRET_KEY` | — (required) | The instance's secret key (`sk_live_…` or `sk_test_…`), sent with every request |
-| `CLERK_READ_ONLY` | `false` | Set `true` to refuse every method except GET |
+| `CLERK_SECRET_KEY` | — (required) | The instance's secret key, sent with every request. Surrounding whitespace is stripped; it must then be `sk_live_` or `sk_test_` followed by letters and digits, or the server will not start |
+| `CLERK_READ_ONLY` | `false` | Set `true` to refuse every method except GET. Like every switch here it accepts `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`; any other value stops the server at startup, so a typo cannot quietly mean "off" |
 | `CLERK_TIMEOUT_SECONDS` | `60` | Per-request timeout |
 | `MCP_TRANSPORT` | `stdio` (`http` in Docker) | `stdio` or `http` |
 | `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` (`0.0.0.0` in Docker) | HTTP bind address |
@@ -133,7 +133,7 @@ balancers can call it. CI publishes the image as `ghcr.io/<owner>/clerk-mcp` (se
   query key `__clerk_api_version` (any case) is refused, because Clerk treats both
   together as an invalid request.
 - **The key is scrubbed** from every result and error: JSON keys and values, forwarded
-  headers and text. Scrubbing happens before the 256 KiB cut, so no fragment of the key
+  headers and text. Scrubbing happens before the 64 KiB cut, so no fragment of the key
   survives. Credentials that Clerk returns by design are not scrubbed (see above).
 - **Response headers are an allowlist.** Only `content-type`, `retry-after` and any
   `x-ratelimit-*` or `ratelimit*` header come through. `set-cookie` never does. There are
@@ -170,7 +170,7 @@ uv run --with pyyaml python -I -c 'import json, sys, yaml; \
 ```
 
 Then update `bapi.LICENSE` (commit, blob from `git hash-object /tmp/bapi.yml`, sha256),
-`CLERK_API_VERSION`, and the counts and hashes in `tests/test_spec.py`.
+`CLERK_API_VERSION`, and the counts and `VENDORED_SHA256` in `tests/test_spec.py`.
 
 If Clerk ever refuses the `2026-08-20` header for Backend API calls, re-pin to
 `2026-05-12`. Its Backend API is the same.
@@ -182,6 +182,9 @@ If Clerk ever refuses the `2026-08-20` header for Backend API calls, re-pin to
   `PUT /oauth_applications/{oauth_application_id}/logo` take `multipart/form-data`. They
   only set images, and the discovery tools mark them as not callable.
 - **One API version and one instance per server.**
+- **The body cap counts the compact body.** MCP clients get each result twice (structured
+  content and a pretty-printed text copy), so a capped result can reach the model at about three
+  times 64 KiB.
 - **Discovery is advisory.** `clerk_request` does not check `(method, path)` against the
   spec, so an endpoint Clerk adds after the pin is still reachable.
 - **Not measured live when written.** The request shape follows Clerk's spec and docs.

@@ -39,11 +39,19 @@ def test_every_variable_is_read() -> None:
     assert settings.stateless
 
 
-@pytest.mark.parametrize("value", ["", "pk_live_abc", "abc"])
-def test_secret_key_must_look_like_one_and_is_never_echoed(value: str) -> None:
-    with pytest.raises(ConfigError, match="CLERK_SECRET_KEY") as raised:
+@pytest.mark.parametrize(
+    "value",
+    ["", "pk_live_abc", "abc", "sk_", "sk_prod_abc", "sk_live_", "sk_live_a\nb", "sk_live_a b"],
+)
+def test_secret_key_must_have_the_clerk_shape(value: str) -> None:
+    with pytest.raises(ConfigError, match="CLERK_SECRET_KEY"):
         load_settings({"CLERK_SECRET_KEY": value})
-    assert not value or value not in str(raised.value)
+
+
+def test_a_refused_key_is_never_echoed() -> None:
+    with pytest.raises(ConfigError) as raised:
+        load_settings({"CLERK_SECRET_KEY": "sk_live_Real9Value!"})
+    assert "Real9Value" not in str(raised.value)
 
 
 def test_missing_secret_key_is_refused() -> None:
@@ -69,3 +77,31 @@ def test_http_mode_requires_a_token() -> None:
 def test_http_mode_may_run_unauthenticated_when_asked() -> None:
     env = {"CLERK_SECRET_KEY": KEY, "MCP_TRANSPORT": "http", "MCP_ALLOW_UNAUTHENTICATED": "1"}
     assert load_settings(env).allow_unauthenticated
+
+
+@pytest.mark.parametrize("raw", ["sk_live_abc\n", "sk_live_abc\r\n", " sk_live_abc\t"])
+def test_surrounding_whitespace_is_stripped_from_the_key(raw: str) -> None:
+    assert load_settings({"CLERK_SECRET_KEY": raw}).secret_key == "sk_live_abc"  # noqa: S105
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("on", True), ("TRUE\n", True), ("1", True), ("off", False), ("No", False), ("", False)],
+)
+def test_switches_read_true_and_false(value: str, expected: bool) -> None:  # noqa: FBT001
+    settings = load_settings({"CLERK_SECRET_KEY": KEY, "CLERK_READ_ONLY": value})
+    assert settings.read_only is expected
+
+
+@pytest.mark.parametrize("name", ["CLERK_READ_ONLY", "MCP_ALLOW_UNAUTHENTICATED", "MCP_STATELESS"])
+@pytest.mark.parametrize("value", ["enabled", "y", "2"])
+def test_an_unrecognized_switch_value_stops_startup(name: str, value: str) -> None:
+    with pytest.raises(ConfigError, match=f"{name} must be true or false"):
+        load_settings({"CLERK_SECRET_KEY": KEY, name: value})
+
+
+def test_settings_repr_hides_the_key_and_the_token() -> None:
+    env = {"CLERK_SECRET_KEY": "sk_live_hidden1", "MCP_AUTH_TOKEN": "tok_hidden2"}
+    shown = repr(load_settings(env))
+    assert "hidden1" not in shown
+    assert "hidden2" not in shown

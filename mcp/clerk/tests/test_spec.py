@@ -11,6 +11,7 @@ from clerk_mcp.spec import CLERK_API_VERSION, MULTIPART_NOTE, SpecCatalog, load_
 
 VENDORED_OPERATIONS = 264
 VENDORED_MULTIPART = 3
+VENDORED_SHA256 = "3b4996ebb952098cb9d95eb05b9478e3dbd27ee780d6478ac671f4d477473569"
 
 
 def test_listing_marks_multipart_and_filters(catalog: SpecCatalog) -> None:
@@ -73,5 +74,9 @@ def test_license_records_the_source() -> None:
     assert "952872280f03c096952687098bf91925669488d662324ffea27d4efb415ab4e0" in notice
     assert "Copyright (c) 2025 Clerk" in notice
     assert "bapi/2026-08-20.yml" in notice
+
+
+def test_vendored_spec_bytes_are_pinned() -> None:
+    # Any edit to bapi.json fails here; a re-pin updates this hash (README, "To re-pin").
     vendored = resources.files("clerk_mcp").joinpath("bapi.json").read_bytes()
-    assert len(hashlib.sha256(vendored).hexdigest()) == 64
+    assert hashlib.sha256(vendored).hexdigest() == VENDORED_SHA256
