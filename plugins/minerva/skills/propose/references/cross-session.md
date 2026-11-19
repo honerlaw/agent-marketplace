@@ -120,8 +120,7 @@ the same way: one line in the final report, no user contact, no counter.
 ## Not covered: subagents
 
 **Independent agent dispatch is delegation by design, and minerva depends on it** —
-`minerva:round-table`'s panelists, `minerva:review`'s reviewers, every orchestrator reviewer
-gate. A subagent is this session's own instrument, dispatched with a brief and returning to the
+`minerva:review`'s reviewers, every orchestrator reviewer gate. A subagent is this session's own instrument, dispatched with a brief and returning to the
 session that spawned it; it has no workstream of its own to protect.
 
 This contract binds **peer sessions** only. That exemption covers the whole channel, not just the

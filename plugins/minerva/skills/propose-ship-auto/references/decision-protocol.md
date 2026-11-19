@@ -2,7 +2,14 @@
 
 Read once, in full, before the run's first strategic/tactical decision point. Its rules then apply to every decision that follows.
 
-This skill picks the adjudication **tier** each decision earns, one decision at a time: **solo** (the main model decides), **reviewer** (one fresh-context Skeptic or Verifier, plus one fold-audit re-check after a fold), or **panel** (a 3-agent `minerva:round-table`). Uncertainty moves a decision **up a tier** inside this run. It never stops the run to recommend a different orchestrator. The whole ladder lives here because the run cannot know in advance which decisions will turn out load-bearing (`2026-05-31-decision-per-decision-skip-over-sizing-gate`).
+This skill picks the adjudication **tier** each decision earns, one decision at a time. There are two tiers:
+
+- **solo** — the main model decides alone;
+- **reviewer** — one fresh-context Skeptic (or a Verifier at completion), arbitrated inline, plus one fold-audit re-check after a fold and, when that still cannot settle the decision, one Adjudicator.
+
+When the reviewer tier cannot settle a decision, it goes to the **user**. It never stops the run to recommend a different orchestrator. The whole ladder lives here because the run cannot know in advance which decisions will turn out load-bearing (`2026-05-31-decision-per-decision-skip-over-sizing-gate`).
+
+There is no multi-agent panel tier. The 3-agent consensus panel was removed in minerva 4.0.0: at matched compute, debate ties or loses to independent review, role-locked votes are not independent samples, and in this repo's own logs the panel's output was the fixes a single Skeptic also produces. The work unit `2026-11-19-remove-round-table-tier` holds the evidence.
 
 ## No whole-run sizing
 
@@ -16,13 +23,13 @@ Operational decisions (commit messages, PR bodies, file paths) take no tier. The
 
 ## Tier-selection order
 
-For a drafted decision, take the first step that applies, then clamp the result to the row's floor and ceiling in the [Decision taxonomy](#decision-taxonomy):
+For a drafted decision, take the first step that applies, then clamp the result to the row's floor in the [Decision taxonomy](#decision-taxonomy):
 
 1. **Hardcoded trigger → user.** In-flight collision, open-issue match at intake, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), global escalation counter at 3. See `references/governance.md`.
-2. **Panel predicate → panel.** Convene a panel if **any** clause holds, **or if you are unsure whether it holds** (except the interface clause — see below):
+2. **Scrutiny predicate → reviewer.** Route to the reviewer if **any** clause holds, **or if you are unsure whether it holds**, and name each clause that fired (or that you could not rule out) in the reviewer's CONTEXT:
    - **genuine ambiguity** — you enumerated ≥2 viable options and none is dominant on the stated criteria;
    - **high blast radius / irreversible** — hard to walk back, or a broad rather than bounded surface;
-   - **existing interface change** — the decision renames, removes or changes the behaviour of an **existing** public interface or cross-cutting contract that consumers **outside this work unit** already rely on. *Introducing* a new interface, package or tool surface is not this clause; it fails the solo predicate's "no new public interface" clause and lands at reviewer. A consumer added inside the same unit does not make an interface "existing";
+   - **existing interface change** — the decision renames, removes or changes the behaviour of an **existing** public interface or cross-cutting contract that consumers **outside this work unit** already rely on. *Introducing* a new interface, package or tool surface is not this clause; it fails the solo predicate's "no new public interface" clause and lands at reviewer anyway. A consumer added inside the same unit does not make an interface "existing";
    - **knowledge tension** — the decision would violate, or sits in tension with, a documented `.minerva/knowledge/` constraint.
 3. **Solo predicate → solo.** Decide alone **only if every** clause holds:
    - **additive / low blast radius** — the artifact adds rather than rewrites, with a bounded surface;
@@ -31,45 +38,28 @@ For a drafted decision, take the first step that applies, then clamp the result 
    - **no new public interface or cross-cutting contract**;
    - **no knowledge conflict**;
    - **(approach-bearing decisions only)** you actually **enumerated ≥2 viable approaches and one is strictly dominant**. This is an action check (did you enumerate), not a self-judgment that no alternative exists.
-4. **Otherwise → reviewer.** The default tier: a decision that is not provably small and not ambiguous or high-stakes.
+4. **Otherwise → reviewer.** The default tier: a decision that is not provably small.
 
-**Both predicates fail closed, in opposite directions — with one exception.** Doubt about a panel clause convenes the panel; doubt about a solo clause denies solo. A wrong escalation costs a dispatch; a wrong de-escalation is an unchecked call on a decision that deserved a second look.
+**Both predicates fail closed.** Doubt about a scrutiny clause routes to the reviewer and names the doubt; doubt about a solo clause denies solo. A wrong escalation costs a dispatch; a wrong de-escalation is an unchecked call on a decision that deserved a second look.
 
-The exception is **doubt about the existing-interface clause** at a **Skeptic gate** (scope, approach, whole-proposal): it routes to the **reviewer**, not the panel, and never to solo. Write your specific doubt ("does the reddit-ads tool rename break the README's documented calls?") into the Skeptic's CONTEXT; the Skeptic answers it in its `## Panel warranted?` section, and a named, evidenced clause you cannot rule out moves the decision up to a panel (see [Upward moves](#upward-moves)). The trade-off is deliberate: the interface clause's second look is an independent Skeptic seeded with your doubt rather than an automatic panel. The evidence was that this clause, on doubt and on new surfaces nobody consumed yet, convened most of auto's panels (9 of 11 predicate panels in the 2026-09-23..26 runs), while the other clauses fired rarely. Doubt about ambiguity, blast radius or knowledge tension still convenes a panel. The exception does not reach **completion**: there the reviewer is a Verifier, which has no `## Panel warranted?` section and no upward move, so doubt about whether the diff changes an existing interface beyond what the proposal approved still convenes the completion panel.
+**Naming the clause is what the scrutiny predicate buys.** Steps 2 and 4 both land on the reviewer, so on most rows the predicate's only effect is the brief: the Skeptic is told which clause put the decision under review ("existing interface change: does the reddit-ads tool rename break the README's documented calls?") and tests exactly that. On the default-solo rows below, the predicate is also what moves a decision from solo to reviewer.
 
-**A clause fires once per approved change.** A *surface* is the named thing consumers bind to: a server's tool set, a CLI's flags and output, an env-var contract, a skill's protocol file. Once a gate has adjudicated a panel clause for a surface **and approved that change** (at any tier), later gates in the run do not re-fire that clause for the same approved change. Every decision line's `(tier: …)` reason names the clause and surface it adjudicated, and that log is the record later gates check. This suppresses only re-firing on what was already approved. Inside a gate wave (`references/phases.md` Phase 1), an earlier gate's clause is still **pending** when later gates are routed. A later gate may route on it provisionally, but only if that gate is re-routed at the restart check whenever the earlier gate did not approve the change as drafted. A surface that raised no concern at an earlier gate is not exempt when one appears later, and completion convenes a panel on the interface clause only when the diff changes an interface or contract **beyond what the proposal approved**.
+**Row floors override step 3.** On a row floored at reviewer, a holding solo predicate still routes to reviewer.
 
-**Row ceilings override step 2 and row floors override step 3.** On a row capped at reviewer, a holding panel predicate routes to reviewer. On a row floored at reviewer, a holding solo predicate still routes to reviewer. On a row floored at panel, the decision is a panel whatever steps 2–4 say.
-
-**Triage, promote partition and TODO disposition do not run steps 3–4.** A disposition is a judgment call by nature, so the solo predicate's mechanical-evidence clause would never pass and every item would fall through to reviewer. These rows are **solo** unless the panel predicate holds, then **reviewer**. On them the clause that realistically fires is ambiguity — an item with two defensible dispositions and none dominant (FIX vs. SUGGEST on a finding, PROMOTE vs. DISCARD on an entry) — or knowledge tension, when a disposition would contradict an entry.
-
-## Upward moves
-
-A decision moves **up** a tier, never sideways to another skill:
-
-- **Reviewer → panel** when the reviewer's critique is load-bearing and the main model **cannot confidently adjudicate** it (the [anti-circularity escape](#arbitrating-a-skeptic-critique)).
-- **Reviewer → panel** when the [fold-audit re-check](#fold-audit-re-check) finds a load-bearing item not addressed, partially addressed or regressed, or a new load-bearing concern.
-- **Reviewer → panel** when the Skeptic's `## Panel warranted?` section names a panel clause with evidence and the main model **cannot rule it out** on the facts. A bare "yes" with no evidence is not an event. This event applies only on rows whose ceiling is panel, and only for a clause that was **not** already the reason the decision reached the reviewer. Capped rows (triage, partition, TODO) reach the reviewer *because* a panel clause holds, so the section is ignored there. When it fires, go up to the panel **immediately**, before arbitrating or folding the critique, and carry the critique into the panel's CONTEXT. No fold-audit runs; log `[reviewed — escalated]`.
-- **Panel → user** when the panel fails quorum after its one revision round (`minerva:round-table`'s escalation). This increments the global escalation counter.
-- **Capped rows go to the user instead.** On a row whose ceiling is reviewer (triage, partition, TODO), an upward move that would reach a panel goes to the **user**. The ceiling wins; these rows never convene a panel.
-
-The up-arm keys **only** on the three reviewer events above — the two that used to go straight to the user, plus an evidenced panel clause — never on a Skeptic `revise` as such. A Skeptic returns `revise` on most dispatches, and keying on it would turn every reviewer gate into a panel (`2026-09-05-decision-balanced-rechecks-its-folds`).
-
-**What a panel receives on an upward move.** ARTIFACT = the decision as it now stands (the revised decision after a fold). CONTEXT adds, as enumerated items beyond round-table's usual list, the original decision, the reviewer's critique verbatim, and the fold-audit disposition if one ran. The panel judges whether the current decision is sound given that history; it does not re-derive the decision from a blank page.
-
-**A change that grows mid-run needs no escape hatch.** Its later decisions fail the solo predicate and trip the panel predicate on blast radius. There is no "switch to another orchestrator" recommendation anywhere in this skill.
+**Triage, promote partition and TODO disposition do not run steps 3–4.** A disposition is a judgment call by nature, so the solo predicate's mechanical-evidence clause would never pass and every item would fall through to reviewer. These rows are **solo** unless the scrutiny predicate holds, then **reviewer**. On them the clause that realistically fires is ambiguity — an item with two defensible dispositions and none dominant (FIX vs. SUGGEST on a finding, PROMOTE vs. DISCARD on an entry) — or knowledge tension, when a disposition would contradict an entry.
 
 ## Reviewer tier
 
-### Skeptic gates
+### The ladder at a Skeptic gate
 
-At a Skeptic gate, after the decision is drafted and routed to reviewer:
+At every Skeptic gate — every row except completion — the reviewer tier is a short, fixed ladder. Each rung runs only when the one before it could not settle the decision:
 
-1. **Dispatch one reviewer.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Skeptic brief](#skeptic-brief). Pass only the gate's ARTIFACT + CONTEXT from `references/phases.md`, plus your specific doubt when the gate reached reviewer on doubt about the interface clause; dispatch parameters and model policy belong to the host adapter.
-2. **Arbitrate inline** — see [Arbitrating a Skeptic critique](#arbitrating-a-skeptic-critique).
-3. **After a fold, run the [fold-audit re-check](#fold-audit-re-check).** After a clean outcome, nothing more is dispatched.
+1. **Skeptic.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Skeptic brief](#skeptic-brief). Pass only the gate's ARTIFACT + CONTEXT from `references/phases.md`, plus every scrutiny clause that fired or that you could not rule out; dispatch parameters and model policy belong to the host adapter. Then [arbitrate the critique](#arbitrating-a-skeptic-critique) inline.
+2. **Fold-audit** — only after a fold. See [Fold-audit re-check](#fold-audit-re-check).
+3. **Adjudicator** — only after a failed fold-audit or the anti-circularity escape. See [Adjudicator](#adjudicator).
+4. **User** — only when the Adjudicator's rulings leave a disputed item `unresolved` (logged `[adjudicated — escalated]`). Ask with the user question operation, naming the gate, the disputed items by their `C<n>` / `F<n>` labels and each side's evidence. This increments the global escalation counter.
 
-**Budget: at most two dispatches per Skeptic gate** — the review, plus the re-check when and only when step 2 folded. Never a third reviewer. An upward move to a panel is a separate tier with its own budget.
+**Budget: at most three dispatches per Skeptic gate** — the Skeptic, the fold-audit when and only when step 1 folded, and the Adjudicator when and only when the decision could not otherwise be settled. Never a second Skeptic, never a second fold-audit, never a fourth reviewer.
 
 ### Arbitrating a Skeptic critique
 
@@ -80,15 +70,15 @@ The main model that drafted the decision also judges the critique, so "load-bear
 - (c) an overlooked scope surface or file;
 - (d) **[approach/scope gates]** a viable alternative that is **strictly dominant** on the stated criteria.
 
-Stylistic disagreement, or a re-weighting of tradeoffs the decision already considered with no new information, is **not** load-bearing.
+Stylistic disagreement, or a re-weighting of tradeoffs the decision already considered with no new information, is **not** load-bearing. A concern the Skeptic itself marked non-blocking is load-bearing only if it independently meets (a)–(d).
 
-- **Load-bearing → fold.** Revise the decision to address it. Log `[reviewed — folded]` with what was folded.
+- **Load-bearing → fold.** Revise the decision to address it. Log `[reviewed — folded]` with what was folded, then run the fold-audit.
 - **Not load-bearing → proceed.** Log `[reviewed — clean]`, recording any noted-but-dismissed concern so review/promote can audit the call.
-- **Anti-circularity escape → panel.** If folding would require a **materially different decision** and the main model **cannot confidently tell** whether the reviewer is right, move the decision up to a panel. Log `[reviewed — escalated]` naming where it went. Never self-confirm past a critique you cannot honestly adjudicate.
+- **Anti-circularity escape → Adjudicator.** If folding would require a **materially different decision** and the main model **cannot confidently tell** whether the Skeptic is right, do not fold and do not proceed. Send the disputed items to the Adjudicator. Log `[reviewed — escalated]` naming the items. Never self-confirm past a critique you cannot honestly adjudicate.
 
 ### Fold-audit re-check
 
-**Trigger.** Step 2 logged `[reviewed — folded]` at a Skeptic gate.
+**Trigger.** Step 1 logged `[reviewed — folded]` at a Skeptic gate.
 
 **Dispatch.** Write the revised decision down first. Then dispatch one more fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Fold-audit brief](#fold-audit-brief). ARTIFACT = the original decision as first written, the Skeptic's critique **verbatim**, and the revised decision; CONTEXT = exactly the CONTEXT the gate gave the Skeptic. It must not be the same agent and must not see the main model's arbitration reasoning.
 
@@ -96,44 +86,59 @@ Stylistic disagreement, or a re-weighting of tradeoffs the decision already cons
 
 - `accept` → proceed. Log `[rechecked — clean]`.
 - `partially` on an item whose residual is **not** load-bearing → fold the residual, proceed. Log `[rechecked — residual folded]`, naming the residual.
-- Anything else — a load-bearing item `partially`, `not addressed` or `regressed`, or a load-bearing item under `## New concerns` → **move up to a panel** (on a capped row, to the user). Log `[rechecked — escalated]` naming where it went. The main model may not decide the re-check is mistaken and proceed, and there is no third reviewer.
+- Anything else — a load-bearing item `partially`, `not addressed` or `regressed`, or a load-bearing item under `## New concerns` → **send those items to the Adjudicator**. Log `[rechecked — escalated]` naming them. The main model may not decide the re-check is mistaken and proceed.
 
 The per-item `## Disposition` lines govern; the `## Verdict` line summarises them. If they disagree, the dispositions win.
 
+### Adjudicator
+
+The Adjudicator is the last independent look before the user. It is deliberately narrow: it **rules on the disputed items and nothing else**. It does not re-review the decision and it raises no new concerns. A fresh critic over a revised decision re-critiques from a blank page, and its new concerns cannot be told apart from the first review's (`2026-09-05-decision-balanced-rechecks-its-folds` rejected exactly that). An Adjudicator that may only rule on named items cannot do that.
+
+**Dispatch.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Adjudicator brief](#adjudicator-brief). It is never the Skeptic or the fold-audit agent, and it never sees the main model's arbitration reasoning. ARTIFACT = the original decision, the Skeptic's critique **verbatim**, the revised decision and the fold-audit's output verbatim when a fold happened, and the **disputed items** by label — `C<n>` for the Skeptic's critique item *n*, `F<n>` for the fold-audit's new concern *n* (the two lists are numbered separately, so a bare number is ambiguous); CONTEXT = the gate's CONTEXT.
+
+The disputed items are the load-bearing items the fold-audit did not accept, or, on the anti-circularity escape, the critique items the main model could not adjudicate.
+
+**Arbitration is strict:**
+
+- Every disputed item `resolved` or `critique mistaken` → proceed with the decision as it stands (the revised decision after a fold, the original decision on the escape path). Log `[adjudicated — proceed]`.
+- Any disputed item `unresolved` → go to the **user**. Log `[adjudicated — escalated]`. This includes the escape path when the Adjudicator rules the Skeptic right: adopting a materially different decision with the gate's budget spent would ship a rewrite nobody audited, so the user decides.
+
+The per-item rulings decide the outcome; the verdict line only summarises them. If they disagree, the rulings win, so a `proceed` verdict over an `unresolved` item still goes to the user and an `escalate` verdict over all-settled items still proceeds. A ruling with no evidence counts as `unresolved`, and so does a disputed item the Adjudicator returned no ruling for.
+
 ### The Verifier gate (completion) is asymmetric
 
-Completion verification uses a **Verifier**, not a Skeptic, and it is deliberately different (`2026-09-05-decision-balanced-rechecks-its-folds`): **one dispatch, no fold-audit re-check, no anti-circularity escape**. Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Verifier brief](#verifier-brief). A Verifier `revise`/`reject` that names an unmet criterion is a success-criteria divergence: go to Phase 2.5 (replan), whose new-plan acceptance has a panel floor. That loop is the Verifier's re-check. The two-dispatch Skeptic budget and the upward moves above do **not** apply here. When the panel predicate holds at completion, completion is a panel instead. On the interface clause that means the diff changes an interface or contract **beyond what the proposal approved**; an interface the proposal's gates already adjudicated and approved does not re-fire here ([a clause fires once per approved change](#tier-selection-order)).
+Completion verification uses a **Verifier**, not a Skeptic, and it is deliberately different (`2026-09-05-decision-balanced-rechecks-its-folds`): **one dispatch, no fold-audit re-check, no Adjudicator, no anti-circularity escape**. Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Verifier brief](#verifier-brief). A Verifier `revise`/`reject` that names an unmet criterion is a success-criteria divergence: go to Phase 2.5 (replan), whose new-plan acceptance is itself a Skeptic gate. That loop is the Verifier's re-check. The Skeptic ladder above does **not** apply here. Completion is always a Verifier, whatever the scrutiny predicate says. Its value is independent *reproduction* of each criterion against the diff, which is exactly the execution-grounded check the evidence supports most strongly.
 
 ### Skeptic brief
 
-Adapted from `skills/round-table/references/briefs.md`. It keeps three verdicts on purpose: there is no quorum to protect at the reviewer tier, and the main model already arbitrates each critique item as load-bearing or not, which is the distinction a panel's `accept with fixes` draws.
+The Skeptic keeps three verdicts. The main model already arbitrates each critique item as load-bearing or not, so there is nothing a fourth verdict would add.
 
 ```
 YOUR ROLE: You are an independent Skeptic reviewing the decision in the ARTIFACT
-above. You have fresh context and did not make this decision. Surface every
-load-bearing risk, ambiguity, divergence from convention, missing piece, or
-unstated assumption — especially an overlooked alternative, a violated
-constraint, or a scope/dependency the decision missed. Be specific; cite the
-part of the ARTIFACT you are critiquing.
+above. You have fresh context and did not make this decision. Look for
+load-bearing problems: an overlooked alternative, a violated constraint or
+success criterion, a scope surface or dependency the decision missed, an
+unstated assumption it relies on.
 
-Render a final verdict of accept / revise / reject. Your job is to find
-problems, but the verdict must reflect whether the problems are actually
-load-bearing — nitpicks that do not block soundness should be 'accept' with
-the concerns listed.
+Every concern must cite its evidence: the part of the ARTIFACT, or the file and
+line in the repo, that shows the problem. A concern you cannot point at is not a
+concern. Mark each one blocking (the decision is unsound unless it changes) or
+non-blocking (worth fixing, but the decision stands). "No concerns" is a valid
+and expected answer for a sound decision; do not invent problems to have
+something to report.
 
-Then say whether this decision needed a full panel instead of one reviewer. A
-panel is warranted only if one of these holds: genuine ambiguity (≥2 viable
-options, none dominant); high blast radius or irreversibility; a change to an
-EXISTING public interface or cross-cutting contract that consumers outside this
-work unit rely on (introducing a new one does not count); or tension with a
-documented knowledge constraint. If CONTEXT carries the author's doubt about one
-of these, answer that doubt directly.
+If CONTEXT names a scrutiny clause (ambiguity, blast radius, existing interface
+change, knowledge tension), test that clause directly and say whether it holds.
+
+Render a final verdict of accept / revise / reject. The verdict must reflect
+whether the blocking concerns are real: non-blocking concerns alone are 'accept'
+with the concerns listed.
 
 Output format:
 ## Critique
-<numbered concerns, each with severity high/medium/low>
-## Panel warranted?
-<no | yes — <clause>: <evidence from the ARTIFACT or repo>>
+<numbered concerns, each: blocking | non-blocking — severity high/medium/low — evidence — the concern; or "none">
+## Scrutiny clause
+<for each clause named in CONTEXT: holds | does not hold — <evidence>; or "none named">
 ## Verdict
 <accept | revise | reject>: <one-sentence reason>
 ```
@@ -164,68 +169,86 @@ Output format:
 <accept | revise>: <one-sentence reason>
 ```
 
+### Adjudicator brief
+
+```
+YOUR ROLE: You are an independent Adjudicator. The ARTIFACT above holds a
+decision, a Skeptic's numbered CRITIQUE of it, and — when the decision was
+revised — the REVISED decision and a fold-audit of that revision. It ends with
+the DISPUTED ITEMS: the critique or fold-audit items nobody has been able to
+settle, each labelled C<n> (critique item n) or F<n> (the fold-audit's new
+concern n). You did not write any of it and have not seen anyone's reasoning about
+it.
+
+Rule on each disputed item, and only on those. For each, read the decision as it
+now stands and the repo, then decide:
+- resolved — the decision as it stands already deals with the concern;
+- unresolved — the concern is real and the decision as it stands does not deal
+  with it;
+- critique mistaken — the concern is wrong on the facts.
+Cite the evidence for each ruling: the part of the ARTIFACT, or the file and
+line. A ruling without evidence counts as unresolved.
+
+Do not raise new concerns, do not review anything outside the disputed items,
+and do not propose a different decision.
+
+Output format:
+## Rulings
+<one line per disputed item, by its label: `C<n>|F<n>. resolved | unresolved | critique mistaken — <evidence>`>
+## Verdict
+<proceed | escalate>: <one-sentence reason>; proceed only if no item is unresolved
+```
+
 ### Verifier brief
 
 - **ARTIFACT:** the success-criteria checklist (each criterion + the main model's *claimed* evidence + its yes/no), `git diff <default-branch>...HEAD`, and the proposal's `## Success criteria`.
-- **Task:** for **each** criterion, independently determine whether it is honestly met. Do not trust the claimed evidence — reproduce it: read the named files; where a criterion names a test or an anchor, run a **read-only** command or `grep` to confirm the diff contains or passes it. Actively try to falsify "done": a criterion with no corresponding diff, a partial implementation, a claim the code does not support.
+- **Task:** for **each** criterion, independently determine whether it is honestly met. Do not trust the claimed evidence — reproduce it: read the named files; where a criterion names a test or an anchor, run a **read-only** command or `grep` to confirm the diff contains or passes it. Actively try to falsify "done": a criterion with no corresponding diff, a partial implementation, a claim the code does not support. Also check that the diff does not change an **existing** interface or contract beyond what the proposal approved; if it does, report that as an unmet criterion.
 - **Output:** per criterion, `{met: yes | no | unsure, evidence-or-gap: <one line>}`, then `accept` (all honestly met) / `revise` (gaps to close) / `reject`.
-
-## Panel tier
-
-The panel mechanics — dispatch, the Proponent/Skeptic/Arbiter briefs, vote semantics including `accept with fixes`, the revision round and escalation composition — live in `minerva:round-table`. When the run's first panel arrives, invoke `minerva:round-table` via the skill loader in caller mode, leading with:
-
-> "You are running inside `minerva:propose-ship-auto`. Apply your protocol in caller mode for every panel of this run: each decision's artifact and decision context come from the orchestrator, and its quorum comes from the orchestrator's decision taxonomy (3/3 or 2/3 — never your standalone default). Log every panel line to the work unit's `scratchpad.md` under the `## Decisions YYYY-MM-DD` header, prefixing the vote tag with `panel — `."
-
-Once loaded, apply it at each later panel **without re-invoking the skill loader**; re-invoke only if the protocol is no longer in context (for example after compaction).
-
-Orchestrator-owned rules that round-table does not own: **whether to convene** (this file's tier selection), **quorums** (the taxonomy below), **escalation aftermath** (this skill increments the global escalation counter after a panel escalation), and the **per-decision budget** in `references/governance.md`.
 
 ## Parked dispatches
 
-A reviewer or panel dispatch may come back as a background handle regardless of the synchronous pin (`2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch`). Every tier survives that: dispatch, end the turn if the result is not back, resume on the completion notification, then arbitrate. **Never drop a tier to avoid a park** — a parked run is recoverable; an unreviewed decision is not.
+A reviewer dispatch may come back as a background handle regardless of the synchronous pin (`2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch`). Every rung survives that: dispatch, end the turn if the result is not back, resume on the completion notification, then arbitrate. **Never skip a rung to avoid a park** — a parked run is recoverable; an unreviewed decision is not.
 
-**Waves park the same way, several handles at once.** When independent decisions are dispatched together (the propose gate wave, completion alongside code review — `references/phases.md`), several handles can be outstanding. Resume on each notification and act on what that result unblocks — a panel's Arbiter goes out as soon as its own Proponent and Skeptic are back. Reconcile the wave only once every result it waits on is in. A parked handle is never a verdict, and a wave never reconciles on a partial set.
+**Waves park the same way, several handles at once.** When independent decisions are dispatched together (the propose gate wave, completion alongside code review — `references/phases.md`), several handles can be outstanding. Resume on each notification and act on what that result unblocks — a gate's fold-audit goes out as soon as its own fold is written, never held for a joint batch (whole-proposal's only after the restart check, `references/phases.md` Phase 1 (d)). Reconcile the wave only once every result it waits on is in. A parked handle is never a verdict, and a wave never reconciles on a partial set.
 
 ## No ceremony ratification
 
-Never ask the user — up front or mid-run — to pick a tier, a "ceremony level", or to pre-authorize skipping reviews or panels that have not yet run and failed. The per-decision tier selection is the **only** de-ceremony mechanism. User interaction happens only at the hardcoded triggers and at genuine escalations (`2026-05-31-decision-per-decision-skip-over-sizing-gate`).
+Never ask the user — up front or mid-run — to pick a tier, a "ceremony level", or to pre-authorize skipping reviews that have not yet run and failed. The per-decision tier selection is the **only** de-ceremony mechanism. User interaction happens only at the hardcoded triggers and at genuine escalations (`2026-05-31-decision-per-decision-skip-over-sizing-gate`).
 
-- **Escalation batching stays legitimate.** A panel that failed quorum twice escalates with a focused, batched question.
+- **Escalation batching stays legitimate.** An Adjudicator escalation asks one focused, batched question covering every unresolved item at that gate.
 - **Memories never lower a tier.** Stored preferences and prior-session feedback never satisfy the solo predicate or substitute for its per-decision evidence.
-- **Unsolicited user directives are honored, never solicited.** If the user spontaneously tells you to skip reviews or panels, honor it and log each affected decision as `[user-directed]`. Never prompt for such a directive.
+- **Unsolicited user directives are honored, never solicited.** If the user spontaneously tells you to skip reviews, honor it and log each affected decision as `[user-directed]`. Never prompt for such a directive.
 
 ## Per-decision logging
 
 After every decision, append one line to the work unit's `scratchpad.md` under a `## Decisions YYYY-MM-DD` header. Append **inside that block**, not at the end of the file: a line under a later header (`## Work notes`, `## Review triage`) is invisible to `scripts/decision_telemetry.py`. Each line starts with its tier and outcome and ends with why that tier was chosen:
 
 ```
-## Decisions 2026-09-23
+## Decisions 2026-11-19
 - [solo] scope check: single unit (tier: solo predicate — only SKILL.md touched, additive, no interface)
-- [reviewed — clean] approach: option B (tier: reviewer — not provably small; Skeptic flagged nothing load-bearing)
+- [reviewed — clean] approach: option B (tier: reviewer — not provably small; Skeptic flagged nothing blocking)
 - [reviewed — folded] whole-proposal: criterion 4 unsatisfiable under the lifecycle's own writes; reworded (tier: reviewer)
-- [rechecked — clean] whole-proposal: fold-audit confirmed items 1–3 addressed
+- [rechecked — clean] whole-proposal: fold-audit confirmed C1–C3 addressed
 - [reviewed — folded] approach: Skeptic surfaced a dominant alternative C — switched to C (tier: reviewer)
-- [rechecked — residual folded] approach: item 2 partially addressed (example still named the old field) — folded
-- [reviewed — folded] scope check: README surface missing (tier: reviewer)
-- [rechecked — escalated] scope check: item 1 not addressed → panel
-- [panel — 3/3 accept, 1 with fixes] scope check: include README (tier: panel — fold-audit escalation)
-- [panel — 2/3 accept, skeptic dissented] approach: option B (tier: panel — existing interface change)
-- [reviewed — escalated] whole-proposal: Skeptic says criterion 3 is untestable; cannot adjudicate → panel (tier: reviewer)
-- [panel — 3/3 accept] whole-proposal: criterion 3 reworded (tier: panel — anti-circularity escape)
+- [rechecked — residual folded] approach: C2 partially addressed (example still named the old field) — folded
+- [reviewed — folded] scope check: README surface missing (tier: reviewer — scrutiny: existing interface change)
+- [rechecked — escalated] scope check: C1 not addressed → Adjudicator
+- [adjudicated — proceed] scope check: C1 resolved — README section already covered by the revised scope
+- [reviewed — escalated] whole-proposal: C3 says criterion 3 is untestable; cannot adjudicate → Adjudicator (tier: reviewer)
+- [adjudicated — escalated] whole-proposal: C3 unresolved — no test can observe the criterion → user
+- [escalated to user] whole-proposal: C3 — user reworded it to a grep-checkable form
 - [reviewed — clean] approach: option A, new mcp/gsc tool surface (tier: reviewer — introduces an interface, no existing consumer; parallel wave)
-- [reviewed — escalated] approach: Panel warranted? named existing-interface change — renames tools the README documents; cannot rule out → panel (tier: reviewer — interface-clause doubt passed to the Skeptic)
 - [reviewed — clean] whole-proposal (restart): re-reviewed after the approach pick changed B → C (tier: reviewer; parallel wave restart)
 - [solo] review triage: 3 FIX / 1 SUGGEST / 0 IGNORE (tier: default-solo row — no item had two defensible dispositions)
 - [reviewed — clean] completion verification: Verifier reproduced all 5 criteria (tier: reviewer floor)
-- [escalated to user] approach: panel split 1/3 twice — user picked option B
 - [user-directed] review triage: user asked to skip the reviewer
 ```
 
 - `[solo]` — on a row that could have gone higher, record the **concrete evidence** that satisfied the solo predicate, so review/promote can audit that it was honest. On a default-solo row (triage, partition, TODO), record the disposition counts and why no item met the ambiguity clause. Approach decisions also record the rejected alternatives.
-- `[reviewed — clean]` / `[reviewed — folded]` — a reviewer gate; record what the reviewer flagged and whether it was folded.
-- `[reviewed — escalated]` — the anti-circularity escape, or an evidenced `## Panel warranted?` clause; name which, and where the decision went (panel, or user on a capped row). The panel's own line follows it.
-- `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check, written **immediately after** its `[reviewed — folded]` line and naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` names where the decision went (panel, or user on a capped row).
-- `[panel — …]` — round-table's vote line, **prefixed `panel — `** so the tier is explicit (round-table's own standalone format is the bare `[3/3 accept]`; telemetry reads either under this header). A vote counted from `accept with fixes` renders as `, N with fixes`, each folded fix on an indented line beneath.
+- `[reviewed — clean]` / `[reviewed — folded]` — a Skeptic or Verifier gate; record what the reviewer flagged, whether it was folded, and the scrutiny clause that fired, if any.
+- `[reviewed — escalated]` — the anti-circularity escape; name the disputed items by their `C<n>` labels. Its `[adjudicated — …]` line follows it.
+- `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check, written **immediately after** its `[reviewed — folded]` line and naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` names the items sent to the Adjudicator by their `C<n>` / `F<n>` labels; its `[adjudicated — …]` line follows it.
+- `[adjudicated — proceed]` / `[adjudicated — escalated]` — the Adjudicator, written **immediately after** the `[reviewed — escalated]` or `[rechecked — escalated]` line that sent the decision there, naming the same gate. An `[adjudicated — escalated]` line is followed by the `[escalated to user]` line.
 - `[escalated to user]` — what was asked and the answer.
 - `[user-directed]` — an unsolicited user directive; the directive is the justification.
 
@@ -233,28 +256,33 @@ These are scratchpad data. `minerva:promote` treats them as routine noise unless
 
 ## Re-measure
 
-The up-arm's trigger rate is a prediction, not a measurement: the anti-circularity escape fired 0 times in 13 balanced runs, and fold-audit escalations have a few weeks of history. `scripts/decision_telemetry.py` tallies tier × gate × outcome. Once ~10 runs have logged, revisit this taxonomy via `minerva:replan` — including how often a `## Panel warranted?` escalation fires, and whether a reviewer at the narrowed interface clause let through something a later gate or review had to fix, and whether the propose-phase abort (`references/governance.md`) has gone inert now that most escalations pass through a panel first; if it has, re-key it rather than leave dead text.
+The Adjudicator's trigger rate is a prediction, not a measurement. In the panel era, only 3 decisions moved up from a reviewer (all failed fold-audits on whole-proposal) and the anti-circularity escape never fired, so the Adjudicator should rarely run and the user should rarely be asked. `scripts/decision_telemetry.py` tallies tier × gate × outcome. Once ~10 runs have logged under this protocol, revisit it via `minerva:replan`:
+
+- How often the Adjudicator runs, and how often it escalates.
+- Whether the user-escalation rate rose against the panel era. If it did, look at what the escalations asked before adding any tier back.
+- Whether a reviewer gate on a former always-panel row (divergence, new-plan acceptance, replan-vs-FIX) let through something a later gate or review had to fix.
+- Whether the propose-phase abort (`references/governance.md`) has gone inert; if it has, re-key it rather than leave dead text.
 
 ## Decision taxonomy
 
-Default = the tier when no predicate fires. Floor and ceiling clamp whatever the [tier-selection order](#tier-selection-order) picks. Quorum applies when the decision reaches a panel.
+Default = the tier when no predicate fires. The floor clamps whatever the [tier-selection order](#tier-selection-order) picks. Every reviewer row other than completion uses the Skeptic ladder.
 
-| Phase | Decision | Default | Floor | Ceiling | Reviewer brief | Panel quorum |
-|---|---|---|---|---|---|---|
-| Pre-flight | In-flight work collision | Hardcoded user escalation | — | — | — | — |
-| Propose | Open-issue match at intake | Hardcoded user escalation on a match | — | — | — | — |
-| Propose | Scope check (one PR / phases / decompose) | reviewer | solo | panel | Skeptic | 3/3 |
-| Propose | Approach selection | reviewer | solo | panel | Skeptic | 3/3 |
-| Propose | Whole-proposal soundness | reviewer | solo | panel | Skeptic | 3/3 |
-| Work | Mid-work load-bearing divergence | panel | **panel** | panel | — | 2/3 |
-| Replan | New-plan acceptance | panel | **panel** | panel | — | 3/3 |
-| Work | Completion verification | reviewer | **reviewer** | panel | **Verifier** (asymmetric) | 3/3 — with a deliberate exception: 2/3 proceeds with dissent logged, ≤1/3 replans (`references/phases.md`) |
-| Review | Per-finding triage | solo | solo | **reviewer** | Skeptic | — |
-| Review | Replan-vs-FIX | panel | **panel** | panel | — | 2/3 |
-| Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | solo | solo | **reviewer** | Skeptic | — |
-| Promote | TODO disposition | solo | solo | **reviewer** | Skeptic | — |
-| Ship | Commit message / PR title + body | Operational — main model accepts draft | — | — | — | — |
-| Ship | CI auto-fix `other` bail | Hardcoded user escalation | — | — | — | — |
-| Cleanup gate | PR state polling + cleanup | No decision | — | — | — | — |
+| Phase | Decision | Default | Floor | Reviewer brief |
+|---|---|---|---|---|
+| Pre-flight | In-flight work collision | Hardcoded user escalation | — | — |
+| Propose | Open-issue match at intake | Hardcoded user escalation on a match | — | — |
+| Propose | Scope check (one PR / phases / decompose) | reviewer | solo | Skeptic |
+| Propose | Approach selection | reviewer | solo | Skeptic |
+| Propose | Whole-proposal soundness | reviewer | solo | Skeptic |
+| Work | Mid-work load-bearing divergence | reviewer | **reviewer** | Skeptic |
+| Replan | New-plan acceptance | reviewer | **reviewer** | Skeptic |
+| Work | Completion verification | reviewer | **reviewer** | **Verifier** (asymmetric) |
+| Review | Per-finding triage | solo | solo | Skeptic |
+| Review | Replan-vs-FIX | reviewer | **reviewer** | Skeptic |
+| Promote | Four-way partition (PROMOTE/MERGE/DISCARD/TODO) | solo | solo | Skeptic |
+| Promote | TODO disposition | solo | solo | Skeptic |
+| Ship | Commit message / PR title + body | Operational — main model accepts draft | — | — |
+| Ship | CI auto-fix `other` bail | Hardcoded user escalation | — | — |
+| Cleanup gate | PR state polling + cleanup | No decision | — | — |
 
-**Why these floors.** Divergence, new-plan acceptance and replan-vs-FIX keep auto's always-panel floor: their precondition is an already-surfaced load-bearing divergence or finding, they fire rarely, and there is no evidence for lowering them. Completion is the one never-skipped row lowered to a reviewer floor, on evidence: 0 of 18 auto completion panels went to a revision round, and its value is independent *reproduction* of each criterion, which one Verifier does (`2026-06-29-decision-propose-ship-balanced-single-reviewer`). Scope, approach and whole-proposal run the full ladder: the revision rates that justify reviewing them (approach 17/25, whole-proposal 13/27, scope 7/22 auto panels) were measured on panels that had **already failed** the solo predicate, which is exactly where this table sends a reviewer. None of these floors or ceilings changed when the interface clause was narrowed to **existing** interfaces (2026-09-26). That change only moves which decisions reach a panel from the reviewer default. In the six runs before it, approach, whole-proposal and completion each went to a panel in 5 of 6 runs, mostly on new, not-yet-consumed tool surfaces and on the same approved interface re-firing at completion.
+**Why these floors.** Divergence, new-plan acceptance and replan-vs-FIX were always panels until 4.0.0. They keep a reviewer floor, never solo, because their precondition is an already-surfaced load-bearing divergence or finding, and they fire rarely. Completion keeps its Verifier floor on evidence: 0 of 18 completion panels ever went to a revision round, and its value is independent *reproduction* of each criterion (`2026-06-29-decision-propose-ship-balanced-single-reviewer`). Scope, approach and whole-proposal run the full ladder: the revision rates that justify reviewing them (approach 17/25, whole-proposal 13/27, scope 7/22 panels) were measured on decisions that had **already failed** the solo predicate, which is exactly where this table sends a reviewer.

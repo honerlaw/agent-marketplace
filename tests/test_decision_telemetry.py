@@ -43,8 +43,17 @@ SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 # (skill file carrying the fenced logging example, the orchestrator its lines belong to)
 LOGGING_EXAMPLES = {
     "propose-ship-auto/references/decision-protocol.md": "Auto",
-    "round-table/SKILL.md": "Panel",
 }
+
+# The retired `minerva:round-table` skill's fenced logging example, copied verbatim when the skill
+# was deleted in minerva 4.0.0. No skill writes these lines any more, but archived scratchpads hold
+# them, so the legacy Panel vocabulary must keep classifying.
+LEGACY_ROUND_TABLE_EXAMPLE = """## Panel decisions 2026-09-01
+- [3/3 accept] scope check: single unit
+- [3/3 accept, 1 with fixes] whole-proposal: accepted
+- [2/3 accept, skeptic dissented] approach selection: option B (concerns logged: race risk in step 4)
+- [escalated to user] success criteria verification: panel split 1/3 on whether criterion #2 is met
+"""
 
 BALANCED = """# Scratchpad: x
 
@@ -158,13 +167,128 @@ def test_every_documented_tag_classifies(rel, orch):
 
 
 def test_auto_examples_document_every_tier_and_recheck_outcome():
-    """The fold-audit vocabulary is three tags and there are three tiers; the skill's own
-    example must show all of them, or the vocabulary test above passes without ever
-    exercising them."""
+    """The fold-audit vocabulary is three tags, the Adjudicator's two, and there are two tiers;
+    the skill's own example must show all of them, or the vocabulary test above passes without
+    ever exercising them. Since minerva 4.0.0 the example must show no panel line."""
     text = (SKILLS_DIR / "propose-ship-auto/references/decision-protocol.md").read_text()
     tags = {classify_tag("Auto", tag) for tag in _fenced_decision_tags(text)}
     assert {"rechecked-clean", "rechecked-residual-folded", "rechecked-escalated"} <= tags
-    assert {tier_of(o) for o in tags} >= {"solo", "reviewer", "panel"}
+    assert {"adjudicated-proceed", "adjudicated-escalated"} <= tags
+    assert {tier_of(o) for o in tags} >= {"solo", "reviewer"}
+    assert "panel" not in {tier_of(o) for o in tags}
+
+
+def test_auto_example_pairs_every_adjudication():
+    """Every `[adjudicated — …]` line in the skill's example follows the escalation that sent
+    the decision there, so the documented log is itself problem-free."""
+    text = (SKILLS_DIR / "propose-ship-auto/references/decision-protocol.md").read_text()
+    fence = re.search(r"```\n(## Decisions .*?)```", text, re.S)
+    assert fence, "no fenced ## Decisions example"
+    recs = parse_scratchpad(fence.group(1), "u", "p")
+    assert any(r.outcome in ("adjudicated-proceed", "adjudicated-escalated") for r in recs)
+    assert not problems(recs), problems(recs)
+
+
+def test_closed_vocabulary_tag_under_a_legacy_panel_header_classifies():
+    """The 2026-09-23 transition run wrote `[reviewed — clean]` under `## Panel decisions`."""
+    text = "## Panel decisions 2026-09-23\n- [reviewed — clean] completion verification: Verifier ok\n"
+    (rec,) = parse_scratchpad(text, "u", "p")
+    assert rec.outcome == "reviewed-clean" and not rec.problems
+
+
+def test_legacy_round_table_lines_still_classify():
+    """The retired round-table skill's own example, as archived scratchpads hold it."""
+    recs = parse_scratchpad(LEGACY_ROUND_TABLE_EXAMPLE, "u", "p")
+    assert [r.orchestrator for r in recs] == ["Panel"] * 4
+    assert [r.outcome for r in recs] == ["panel-accept", "panel-accept", "panel-accept", "escalated"]
+    assert not problems(recs), problems(recs)
+
+
+def test_adjudicated_tags_classify_and_sit_in_the_reviewer_tier():
+    assert classify_tag("Auto", "adjudicated — proceed") == "adjudicated-proceed"
+    assert classify_tag("Auto", "adjudicated — escalated") == "adjudicated-escalated"
+    assert tier_of("adjudicated-proceed") == tier_of("adjudicated-escalated") == "reviewer"
+
+
+ADJUDICATED = """## Decisions 2026-11-19
+- [reviewed — folded] scope check: README missing (tier: reviewer)
+- [rechecked — escalated] scope check: item 1 not addressed → Adjudicator
+- [adjudicated — proceed] scope check: item 1 resolved
+- [reviewed — escalated] approach: cannot adjudicate item 2 → Adjudicator
+- [adjudicated — escalated] approach: item 2 unresolved → user
+- [escalated to user] approach: user picked B
+- [adjudicated — proceed] whole-proposal: orphan, nothing escalated before it
+"""
+
+
+def test_render_counts_adjudications():
+    out = render(parse_scratchpad(ADJUDICATED, "u", "p"))
+    assert "  adjudications: adjudicated-escalated 1, adjudicated-proceed 2" in out
+
+
+def test_an_escalation_with_no_adjudication_after_it_is_a_skipped_rung():
+    text = ("## Decisions 2026-11-20\n"
+            "- [reviewed — folded] scope check: README missing\n"
+            "- [rechecked — escalated] scope check: item 1 not addressed\n"
+            "- [escalated to user] scope check: asked directly, Adjudicator skipped\n")
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 1 and "skipped rung" in probs[0] and ":3:" in probs[0]
+
+
+@pytest.mark.parametrize("lines,where", [
+    # [reviewed — escalated] (the anti-circularity escape) followed by something else.
+    (["- [reviewed — escalated] approach: C2 cannot adjudicate",
+      "- [solo] review triage: 1 FIX"], ":2:"),
+    # The escalation is the last line of its section.
+    (["- [reviewed — folded] scope check: README missing",
+      "- [rechecked — escalated] scope check: C1 not addressed"], ":3:"),
+])
+def test_other_skipped_rung_shapes(lines, where):
+    text = "## Decisions 2026-11-20\n" + "\n".join(lines) + "\n"
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 1 and "skipped rung" in probs[0] and where in probs[0], probs
+
+
+def test_an_adjudication_for_another_gate_is_both_a_skipped_rung_and_an_orphan():
+    text = ("## Decisions 2026-11-20\n"
+            "- [reviewed — escalated] approach: C1 cannot adjudicate\n"
+            "- [adjudicated — proceed] scope check: C1 resolved\n")
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 2
+    assert any("skipped rung" in p and ":2:" in p for p in probs)
+    assert any("orphan adjudication" in p and ":3:" in p for p in probs)
+
+
+def test_a_3x_project_logging_panels_after_the_cutover_is_not_flagged():
+    """The log records no plugin version, so a panel line counts as the next rung."""
+    text = ("## Decisions 2026-12-01\n"
+            "- [reviewed — folded] approach: B → C\n"
+            "- [rechecked — escalated] approach: item 1 → panel\n"
+            "- [panel — 3/3 accept] approach: C\n")
+    assert not problems(parse_scratchpad(text, "u", "p"))
+
+
+def test_reviewer_escalation_under_a_legacy_panel_header_is_not_a_user_escalation():
+    assert classify_tag("Panel", "rechecked — escalated") == "rechecked-escalated"
+    assert classify_tag("Panel", "escalated to user") == "escalated"
+    assert classify_tag("Panel", "2/3 accept → revise → 3/3 accept") == "panel-revised"
+
+
+def test_panel_era_escalations_are_not_skipped_rungs():
+    """Before 4.0.0 the rung after an escalation was a panel; archived logs must stay clean."""
+    text = ("## Decisions 2026-09-23\n"
+            "- [reviewed — folded] approach: B → C\n"
+            "- [rechecked — escalated] approach: item 1 not addressed → panel\n"
+            "- [panel — 3/3 accept] approach: C\n")
+    assert not problems(parse_scratchpad(text, "u", "p"))
+
+
+def test_adjudications_pair_with_the_escalation_before_them():
+    recs = parse_scratchpad(ADJUDICATED, "u", "p")
+    adj = [r for r in recs if r.outcome.startswith("adjudicated")]
+    assert [r.paired_with_lineno for r in adj] == [3, 5, None]
+    probs = problems(recs)
+    assert len(probs) == 1 and "orphan adjudication" in probs[0] and ":8:" in probs[0]
 
 
 AUTO = """# Scratchpad: x

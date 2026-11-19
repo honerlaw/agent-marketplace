@@ -32,7 +32,6 @@ SCENARIOS = {
     "merged-cleanup": ("Use minerva:cleanup 2026-09-12-fixture --yes. The work PR is already merged and the scratchpad promoted. Remove only its merged worktree, and preserve the proposal and the knowledge entry it shipped. Local commits/pushes/fixture PRs/merge and cleanup are approved.", True),
     "cancelled-ci": ("Use minerva:ship 2026-09-12-fixture --watch-iteration=3 --auto=propose-ship-auto. Checks are cancelled: checkpoint blocked, report recovery, do not begin another fix, merge, or mark CI green. All prior fix attempts were consumed.", False),
     "exhausted-cleanup": ("Use minerva:propose-ship-auto --cleanup-only 2026-09-12-fixture --retry=12. The work PR is still open with auto-merge enabled. The saved deadline has expired. Report exhaustion and manual recovery without scheduling or deleting the worktree. Do not reset the saved budgets.", False),
-    "panel": ("Use minerva:round-table to decide whether calculator.add should return a+b, supported by the supplied test. Convene its independent panel and report the vote. Do not modify any files.", False),
     "review": ("Use minerva:review to review the current calculator implementation and test as a local changeset. Report findings and suggest dispositions, but do not apply fixes or write triage files without further approval.", False),
     "manual-resume": ("Use minerva:ship to resume the already-open fixture PR, --watch-iteration=2 --auto=propose-ship-auto. CI is pending. Scheduling is unavailable; checkpoint progress and return pending with an exact Codex/Claude resume prompt. Do not fix, merge, or claim a wake is scheduled.", False),
 }
@@ -306,7 +305,7 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
     if result.returncode:
         raise ValueError(f"{host} failed ({result.returncode}); artifacts: {directory}; {result.stderr[-500:]}")
     final, dispatches = transcript_output(host, result.stdout)
-    if host == "codex" and scenario in {"panel", "review", "auto", "auto-small"}:
+    if host == "codex" and scenario in {"review", "auto", "auto-small"}:
         evidence = codex_dispatch_evidence(result.stdout, repo)
         (directory / "dispatch-evidence.json").write_text(json.dumps(evidence, indent=2))
         dispatches = max(dispatches, len(evidence))
@@ -363,10 +362,10 @@ skill explicitly requires delegation. Stop with recovery if no such API exists.
         checks.update(one_by_one_checks(final))
     if scenario in {"human", "replan", "grill", "one-by-one"}:
         checks["user_decision_pending"] = "?" in final and not list((repo / ".minerva/work").glob("*/replan.md"))
-    if scenario in {"panel", "review", "auto", "auto-small"}:
+    if scenario in {"review", "auto", "auto-small"}:
         # auto / auto-small: the completion Verifier is a floor, so even a provably small change
         # dispatches at least one independent reviewer.
-        checks["independent_dispatches_observed"] = dispatches >= {"panel": 3, "review": 1, "auto": 1, "auto-small": 1}[scenario]
+        checks["independent_dispatches_observed"] = dispatches >= {"review": 1, "auto": 1, "auto-small": 1}[scenario]
     report = dict(host=host, scenario=scenario, passed=all(checks.values()), checks=checks, artifacts=str(directory))
     (directory / f"{prefix}report.json").write_text(json.dumps(report, indent=2))
     return report

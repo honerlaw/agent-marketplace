@@ -39,7 +39,6 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | Reality has diverged from the plan in a load-bearing way | `minerva:replan` |
 | Just drafted a plan and want to stress-test it before approving | `minerva:grill-plan` (auto-invoked by `minerva:propose` and `minerva:replan`; usable standalone on any drafted plan) |
 | Several questions are outstanding and answering them in one reply would be awkward | `minerva:one-by-one` (asks a finite existing list one at a time, showing `Question k of N`; `minerva:grill-plan` generates new questions about a plan) |
-| Want an independent multi-agent verdict on a decision or drafted artifact — agents argue it out rather than interviewing you | `minerva:round-table` (delegated to by `minerva:propose-ship-auto` for its panel decisions; usable standalone, default quorum 2/3) |
 | Approved a proposal but want to tweak it before coding starts | `minerva:replan` (pre-work amendment mode) |
 | Just hit something that's clearly a durable decision, mid-work | `minerva:promote "<short description>"` |
 | Want to audit shipped code against the proposal | `minerva:review` |
@@ -52,7 +51,7 @@ If none are true, the project isn't using minerva; don't reach for these skills 
 | Orienting: where things stand, what to do next | `minerva:status` (read-only) |
 | A one-time check when adopting minerva on an already-populated, pre-conventions `.minerva/knowledge/` corpus — assess what's non-conforming (legacy filenames, legacy aggregate files, entries missing Theme/Summary, stale routing, entries without cross-refs) and what to run to migrate it (a shape audit, not a recurring health-check) | `minerva:migrate` (read-only — reports a migration checklist naming `minerva:migrate-fix` / `minerva:init` / hand work per gap) |
 | Run the whole lifecycle end-to-end from scratch | `minerva:propose-ship` |
-| Run the whole lifecycle end-to-end without human gates, any size of change — each decision gets the tier it earns: the main model alone when provably small, one reviewer by default, a `minerva:round-table` panel when ambiguous or high-stakes | `minerva:propose-ship-auto` |
+| Run the whole lifecycle end-to-end without human gates, any size of change — each decision gets the tier it earns: the main model alone when provably small, otherwise one fresh-context reviewer (Skeptic → fold-audit → Adjudicator before anything reaches you) | `minerva:propose-ship-auto` |
 
 The skills cover the full lifecycle. Most of the time you stay in `minerva:work` and don't touch the others.
 

@@ -2,13 +2,15 @@
 """Tally the autonomous orchestrators' decision logs across a project's work units.
 
 `minerva:propose-ship-auto` appends one line per decision to the unit's `scratchpad.md` under
-a dated `## Decisions YYYY-MM-DD` header, each line naming the tier the decision reached (solo,
-reviewer, panel). Units shipped before 2026-09-23 carry the three legacy headers of the
-orchestrators that were folded into it — `## Quick decisions`, `## Balanced decisions`, and
-`## Panel decisions` (which `minerva:round-table` still writes when run standalone) — and are
-read the same way. Those lines are the only evidence of what each tier's
-adjudication actually did — how often a reviewer's critique was folded, how often a panel
-went to a revision round, how often anything reached the user — and the reviewer-gate
+a dated `## Decisions YYYY-MM-DD` header, each line naming the tier the decision reached (solo
+or reviewer; runs before minerva 4.0.0 also logged a panel tier). Units shipped before
+2026-09-23 carry the three legacy headers of the orchestrators that were folded into it —
+`## Quick decisions`, `## Balanced decisions`, and `## Panel decisions` (written by the retired
+`minerva:round-table` skill) — and are read the same way. Panel and vote lines are legacy
+data: no current skill writes them, but archived scratchpads hold them, so they still
+classify. Those lines are the only evidence of what each tier's
+adjudication actually did — how often a reviewer's critique was folded, how often the
+Adjudicator had to rule, how often anything reached the user — and the reviewer-gate
 taxonomy is documented as "the load-bearing, revisable knob" that this evidence is
 supposed to tune.
 
@@ -27,14 +29,16 @@ Three rules, each traceable to a knowledge entry:
   an illustration, not a record; `knowledge_spans.unfenced` is imported, never re-derived
   (`2026-06-11-constraint-fence-scans-import-fence-re`).
 - **Unknown is a reported outcome, not a dropped line.** Balanced and Quick tags are a
-  closed vocabulary and classify exactly; Panel tags are `minerva:round-table`'s free-form
-  vote strings and classify heuristically. Anything neither recognises is kept, tagged
+  closed vocabulary and classify exactly; legacy Panel tags are the retired round-table
+  skill's free-form vote strings and classify heuristically. Anything neither recognises is kept, tagged
   `unknown`, and printed with its `path:lineno`, because a tally that silently drops what
   it cannot read is a false reading (`2026-08-11-pattern-a-tolerant-reader-needs-a-boundary`).
 
 Re-check lines (`[rechecked — …]`) pair with the `[reviewed — folded]` line immediately
 before them, by adjacency and same gate. An orphan — a re-check with no fold in front of it —
-is reported as a problem rather than counted as a fold.
+is reported as a problem rather than counted as a fold. Adjudicator lines (`[adjudicated — …]`)
+pair the same way with the `[rechecked — escalated]` or `[reviewed — escalated]` line immediately
+before them; an orphan is a problem.
 """
 from __future__ import annotations
 
@@ -71,6 +75,8 @@ EXACT_TAGS = {
     "rechecked - clean": "rechecked-clean",
     "rechecked - residual folded": "rechecked-residual-folded",
     "rechecked - escalated": "rechecked-escalated",
+    "adjudicated - proceed": "adjudicated-proceed",
+    "adjudicated - escalated": "adjudicated-escalated",
     "escalated to user": "escalated",
     "solo": "solo",
     "user - directed": "user-directed",
@@ -79,6 +85,16 @@ EXACT_TAGS = {
 }
 
 RECHECK_OUTCOMES = {"rechecked-clean", "rechecked-residual-folded", "rechecked-escalated"}
+ADJUDICATED_OUTCOMES = {"adjudicated-proceed", "adjudicated-escalated"}
+# The two reviewer-tier events that send a decision to the Adjudicator.
+TO_ADJUDICATOR = {"reviewed-escalated", "rechecked-escalated"}
+# minerva 4.0.0 replaced the panel tier with the Adjudicator on this date. An `Auto` escalation
+# dated on or after it must be followed by its `[adjudicated — …]` line; before it, the next
+# rung was a panel (or, on a capped row, the user), so older archives are not flagged. The log
+# does not record which plugin version wrote it, so a panel line after the escalation is also
+# accepted as its next rung: a project still on minerva 3.x after this date is not flagged.
+ADJUDICATOR_SINCE = "2026-11-19"
+NEXT_RUNG_OUTCOMES = {"adjudicated-proceed", "adjudicated-escalated", "panel-accept", "panel-revised"}
 
 # Ordered: the first matching keyword wins, so "replan-vs-fix" is tested before "replan".
 GATE_RULES = (
@@ -112,7 +128,9 @@ class Record:
     rest: str
     path: str
     lineno: int
-    paired_with_lineno: int | None = None  # the [reviewed — folded] line this re-check audits
+    # The line this record pairs with: the [reviewed — folded] line a re-check audits, or the
+    # [rechecked — escalated] / [reviewed — escalated] line that sent an adjudication.
+    paired_with_lineno: int | None = None
     rechecked: str | None = None    # set on a folded record when a re-check paired with it
     problems: list[str] = field(default_factory=list)
 
@@ -147,13 +165,20 @@ def classify_tag(orchestrator: str, tag: str) -> str:
     if orch in ("Balanced", "Quick"):
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     if orch == "Auto":
-        # Closed vocabulary, plus round-table's vote line — prefixed `panel — ` as the protocol
-        # asks, or bare (`3/3 accept`) when round-table writes its own standalone format.
+        # Closed vocabulary, plus the legacy panel vote line (runs before minerva 4.0.0) —
+        # prefixed `panel — `, or bare (`3/3 accept`) as round-table's standalone format was.
         if tag.strip().lower().startswith("panel") or PANEL_VOTE_RE.search(tag):
             outcome = classify_tag("Panel", tag)
             return outcome if outcome in ("panel-accept", "panel-revised") else UNKNOWN
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     if orch == "Panel":
+        # The 2026-09-23 transition run logged reviewer-tier lines (`[reviewed — clean]`,
+        # `[rechecked — escalated]`) under the legacy `## Panel decisions` header. An exact
+        # closed-vocabulary tag is read as such first, so a reviewer-tier escalation is not
+        # miscounted as a user escalation by the `escalat` heuristic below.
+        exact = EXACT_TAGS.get(normalize_tag(tag))
+        if exact:
+            return exact
         low = tag.lower()
         if "escalat" in low:
             return "escalated"
@@ -242,6 +267,25 @@ def _pair_rechecks(section: list[Record]) -> None:
             prev.rechecked = rec.outcome
         else:
             rec.problems.append("orphan re-check: no [reviewed — folded] line for the same gate immediately before it")
+    for i, rec in enumerate(section):
+        if rec.outcome not in ADJUDICATED_OUTCOMES:
+            continue
+        prev = section[i - 1] if i else None
+        if prev is not None and prev.outcome in TO_ADJUDICATOR and prev.gate == rec.gate:
+            rec.paired_with_lineno = prev.lineno
+        else:
+            rec.problems.append(
+                "orphan adjudication: no [rechecked — escalated] or [reviewed — escalated] line "
+                "for the same gate immediately before it")
+    for i, rec in enumerate(section):
+        if (rec.outcome not in TO_ADJUDICATOR or rec.orchestrator != "Auto"
+                or not rec.date or rec.date < ADJUDICATOR_SINCE):
+            continue
+        nxt = section[i + 1] if i + 1 < len(section) else None
+        if nxt is None or nxt.outcome not in NEXT_RUNG_OUTCOMES or nxt.gate != rec.gate:
+            rec.problems.append(
+                "skipped rung: no [adjudicated — …] line for the same gate immediately after "
+                "this escalation")
 
 
 def scratchpad_files(root: Path) -> list[Path]:
@@ -324,7 +368,8 @@ TIERS = {
     "reviewed-clean": "reviewer", "reviewed-folded": "reviewer", "reviewed-escalated": "reviewer",
     "rechecked-clean": "reviewer", "rechecked-residual-folded": "reviewer",
     "rechecked-escalated": "reviewer",
-    "panel-accept": "panel", "panel-revised": "panel",
+    "adjudicated-proceed": "reviewer", "adjudicated-escalated": "reviewer",
+    "panel-accept": "panel", "panel-revised": "panel",  # legacy: runs before minerva 4.0.0
 }
 
 
@@ -349,9 +394,13 @@ def render(records: list[Record], file_problems: list[str] = ()) -> str:
             lines.append(f"  {_display_gate(gate):<{GATE_DISPLAY_WIDTH}} {row}")
         if orch == "Auto":
             tiers = Counter(tier_of(r.outcome) for r in records if r.orchestrator == orch)
-            # Lines, not decisions: a decision that moves up (fold → re-check → panel) logs a
-            # line at each tier it passed through.
+            # Lines, not decisions: a decision that climbs the ladder (fold → re-check →
+            # Adjudicator) logs a line at each rung it passed through.
             lines.append("  tier lines: " + ", ".join(f"{k} {v}" for k, v in tiers.most_common()))
+            adj = Counter(r.outcome for r in records
+                          if r.orchestrator == orch and r.outcome in ADJUDICATED_OUTCOMES)
+            lines.append("  adjudications: " + ", ".join(
+                f"{o} {adj.get(o, 0)}" for o in sorted(ADJUDICATED_OUTCOMES)))
         if orch in ("Auto", "Balanced"):
             rs = recheck_summary([r for r in records if r.orchestrator == orch])
             lines.append("  re-checks: " + ", ".join(f"{k} {v}" for k, v in rs.items()))
