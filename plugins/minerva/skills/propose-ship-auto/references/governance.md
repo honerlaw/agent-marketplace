@@ -17,7 +17,7 @@ The worst case for one decision is therefore 3 dispatches — except a restarted
 **Per-phase abort triggers.**
 - Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Every reviewer-tier escalation passes through the Adjudicator before reaching the user, so this should fire rarely; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
-**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an Adjudicator `escalate`, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
+**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an `[adjudicated — escalated]` outcome, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip tier selection entirely).**
 - In-flight work collision (pre-flight) — the check in `skills/propose/references/in-flight-check.md`.
@@ -41,7 +41,7 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 ## Observability
 
 - Every decision logs one line to `scratchpad.md` under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
-- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them.
+- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them; it reports an orphan line, and on runs logged under minerva 4.0.0 or later it also reports an escalation that no `[adjudicated — …]` line follows (a skipped rung).
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
 - The final report (success or bail) lists decisions per tier (solo / reviewer), total reviewer dispatches (Skeptic, fold-audit, Adjudicator, Verifier), and total escalations for the run.
 

@@ -214,6 +214,29 @@ ADJUDICATED = """## Decisions 2026-11-19
 """
 
 
+def test_render_counts_adjudications():
+    out = render(parse_scratchpad(ADJUDICATED, "u", "p"))
+    assert "  adjudications: adjudicated-escalated 1, adjudicated-proceed 2" in out
+
+
+def test_an_escalation_with_no_adjudication_after_it_is_a_skipped_rung():
+    text = ("## Decisions 2026-11-20\n"
+            "- [reviewed — folded] scope check: README missing\n"
+            "- [rechecked — escalated] scope check: item 1 not addressed\n"
+            "- [escalated to user] scope check: asked directly, Adjudicator skipped\n")
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 1 and "skipped rung" in probs[0] and ":3:" in probs[0]
+
+
+def test_panel_era_escalations_are_not_skipped_rungs():
+    """Before 4.0.0 the rung after an escalation was a panel; archived logs must stay clean."""
+    text = ("## Decisions 2026-09-23\n"
+            "- [reviewed — folded] approach: B → C\n"
+            "- [rechecked — escalated] approach: item 1 not addressed → panel\n"
+            "- [panel — 3/3 accept] approach: C\n")
+    assert not problems(parse_scratchpad(text, "u", "p"))
+
+
 def test_adjudications_pair_with_the_escalation_before_them():
     recs = parse_scratchpad(ADJUDICATED, "u", "p")
     adj = [r for r in recs if r.outcome.startswith("adjudicated")]

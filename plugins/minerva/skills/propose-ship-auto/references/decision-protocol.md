@@ -57,7 +57,7 @@ At every Skeptic gate — every row except completion — the reviewer tier is a
 1. **Skeptic.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Skeptic brief](#skeptic-brief). Pass only the gate's ARTIFACT + CONTEXT from `references/phases.md`, plus every scrutiny clause that fired or that you could not rule out; dispatch parameters and model policy belong to the host adapter. Then [arbitrate the critique](#arbitrating-a-skeptic-critique) inline.
 2. **Fold-audit** — only after a fold. See [Fold-audit re-check](#fold-audit-re-check).
 3. **Adjudicator** — only after a failed fold-audit or the anti-circularity escape. See [Adjudicator](#adjudicator).
-4. **User** — only when the Adjudicator returns `escalate`. Ask with the user question operation, naming the gate, the disputed items and each side's evidence. This increments the global escalation counter.
+4. **User** — only when the Adjudicator's rulings leave a disputed item `unresolved` (logged `[adjudicated — escalated]`). Ask with the user question operation, naming the gate, the disputed items and each side's evidence. This increments the global escalation counter.
 
 **Budget: at most three dispatches per Skeptic gate** — the Skeptic, the fold-audit when and only when step 1 folded, and the Adjudicator when and only when the decision could not otherwise be settled. Never a second Skeptic, never a second fold-audit, never a fourth reviewer.
 
@@ -94,16 +94,16 @@ The per-item `## Disposition` lines govern; the `## Verdict` line summarises the
 
 The Adjudicator is the last independent look before the user. It is deliberately narrow: it **rules on the disputed items and nothing else**. It does not re-review the decision and it raises no new concerns. A fresh critic over a revised decision re-critiques from a blank page, and its new concerns cannot be told apart from the first review's (`2026-09-05-decision-balanced-rechecks-its-folds` rejected exactly that). An Adjudicator that may only rule on named items cannot do that.
 
-**Dispatch.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Adjudicator brief](#adjudicator-brief). It is never the Skeptic or the fold-audit agent, and it never sees the main model's arbitration reasoning. ARTIFACT = the original decision, the Skeptic's critique **verbatim**, the revised decision and the fold-audit's output verbatim when a fold happened, and the **disputed items** by number; CONTEXT = the gate's CONTEXT.
+**Dispatch.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Adjudicator brief](#adjudicator-brief). It is never the Skeptic or the fold-audit agent, and it never sees the main model's arbitration reasoning. ARTIFACT = the original decision, the Skeptic's critique **verbatim**, the revised decision and the fold-audit's output verbatim when a fold happened, and the **disputed items** by label — `C<n>` for the Skeptic's critique item *n*, `F<n>` for the fold-audit's new concern *n* (the two lists are numbered separately, so a bare number is ambiguous); CONTEXT = the gate's CONTEXT.
 
 The disputed items are the load-bearing items the fold-audit did not accept, or, on the anti-circularity escape, the critique items the main model could not adjudicate.
 
 **Arbitration is strict:**
 
-- Every disputed item `resolved` or `critique mistaken`, verdict `proceed` → proceed with the decision as it stands (the revised decision after a fold, the original decision on the escape path). Log `[adjudicated — proceed]`.
-- Any disputed item `unresolved`, or verdict `escalate` → go to the **user**. Log `[adjudicated — escalated]`. This includes the escape path when the Adjudicator rules the Skeptic right: adopting a materially different decision with the gate's budget spent would ship a rewrite nobody audited, so the user decides.
+- Every disputed item `resolved` or `critique mistaken` → proceed with the decision as it stands (the revised decision after a fold, the original decision on the escape path). Log `[adjudicated — proceed]`.
+- Any disputed item `unresolved` → go to the **user**. Log `[adjudicated — escalated]`. This includes the escape path when the Adjudicator rules the Skeptic right: adopting a materially different decision with the gate's budget spent would ship a rewrite nobody audited, so the user decides.
 
-The per-item rulings govern; the verdict line summarises them. If they disagree, the rulings win, and a ruling with no evidence counts as `unresolved`.
+The per-item rulings decide the outcome; the verdict line only summarises them. If they disagree, the rulings win, so a `proceed` verdict over an `unresolved` item still goes to the user and an `escalate` verdict over all-settled items still proceeds. A ruling with no evidence counts as `unresolved`.
 
 ### The Verifier gate (completion) is asymmetric
 
@@ -176,7 +176,8 @@ YOUR ROLE: You are an independent Adjudicator. The ARTIFACT above holds a
 decision, a Skeptic's numbered CRITIQUE of it, and — when the decision was
 revised — the REVISED decision and a fold-audit of that revision. It ends with
 the DISPUTED ITEMS: the critique or fold-audit items nobody has been able to
-settle. You did not write any of it and have not seen anyone's reasoning about
+settle, each labelled C<n> (critique item n) or F<n> (the fold-audit's new
+concern n). You did not write any of it and have not seen anyone's reasoning about
 it.
 
 Rule on each disputed item, and only on those. For each, read the decision as it
@@ -193,7 +194,7 @@ and do not propose a different decision.
 
 Output format:
 ## Rulings
-<one line per disputed item: `N. resolved | unresolved | critique mistaken — <evidence>`>
+<one line per disputed item, by its label: `C<n>|F<n>. resolved | unresolved | critique mistaken — <evidence>`>
 ## Verdict
 <proceed | escalate>: <one-sentence reason>; proceed only if no item is unresolved
 ```
@@ -208,7 +209,7 @@ Output format:
 
 A reviewer dispatch may come back as a background handle regardless of the synchronous pin (`2026-08-28-constraint-reviewer-gates-assume-a-synchronous-dispatch`). Every rung survives that: dispatch, end the turn if the result is not back, resume on the completion notification, then arbitrate. **Never skip a rung to avoid a park** — a parked run is recoverable; an unreviewed decision is not.
 
-**Waves park the same way, several handles at once.** When independent decisions are dispatched together (the propose gate wave, completion alongside code review — `references/phases.md`), several handles can be outstanding. Resume on each notification and act on what that result unblocks — a gate's fold-audit goes out as soon as its own Skeptic is back and folded. Reconcile the wave only once every result it waits on is in. A parked handle is never a verdict, and a wave never reconciles on a partial set.
+**Waves park the same way, several handles at once.** When independent decisions are dispatched together (the propose gate wave, completion alongside code review — `references/phases.md`), several handles can be outstanding. Resume on each notification and act on what that result unblocks — a gate's fold-audit goes out as soon as its own fold is written, never held for a joint batch (whole-proposal's only after the restart check, `references/phases.md` Phase 1 (d)). Reconcile the wave only once every result it waits on is in. A parked handle is never a verdict, and a wave never reconciles on a partial set.
 
 ## No ceremony ratification
 

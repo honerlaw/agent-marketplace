@@ -25,7 +25,7 @@ The proposal says one thing; the code does another; nobody updated the document.
 
 **4. AI judgment goes unaudited**
 
-"Looks done to me" is an easy sentence for a model to produce. minerva routes the load-bearing calls — is this done? is this finding real? is this knowledge durable? — through adversarial review, with the votes logged where a later audit can read them.
+"Looks done to me" is an easy sentence for a model to produce. minerva routes the load-bearing calls — is this done? is this finding real? is this knowledge durable? — through independent fresh-context review, with every decision and its tier logged where a later audit can read them.
 
 ---
 

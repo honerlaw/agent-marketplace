@@ -11,6 +11,8 @@
 - [user-directed] scope check: one unit, one PR — chosen by the user in minerva:propose (no phases)
 - [user-directed] approach selection: one PR (vs. two phases) — chosen by the user in minerva:propose after grill-plan
 - [user-directed] whole-proposal soundness: every section approved by the user in minerva:propose; Phase 1 gates not re-run
+- [reviewed — clean] completion verification: Verifier independently reproduced all 11 criteria, ran the full suite (1112 passed), found no interface change beyond the approved scope (tier: reviewer floor; code review dispatched alongside)
+- [solo] review triage: 9 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was small enough to absorb; no item had two defensible dispositions; none was a load-bearing divergence, so no replan-vs-FIX gate)
 
 ## Work notes
 - The Adjudicator dispatch line must say exactly "wait for results": `tests/test_skill_dispatch.py` pins that phrase on every dispatch-instructing line, and "waiting for results" slipped past the first draft. decision-protocol now registers 4 dispatch sites (Skeptic, fold-audit, Adjudicator, Verifier).
@@ -20,3 +22,15 @@
 - `pages/index.md` principle "Adversarial by default" rewritten as "Independent scrutiny, not debate" — it is a stated minerva bias, not just a catalog line.
 - COMPATIBILITY.md gained an "Upgrading to 4.0" section, matching the 3.0 precedent for deleted skills (not in the proposal's file list; found while bumping its version line).
 - Pre-existing, not this unit: `decision_telemetry.py` reports `2026-09-23-adaptive-propose-ship-auto/archive/scratchpad.md:8: unknown tag [reviewed — clean]` on main too (the tag carries markdown bold inside the brackets).
+
+## Review triage 2026-11-19
+Local-diff mode (fresh-context subagent). Minerva audit (inline): no findings — every Approach item maps to the diff; registries carry no panel mentions; skill-catalog-sync and dispatch-pin constraints hold.
+1. medium — phases.md wave (b)/(d) vs Parked dispatches gave conflicting fold-audit timing → FIX: fold-audits go out as soon as their own fold is written; whole-proposal's only after the restart check.
+2. medium — decision-protocol: user rung keyed on verdict `escalate` vs rulings-win rule → FIX: the rulings decide; the verdict only summarises (SKILL.md, governance aligned).
+3. low — disputed items cited "by number" across two separately numbered lists → FIX: labels C<n> / F<n> in dispatch text and brief.
+4. low — pages/index.md:28 still said "votes logged" → FIX.
+5. low — eval contract duplicated "Verifier"/"fold-audit" anchors → FIX: removed the added duplicates.
+6. low — governance claimed telemetry catches a skipped Adjudicator rung; it did not → FIX: telemetry now flags an Auto escalation with no adjudication after it, gated on dates ≥ 2026-11-19 so panel-era archives stay clean; tests added.
+7. low — stale `paired_with_lineno` comment → FIX.
+8. low — `adjudications:` render line untested → FIX: test added.
+9. low — dead first half of an `or` assertion → FIX: rung headers asserted in decision-protocol, ladder summary in SKILL.md.

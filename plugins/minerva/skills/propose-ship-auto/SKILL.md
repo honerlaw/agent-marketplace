@@ -37,7 +37,7 @@ Binding floor, even before the reference is read:
 
 - **Decide first, then route.** Draft the decision, then choose its tier. Both predicates fail closed: doubt about a scrutiny clause routes to the reviewer and names the doubt in its brief; doubt about a solo clause denies solo.
 - **Never below the floor:** divergence confirmation, new-plan acceptance and replan-vs-FIX are always reviewed, never solo; completion verification is always a Verifier.
-- **Up the ladder, never sideways.** An unadjudicable critique or a failed fold-audit goes to the Adjudicator; an Adjudicator `escalate` goes to the user. No step recommends switching to another orchestrator.
+- **Up the ladder, never sideways.** An unadjudicable critique or a failed fold-audit goes to the Adjudicator; an Adjudicator that leaves a disputed item unresolved sends the decision to the user. No step recommends switching to another orchestrator.
 - Every decision logs one line to `scratchpad.md` under `## Decisions YYYY-MM-DD`, naming its tier and why.
 
 ## Phases

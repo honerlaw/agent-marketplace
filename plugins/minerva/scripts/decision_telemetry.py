@@ -88,6 +88,10 @@ RECHECK_OUTCOMES = {"rechecked-clean", "rechecked-residual-folded", "rechecked-e
 ADJUDICATED_OUTCOMES = {"adjudicated-proceed", "adjudicated-escalated"}
 # The two reviewer-tier events that send a decision to the Adjudicator.
 TO_ADJUDICATOR = {"reviewed-escalated", "rechecked-escalated"}
+# minerva 4.0.0 replaced the panel tier with the Adjudicator on this date. An `Auto` escalation
+# logged on or after it must be followed by its `[adjudicated — …]` line; before it, the next
+# rung was a panel (or, on a capped row, the user), so older archives are not flagged.
+ADJUDICATOR_SINCE = "2026-11-19"
 
 # Ordered: the first matching keyword wins, so "replan-vs-fix" is tested before "replan".
 GATE_RULES = (
@@ -121,7 +125,9 @@ class Record:
     rest: str
     path: str
     lineno: int
-    paired_with_lineno: int | None = None  # the [reviewed — folded] line this re-check audits
+    # The line this record pairs with: the [reviewed — folded] line a re-check audits, or the
+    # [rechecked — escalated] / [reviewed — escalated] line that sent an adjudication.
+    paired_with_lineno: int | None = None
     rechecked: str | None = None    # set on a folded record when a re-check paired with it
     problems: list[str] = field(default_factory=list)
 
@@ -261,6 +267,15 @@ def _pair_rechecks(section: list[Record]) -> None:
             rec.problems.append(
                 "orphan adjudication: no [rechecked — escalated] or [reviewed — escalated] line "
                 "for the same gate immediately before it")
+    for i, rec in enumerate(section):
+        if (rec.outcome not in TO_ADJUDICATOR or rec.orchestrator != "Auto"
+                or not rec.date or rec.date < ADJUDICATOR_SINCE):
+            continue
+        nxt = section[i + 1] if i + 1 < len(section) else None
+        if nxt is None or nxt.outcome not in ADJUDICATED_OUTCOMES or nxt.gate != rec.gate:
+            rec.problems.append(
+                "skipped rung: no [adjudicated — …] line for the same gate immediately after "
+                "this escalation")
 
 
 def scratchpad_files(root: Path) -> list[Path]:

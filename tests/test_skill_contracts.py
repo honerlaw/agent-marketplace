@@ -853,15 +853,19 @@ def test_auto_verifier_checks_interface_changes_beyond_the_proposal():
 
 def test_auto_reviewer_ladder_ends_at_a_narrow_adjudicator():
     body = _auto_ref("decision-protocol.md")
-    assert "Skeptic → fold-audit → Adjudicator → user" in body or (
-        "1. **Skeptic.**" in body and "3. **Adjudicator**" in body and "4. **User**" in body)
+    for rung in ("1. **Skeptic.**", "2. **Fold-audit**", "3. **Adjudicator**", "4. **User**"):
+        assert rung in body, rung
+    skill_md = (SKILLS_DIR / "propose-ship-auto" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Skeptic → fold-audit → Adjudicator → user" in skill_md
     assert "it **rules on the disputed items and nothing else**" in body
-    assert "`N. resolved | unresolved | critique mistaken — <evidence>`" in body
+    assert "`C<n>|F<n>. resolved | unresolved | critique mistaken — <evidence>`" in body
+    # The rulings, not the verdict line, decide; the two lists are labelled apart.
+    assert "If they disagree, the rulings win" in body and "`F<n>` for the fold-audit's new concern" in body
     assert "Do not raise new concerns" in body
     # The anti-circularity path cannot adopt an unaudited rewrite.
     assert "the Adjudicator rules the Skeptic right" in body and "so the user decides" in body
     gov = _auto_ref("governance.md")
-    assert "an Adjudicator `escalate`, or a hardcoded trigger" in gov
+    assert "an `[adjudicated — escalated]` outcome, or a hardcoded trigger" in gov
 
 
 def test_auto_former_panel_rows_keep_a_reviewer_floor():
