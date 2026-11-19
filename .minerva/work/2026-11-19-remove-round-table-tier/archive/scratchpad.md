@@ -14,6 +14,7 @@
 - [reviewed — clean] completion verification: Verifier independently reproduced all 11 criteria, ran the full suite (1112 passed), found no interface change beyond the approved scope (tier: reviewer floor; code review dispatched alongside)
 - [solo] review triage: 9 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was small enough to absorb; no item had two defensible dispositions; none was a load-bearing divergence, so no replan-vs-FIX gate)
 - [solo] review triage (re-review): 6 FIX + test gaps FIX / 1 IGNORE (tier: default-solo row — each finding small with a writable failure scenario; none load-bearing)
+- [solo] promote partition: 1 PROMOTE (decision entry), work notes MERGE INTO PROPOSAL, 1 TODO absorbed (telemetry Panel-header fallback), rest DISCARD (tier: default-solo row — no scrutiny clause; entry supersedes only the round-table extraction it replaces)
 
 ## Work notes
 - The Adjudicator dispatch line must say exactly "wait for results": `tests/test_skill_dispatch.py` pins that phrase on every dispatch-instructing line, and "waiting for results" slipped past the first draft. decision-protocol now registers 4 dispatch sites (Skeptic, fold-audit, Adjudicator, Verifier).
