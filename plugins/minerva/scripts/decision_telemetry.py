@@ -89,9 +89,12 @@ ADJUDICATED_OUTCOMES = {"adjudicated-proceed", "adjudicated-escalated"}
 # The two reviewer-tier events that send a decision to the Adjudicator.
 TO_ADJUDICATOR = {"reviewed-escalated", "rechecked-escalated"}
 # minerva 4.0.0 replaced the panel tier with the Adjudicator on this date. An `Auto` escalation
-# logged on or after it must be followed by its `[adjudicated — …]` line; before it, the next
-# rung was a panel (or, on a capped row, the user), so older archives are not flagged.
+# dated on or after it must be followed by its `[adjudicated — …]` line; before it, the next
+# rung was a panel (or, on a capped row, the user), so older archives are not flagged. The log
+# does not record which plugin version wrote it, so a panel line after the escalation is also
+# accepted as its next rung: a project still on minerva 3.x after this date is not flagged.
 ADJUDICATOR_SINCE = "2026-11-19"
+NEXT_RUNG_OUTCOMES = {"adjudicated-proceed", "adjudicated-escalated", "panel-accept", "panel-revised"}
 
 # Ordered: the first matching keyword wins, so "replan-vs-fix" is tested before "replan".
 GATE_RULES = (
@@ -169,6 +172,13 @@ def classify_tag(orchestrator: str, tag: str) -> str:
             return outcome if outcome in ("panel-accept", "panel-revised") else UNKNOWN
         return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     if orch == "Panel":
+        # The 2026-09-23 transition run logged reviewer-tier lines (`[reviewed — clean]`,
+        # `[rechecked — escalated]`) under the legacy `## Panel decisions` header. An exact
+        # closed-vocabulary tag is read as such first, so a reviewer-tier escalation is not
+        # miscounted as a user escalation by the `escalat` heuristic below.
+        exact = EXACT_TAGS.get(normalize_tag(tag))
+        if exact:
+            return exact
         low = tag.lower()
         if "escalat" in low:
             return "escalated"
@@ -187,9 +197,7 @@ def classify_tag(orchestrator: str, tag: str) -> str:
             return "panel-revised"
         if vote or "accept" in low:
             return "panel-accept"
-        # The 2026-09-23 transition run logged reviewer-tier lines (`[reviewed — clean]`) under
-        # the legacy `## Panel decisions` header; read them by the closed vocabulary.
-        return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
+        return UNKNOWN
     return UNKNOWN
 
 
@@ -274,7 +282,7 @@ def _pair_rechecks(section: list[Record]) -> None:
                 or not rec.date or rec.date < ADJUDICATOR_SINCE):
             continue
         nxt = section[i + 1] if i + 1 < len(section) else None
-        if nxt is None or nxt.outcome not in ADJUDICATED_OUTCOMES or nxt.gate != rec.gate:
+        if nxt is None or nxt.outcome not in NEXT_RUNG_OUTCOMES or nxt.gate != rec.gate:
             rec.problems.append(
                 "skipped rung: no [adjudicated — …] line for the same gate immediately after "
                 "this escalation")

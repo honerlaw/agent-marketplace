@@ -13,6 +13,7 @@
 - [user-directed] whole-proposal soundness: every section approved by the user in minerva:propose; Phase 1 gates not re-run
 - [reviewed — clean] completion verification: Verifier independently reproduced all 11 criteria, ran the full suite (1112 passed), found no interface change beyond the approved scope (tier: reviewer floor; code review dispatched alongside)
 - [solo] review triage: 9 FIX / 0 SUGGEST / 0 IGNORE (tier: default-solo row — every finding had a writable failure scenario and was small enough to absorb; no item had two defensible dispositions; none was a load-bearing divergence, so no replan-vs-FIX gate)
+- [solo] review triage (re-review): 6 FIX + test gaps FIX / 1 IGNORE (tier: default-solo row — each finding small with a writable failure scenario; none load-bearing)
 
 ## Work notes
 - The Adjudicator dispatch line must say exactly "wait for results": `tests/test_skill_dispatch.py` pins that phrase on every dispatch-instructing line, and "waiting for results" slipped past the first draft. decision-protocol now registers 4 dispatch sites (Skeptic, fold-audit, Adjudicator, Verifier).
@@ -35,3 +36,14 @@ Local-diff mode (fresh-context subagent). Minerva audit (inline): no findings �
 8. low — `adjudications:` render line untested → FIX: test added.
 9. low — dead first half of an `or` assertion → FIX: rung headers asserted in decision-protocol, ladder summary in SKILL.md.
 - Absorbed fix: decision_telemetry reported the 2026-09-23 transition run's `[reviewed — clean]` under a legacy `## Panel decisions` header as unknown, so the problem list never read clean; the Panel classifier now falls back to the closed vocabulary (test added). Surfaced at promote as a TODO, absorbed per deferral-bar outlet 0.
+
+## Review triage 2026-11-19 (re-review of 53920bb..b5a9652)
+Local-diff mode (fresh-context subagent). 6 low → FIX; 1 IGNORE.
+1. skipped-rung check keyed on date, not plugin version → FIX: a panel line also counts as the next rung, so a 3.x project after the cutover is not flagged; governance says "dated 2026-11-19 or later".
+2. Panel-header `escalat` heuristic swallowed reviewer-tier escalations → FIX: exact closed-vocabulary tags are read first.
+3. phases.md "Adjudicator `proceed`" named the verdict token → FIX: `[adjudicated — proceed]` outcome.
+4. restarted whole-proposal fold-audit timing unstated → FIX.
+5. logging spec/example used bare item numbers → FIX: C<n>/F<n>.
+6. disputed item with no ruling undefined → FIX: counts as unresolved.
+- Test gaps (reviewed-escalated, last-line, other-gate) → FIX: tests added.
+- IGNORE: an escalation and its adjudication split across a midnight `## Decisions` header reports two problems — pairing is per-header by design, the same as a fold and its re-check.

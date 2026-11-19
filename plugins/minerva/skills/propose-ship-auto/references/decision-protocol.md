@@ -57,7 +57,7 @@ At every Skeptic gate — every row except completion — the reviewer tier is a
 1. **Skeptic.** Dispatch one fresh-context agent via the independent reviewer operation and **wait for results**, carrying the [Skeptic brief](#skeptic-brief). Pass only the gate's ARTIFACT + CONTEXT from `references/phases.md`, plus every scrutiny clause that fired or that you could not rule out; dispatch parameters and model policy belong to the host adapter. Then [arbitrate the critique](#arbitrating-a-skeptic-critique) inline.
 2. **Fold-audit** — only after a fold. See [Fold-audit re-check](#fold-audit-re-check).
 3. **Adjudicator** — only after a failed fold-audit or the anti-circularity escape. See [Adjudicator](#adjudicator).
-4. **User** — only when the Adjudicator's rulings leave a disputed item `unresolved` (logged `[adjudicated — escalated]`). Ask with the user question operation, naming the gate, the disputed items and each side's evidence. This increments the global escalation counter.
+4. **User** — only when the Adjudicator's rulings leave a disputed item `unresolved` (logged `[adjudicated — escalated]`). Ask with the user question operation, naming the gate, the disputed items by their `C<n>` / `F<n>` labels and each side's evidence. This increments the global escalation counter.
 
 **Budget: at most three dispatches per Skeptic gate** — the Skeptic, the fold-audit when and only when step 1 folded, and the Adjudicator when and only when the decision could not otherwise be settled. Never a second Skeptic, never a second fold-audit, never a fourth reviewer.
 
@@ -103,7 +103,7 @@ The disputed items are the load-bearing items the fold-audit did not accept, or,
 - Every disputed item `resolved` or `critique mistaken` → proceed with the decision as it stands (the revised decision after a fold, the original decision on the escape path). Log `[adjudicated — proceed]`.
 - Any disputed item `unresolved` → go to the **user**. Log `[adjudicated — escalated]`. This includes the escape path when the Adjudicator rules the Skeptic right: adopting a materially different decision with the gate's budget spent would ship a rewrite nobody audited, so the user decides.
 
-The per-item rulings decide the outcome; the verdict line only summarises them. If they disagree, the rulings win, so a `proceed` verdict over an `unresolved` item still goes to the user and an `escalate` verdict over all-settled items still proceeds. A ruling with no evidence counts as `unresolved`.
+The per-item rulings decide the outcome; the verdict line only summarises them. If they disagree, the rulings win, so a `proceed` verdict over an `unresolved` item still goes to the user and an `escalate` verdict over all-settled items still proceeds. A ruling with no evidence counts as `unresolved`, and so does a disputed item the Adjudicator returned no ruling for.
 
 ### The Verifier gate (completion) is asymmetric
 
@@ -228,15 +228,15 @@ After every decision, append one line to the work unit's `scratchpad.md` under a
 - [solo] scope check: single unit (tier: solo predicate — only SKILL.md touched, additive, no interface)
 - [reviewed — clean] approach: option B (tier: reviewer — not provably small; Skeptic flagged nothing blocking)
 - [reviewed — folded] whole-proposal: criterion 4 unsatisfiable under the lifecycle's own writes; reworded (tier: reviewer)
-- [rechecked — clean] whole-proposal: fold-audit confirmed items 1–3 addressed
+- [rechecked — clean] whole-proposal: fold-audit confirmed C1–C3 addressed
 - [reviewed — folded] approach: Skeptic surfaced a dominant alternative C — switched to C (tier: reviewer)
-- [rechecked — residual folded] approach: item 2 partially addressed (example still named the old field) — folded
+- [rechecked — residual folded] approach: C2 partially addressed (example still named the old field) — folded
 - [reviewed — folded] scope check: README surface missing (tier: reviewer — scrutiny: existing interface change)
-- [rechecked — escalated] scope check: item 1 not addressed → Adjudicator
-- [adjudicated — proceed] scope check: item 1 resolved — README section already covered by the revised scope
-- [reviewed — escalated] whole-proposal: Skeptic says criterion 3 is untestable; cannot adjudicate → Adjudicator (tier: reviewer)
-- [adjudicated — escalated] whole-proposal: item 3 unresolved — no test can observe the criterion → user
-- [escalated to user] whole-proposal: criterion 3 — user reworded it to a grep-checkable form
+- [rechecked — escalated] scope check: C1 not addressed → Adjudicator
+- [adjudicated — proceed] scope check: C1 resolved — README section already covered by the revised scope
+- [reviewed — escalated] whole-proposal: C3 says criterion 3 is untestable; cannot adjudicate → Adjudicator (tier: reviewer)
+- [adjudicated — escalated] whole-proposal: C3 unresolved — no test can observe the criterion → user
+- [escalated to user] whole-proposal: C3 — user reworded it to a grep-checkable form
 - [reviewed — clean] approach: option A, new mcp/gsc tool surface (tier: reviewer — introduces an interface, no existing consumer; parallel wave)
 - [reviewed — clean] whole-proposal (restart): re-reviewed after the approach pick changed B → C (tier: reviewer; parallel wave restart)
 - [solo] review triage: 3 FIX / 1 SUGGEST / 0 IGNORE (tier: default-solo row — no item had two defensible dispositions)
@@ -246,8 +246,8 @@ After every decision, append one line to the work unit's `scratchpad.md` under a
 
 - `[solo]` — on a row that could have gone higher, record the **concrete evidence** that satisfied the solo predicate, so review/promote can audit that it was honest. On a default-solo row (triage, partition, TODO), record the disposition counts and why no item met the ambiguity clause. Approach decisions also record the rejected alternatives.
 - `[reviewed — clean]` / `[reviewed — folded]` — a Skeptic or Verifier gate; record what the reviewer flagged, whether it was folded, and the scrutiny clause that fired, if any.
-- `[reviewed — escalated]` — the anti-circularity escape; name the disputed items. Its `[adjudicated — …]` line follows it.
-- `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check, written **immediately after** its `[reviewed — folded]` line and naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` names the items sent to the Adjudicator; its `[adjudicated — …]` line follows it.
+- `[reviewed — escalated]` — the anti-circularity escape; name the disputed items by their `C<n>` labels. Its `[adjudicated — …]` line follows it.
+- `[rechecked — clean]` / `[rechecked — residual folded]` / `[rechecked — escalated]` — the fold-audit re-check, written **immediately after** its `[reviewed — folded]` line and naming the same gate, so the two pair by adjacency. `[rechecked — escalated]` names the items sent to the Adjudicator by their `C<n>` / `F<n>` labels; its `[adjudicated — …]` line follows it.
 - `[adjudicated — proceed]` / `[adjudicated — escalated]` — the Adjudicator, written **immediately after** the `[reviewed — escalated]` or `[rechecked — escalated]` line that sent the decision there, naming the same gate. An `[adjudicated — escalated]` line is followed by the `[escalated to user]` line.
 - `[escalated to user]` — what was asked and the answer.
 - `[user-directed]` — an unsolicited user directive; the directive is the justification.

@@ -235,6 +235,45 @@ def test_an_escalation_with_no_adjudication_after_it_is_a_skipped_rung():
     assert len(probs) == 1 and "skipped rung" in probs[0] and ":3:" in probs[0]
 
 
+@pytest.mark.parametrize("lines,where", [
+    # [reviewed — escalated] (the anti-circularity escape) followed by something else.
+    (["- [reviewed — escalated] approach: C2 cannot adjudicate",
+      "- [solo] review triage: 1 FIX"], ":2:"),
+    # The escalation is the last line of its section.
+    (["- [reviewed — folded] scope check: README missing",
+      "- [rechecked — escalated] scope check: C1 not addressed"], ":3:"),
+])
+def test_other_skipped_rung_shapes(lines, where):
+    text = "## Decisions 2026-11-20\n" + "\n".join(lines) + "\n"
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 1 and "skipped rung" in probs[0] and where in probs[0], probs
+
+
+def test_an_adjudication_for_another_gate_is_both_a_skipped_rung_and_an_orphan():
+    text = ("## Decisions 2026-11-20\n"
+            "- [reviewed — escalated] approach: C1 cannot adjudicate\n"
+            "- [adjudicated — proceed] scope check: C1 resolved\n")
+    probs = problems(parse_scratchpad(text, "u", "p"))
+    assert len(probs) == 2
+    assert any("skipped rung" in p and ":2:" in p for p in probs)
+    assert any("orphan adjudication" in p and ":3:" in p for p in probs)
+
+
+def test_a_3x_project_logging_panels_after_the_cutover_is_not_flagged():
+    """The log records no plugin version, so a panel line counts as the next rung."""
+    text = ("## Decisions 2026-12-01\n"
+            "- [reviewed — folded] approach: B → C\n"
+            "- [rechecked — escalated] approach: item 1 → panel\n"
+            "- [panel — 3/3 accept] approach: C\n")
+    assert not problems(parse_scratchpad(text, "u", "p"))
+
+
+def test_reviewer_escalation_under_a_legacy_panel_header_is_not_a_user_escalation():
+    assert classify_tag("Panel", "rechecked — escalated") == "rechecked-escalated"
+    assert classify_tag("Panel", "escalated to user") == "escalated"
+    assert classify_tag("Panel", "2/3 accept → revise → 3/3 accept") == "panel-revised"
+
+
 def test_panel_era_escalations_are_not_skipped_rungs():
     """Before 4.0.0 the rung after an escalation was a panel; archived logs must stay clean."""
     text = ("## Decisions 2026-09-23\n"

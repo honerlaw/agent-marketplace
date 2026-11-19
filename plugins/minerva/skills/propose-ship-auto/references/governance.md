@@ -41,7 +41,7 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 ## Observability
 
 - Every decision logs one line to `scratchpad.md` under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
-- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them; it reports an orphan line, and on runs logged under minerva 4.0.0 or later it also reports an escalation that no `[adjudicated — …]` line follows (a skipped rung).
+- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them; it reports an orphan line, and on logs dated 2026-11-19 (minerva 4.0.0) or later it also reports an escalation that no `[adjudicated — …]` line follows (a skipped rung).
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
 - The final report (success or bail) lists decisions per tier (solo / reviewer), total reviewer dispatches (Skeptic, fold-audit, Adjudicator, Verifier), and total escalations for the run.
 

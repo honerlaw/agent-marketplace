@@ -861,6 +861,7 @@ def test_auto_reviewer_ladder_ends_at_a_narrow_adjudicator():
     assert "`C<n>|F<n>. resolved | unresolved | critique mistaken — <evidence>`" in body
     # The rulings, not the verdict line, decide; the two lists are labelled apart.
     assert "If they disagree, the rulings win" in body and "`F<n>` for the fold-audit's new concern" in body
+    assert "so does a disputed item the Adjudicator returned no ruling for" in body
     assert "Do not raise new concerns" in body
     # The anti-circularity path cannot adopt an unaudited rewrite.
     assert "the Adjudicator rules the Skeptic right" in body and "so the user decides" in body
