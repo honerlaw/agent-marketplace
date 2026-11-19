@@ -76,8 +76,9 @@ PHASES = ("propose", "work", "verify", "review", "promote", "ship", "cleanup")
 # Two orchestrator invocations this close together are one run (a slash
 # command's prompt followed by the model's own Skill call for it).
 SAME_RUN_WINDOW_S = 120.0
-# Proponent + Skeptic of one panel are dispatched together; a Skeptic launched
-# this close to a same-gate Proponent is a panel member, not a lone reviewer.
+# Legacy (runs before minerva 4.0.0, which removed the panel tier): Proponent +
+# Skeptic of one panel were dispatched together; a Skeptic launched this close
+# to a same-gate Proponent is a panel member, not a lone reviewer.
 PANEL_BATCH_WINDOW_S = 10.0
 MULTIPLEXERS = {"gh", "git", "npm", "uv", "docker", "pnpm", "yarn", "cargo"}
 
@@ -488,7 +489,11 @@ def parse_description(desc: str) -> dict:
     d = (desc or "").lower()
     # Only the explicit role word: "re-check"/"recheck" also appear in slugs and
     # diff names ("Verify balanced-rechecks-folds completion").
-    if "fold-audit" in d or "fold audit" in d:
+    # The Adjudicator is checked first: its brief may name the fold-audit that sent
+    # the decision to it ("Adjudicator: scope fold-audit escalation").
+    if "adjudicator" in d:
+        role = "adjudicator"
+    elif "fold-audit" in d or "fold audit" in d:
         role = "fold-audit"
     elif "proponent" in d:
         role = "proponent"
@@ -611,7 +616,8 @@ def load_subagents(main_path, main_events, agent_spans, seen=None, unplaced=None
 def _assign_tiers(subs) -> None:
     """Panel vs reviewer, by launch batch — never by keyword alone.
 
-    Proponent and Arbiter only exist inside panels; a description saying
+    Panels are legacy: minerva 4.0.0 removed the tier, so only older transcripts
+    carry them. Proponent and Arbiter only exist inside panels; a description saying
     "panel" is a panel. A Skeptic is a panel member when a same-gate, same-round
     Proponent was dispatched in the same assistant message or within
     ``PANEL_BATCH_WINDOW_S`` — real panels often omit the word ("Whole-proposal:
@@ -631,7 +637,7 @@ def _assign_tiers(subs) -> None:
                 for p in subs
             )
             s["tier"] = "panel" if batch else "reviewer"
-        elif s["role"] in ("verifier", "fold-audit"):
+        elif s["role"] in ("verifier", "fold-audit", "adjudicator"):
             s["tier"] = "reviewer"
         elif s["role"] == "code-review":
             s["tier"] = "code-review"  # not "review": too close to "reviewer" in one column

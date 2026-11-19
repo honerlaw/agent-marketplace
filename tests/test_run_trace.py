@@ -221,6 +221,8 @@ def test_bash_head(command, head):
     ("Verify balanced-rechecks-folds completion", "verifier", "completion", 1),
     ("Code-quality review of balanced re-check diff", "code-review", "review", 1),
     ("New-plan panel: Skeptic", "skeptic", "replan", 1),
+    ("Scope Adjudicator — disputed items", "adjudicator", "scope", 1),
+    ("Adjudicator: whole-proposal fold-audit escalation", "adjudicator", "whole-proposal", 1),
 ])
 def test_description_vocabulary(desc, role, gate, rnd):
     got = rt.parse_description(desc)
@@ -283,6 +285,19 @@ def test_lone_skeptic_is_reviewer_even_when_a_later_panel_shares_its_gate(tmp_pa
     tiers = {s["description"]: s["tier"] for s in tr["subagents"]}
     assert tiers["Skeptic: whole-proposal soundness"] == "reviewer"
     assert tiers["Panel Skeptic: whole-proposal"] == "panel"
+
+
+def test_adjudicator_is_a_reviewer_tier_dispatch(tmp_path):
+    """minerva 4.0.0's Adjudicator is the third rung of the reviewer ladder, never a panel."""
+    events = [
+        orchestrator_prompt(0),
+        assistant(10, _agent("a1", "Scope Adjudicator — disputed items")), result(11, "a1"),
+        assistant(12), marker(12, 12),
+    ]
+    subs = [_sub("a1", "Scope Adjudicator — disputed items", 10)]
+    tr = rt.trace_session(write_session(tmp_path, events, subagents=subs))
+    (sub,) = tr["subagents"]
+    assert (sub["role"], sub["gate"], sub["tier"]) == ("adjudicator", "scope", "reviewer")
 
 
 def test_unknown_descriptions_are_reported_not_dropped(tmp_path):

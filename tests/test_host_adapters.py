@@ -19,7 +19,7 @@ def claude_dispatch_contract(body):
 def codex_dispatch_contract(body):
     return all(token in body for token in (
         "`fork_turns: none`", "Leave model and reasoning effort unpinned",
-        "Wait for results", "both finish before Arbiter starts",
+        "Wait for results", "reconcile only once every result is in",
         "stop this workflow with recovery", "excludes the author's arbitration reasoning"))
 
 
@@ -27,9 +27,9 @@ def test_both_manifests_expose_the_same_canonical_skill_tree_and_version():
     claude = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
     codex = json.loads((PLUGIN / ".codex-plugin/plugin.json").read_text())
     assert claude["name"] == codex["name"] == "minerva"
-    assert claude["version"] == codex["version"] == "3.1.0"
+    assert claude["version"] == codex["version"] == "4.0.0"
     assert (PLUGIN / codex["skills"]).resolve() == SKILLS
-    assert len(list(SKILLS.glob("*/SKILL.md"))) == 20
+    assert len(list(SKILLS.glob("*/SKILL.md"))) == 19
     catalog = json.loads((REPO / ".agents/plugins/marketplace.json").read_text())
     entry = next(p for p in catalog["plugins"] if p["name"] == "minerva")
     assert (REPO / entry["source"]["path"]).resolve() == PLUGIN

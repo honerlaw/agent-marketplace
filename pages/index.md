@@ -54,7 +54,7 @@ The lifecycle is a rail with stations. You can board anywhere, but each skill as
 6. **ship** — commit, open the PR, observe CI through a tracked watcher; resume through an available scheduler or an exact checkpointed manual prompt, bounded auto-fix, auto-merge where permitted
 7. **cleanup** — after merge: remove the worktree, prune the branch
 
-Two orchestrators run the whole rail end-to-end, differing in who adjudicates decisions — `minerva:propose-ship`'s human gates, or `minerva:propose-ship-auto`, which gives each decision the tier it earns: the main model alone, one fresh-context reviewer, or a three-agent consensus panel (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
+Two orchestrators run the whole rail end-to-end, differing in who adjudicates decisions — `minerva:propose-ship`'s human gates, or `minerva:propose-ship-auto`, which gives each decision the tier it earns: the main model alone, or one fresh-context reviewer whose fixes are independently re-checked (see [The orchestrators](#the-orchestrators)). The remaining skills are utilities you reach for out of band — debugging, wiki hygiene, migration, orientation.
 
 ---
 
@@ -99,15 +99,12 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 : Orchestrates propose → work → review → promote → ship → cleanup by delegating to each skill in sequence with no logic duplication. Refuses to start if in-flight work exists for the same intent; waits for the PR to actually merge before invoking cleanup.
 
 **`minerva:propose-ship-auto`**
-: The same lifecycle with no scheduled human gates, for any size of change. Each decision gets the adjudication tier it earns, chosen per decision rather than for the whole run: the main model alone when a strict fail-closed predicate proves it small, one fresh-context reviewer by default (a Skeptic, or a Verifier at completion, with one fold-audit re-check after a fold), and a 3-agent Proponent/Skeptic/Arbiter panel (delegated to `minerva:round-table`) when the decision is ambiguous, high-blast-radius, changes a public interface, or conflicts with recorded knowledge. Uncertainty moves a decision up a tier instead of stopping the run; the user is asked only when a panel can't agree after one revision round, or a hardcoded trigger fires.
+: The same lifecycle with no scheduled human gates, for any size of change. Each decision gets the adjudication tier it earns, chosen per decision rather than for the whole run: the main model alone when a strict fail-closed predicate proves it small, and one fresh-context reviewer otherwise (a Skeptic, or a Verifier at completion, with one fold-audit re-check after a fold), told which risk to test when the decision is ambiguous, high-blast-radius, changes a public interface, or conflicts with recorded knowledge. A critique nobody can settle goes to a narrow Adjudicator that rules only on the disputed items; the user is asked only when it can't settle them, or a hardcoded trigger fires. There is no multi-agent voting.
 
 ### The utilities
 
 **`minerva:one-by-one`**
 : Walks the user through the questions already outstanding in the current session, one at a time, showing the running position and total ("Question 3 of 10") and waiting for each answer before the next. Every question offers three to five concrete options, marks a recommended answer or says there is none, and always accepts the user's own direction instead.
-
-**`minerva:round-table`**
-: Dispatches a 3-agent Proponent/Skeptic/Arbiter panel of fresh-context subagents over a decision or drafted artifact, counts accept votes against a caller-specified quorum (default 2/3), runs at most one revision round, and escalates to the user when consensus fails twice. Usable standalone for any decision.
 
 **`minerva:debug`**
 : Investigates a bug end-to-end — gathers evidence first, then diagnoses root cause grounded in that evidence, and reports with a mechanically-derived confidence score. Stays read-only against any system other users depend on.
@@ -138,11 +135,11 @@ Each entry below is excerpted from the skill's own `description:` frontmatter �
 
 minerva is opinionated, and the opinions are load-bearing. Each entry below names where the bias is enforced, so you can read the enforcing text yourself.
 
-**Fail closed** — When it is unclear whether a decision is small enough to skip review, it is not. The auto orchestrator's skip predicate is conjunctive — every clause must hold, and any uncertainty convenes the full panel.
+**Fail closed** — When it is unclear whether a decision is small enough to skip review, it is not. The auto orchestrator's skip predicate is conjunctive — every clause must hold, and any uncertainty sends the decision to an independent reviewer.
 *source: `minerva:propose-ship-auto` · knowledge 014 (per-decision skip over sizing gate)*
 
-**Adversarial by default** — Artifacts earn acceptance by surviving an argument: a Proponent defends, a Skeptic attacks, an Arbiter weighs — and at the strictest decision tier, where unanimity is required, a lone Skeptic dissent blocks outright.
-*source: `minerva:round-table` · knowledge 033 (panel mechanics extraction)*
+**Independent scrutiny, not debate** — Decisions earn acceptance by surviving a fresh-context Skeptic that must cite evidence for every objection. A fix is re-checked by a second agent that never saw the author's reasoning, and anything still disputed goes to a narrow Adjudicator, then to the user. Nobody is assigned to defend the draft, and nobody votes.
+*source: `minerva:propose-ship-auto` · knowledge 2026-09-05 (balanced re-checks its folds)*
 
 **Interrogate the plan** — Plans are not approved on vibes. A drafted design is questioned one question at a time, recommended answer first, until shared understanding — not until the user gets tired.
 *source: `minerva:grill-plan`*

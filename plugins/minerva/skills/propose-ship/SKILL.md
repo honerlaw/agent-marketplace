@@ -40,7 +40,7 @@ When a peer session messages you, read `skills/propose/references/cross-session.
 
 This skill's identity is that **a human decides at every phase transition**. The one explicit gate is promote → ship: summarize what promote did, then wait for `ship it` / `proceed` / `yes`. The work → review handoff advances only on an explicit user signal, never silently.
 
-The autonomous sibling, `minerva:propose-ship-auto`, replaces those gates with machinery: each decision gets the scrutiny it earns — the main model alone, one fresh-context reviewer, or a 3-agent consensus panel — chosen per decision. Reach for it when the user wants the lifecycle run unattended; stay here when they want to approve each step.
+The autonomous sibling, `minerva:propose-ship-auto`, replaces those gates with machinery: each decision gets the scrutiny it earns — the main model alone, or one fresh-context reviewer with an independent re-check of its fixes — chosen per decision. Reach for it when the user wants the lifecycle run unattended; stay here when they want to approve each step.
 
 ## Out of scope
 

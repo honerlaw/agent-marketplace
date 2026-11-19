@@ -3,8 +3,8 @@
 Work unit 047. The ``Agent`` tool runs subagents in the **background by
 default**, returning only a handle rather than the agent's output. Every
 minerva protocol that dispatches an agent needs that output *in the same turn*
-— ``round-table`` counts votes then dispatches an Arbiter, ``propose-ship-
-auto`` arbitrates its reviewer's critique inline, ``review``'s local-diff
+— ``propose-ship-auto`` arbitrates its reviewer's critique inline before the
+next rung of its reviewer ladder, ``review``'s local-diff
 mode presents findings in the same turn. A backgrounded dispatch leaves the
 next protocol step unexecutable, so the run ends the turn announcing that it is
 waiting. Measured across 105 real orchestrator runs before this unit, 562 of
@@ -20,16 +20,16 @@ and model policy and Codex's fresh-context/inherited-settings contract.
 corpus:
 
 * matching ``subagent`` alone false-positives on frontmatter descriptions and
-  prose framing (``round-table``'s own description "Dispatches a 3-agent …
-  panel of fresh-context subagents" instructs nothing);
+  prose framing (a description saying a skill "dispatches fresh-context
+  subagents" instructs nothing);
 * matching the literal ```Agent``` tool phrase alone misses
   ``propose-ship-auto/references/phases.md``, which restates the dispatch
   parameters without naming the tool.
 
 So a line counts as a dispatch instruction iff it carries **both** a dispatch
-verb and a dispatch-parameter token. That combination selects exactly the five
-real sites and excludes every near-miss — budget statements ("6 subagent
-dispatches max"), delegation prose, and descriptions.
+verb and a dispatch-parameter token. That combination selects exactly the
+registered sites and excludes every near-miss — budget statements ("three
+reviewer dispatches"), delegation prose, and descriptions.
 
 Detection is **line-based**: this corpus writes one paragraph or list item per
 line (no hard wrapping), so a line is the natural instruction unit and gives
@@ -76,11 +76,10 @@ EXECUTION_MODE_KEY = "wait for results"
 # mode this unit is closing is precisely a site nobody noticed. Paths, not line
 # numbers: line numbers churn whenever text is added above a site.
 REGISTERED_SITES = {
-    # 3: the Skeptic review, the fold-audit re-check after a fold, and the Verifier.
-    "propose-ship-auto/references/decision-protocol.md": 3,
+    # 4: the Skeptic review, the fold-audit re-check after a fold, the Adjudicator, and the Verifier.
+    "propose-ship-auto/references/decision-protocol.md": 4,
     "propose-ship-auto/references/phases.md": 1,
     "review/references/protocol.md": 1,
-    "round-table/SKILL.md": 1,
     "using-minerva/references/runtime.md": 1,
 }
 
@@ -88,8 +87,7 @@ REGISTERED_SITES = {
 # substring). Guards the detector's precision: loosening it to a bare
 # `subagent` match reds these.
 PROSE_NEAR_MISSES = [
-    ("round-table/SKILL.md", "Dispatches a 3-agent Proponent/Skeptic/Arbiter panel"),
-    ("propose-ship-auto/SKILL.md", "6 subagent dispatches max"),
+    ("propose-ship-auto/SKILL.md", "three** reviewer dispatches"),
     ("propose-ship-auto/references/governance.md", "Solo** dispatches nothing"),
 ]
 

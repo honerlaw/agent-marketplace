@@ -10,14 +10,13 @@ user decisions when available, otherwise ask directly and wait. A skill's
 `allowed-tools` grants turn-local permissions; it does not remove other tools.
 Read-only behavior comes from the shared contract, not this frontmatter.
 
-## Independent review and panels
+## Independent review
 
 Use the `Agent` tool with fresh context, `subagent_type: general-purpose`, and
 `run_in_background: false`. Always wait for results. Do not reuse an author or
-previous reviewer for a fold-audit. Round-table panelists and reviewer-tier agents
-(Skeptic, fold-audit, Verifier) use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
-review leaves `model` unpinned. Proponent and Skeptic calls run in parallel;
-Arbiter runs after both outputs are available. For a wave of independent
+previous reviewer for a fold-audit or an Adjudicator. Reviewer-tier agents
+(Skeptic, fold-audit, Adjudicator, Verifier) use `model: sonnet`, preserving Claude's existing cost policy; ordinary code
+review leaves `model` unpinned. For a wave of independent
 decisions, issue all of its first-wave `Agent` calls in one message; calls in
 one message already run concurrently, so a wave needs no new capability. If any
 required capability is missing, stop with an actionable recovery report.

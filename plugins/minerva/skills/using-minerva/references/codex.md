@@ -17,7 +17,7 @@ Use an available question tool when appropriate to the current collaboration
 mode, otherwise ask the required question directly and wait. Respect prior user
 authorization and sandbox approvals. A fallback answer is not permission.
 
-## Independent review and panels
+## Independent review
 
 Use the actual available subagent API (`collaboration.spawn_agent` with
 `fork_turns: none`, or a native `spawn_agent` exposing its fresh-context option).
@@ -27,11 +27,10 @@ the reviewer inherits the session settings; never pass a Claude model alias.
 If fresh-context delegation is unavailable, stop this workflow with recovery
 instructions. Do not send the full authoring history to an independent reviewer.
 
-Wait for results through the available wait/status tools. Parallel Proponent
-and Skeptic agents must both finish before Arbiter starts. For a wave of
+Wait for results through the available wait/status tools. For a wave of
 independent decisions, start every first-wave agent before waiting, then wait
 on all of them; reconcile only once every result is in. A fold-audit
-uses a new agent and excludes the author's arbitration reasoning. Close or
+or Adjudicator uses a new agent and excludes the author's arbitration reasoning. Close or
 release completed agents where supported. No background handle is a verdict.
 
 Use a structured independent code reviewer for local and PR diffs when the

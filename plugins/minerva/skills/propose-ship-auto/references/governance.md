@@ -5,20 +5,19 @@
 **Per-decision budget.** Each tier has its own hard cap, from `references/decision-protocol.md`:
 
 - **Solo** dispatches nothing.
-- **Reviewer, Skeptic gate:** at most two dispatches — the review, plus one fold-audit re-check when and only when the main model folded the critique. Never a third reviewer.
+- **Reviewer, Skeptic gate:** at most three dispatches — the Skeptic, one fold-audit re-check when and only when the main model folded the critique, and one Adjudicator when and only when a failed fold-audit or the anti-circularity escape left the decision unsettled. Never a fourth reviewer; past the Adjudicator the decision goes to the user.
 - **Reviewer, Verifier gate (completion):** one dispatch. A `revise` loops through Phase 2.5 rather than re-dispatching.
-- **Panel:** one initial vote + one revision vote. 6 subagent dispatches max per panel.
 
-A decision that moves up from reviewer to panel spends both budgets, so the worst case for one decision is 8 dispatches — except a restarted whole-proposal, which adds its discarded first wave (below).
+The worst case for one decision is therefore 3 dispatches — except a restarted whole-proposal, which adds its discarded first wave (below).
 
-**Propose-wave restart.** When the gate wave's restart check (`references/phases.md` Phase 1) finds whole-proposal's first-wave review stale, that review is discarded. The re-dispatched whole-proposal is a new review of a new artifact, with a fresh per-tier budget of its own. The stale first wave is held unarbitrated, so it spent at most its first-wave dispatches: 1 reviewer, or a panel's Proponent + Skeptic + Arbiter (3). A restarted whole-proposal can therefore spend up to 3 reviewer dispatches in total (1 stale + 2 restarted), and at worst 11 (3 stale + a restarted reviewer-to-panel move's 8). There is at most **one** restart per run, because the check is made once, after scope and approach are final.
+**Propose-wave restart.** When the gate wave's restart check (`references/phases.md` Phase 1) finds whole-proposal's first-wave review stale, that review is discarded. The re-dispatched whole-proposal is a new review of a new artifact, with a fresh per-tier budget of its own. The stale first wave is held unarbitrated, so it spent exactly one dispatch, its Skeptic. A restarted whole-proposal can therefore spend at most 4 reviewer dispatches in total (1 stale + 3 restarted). There is at most **one** restart per run, because the check is made once, after scope and approach are final.
 
 **Provisional review findings.** Code review sent out alongside completion verification (`references/phases.md` Phase 2 step 4) is Phase 3's code-review pass, run early, not an extra reviewer. It is re-run only when a failed completion led to a changed diff.
 
 **Per-phase abort triggers.**
-- Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Most escalations now pass through a panel before reaching the user, so this fires less often than it used to; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
+- Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Every reviewer-tier escalation passes through the Adjudicator before reaching the user, so this should fire rarely; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
-**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — a panel that failed quorum twice, an upward move from a capped row, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
+**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an Adjudicator `escalate`, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
 
 **Hard escalation triggers (skip tier selection entirely).**
 - In-flight work collision (pre-flight) — the check in `skills/propose/references/in-flight-check.md`.
@@ -42,15 +41,14 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 ## Observability
 
 - Every decision logs one line to `scratchpad.md` under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
-- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, so `scripts/decision_telemetry.py` can pair them.
+- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them.
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
-- The final report (success or bail) lists decisions per tier (solo / reviewer / panel), total reviewer and panel dispatches, and total escalations for the run.
+- The final report (success or bail) lists decisions per tier (solo / reviewer), total reviewer dispatches (Skeptic, fold-audit, Adjudicator, Verifier), and total escalations for the run.
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:round-table`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates, and the panel mechanics are likewise *invoked* from `minerva:round-table` in caller mode.
+- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
 - **Sizing the whole run up front, or switching orchestrators mid-run.** Tier is chosen per decision; a change that grows simply makes its later decisions route higher (`2026-05-31-decision-per-decision-skip-over-sizing-gate`). There is no mode flag and no recommendation to hand the run to another skill.
 - **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.
-- **A configurable quorum.** The 3/3 vs. 2/3 quorums per decision type are fixed (see the Decision taxonomy in `references/decision-protocol.md`); `minerva:round-table`'s standalone 2/3 default never applies inside this skill. If a user wants different thresholds, they fork the skill.

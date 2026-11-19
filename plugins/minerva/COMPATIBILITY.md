@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 3.1.0 packages one canonical `skills/` tree for Claude Code and local
+Version 4.0.0 packages one canonical `skills/` tree for Claude Code and local
 Codex app, CLI, and IDE conversations. Codex cloud and external scheduling are
 outside this release. Git, Python 3.11+, and a POSIX shell are required. GitHub
 operations require authenticated `gh`, repository permissions, and normal host
@@ -12,7 +12,7 @@ approvals. Skills do not bypass those approvals.
 | --- | --- | --- |
 | Load another skill | `Skill`, original arguments | Available loader, or read the installed skill and references in the current agent |
 | Required user decision | Available question tool | Available question tool in the appropriate mode, or direct question |
-| Panel / single reviewer | Fresh `Agent`, synchronous results, `model: sonnet` | Fresh-context native subagent API, inherit session model, await results |
+| Reviewer (Skeptic, fold-audit, Adjudicator, Verifier) | Fresh `Agent`, synchronous results, `model: sonnet` | Fresh-context native subagent API, inherit session model, await results |
 | Code review | Optional PR review skill, otherwise independent diff reviewer | Optional PR review skill, otherwise independent fetched-PR/local-diff reviewer |
 | CI watcher | Tracked background completion when supported | Tracked shell process and polling while the session is active |
 | Scheduled re-entry | Only when an actual scheduler is exposed | Only when an actual scheduler is exposed |
@@ -22,7 +22,7 @@ approvals. Skills do not bypass those approvals.
 Every skill requires the shared [runtime contract](skills/using-minerva/references/runtime.md)
 and its applicable [Claude](skills/using-minerva/references/claude.md) or
 [Codex](skills/using-minerva/references/codex.md) adapter. Missing fresh-context
-delegation blocks panel/review workflows with recovery instructions. The author
+delegation blocks review workflows with recovery instructions. The author
 cannot substitute self-review for an independent gate.
 
 ## State and upgrades
@@ -60,6 +60,30 @@ fails after Claude succeeds, the error reports partial success and the retry
 command. Reload Claude plugins and start a new Codex conversation after updates.
 Existing host-neutral routing remains; legacy Claude-only routing gets an
 offered, diffed refresh through `minerva:init`.
+
+## Upgrading to 4.0
+
+4.0 is a **breaking** release. `minerva:propose-ship-auto` adjudicates every decision with
+at most one reviewer tier, never a multi-agent panel. At matched compute, multi-agent debate
+ties or loses to independent review; role-locked Proponent and Skeptic votes are not
+independent samples; and in this repo's own logs nearly every panel returned a unanimous
+accept whose only output was the fixes a single Skeptic also produces. The evidence is in
+the `2026-11-19-remove-round-table-tier` work unit.
+
+**Removed.**
+
+- `minerva:round-table` is deleted; invoking it reports "skill not found". For an
+  independent check of a decision, dispatch one fresh-context reviewer and triage its
+  evidence-backed concerns, as `minerva:propose-ship-auto`'s Skeptic gate does.
+- The panel tier of `minerva:propose-ship-auto`. Decisions that were always panels
+  (divergence confirmation, new-plan acceptance, replan-vs-FIX) are now always reviewed and
+  never solo, and completion is always a Verifier. A critique that cannot be settled goes to
+  a narrow Adjudicator, then to the user.
+
+**Upgrade steps.** None for a corpus or a checkpoint: run checkpoints store no tier state,
+so a run started under 3.x resumes under the 4.0 protocol, and `decision_telemetry.py` still
+reads the `[panel — …]` lines in archived scratchpads. Remove any script or prompt of your
+own that invokes `minerva:round-table`.
 
 ## Upgrading to 3.0
 
@@ -170,7 +194,7 @@ python3 scripts/run_compatibility_evals.py --host both --scenario auto
 ```
 
 Scenarios cover read-only readers, init, human gates, grill/replan, one-by-one, standalone
-panels/review, the autonomous orchestrator at two change sizes, phased shipping, manual
+review, the autonomous orchestrator at two change sizes, phased shipping, manual
 resume, cancelled CI, and exhausted cleanup. Acceptance checks inspect artifacts,
 fixture actions, checkpoints, and actual structured dispatch events rather than
 scoring final prose alone. Live conformance results and any remaining app/IDE

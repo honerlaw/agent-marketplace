@@ -13,12 +13,12 @@
     ]
   },
   "anchors": [
-    "Proponent",
     "Skeptic",
-    "Arbiter",
+    "Adjudicator",
+    "Verifier",
+    "fold-audit",
     "minerva:ship",
     "minerva:cleanup",
-    "panel",
     "No ceremony ratification",
     {
       "any_of": [
@@ -71,6 +71,12 @@
     {
       "any_of": [
         "The Verifier gate (completion) is asymmetric"
+      ],
+      "file": "references/decision-protocol.md"
+    },
+    {
+      "any_of": [
+        "Adjudicator brief"
       ],
       "file": "references/decision-protocol.md"
     },

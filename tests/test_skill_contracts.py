@@ -564,7 +564,7 @@ PREFLIGHT_QUALIFIERS = {
 # and a dropped entry cannot look like an intentional exemption.
 PREFLIGHT_ADJUDICATORS = {
     "propose-ship": None,
-    "propose-ship-auto": "**not** panel-decided",
+    "propose-ship-auto": "**not** tiered",
 }
 
 SHARED_PREFLIGHT_REF = "skills/propose/references/in-flight-check.md"
@@ -662,7 +662,7 @@ def test_preflight_block_keeps_its_adjudicator_clause(skill):
     clause = PREFLIGHT_ADJUDICATORS[skill]
     block = preflight_block(skill)
     if clause is None:
-        assert "panel-decided" not in block and "main-model-decided" not in block, (
+        assert not any(c in block for c in ("panel-decided", "main-model-decided", "**not** tiered")), (
             f"{skill}: human-gated rung acquired an adjudicator clause — if that is "
             "intentional, add it to PREFLIGHT_ADJUDICATORS rather than leaving it untested")
         return
@@ -784,7 +784,8 @@ def test_auto_does_not_state_the_retired_one_dispatch_cap(phrase):
 def test_auto_states_the_recheck_cap():
     """The positive half, so the pair cannot both pass on a file that says nothing."""
     body = (SKILLS_DIR / "propose-ship-auto" / "references" / "decision-protocol.md").read_text(encoding="utf-8")
-    assert "Fold-audit re-check" in body and "never a third" in body.lower()
+    assert "Fold-audit re-check" in body and "never a fourth reviewer" in body.lower()
+    assert "**Budget: at most three dispatches per Skeptic gate**" in body
 
 
 def test_auto_keeps_the_verifier_asymmetric():
@@ -826,32 +827,62 @@ def test_auto_interface_clause_covers_existing_interfaces_only():
     assert "the decision introduces or changes one" not in body
 
 
-def test_auto_interface_doubt_routes_to_a_seeded_reviewer():
-    """Only the interface clause's doubt moves down to a reviewer; the others still fail closed
-    to a panel, and the Skeptic is handed the author's doubt rather than rediscovering it."""
+def test_auto_scrutiny_clauses_seed_the_reviewer_rather_than_convene_a_panel():
+    """Since minerva 4.0.0 the four former panel clauses route to the reviewer and are named in
+    its brief; the Skeptic tests the named clause directly. The panel-era interface-doubt
+    exception and the `## Panel warranted?` up-move must not come back."""
     body = _auto_ref("decision-protocol.md")
-    assert "**doubt about the existing-interface clause** at a **Skeptic gate** (scope, approach, whole-proposal): it routes to the **reviewer**, not the panel, and never to solo" in body
-    assert "Doubt about ambiguity, blast radius or knowledge tension still convenes a panel" in body
-    assert "Write your specific doubt" in body
-    # Pin the brief's output format itself, not just a mention elsewhere in the prose.
-    assert "## Panel warranted?\n<no | yes — <clause>: <evidence" in body
-    assert "the three reviewer events above" in body
-    # The up-move must not fire on capped rows, whose reviewer tier is itself caused by a panel
-    # clause — otherwise every reviewer-tier triage item would escalate to the user.
-    assert "applies only on rows whose ceiling is panel" in body
-    assert "not** already the reason the decision reached the reviewer" in body
-    # A Verifier cannot move up, so interface doubt at completion keeps failing closed.
-    assert "The exception does not reach **completion**" in body
+    assert "2. **Scrutiny predicate → reviewer.**" in body
+    assert "name each clause that fired (or that you could not rule out) in the reviewer's CONTEXT" in body
+    assert "## Scrutiny clause\n<for each clause named in CONTEXT: holds | does not hold" in body
+    # Inverted half: the panel-era routing text.
+    for retired in ("## Panel warranted?", "Panel predicate → panel", "still convenes a panel",
+                    "**A clause fires once per approved change.**", "applies only on rows whose ceiling is panel"):
+        assert retired not in body, retired
     skill = (SKILLS_DIR / "propose-ship-auto" / "SKILL.md").read_text(encoding="utf-8")
-    assert "doubt about the existing-interface clause goes to a reviewer instead" in skill
+    assert "doubt about a scrutiny clause routes to the reviewer" in skill
 
 
-def test_auto_clause_fires_once_per_approved_change():
-    body = _auto_ref("decision-protocol.md")
-    assert "**A clause fires once per approved change.**" in body
-    assert "A surface that raised no concern at an earlier gate is not exempt" in body
+def test_auto_verifier_checks_interface_changes_beyond_the_proposal():
+    """The completion panel used to catch an interface change the proposal never approved; the
+    Verifier now carries that check, and completion has no other shape."""
     for name in ("decision-protocol.md", "phases.md"):
         assert "beyond what the proposal approved" in _auto_ref(name), name
+    assert "Completion is always a Verifier, whatever the scrutiny predicate says." in _auto_ref("decision-protocol.md")
+
+
+def test_auto_reviewer_ladder_ends_at_a_narrow_adjudicator():
+    body = _auto_ref("decision-protocol.md")
+    assert "Skeptic → fold-audit → Adjudicator → user" in body or (
+        "1. **Skeptic.**" in body and "3. **Adjudicator**" in body and "4. **User**" in body)
+    assert "it **rules on the disputed items and nothing else**" in body
+    assert "`N. resolved | unresolved | critique mistaken — <evidence>`" in body
+    assert "Do not raise new concerns" in body
+    # The anti-circularity path cannot adopt an unaudited rewrite.
+    assert "the Adjudicator rules the Skeptic right" in body and "so the user decides" in body
+    gov = _auto_ref("governance.md")
+    assert "an Adjudicator `escalate`, or a hardcoded trigger" in gov
+
+
+def test_auto_former_panel_rows_keep_a_reviewer_floor():
+    body = _auto_ref("decision-protocol.md")
+    for row in ("| Work | Mid-work load-bearing divergence | reviewer | **reviewer** |",
+                "| Replan | New-plan acceptance | reviewer | **reviewer** |",
+                "| Review | Replan-vs-FIX | reviewer | **reviewer** |",
+                "| Work | Completion verification | reviewer | **reviewer** |"):
+        assert row in body, row
+    assert "| Floor | Ceiling |" not in body and "Panel quorum" not in body
+
+
+def test_no_skill_references_the_retired_round_table():
+    """`minerva:round-table` was deleted in 4.0.0; a stale pointer to it is a broken route."""
+    assert not (SKILLS_DIR / "round-table").exists()
+    offenders = [str(p.relative_to(SKILLS_DIR)) for p in SKILLS_DIR.rglob("*.md")
+                 if re.search(r"minerva:round-table|Proponent|Arbiter|quorum", p.read_text(encoding="utf-8"))]
+    assert not offenders, offenders
+    for name in ("SKILL.md", "references/phases.md"):
+        text = (SKILLS_DIR / "propose-ship-auto" / name).read_text(encoding="utf-8")
+        assert "panel" not in text.lower(), name
 
 
 def test_auto_propose_gates_run_as_one_wave_with_a_held_restart_check():
@@ -864,7 +895,6 @@ def test_auto_propose_gates_run_as_one_wave_with_a_held_restart_check():
                       "rewrote `## Goal` or `## Success criteria`"):
         assert condition in body, condition
     assert "whole-proposal's tier is **selected again**" in body
-    assert "routed on a pending clause that scope or approach did not approve as drafted" in body
     gov = _auto_ref("governance.md")
     assert "**Propose-wave restart.**" in gov and "at most **one** restart per run" in gov
 
@@ -873,7 +903,7 @@ def test_auto_completion_and_code_review_run_together():
     body = _auto_ref("phases.md")
     assert "**Run review's finding generation alongside it.**" in body
     assert "discard **both** the code-review and the audit findings" in body
-    assert "Completion fails** (Verifier `revise`/`reject`, or a completion panel at ≤1/3)" in body
+    assert "Completion fails** (Verifier `revise`/`reject`)" in body
     assert "If Phase 2 step 4 already generated them" in body
 
 
