@@ -1,7 +1,7 @@
 # Proposal: remove-round-table-tier
 
 **Date**: 2026-11-19
-**Status**: Draft
+**Status**: Shipped (2026-11-19)
 
 ## Goal
 `minerva:propose-ship-auto` adjudicates every decision with at most a reviewer tier — **solo** or
@@ -51,13 +51,17 @@
    - The Adjudicator is reached by a failed fold-audit (`[rechecked — escalated]`) or by the
      anti-circularity escape (`[reviewed — escalated]`).
    - It is deliberately narrow, so it is not the re-critique `2026-09-05` rejected: it rules only
-     on the disputed items — `resolved | unresolved | critique mistaken — <evidence>` — raises
-     **no new concerns**, and returns `proceed` or `escalate`.
-   - Arbitration is strict: any load-bearing item `unresolved` → user. On the anti-circularity
+     on the disputed items, labelled `C<n>` (Skeptic critique item) or `F<n>` (fold-audit new
+     concern) because the two lists are numbered separately — `resolved | unresolved | critique
+     mistaken — <evidence>` — raises **no new concerns**, and ends with a `proceed` / `escalate`
+     verdict line that only summarises.
+   - Arbitration is strict and the **rulings decide**, never the verdict line: any disputed item
+     `unresolved` → user; a ruling with no evidence, or a disputed item left unruled, counts as
+     `unresolved`. On the anti-circularity
      path (nothing folded yet), "critique mistaken" → proceed with the original decision; the
      Skeptic ruled right → user, because adopting a materially different decision with the budget
      spent would ship an unaudited rewrite.
-   - Budget: at most **3 dispatches per Skeptic gate**. An Adjudicator escalation increments the
+   - Budget: at most **3 dispatches per Skeptic gate**. An `[adjudicated — escalated]` outcome increments the
      global escalation counter. The same ladder applies on every Skeptic row, so the capped-row
      special case ("upward move goes to the user instead of a panel") disappears.
    - Reviewer-tier model policy is unchanged (`model: sonnet` in the Claude adapter).
@@ -74,23 +78,32 @@
    completion.
 6. **Governance** (`references/governance.md`): panel budgets removed; the propose-wave restart's
    worst case for whole-proposal becomes 4 dispatches (1 stale + 3); the counter increments on
-   Adjudicator escalations and hardcoded triggers; the propose-phase abort stays; the final report
+   `[adjudicated — escalated]` outcomes and hardcoded triggers; the propose-phase abort stays; the final report
    counts solo/reviewer decisions; round-table leaves the never-modify list; the "configurable
    quorum" out-of-scope bullet goes. The *Re-measure* section is rewritten for the new ladder
-   (Adjudicator trigger rate, user-escalation rate vs. the panel era).
+   (Adjudicator trigger rate, user-escalation rate vs. the panel era). In the propose wave each
+   gate's fold-audit goes out as soon as its own fold is written, never batched; whole-proposal's
+   only after the restart check, whether that kept or re-dispatched its review. The "a clause fires
+   once" rule and the "routed on a pending clause" restart condition were dropped: both existed only
+   to stop the interface clause re-convening panels.
 7. **Logging and telemetry.**
    - New tags `[adjudicated — proceed]` / `[adjudicated — escalated]`, written immediately after
      the `[rechecked — escalated]` or `[reviewed — escalated]` line that triggered them, naming the
      same gate.
    - `plugins/minerva/scripts/decision_telemetry.py` classifies both tags, keeps classifying legacy
      `[panel — …]` / bare vote lines and legacy headers (historical scratchpads), and reports an
-     orphan `adjudicated` line as a problem.
+     orphan `adjudicated` line as a problem. It also flags a **skipped rung**: an `Auto` escalation
+     dated 2026-11-19 or later followed by neither an `[adjudicated — …]` line nor a legacy panel
+     line (the log records no plugin version, so a 3.x project is not flagged). Under a legacy
+     `## Panel decisions` header, an exact closed-vocabulary tag is read as such first, so the
+     2026-09-23 transition run's reviewer lines classify and the corpus reports zero problems.
    - `tests/test_decision_telemetry.py` drops the `round-table/SKILL.md` → `Panel` mapping and
      covers legacy panel-line classification with an inline fixture copied from round-table's
      current fenced example; the auto-example test requires both `adjudicated` tags and no panel
      tags.
    - `scripts/run_trace.py` gains an `adjudicator` role (reviewer tier) and keeps detecting legacy
-     Proponent/Arbiter panel batches; a test covers the new role.
+     Proponent/Arbiter panel batches; a test covers the new role. `adjudicator` is matched before
+     `fold-audit`, because an Adjudicator's description names the fold-audit that sent it.
 8. **Deletions and surface sync.**
    - Delete `plugins/minerva/skills/round-table/`, `evals/round-table/`, and the `panel` scenario in
      `scripts/run_compatibility_evals.py`.
@@ -101,16 +114,19 @@
      `skills/propose/references/cross-session.md`, `evals/propose-ship-auto/contract.json`,
      `skills/propose-ship-auto/SKILL.md` (description and summary).
    - Update assertions in `tests/test_skill_contracts.py` and `tests/test_skill_dispatch.py`.
-   - Bump `plugins/minerva/.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` to 4.0.0.
+   - Bump `plugins/minerva/.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` to 4.0.0;
+     `COMPATIBILITY.md` gains an "Upgrading to 4.0" section (evidence, what was removed, no upgrade
+     steps for a corpus or checkpoint) following the 3.0 precedent.
    - `docs/superpowers/specs/2026-05-21-propose-ship-auto-design.md` is a historical spec and is
      left as is.
-9. **Record.** `research.md` (this unit) holds the full research report. At promote, write a
-   knowledge entry for this decision that supersedes
-   `2026-06-10-decision-panel-mechanics-extracted-to-round-table` and builds on
+9. **Record.** `research.md` (this unit) holds the full research report. Knowledge entry
+   `2026-11-19-decision-propose-ship-auto-drops-the-panel-tier` supersedes
+   `2026-06-10-decision-panel-mechanics-extracted-to-round-table`, builds on
    `2026-09-23-decision-one-orchestrator-picks-each-decisions-tier` and
-   `2026-09-05-decision-balanced-rechecks-its-folds`; review
-   `2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes` and
-   `2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause` for supersession.
+   `2026-09-05-decision-balanced-rechecks-its-folds`, cites
+   `2026-09-23-pattern-a-unanimous-quorum-deadlocks-on-write-up-fixes` as evidence, and refines
+   `2026-09-26-decision-parallel-gate-waves-and-existing-interface-clause` (neither of the last two
+   is superseded: the pattern stays a true observation, and the gate wave still holds).
 
 ## Success criteria
 - `plugins/minerva/skills/round-table/` and `evals/round-table/` do not exist.
