@@ -34,3 +34,4 @@ Local-diff mode (fresh-context subagent). Minerva audit (inline): no findings �
 7. low — stale `paired_with_lineno` comment → FIX.
 8. low — `adjudications:` render line untested → FIX: test added.
 9. low — dead first half of an `or` assertion → FIX: rung headers asserted in decision-protocol, ladder summary in SKILL.md.
+- Absorbed fix: decision_telemetry reported the 2026-09-23 transition run's `[reviewed — clean]` under a legacy `## Panel decisions` header as unknown, so the problem list never read clean; the Panel classifier now falls back to the closed vocabulary (test added). Surfaced at promote as a TODO, absorbed per deferral-bar outlet 0.

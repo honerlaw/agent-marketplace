@@ -187,7 +187,9 @@ def classify_tag(orchestrator: str, tag: str) -> str:
             return "panel-revised"
         if vote or "accept" in low:
             return "panel-accept"
-        return UNKNOWN
+        # The 2026-09-23 transition run logged reviewer-tier lines (`[reviewed — clean]`) under
+        # the legacy `## Panel decisions` header; read them by the closed vocabulary.
+        return EXACT_TAGS.get(normalize_tag(tag), UNKNOWN)
     return UNKNOWN
 
 

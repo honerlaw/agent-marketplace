@@ -189,6 +189,13 @@ def test_auto_example_pairs_every_adjudication():
     assert not problems(recs), problems(recs)
 
 
+def test_closed_vocabulary_tag_under_a_legacy_panel_header_classifies():
+    """The 2026-09-23 transition run wrote `[reviewed — clean]` under `## Panel decisions`."""
+    text = "## Panel decisions 2026-09-23\n- [reviewed — clean] completion verification: Verifier ok\n"
+    (rec,) = parse_scratchpad(text, "u", "p")
+    assert rec.outcome == "reviewed-clean" and not rec.problems
+
+
 def test_legacy_round_table_lines_still_classify():
     """The retired round-table skill's own example, as archived scratchpads hold it."""
     recs = parse_scratchpad(LEGACY_ROUND_TABLE_EXAMPLE, "u", "p")
