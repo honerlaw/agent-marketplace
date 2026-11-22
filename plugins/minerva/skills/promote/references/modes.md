@@ -8,8 +8,10 @@
 2. **Idempotency check:** decide via the importable predicate, never by matching the marker string:
 
    ```bash
-   python3 -c "import sys; sys.path.insert(0, '<scripts>'); from work_status import unit_state; print(unit_state('.minerva/work/<date-slug>')['promoted'])"
+   python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from work_status import unit_state; print(unit_state(sys.argv[2])["promoted"])' "$PLUGIN_SCRIPTS" ".minerva/work/<date-slug>"
    ```
+
+   `PLUGIN_SCRIPTS` is resolved as the runtime contract says. `<date-slug>` is a checked id: see the runtime contract's "Names are data".
 
    If it prints `True`, report "already promoted" and stop. **Do not** re-implement this as a string comparison against the marker below. That is what the check used to do, and the marker has eight spellings across one corpus (`/promote` before the skill rename, `promoted <date> — durable knowledge in …`, a bare `<!-- post-promote -->`, an appended `## Promote` section, a `> **PROMOTED …**` blockquote). Matching one spelling made the check fail **open** on 16 of 51 units — promote would re-run a mutating pass and can duplicate `.minerva/knowledge/` entries. Reported as a bug in May 2026 and left unapplied while the affected set grew from 3 units to 16.
 3. Propose a three-way partition of the scratchpad entries:

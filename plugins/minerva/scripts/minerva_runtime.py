@@ -75,10 +75,49 @@ def common_dir(cwd: Path | None = None) -> Path:
     return (cwd / result.stdout.strip()).resolve()
 
 
+# A unit id is also a branch name and a directory name, and the repository it comes from may
+# not be the user's, so only ids of this shape are ever used (`units`, `state_path`).
+UNIT_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def is_unit_id(name: str) -> bool:
+    return UNIT_ID_RE.fullmatch(name) is not None and ".." not in name
+
+
 def state_path(unit: str, cwd: Path | None = None) -> Path:
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", unit) or ".." in unit:
+    if not is_unit_id(unit):
         raise ValueError("unit must be a slug, not a path")
     return common_dir(cwd) / "minerva" / "runtime" / unit / "run.json"
+
+
+def unit_ids(cwd: Path | None = None) -> dict:
+    """Every work-unit id this project holds that is safe to use, and how many were refused.
+
+    Reads directory names only: the primary checkout's `.minerva/work` and `.minerva/worktrees`,
+    each worktree's `.minerva/work`, and this working tree's `.minerva/work`. A refused name
+    is counted, never printed.
+    """
+    cwd = (cwd or Path.cwd()).resolve()
+    common = common_dir(cwd)
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd,
+                         capture_output=True, text=True).stdout.strip()
+    roots = {Path(top)} if top else set()
+    if common.name == ".git":
+        roots.add(common.parent)
+    parents = []
+    for root in sorted(roots):
+        parents += [root / ".minerva" / "work", root / ".minerva" / "worktrees"]
+        worktrees = root / ".minerva" / "worktrees"
+        if worktrees.is_dir():
+            parents += [entry / ".minerva" / "work" for entry in sorted(worktrees.iterdir())]
+    found, refused = set(), set()
+    for parent in parents:
+        if not parent.is_dir():
+            continue
+        for entry in parent.iterdir():
+            if entry.is_dir():
+                (found if is_unit_id(entry.name) else refused).add(entry.name)
+    return {"units": sorted(found), "refused": len(refused)}
 
 
 def validate(state: dict, unit: str, repository: str) -> dict:
@@ -230,6 +269,8 @@ def main(argv=None) -> int:
     resolve = sub.add_parser("resolve")
     resolve.add_argument("--skill-file", type=Path, required=True)
     resolve.add_argument("--scripts")
+    units = sub.add_parser("units", help="the safe work-unit ids in this project")
+    units.add_argument("--cwd", type=Path)
     for operation in ("read", "write", "clear"):
         command = sub.add_parser(operation)
         command.add_argument("--unit", required=True)
@@ -246,6 +287,8 @@ def main(argv=None) -> int:
             print(resolve_scripts(args.skill_file, args.scripts))
         elif args.operation == "write":
             print(json.dumps(write_state(args.unit, json.load(sys.stdin), args.cwd, args.start_phase), indent=2))
+        elif args.operation == "units":
+            print(json.dumps(unit_ids(args.cwd), indent=2))
         elif args.operation == "clear":
             clear_state(args.unit, args.revision, args.cwd)
         else:

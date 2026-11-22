@@ -15,6 +15,7 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 After resolving the target and before running any git commands:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- `<date-slug>` is a checked id: see the runtime contract's "Names are data".
 - If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<date-slug> …` and prefix any file path with `.minerva/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
@@ -52,18 +53,20 @@ hand; ask the module that owns them:
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-WT="$ROOT/.minerva/worktrees/<date-slug>"        # the unit's worktree, addressed by prefix
-python3 -c "
+UNIT="<date-slug>"                               # a checked id
+# BASE comes from the runtime contract's default-branch snippet ("Names are data"), run first in this shell call.
+WT="$ROOT/.minerva/worktrees/$UNIT"              # the unit's worktree, addressed by prefix
+python3 -c '
 import subprocess, sys; sys.path.insert(0, sys.argv[1])
 from work_status import read_phases, phase_progress, phase_name
-slug = '<date-slug>'
-merged = subprocess.run(['git','-C',sys.argv[2],'branch','--merged','<default-branch>',
-                         '--format=%(refname:short)'],
+slug, base = sys.argv[4], sys.argv[5]
+merged = subprocess.run(["git", "-C", sys.argv[2], "branch", "--merged", base,
+                         "--format=%(refname:short)"],
                         capture_output=True, text=True).stdout.split()
 phases = read_phases(open(sys.argv[3]).read())
 state = phase_progress(phases, merged, slug)
-print(state, [phase_name(t) for n, t in phases if n >= (state['next_position'] or 1)])
-" "$PLUGIN_SCRIPTS" "$WT" "$WT/.minerva/work/<date-slug>/proposal.md"
+print(state, [phase_name(t) for n, t in phases if n >= (state["next_position"] or 1)])
+' "$PLUGIN_SCRIPTS" "$WT" "$WT/.minerva/work/$UNIT/proposal.md" "$UNIT" "${BASE:?}"
 ```
 
 **Both paths are anchored, not CWD-relative**, and that is load-bearing twice over:
@@ -81,7 +84,7 @@ print(state, [phase_name(t) for n, t in phases if n >= (state['next_position'] o
 
 **If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
 
-Use `--merged <default-branch>` against a **freshly fetched** default branch; a stale local ref
+Use `--merged` against a **freshly fetched** default branch; a stale local ref
 reports a phase as unmerged after its PR landed, which would try to re-ship it.
 
 - `next_branch` is the branch this run ships. If the worktree is on a different branch, say so
@@ -91,11 +94,12 @@ reports a phase as unmerged after its PR landed, which would try to re-ship it.
 
 To **start** phase N (N≥2), cut its branch from the freshly fetched default branch inside the
 unit's existing worktree — `proposal.md` and `scratchpad.md` arrive with it, because they merged
-there with the previous phase:
+there with the previous phase. `BASE_NAME` comes from the default-branch snippet, run first in
+the same shell call:
 
 ```bash
-git -C .minerva/worktrees/<date-slug> fetch origin <default-branch>
-git -C .minerva/worktrees/<date-slug> checkout -b <date-slug>-phase-N origin/<default-branch>
+git -C .minerva/worktrees/<date-slug> fetch origin "refs/heads/${BASE_NAME:?}"
+git -C .minerva/worktrees/<date-slug> checkout -b <date-slug>-phase-N "refs/remotes/origin/${BASE_NAME:?}"
 ```
 
 Full rules — the soft ceiling, why phase 1 keeps the bare slug, and why progress is derived
@@ -105,22 +109,22 @@ other than the first.**
 
 ## Default-branch detection
 
-Several steps below reference "the default branch". Resolve it **once** at the start of the run using this sequence and reuse the result:
-
-1. `git symbolic-ref refs/remotes/origin/HEAD` — parse out `refs/remotes/origin/<name>` and take `<name>`.
-2. If that fails, fall back to `main`.
-3. If `main` doesn't exist locally or on the remote, fall back to `master`.
-
-Use the same resolved value in pre-flight, branch creation, and the branch-vs-default diff for PR-body construction.
+Several steps below reference "the default branch". Use the runtime contract's default-branch snippet ("Names are data") in each shell call that needs it — pre-flight, branch creation, and the branch-vs-default diff for PR-body construction — and refer to it only as `"${BASE:?}"`.
 
 ## Branch creation
 
 Only if currently on the default branch:
 
-1. Derive the branch name:
-   - Work-unit mode: `<YYYY-MM-DD>-<slug>` (e.g. `006-add-ship-skill`). For a **phased** unit take `next_branch` from [Phase resolution](#phase-resolution) instead — phase 1 resolves to exactly this same bare name, so the two agree by construction rather than by coincidence.
-   - Bare mode: `<git-user>/<slug-from-recent-commit-or-timestamp>`, where `<git-user>` is taken from `git config user.email` (local part before `@`) or `git config user.name` lowercased; fall back to `work` if neither is set. Avoids hardcoding any single agent identity into branch names.
-2. `git checkout -b <branch>`.
+1. **Work-unit mode:** the branch is the checked unit id (e.g. `006-add-ship-skill`): `git checkout -b <date-slug>`. For a **phased** unit it is `next_branch` from [Phase resolution](#phase-resolution), which is built from that id — phase 1 resolves to exactly this same bare name, so the two agree by construction rather than by coincidence.
+2. **Bare mode:** a user part and a slug part, each reduced in the shell to lowercase letters, digits and single dashes, starting with a letter or digit; the user part falls back to `work` and the slug to a timestamp. Avoids hardcoding any single agent identity into branch names:
+
+   ```bash
+   reduce() { printf '%s' "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | tr -s '-' | cut -c1-40 | sed 's/^-*//; s/-*$//'; }
+   u="$(git config user.email)"; u="${u%%@*}"; [ -n "$u" ] || u="$(git config user.name)"
+   u="$(reduce "$u")"; [ -n "$u" ] || u=work
+   s="$(reduce "$(git log -1 --format=%s 2>/dev/null)")"; [ -n "$s" ] || s="ship-$(date +%Y%m%d%H%M%S)"
+   git checkout -b "$u/$s"
+   ```
 
 If already on a non-default branch, **do not switch branches** — ship from where you are. The user picked this branch on purpose.
 
@@ -143,7 +147,7 @@ If nothing is uncommitted, skip this step entirely.
 
 ## Push & open PR
 
-1. `git push -u origin <branch>` (or just `git push` if upstream is already set).
+1. `git push -u origin HEAD` (or just `git push` if upstream is already set). `HEAD` names the branch just checked out, so no branch name is typed.
 2. **Check for an existing PR** on this branch: `gh pr view --json url,number,state 2>/dev/null`. If a PR already exists and is `OPEN`, **skip steps 3–5** and jump straight to the **CI watch & auto-fix loop** using the existing PR URL. Report that the existing PR was reused. This is what makes the Idempotency promise below load-bearing — re-running ship on the same branch must not error out on `gh pr create`.
 
    - **`MERGED`, and the branch has no commits the PR did not carry** → this run is a stale re-entry (a watch fallback firing after the work already shipped). Report "already shipped as #N" and **exit without opening a PR**.
@@ -189,7 +193,7 @@ If nothing is uncommitted, skip this step entirely.
    Bare-mode body is built from `git log` of branch-vs-default (no footer, no `Closes`
    lines — bare mode has no proposal to read the field from).
 5. **Hard gate #2 (PR title + body).** Show the proposed title and body block and prompt the user to redirect or accept. The user can edit either in place. Routine work can accept with one word ("ok"); bigger changes get a real preview.
-6. Write the exact approved PR body to a temporary file, then run `gh pr create --title "<title>" --body-file <absolute-body-file>`. Capture the returned PR URL.
+6. Write the exact approved title and PR body to two temporary files with a file tool, then run `gh pr create --title "$(cat <absolute-title-file>)" --body-file <absolute-body-file>`. The title is never typed into the command. Capture the returned PR URL.
 
 ## CI watch & auto-fix loop (tracked watcher + durable fallback)
 
@@ -285,7 +289,7 @@ Once checks are green:
    ```
 
    Prefer `--squash`, fall back to `--merge`, then `--rebase`.
-2. `gh pr merge --auto <strategy> <pr-number>`. If the PR is already mergeable and protections permit, GitHub merges immediately; otherwise it merges as soon as required checks pass.
+2. `gh pr merge --auto --squash <pr-number>`, with `--merge` or `--rebase` in place of `--squash` per step 1 (one of these three fixed flags, never a value read from output). `<pr-number>` is the number `gh pr view --json number` returned. If the PR is already mergeable and protections permit, GitHub merges immediately; otherwise it merges as soon as required checks pass.
 3. On permission failure (no write access, repo doesn't allow auto-merge, branch protection blocks it) → report it cleanly, leave the PR open with checks green. The user can merge manually.
 
 ## Final report

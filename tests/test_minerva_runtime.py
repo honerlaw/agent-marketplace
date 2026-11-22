@@ -45,6 +45,14 @@ def installed(tmp_path):
     return dest
 
 
+def default_branch_snippet(plugin=PLUGIN):
+    """The runtime contract's default-branch snippet ("Names are data"), which sets BASE."""
+    runtime_md = plugin / "skills" / "using-minerva" / "references" / "runtime.md"
+    snippets = fenced_blocks(runtime_md, "bash", contains="unset BASE BASE_NAME")
+    assert len(snippets) == 1
+    return snippets[0]
+
+
 def snapshot(root):
     return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*")
             if p.is_file() and ".git" not in p.relative_to(root).parts}
@@ -343,7 +351,9 @@ def test_shipped_phase_snippets_resolve_installed_code_and_primary_unit_paths(
         "ship": "protocol.md", "cleanup": "phased-units.md", "propose": "on-approval.md"}[skill]
     blocks = fenced_blocks(document, "bash", contains="from work_status import read_phases")
     assert len(blocks) == 1
-    block = blocks[0].replace("<date-slug>", UNIT).replace("<default-branch>", "main").replace("<default>", "main")
+    # Setup: the runtime contract's default-branch snippet runs first in the same shell call,
+    # as the skills instruct, and the checked unit id fills its one placeholder.
+    block = default_branch_snippet(installed) + "\n" + blocks[0].replace("<date-slug>", UNIT)
     cwd = consumer if location == "root" else worktree if location == "linked" else consumer / "nested"
     cwd.mkdir(exist_ok=True)
     env = {**os.environ, "MINERVA_PLUGIN_ROOT": str(installed),
@@ -397,3 +407,33 @@ def test_recorded_work_pr_cannot_be_replaced_during_reconciliation(consumer, pr)
     with pytest.raises(ValueError, match="original work PR"):
         runtime.write_state(UNIT, dict(revision=1, pr=pr, phase="reconciliation"), consumer)
     assert runtime.read_state(UNIT, consumer) == state
+
+
+@pytest.mark.parametrize("name,safe", [
+    (UNIT, True), ("005-legacy", True), ("a..b", False), (".hidden", False),
+    ("-x", False), ("two\nlines", False), ("odd'$name", False), ("sp ace", False),
+])
+def test_units_lists_only_safe_ids_and_counts_the_rest(consumer, tmp_path, name, safe):
+    (consumer / ".minerva" / "work" / name).mkdir(parents=True)
+    worktree = consumer / ".minerva" / "worktrees" / "2026-09-13-other"
+    git(consumer, "worktree", "add", "-q", "-b", "2026-09-13-other", str(worktree))
+    (worktree / ".minerva" / "work" / "2026-09-14-inner").mkdir(parents=True)
+    for cwd in (consumer, worktree):
+        result = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "minerva_runtime.py"),
+                                 "units", "--cwd", str(cwd)], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        got = json.loads(result.stdout)
+        expected = {"2026-09-13-other", "2026-09-14-inner"} | ({name} if safe else set())
+        assert set(got["units"]) == expected
+        assert got["refused"] == (0 if safe else 1)
+        assert safe or name not in result.stdout
+
+
+def test_units_and_checkpoints_share_one_id_rule():
+    for name in ("ok-1", "a..b", ".x", "-x", "a/b", "a\nb"):
+        try:
+            runtime.state_path(name, PLUGIN)
+            accepted = True
+        except ValueError as error:
+            accepted = "slug" not in str(error)
+        assert accepted == runtime.is_unit_id(name), name

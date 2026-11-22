@@ -121,6 +121,10 @@ FENCE_LOOP_EXEMPT = {
         "collects the content INSIDE each fence — the exact inverse of `unfenced`, which drops "
         "it; the peer-message template it guards is fenced content, so a filtered-out subset is "
         "precisely what it cannot use",
+    "tests/test_untrusted_names.py":
+        "reads BOTH sides of every fence in one pass: each fenced block with its info string "
+        "(scanned as commands or Python) and the lines outside it (for inline spans); "
+        "`unfenced` drops the first",
 }
 
 

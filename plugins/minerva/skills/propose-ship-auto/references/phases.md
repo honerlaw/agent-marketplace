@@ -51,7 +51,7 @@ This phase replaces the user-interactive intake in `minerva:propose`.
    - Derive slug, check for a duplicate slug across local work / local branches / remote branches, and take today's date as the id.
    - Resolve default branch.
    - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
-   - `git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>`.
+   - `git worktree add --no-track -b <date-slug> .minerva/worktrees/<date-slug> "${BASE:?}"`, in the same shell call as the runtime contract's default-branch snippet ("Names are data").
    - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
 
 8. **File writes (inside the worktree).** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
@@ -77,7 +77,7 @@ This phase replaces the user-interactive setup and completion signal in `minerva
 
 4. **Completion verification.** When the main LLM judges that every `## Success criteria` item appears met:
    - Compose a checklist: each criterion, the evidence (test name, file path, behavior observed), and a yes/no.
-   - Route it to the **Verifier**, always: completion has a reviewer floor and no other shape. The Verifier also checks that the diff changes no existing interface or contract *beyond what the proposal approved*. ARTIFACT = the checklist + `git diff <default>...HEAD` + the proposal's `## Success criteria`.
+   - Route it to the **Verifier**, always: completion has a reviewer floor and no other shape. The Verifier also checks that the diff changes no existing interface or contract *beyond what the proposal approved*. ARTIFACT = the checklist + `git diff "${BASE:?}"...HEAD` (with the default-branch snippet) + the proposal's `## Success criteria`.
    - **Run review's finding generation alongside it.** In the same message as the Verifier, also send out Phase 3 step 3's code review over the same diff. Run Phase 3 step 3's inline minerva audit while they run. These findings are **provisional** until completion passes:
      - **Completion passes** (Verifier `accept`): Phase 3 uses them as its step 3 output and does not re-run the code review.
      - **Completion fails** (Verifier `revise`/`reject`): go to Phase 2.5 as below. A replan always invalidates the audit findings, because it can rewrite `## Success criteria`, so Phase 3 re-runs the audit. If the resumed implementation also changes the diff outside `.minerva/work/`, discard **both** the code-review and the audit findings, and Phase 3 generates them again against the final diff. If the diff outside `.minerva/work/` is unchanged, the code-review findings stand.
@@ -178,8 +178,8 @@ these limits when switching sessions.
 
 Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
 
-1. `gh pr view <branch> --json state,mergedAt 2>/dev/null`. On resume, use the
-   checkpoint's work PR number if its branch has already been pruned.
+1. `gh pr view <pr-number> --json state,mergedAt 2>/dev/null`, with the PR number ship
+   reported (on resume, the checkpoint's PR number). No branch name is typed.
 2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. Cleanup removes the worktree and prunes the branch; it opens no PR, because the unit's knowledge entries were complete when its PR merged. Report and exit.
 3. **`OPEN`, auto-merge enabled** → when a scheduler supports re-entry, use the scheduled resume operation with `prompt: minerva:propose-ship-auto --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12. On exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.

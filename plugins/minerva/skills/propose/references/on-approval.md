@@ -2,7 +2,7 @@
 
 ## On approval — worktree setup + file writes
 
-Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 establishes how to address the worktree. Steps 8–13 write into the worktree **via its prefixed path** — the session's working directory never changes.
+Steps 1–6 run from the parent repo (typically on the default branch). `<date-slug>` is a checked id: see the runtime contract's "Names are data". Step 7 establishes how to address the worktree. Steps 8–13 write into the worktree **via its prefixed path** — the session's working directory never changes.
 
 **Non-git repo escape clause:** in a non-git project (no `.git/` directory at the project root), there's nothing to commit and no worktree to create. Skip steps 4, 5, 6, 7, and 11 entirely; run steps 1–3 (the date id needs no git), then jump from step 3 to step 8 — create `.minerva/work/<date-slug>/` directly at the project root and continue with steps 9, 10, 12, 13.
 
@@ -18,24 +18,22 @@ Steps 1–6 run from the parent repo (typically on `<default-branch>`). Step 7 e
 
    This replaced a three-source NNN scan. That scan existed because a number is scarce — two units picking the same one collided invisibly. It is not needed for a date, and keeping it would reintroduce the coordination it was written to fix.
 
-4. **Resolve the default branch.** Same logic used by `ship` and `cleanup`, executed once and reused:
-   - `git symbolic-ref refs/remotes/origin/HEAD` → parse `refs/remotes/origin/<name>` and take `<name>`.
-   - Fall back to `main`, then `master`.
+4. **Resolve the default branch** with the runtime contract's default-branch snippet ("Names are data"), repeated in each shell call below that uses `BASE`.
 
-5. **Pre-flight gitignore check** — verify `.minerva/worktrees/` is ignored on `<default-branch>`. Check the default branch's `.gitignore` (not just the current working tree's) via `git show <default-branch>:.gitignore 2>/dev/null` and grep for a line matching `.minerva/worktrees/` (or a parent pattern like `.minerva/`).
+5. **Pre-flight gitignore check** — verify `.minerva/worktrees/` is ignored on the default branch. Check the default branch's `.gitignore` (not just the current working tree's) via `git show "${BASE:?}:.gitignore" 2>/dev/null` and grep for a line matching `.minerva/worktrees/` (or a parent pattern like `.minerva/`).
 
    - If present → continue.
-   - If missing → **abort**: "The `.minerva/worktrees/` entry is missing from `.gitignore` on `<default-branch>`. Run `minerva:init` first to install it (init handles this idempotently), or add `.minerva/worktrees/` to `.gitignore` and commit on `<default-branch>` manually before re-running `minerva:propose`."
+   - If missing → **abort**: "The `.minerva/worktrees/` entry is missing from `.gitignore` on the default branch. Run `minerva:init` first to install it (init handles this idempotently), or add `.minerva/worktrees/` to `.gitignore` and commit on the default branch manually before re-running `minerva:propose`."
 
    Do not auto-edit `.gitignore` from propose: propose may be invoked from inside another worktree, where editing `.gitignore` would land the change on the wrong branch. Init is the one place that installs this entry.
 
-6. **Create the worktree and branch:**
+6. **Create the worktree and branch**, in the same shell call as the default-branch snippet:
 
    ```
-   git worktree add -b <date-slug> .minerva/worktrees/<date-slug> <default-branch>
+   git worktree add --no-track -b <date-slug> .minerva/worktrees/<date-slug> "${BASE:?}"
    ```
 
-   Branching explicitly from `<default-branch>` (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the work-unit directory so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch. Legacy branches keep their old `NNN-` names; only new ones are dated.
+   Branching explicitly from the default branch (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the work-unit directory so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch. Legacy branches keep their old `NNN-` names; only new ones are dated.
 
 7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.minerva/worktrees/`, which must be addressed directly in either host, so minerva never uses a host-managed worktree switch. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.minerva/worktrees/<date-slug>/` and run each git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 

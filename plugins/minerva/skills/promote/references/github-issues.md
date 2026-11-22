@@ -105,7 +105,8 @@ before `gh pr create`. Check three sources, cheapest and most reliable first:
 3. **A repository search**, for a re-run from a different clone or session:
 
    ```bash
-   gh issue list --state all --limit 200 --search '"<date-slug>" in:body' \
+   U="<date-slug>"   # a checked id (runtime contract, "Names are data")
+   gh issue list --state all --limit 200 --search "\"$U\" in:body" \
      --json number,title --jq '.[] | "\(.number)\t\(.title)"'
    ```
 

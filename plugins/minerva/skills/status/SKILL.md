@@ -66,7 +66,7 @@ stale ref reports a merged phase as unmerged.
 ```bash
 git -C "$WORK_ROOT" fetch --quiet origin 2>/dev/null
 MERGED="$(gh pr list --state merged --limit 200 --json headRefName -q '.[].headRefName' 2>/dev/null)"
-[ -z "$MERGED" ] && MERGED="$(git -C "$WORK_ROOT" branch --merged "$(git -C "$WORK_ROOT" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|origin/||' || echo main)" --format='%(refname:short)')"
+[ -z "$MERGED" ] && MERGED="$(D="$(git -C "$WORK_ROOT" symbolic-ref -q refs/remotes/origin/HEAD)"; D="${D#refs/remotes/origin/}"; git -C "$WORK_ROOT" branch --merged "refs/heads/${D:-main}" --format='%(refname:short)')"
 ```
 
 **Merged-PR first, `git branch --merged` only as a fallback** — the same order and the

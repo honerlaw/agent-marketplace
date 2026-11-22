@@ -29,14 +29,16 @@ that owns the topology — never infer it from the branch name:
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-python3 -c "
+UNIT="<date-slug>"                               # a checked id
+# BASE comes from the runtime contract's default-branch snippet ("Names are data"), run first in this shell call.
+python3 -c '
 import subprocess, sys; sys.path.insert(0, sys.argv[1])
 from work_status import read_phases, phase_progress
-merged = subprocess.run(['git','branch','--merged','<default>','--format=%(refname:short)'],
+merged = subprocess.run(["git", "branch", "--merged", sys.argv[4], "--format=%(refname:short)"],
                         capture_output=True, text=True).stdout.split()
 proposal = sys.argv[2]
-print(phase_progress(read_phases(open(proposal).read()), merged, '<date-slug>'))
-" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md"
+print(phase_progress(read_phases(open(proposal).read()), merged, sys.argv[3]))
+' "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/$UNIT/.minerva/work/$UNIT/proposal.md" "$UNIT" "${BASE:?}"
 ```
 
 **If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
@@ -65,7 +67,7 @@ string: two derivations plus a comment asking them to agree is the shape
 ## Why this step has to exist at all
 
 Merge detection is exact-match on `<date-slug>` — both the `gh pr list --head` query and the
-`git branch --merged | grep "^[* ] <date-slug>$"` fallback. Neither can ever match a
+`git branch --merged | grep -Fqx -- "<date-slug>"` fallback. Neither can ever match a
 `-phase-N` branch.
 
 That makes the existing logic **safe by accident**: it will not tear down a live phased unit,

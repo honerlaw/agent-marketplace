@@ -52,7 +52,7 @@ Every active work unit lives in an isolated git worktree created by `minerva:pro
 
 ## Setup (run at the start of every `minerva:work` invocation)
 
-All paths below are **prefixed with** the worktree root (`.minerva/worktrees/<date-slug>/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .minerva/worktrees/<date-slug> …`.
+All paths below are **prefixed with** the worktree root (`.minerva/worktrees/<date-slug>/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .minerva/worktrees/<date-slug> …`. `<date-slug>` is a checked id (runtime contract, "Names are data").
 
 1. Read `.minerva/work/<date-slug>/proposal.md`.
 2. Read **all** `.minerva/work/<date-slug>/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
