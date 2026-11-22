@@ -20,7 +20,7 @@ Steps 1–6 run from the parent repo (typically on the default branch). `<date-s
 
 4. **Resolve the default branch** with the runtime contract's default-branch snippet ("Names are data"), repeated in each shell call below that uses `BASE`.
 
-5. **Pre-flight gitignore check** — verify `.minerva/worktrees/` is ignored on the default branch. Check the default branch's `.gitignore` (not just the current working tree's) via `git show "${BASE:?}:.gitignore" 2>/dev/null` and grep for a line matching `.minerva/worktrees/` (or a parent pattern like `.minerva/`).
+5. **Pre-flight gitignore check** — verify `.minerva/worktrees/` is ignored on the default branch. Check the default branch's `.gitignore` (not just the current working tree's) via `: "${BASE:?}" && git show "${BASE:?}:.gitignore" 2>/dev/null` piped to grep for a line matching `.minerva/worktrees/` (or a parent pattern like `.minerva/`).
 
    - If present → continue.
    - If missing → **abort**: "The `.minerva/worktrees/` entry is missing from `.gitignore` on the default branch. Run `minerva:init` first to install it (init handles this idempotently), or add `.minerva/worktrees/` to `.gitignore` and commit on the default branch manually before re-running `minerva:propose`."

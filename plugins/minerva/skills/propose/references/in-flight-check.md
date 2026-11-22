@@ -58,10 +58,12 @@ last fetch, so `git branch -r` reads clean for a branch pushed five minutes ago.
 
 **Bound this source for staleness.** A pushed-and-abandoned branch otherwise produces a
 recurring false collision on every future intake touching its theme, forever. Two bounds, read
-for every work-unit branch in one call, so no branch name is typed into a command:
+for every work-unit branch, local and remote, in one call, so no branch name is typed into a
+command:
 
 ```bash
-git ls-remote --heads origin | while read -r sha ref; do
+{ git ls-remote --heads origin 2>/dev/null; git for-each-ref --format='%(objectname) %(refname)' refs/heads/; } |
+while read -r sha ref; do
   b="${ref#refs/heads/}"
   case "$b" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*|[0-9][0-9][0-9]-*) ;; *) continue ;; esac
   printf '%s\t%s\t' "$b" "$(git log -1 --format=%cI "$sha" 2>/dev/null || echo unfetched)"   # newest commit — older than 14 days is stale
@@ -69,8 +71,9 @@ git ls-remote --heads origin | while read -r sha ref; do
 done
 ```
 
-Each line is a branch, its newest commit date (`unfetched` when that commit is not local),
-and its PRs as JSON.
+Each line is a branch (a branch both local and pushed appears twice), its newest commit date
+and its PRs as JSON. `unfetched` means the pushed commit is not local: judge that branch by its
+PRs alone, and with none treat it as in flight, never stale.
 
 Use `--state all`, not the `--state open` query in step 3: that one cannot tell a branch whose
 PR merged from a branch that never had one. A branch whose PR is merged or closed is **not** in

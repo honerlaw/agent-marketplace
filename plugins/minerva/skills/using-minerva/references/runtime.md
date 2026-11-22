@@ -38,7 +38,8 @@ text. So:
   inside the shell call that uses it, keep it in a variable, and pass it quoted: after a
   `refs/…` prefix, as a flag's value, or after `--`. Python receives it in `sys.argv`.
 - **The default branch** comes from this snippet, repeated in each shell call that uses it.
-  The `:?` in `"${BASE:?}"` stops a call that skipped it. A branch or worktree cut from `BASE` takes
+  The `:?` in `"${BASE:?}"` stops a call that skipped it. It cannot stop a call from inside
+  `$(…)` or a pipeline, so never put it there; start such a line with `: "${BASE:?}" &&`. A branch or worktree cut from `BASE` takes
   `--no-track`, so a fallback to origin's ref never sets the default branch as upstream.
 
   ```bash
@@ -140,7 +141,16 @@ For legacy runs, reconstruct Git/PR progress and seed counters from explicit
 usage requires user recovery rather than pretending zero. For bare shipping,
 use `bare-` plus the SHA-256 of the branch name as the checkpoint key and give
 the user the current branch and bare ship prompt (do not treat that key as a
-work unit). Bare shipping can mark done after its PR is confirmed merged; no
+work unit). Read the branch and derive both in the shell, so its name is never typed:
+
+```bash
+BR="$(git branch --show-current)"
+KEY="$(python3 -c 'import hashlib, sys; print("bare-" + hashlib.sha256(sys.argv[1].encode()).hexdigest())' "$BR")"
+python3 -c 'import json, sys; print(json.dumps({"revision": 0, "branch": sys.argv[1], "caller": None}))' "$BR" \
+  | python3 "$PLUGIN_SCRIPTS/minerva_runtime.py" write --unit "$KEY"
+```
+
+Later writes build their JSON the same way. Bare shipping can mark done after its PR is confirmed merged; no
 unit teardown is needed. A pending bare run resumes on its recorded branch.
 
 Do not clear progress while anything is pending. After live evidence confirms

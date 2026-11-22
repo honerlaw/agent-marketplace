@@ -437,3 +437,38 @@ def test_units_and_checkpoints_share_one_id_rule():
         except ValueError as error:
             accepted = "slug" not in str(error)
         assert accepted == runtime.is_unit_id(name), name
+
+
+def _units(cwd):
+    result = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "minerva_runtime.py"),
+                             "units", "--cwd", str(cwd)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def test_units_works_outside_git(tmp_path):
+    (tmp_path / ".minerva" / "work" / "2026-01-01-plain").mkdir(parents=True)
+    (tmp_path / ".minerva" / "work" / ".bad").mkdir()
+    assert _units(tmp_path) == {"units": ["2026-01-01-plain"], "refused": 1, "unreadable": 0}
+
+
+def test_units_keeps_a_unit_whose_worktree_is_gone(consumer):
+    worktree = consumer / ".minerva" / "worktrees" / "2026-09-13-gone"
+    git(consumer, "worktree", "add", "-q", "-b", "2026-09-13-gone", str(worktree))
+    git(consumer, "branch", "2026-09-13-gone-phase-2")
+    git(consumer, "branch", "feature-x")
+    git(consumer, "worktree", "remove", str(worktree))
+    assert _units(consumer)["units"] == ["2026-09-13-gone"]
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads any directory")
+def test_units_counts_an_unreadable_directory_and_goes_on(consumer):
+    (consumer / ".minerva" / "work" / UNIT).mkdir(parents=True)
+    locked = consumer / ".minerva" / "worktrees" / "locked" / ".minerva" / "work"
+    locked.mkdir(parents=True)
+    locked.chmod(0)
+    try:
+        got = _units(consumer)
+    finally:
+        locked.chmod(0o755)
+    assert UNIT in got["units"] and got["unreadable"] == 1

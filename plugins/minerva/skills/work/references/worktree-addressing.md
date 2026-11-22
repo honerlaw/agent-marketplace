@@ -18,7 +18,7 @@ Every active work unit lives in an isolated git worktree created by `minerva:pro
    `.minerva/worktrees/<date-slug>/` does **not** exist, but `.minerva/work/<date-slug>/` exists on the default branch. This is the resurrection case: the unit was previously shipped and `minerva:cleanup` removed its worktree, but the user wants to re-open it. Surface a one-line note before proceeding: "no worktree found for `<date-slug>` — re-creating from the shipped docs on the default branch."
 
    1. Run the runtime contract's default-branch snippet ("Names are data") in the same shell call as steps 2 and 3.
-   2. Confirm `.minerva/worktrees/` is gitignored on the default branch (`git show "${BASE:?}:.gitignore" | grep -q '\.minerva/worktrees/'`). If missing, bail with "run `minerva:init` first to install the gitignore entry, then retry."
+   2. Confirm `.minerva/worktrees/` is gitignored on the default branch (`: "${BASE:?}" && git show "${BASE:?}:.gitignore" | grep -q '\.minerva/worktrees/'`). If missing, bail with "run `minerva:init` first to install the gitignore entry, then retry."
    3. `git worktree add --no-track -b <date-slug> .minerva/worktrees/<date-slug> "${BASE:?}"` — branches from the merged default, picking up the shipped docs automatically.
    4. Address it by prefix (no `EnterWorktree`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
    5. Continue to Setup. (No file move or commit needed — the docs are already on the branch.)

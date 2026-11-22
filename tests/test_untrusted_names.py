@@ -11,10 +11,13 @@ It never executes what it reads, so it does not use `fenced_blocks`, whose read-
 exists for extractors that run their snippets. Fences are found with the shared grammar
 (`knowledge_spans.FENCE_RE`).
 """
+import hashlib
+import json
 import os
 import re
 import shutil
 import subprocess
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -36,12 +39,12 @@ REF = {"default-branch", "default", "branch", "branch name", "next branch", "git
 # agent makes, naming patterns, and fields of report templates and reviewer briefs.
 INERT = {
     # numbers read from `gh ... --json`
-    "pr", "pr-number", "run-id", "n", "N", "X", "x",
+    "pr", "pr-number", "run-id", "N",
     # paths and files the agent makes or a helper printed
-    "absolute-body-file", "absolute-title-file", "file", "files", "path", "unit-dir",
-    "scripts", "target", "topic", "stem", "old-stem", "entry",
+    "absolute-body-file", "absolute-title-file", "file", "files", "unit-dir",
+    "scripts", "topic", "stem", "old-stem",
     # naming patterns and skill or host names, never a branch
-    "YYYY-MM-DD", "type", "date", "name", "orchestrator", "unit", "project", "suffix",
+    "YYYY-MM-DD", "type", "date", "orchestrator", "project", "suffix",
     # report templates, briefs and prose fields
     "list", "list with branch names", "list — needs manual review", "message",
     "apparent conflict", "level", "that level's definition from step 2",
@@ -64,8 +67,12 @@ INERT = {
     "omit this section entirely for a unit that fits one PR — which is most units",
     "bullets derived from proposal's ## Why and scratchpad highlights",
 }
+# Generic names that could hold anything, a branch included: allowed in prose and templates,
+# never in a git or gh command.
+AMBIGUOUS = {"name", "target", "x", "X", "unit", "path", "entry", "n"}
+GIT_COMMAND = re.compile(r"(?:^|[;&|(]\s*|\$\(\s*)(?:git|gh)\s")
 # Variables a span may expand. The ones that can hold a name must always be double-quoted.
-NAME_VARS = {"BASE", "BASE_NAME", "b", "UNIT", "U", "u", "s", "D"}
+NAME_VARS = {"BASE", "BASE_NAME", "b", "UNIT", "U", "u", "s", "D", "BR", "KEY"}
 OTHER_VARS = {
     "PLUGIN_SCRIPTS", "ROOT", "WT", "MINERVA_PLUGIN_ROOT", "MINERVA_SKILL_FILE",
     "MINERVA_SCRIPTS", "WORK_ROOT", "MERGED", "PWD", "HOME", "1", "2", "3", "n", "sha", "ref",
@@ -74,9 +81,11 @@ OTHER_VARS = {
 }
 PLACEHOLDER = re.compile(r"<([^<>!/\s`][^<>\n`]{0,80})>")
 REF_CONTEXT = re.compile(r"(?:refs/heads/|refs/remotes/origin/|origin/)<([^<>\n]+)>")
-VARIABLE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*|[0-9])")
+VARIABLE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*|[0-9@*])")
 PYTHON_C = re.compile(r"python3?\s+(?:-[A-Za-z]+\s+)*-c\s+(\S)")
-BRANCH_CUT = re.compile(r"worktree\s+add\b|checkout\s+-b\b|switch\s+-c\b")
+PYTHON_HEREDOC = re.compile(r"python3?\s[^\n]*?<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n(.*?)^\s*\1\s*$", re.S | re.M)
+BRANCH_CUT = re.compile(r"worktree\s+add\b|checkout\b[^\n|;&]*\s-[bB]\b|switch\b[^\n|;&]*\s-[cC]\b"
+                        r"|\bbranch\s+(?:-\S+\s+)*[^-\s\"]\S*\s+\"?\$\{BASE")
 # Lines that name a ref placeholder in prose or in a report the user reads, never in a
 # command: (file, the exact line or inline span) -> why.
 PROSE_EXEMPT = {
@@ -93,15 +102,18 @@ def spans(md: Path):
     kind is the fence's info string ("" for none) or "inline".
     """
     lines = md.read_text().splitlines()
-    fence, body, start = None, [], 0
+    fence, body, start, marker = None, [], 0, ""
     for number, line in enumerate(lines, 1):
         if FENCE_RE.match(line):
+            run = re.match(r"\s*(`+|~+)", line).group(1)
             if fence is None:
-                fence, body, start = line.strip()[3:].strip(), [], number
-            else:
+                fence, body, start, marker = line.strip()[len(run):].strip(), [], number, run
+                continue
+            # Only a fence of the same character, at least as long, with no info string closes.
+            if run[0] == marker[0] and len(run) >= len(marker) and not line.strip()[len(run):]:
                 yield fence, "\n".join(body), start
                 fence = None
-            continue
+                continue
         if fence is not None:
             body.append(line)
             continue
@@ -114,6 +126,8 @@ def python_sources(kind: str, text: str):
     if kind == "python":
         yield text, None
         return
+    for match in PYTHON_HEREDOC.finditer(text):
+        yield match.group(2), None
     for match in PYTHON_C.finditer(text):
         quote = match.group(1)
         rest = text[match.end():]
@@ -121,8 +135,8 @@ def python_sources(kind: str, text: str):
         yield (rest[:closing.start()] if closing else rest), quote
 
 
-def quoted(text: str, index: int) -> bool:
-    """Whether `index` sits inside double quotes (or single quotes, where `$` is literal).
+def quoting(text: str, index: int) -> str:
+    """'single', 'double' or '' for the quoting around `index`.
 
     Scans its line, tracking `$(...)`, which opens a fresh quoting level, and backslashes.
     """
@@ -143,19 +157,34 @@ def quoted(text: str, index: int) -> bool:
         elif char == ")" and len(levels) > 1 and not levels[-1]:
             levels.pop()
         i += 1
-    return single or levels[-1]
+    return "single" if single else "double" if levels[-1] else ""
+
+
+def subshell_depth(text: str, index: int) -> int:
+    """How many `$(...)` levels enclose `index` on its line."""
+    depth, i = 0, text.rfind("\n", 0, index) + 1
+    while i < index:
+        if text.startswith("$(", i):
+            depth, i = depth + 1, i + 1
+        elif text[i] == ")" and depth:
+            depth -= 1
+        i += 1
+    return depth
 
 
 def violations(where: str, kind: str, text: str, runtime_snippet: bool = False,
                rel: str = "") -> list:
     found = []
+    text = re.sub(r"\\\n\s*", " ", text)  # a command continued across lines is one line
     for line in text.splitlines():
         exempt = (rel, line.strip()) in PROSE_EXEMPT
         for name in PLACEHOLDER.findall(line):
-            if name not in UNIT | REF | INERT:
+            if name not in UNIT | REF | INERT | AMBIGUOUS:
                 found.append(f"{where}: unclassified placeholder <{name}>")
             elif name in REF and not exempt:
                 found.append(f"{where}: branch or ref placeholder <{name}>")
+            elif name in AMBIGUOUS and GIT_COMMAND.search(line):
+                found.append(f"{where}: generic placeholder <{name}> in a git or gh command")
         for name in REF_CONTEXT.findall(line):
             if name not in UNIT and not exempt:
                 found.append(f"{where}: a placeholder used as a ref name: <{name}>")
@@ -166,16 +195,26 @@ def violations(where: str, kind: str, text: str, runtime_snippet: bool = False,
             found.append(f"{where}: placeholder inside Python source")
     for match in VARIABLE.finditer(text):
         name = match.group(1)
+        quote = quoting(text, match.start())
+        if quote == "single":
+            continue  # literal text, e.g. an awk field or Python inside single quotes
         if name not in NAME_VARS | OTHER_VARS:
             found.append(f"{where}: unknown variable ${name}")
-        elif name in NAME_VARS and not runtime_snippet and not quoted(text, match.start()):
+        elif name in NAME_VARS and not runtime_snippet and quote != "double":
             found.append(f"{where}: ${name} is not double-quoted")
         elif name in {"BASE", "BASE_NAME"} and not runtime_snippet \
                 and not text.startswith(":?}", match.end()):
             found.append(f"{where}: ${name} without :? (a skipped snippet would go unnoticed)")
+        elif name in {"BASE", "BASE_NAME"} and not runtime_snippet \
+                and subshell_depth(text, match.start()):
+            found.append(f"{where}: ${name} inside $(...), where :? cannot stop the call")
     for line in text.splitlines():
         if "${BASE:?}" in line and BRANCH_CUT.search(line) and "--no-track" not in line:
             found.append(f"{where}: a branch cut from BASE without --no-track")
+        piped = re.search(r"(?<![|])\|(?![|])", line)
+        if piped and re.search(r"\$\{BASE(?:_NAME)?:\?\}", line) and not runtime_snippet \
+                and not re.match(r'\s*:\s+"\$\{BASE(?:_NAME)?:\?\}"\s*&&', line):
+            found.append(f"{where}: BASE in a pipeline without a leading : \"${{BASE:?}}\" &&")
     return found
 
 
@@ -210,6 +249,17 @@ def test_no_skill_types_a_name_into_a_command_or_python_source():
     ("inline", "gh pr list --head $b"),
     ("inline", "git log -1 \"$BRANCH\""),
     ("inline", "git log <a-new-placeholder>"),
+    ("inline", "git push origin <name>"),
+    ("inline", "gh pr view <target> --json state"),
+    ("inline", "git log <x>"),
+    ("inline", "git checkout -B x \"${BASE:?}\""),
+    ("inline", "git checkout -q -b x \"${BASE:?}\""),
+    ("inline", "git branch x \"${BASE:?}\""),
+    ("bash", "git worktree add -b x \\\n  p \"${BASE:?}\""),
+    ("inline", "git diff \"$(git merge-base \"${BASE:?}\" HEAD)\"...HEAD"),
+    ("inline", "git show \"${BASE:?}:.gitignore\" | grep -q x"),
+    ("bash", "python3 - \"$PLUGIN_SCRIPTS\" <<'PY'\nprint('<date-slug>')\nPY"),
+    ("inline", "git log $@"),
 ])
 def test_the_guard_fails_on_each_shape_it_exists_to_catch(kind, text):
     assert violations("sample", kind, text)
@@ -222,7 +272,7 @@ def test_the_rule_and_the_listing_are_in_the_runtime_contract():
     assert "unset BASE BASE_NAME" in text
 
 
-UNIT_COMMAND = re.compile(r"^(?:git|gh|python3|cd|U=|UNIT=)\b.*<(?:date-slug|slug)>", re.S)
+UNIT_COMMAND = re.compile(r"^(?:(?:git|gh|python3|cd)\b|U=|UNIT=).*<(?:date-slug|slug)>", re.S)
 
 
 def test_every_skill_file_running_a_unit_id_command_points_at_the_rule():
@@ -322,3 +372,46 @@ def test_phase_snippets_read_merges_against_the_resolved_default_branch(tmp_path
     result = subprocess.run(["bash", "-c", block], cwd=repo, env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "'merged': 1" in result.stdout and f"'next_branch': '{unit}-phase-2'" in result.stdout
+
+
+def _block(md: Path, needle: str) -> str:
+    found = [text for kind, text, _ in spans(md) if kind == "bash" and needle in text]
+    assert len(found) == 1
+    return textwrap.dedent(found[0])
+
+
+def test_the_bare_checkpoint_snippet_records_the_branch_it_reads(tmp_path):
+    # In the test's own scratch repository; the snippet writes only an untracked checkpoint.
+    odd = "user/odd'name$x"
+    repo = _repo(tmp_path, odd)
+    env = {**os.environ, "PLUGIN_SCRIPTS": str(SKILLS.parent / "scripts")}
+    result = subprocess.run(["bash", "-c", _block(RUNTIME, "hashlib.sha256")], cwd=repo, env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    state = json.loads(result.stdout)
+    assert state["branch"] == odd
+    assert state["unit"] == "bare-" + hashlib.sha256(odd.encode()).hexdigest()
+
+
+def test_the_in_flight_loop_bounds_local_and_pushed_unit_branches(tmp_path):
+    origin = tmp_path / "origin.git"
+    _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+    repo = _repo(tmp_path, "main")
+    _git(repo, "remote", "add", "origin", str(origin))
+    for name in ("2026-01-02-pushed", "2026-01-03-odd'name$x", "feature/other"):
+        _git(repo, "push", "-q", "origin", f"HEAD:refs/heads/{name}")
+    _git(repo, "branch", "005-local-only")
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "gh").write_text('#!/bin/sh\nprintf "[%s]" "$@"; echo\n')
+    (stub / "gh").chmod(0o755)
+    block = _block(SKILLS / "propose" / "references" / "in-flight-check.md", "while read")
+    env = {**os.environ, "PATH": f"{stub}{os.pathsep}{os.environ['PATH']}"}
+    for shell in ("bash", "zsh"):
+        if not shutil.which(shell):
+            continue
+        result = subprocess.run([shell, "-c", block], cwd=repo, env=env, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        rows = {line.split("\t")[0]: line for line in result.stdout.splitlines()}
+        assert set(rows) == {"2026-01-02-pushed", "2026-01-03-odd'name$x", "005-local-only"}
+        assert "[--head][2026-01-03-odd'name$x]" in rows["2026-01-03-odd'name$x"]

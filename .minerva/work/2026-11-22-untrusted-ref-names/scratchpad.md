@@ -20,6 +20,8 @@
 - Restart, whole-proposal: first-wave review discarded unread for folding — the approach fold rewrote the Goal; tier selected again on the merged draft: reviewer (scrutiny: blast radius, knowledge tension)
 - [reviewed — folded] whole-proposal (restart): C1 criterion 3 narrowed to branch, ref and Python-source sites with the unit-id half tested separately; C2 --no-track enforced and tested; C3–C7 folded, the listing moves into minerva_runtime (tier: reviewer — scrutiny: blast radius, knowledge tension)
 - [rechecked — residual folded] whole-proposal (restart): all seven addressed; residuals folded — the units command's compatibility and test coverage named, fetch-then-cut keeps today's tracking, allowed variables and the pointer assertion made exact
+- [reviewed — clean] completion verification: Verifier accepted all six criteria; it re-ran the restoration pass and the suite, and took the eval dry-runs and lint from the checklist (tier: reviewer — Verifier floor; parallel with code review)
+- [solo] review triage: 9 code-review findings — 8 fixed, 1 kept and disclosed; none changes the approach, so no replan-vs-FIX (tier: default-solo triage; no item ambiguous)
 
 ## Work notes 2026-11-22
 
@@ -29,3 +31,19 @@
 - Restoration pass (each changed skill hunk reversed alone in a throwaway copy): 30 of 38 fail the guard. The 8 that pass hold no branch/ref or Python-source site: redundant pointers, prose, the tail of a split Python hunk, the PR-title change (free text, out of criterion 3) and the status hardening (name already quoted).
 - Mutation pass (12 chosen mutations of `units`, the snippet, `--no-track` and the phase snippet): all killed after adding the `trunk` case; before it, a hardcoded `"main"` in the phase snippet survived.
 - Gates: 1160 passed (3.13); new and touched modules pass on 3.11; `units` runs on 3.9; skill and compatibility eval dry-runs and knowledge lint pass; no SKILL.md over 9216 bytes.
+
+## Review triage 2026-11-22
+
+Code review (fresh context, independent of the Verifier):
+
+1. Fixed: review's diff put `${BASE:?}` inside `$(...)`, where a skipped snippet gave an empty diff with exit 0. Now `git diff "${BASE:?}"...HEAD`; pipeline uses start with `: "${BASE:?}" &&`; the runtime rule says so; the guard flags both shapes.
+2. Fixed: `units` failed outside Git. It now reads `cwd` there (`test_units_works_outside_git`).
+3. Fixed: an id whose worktree was removed before its branch was deleted was no longer listed, so a retried cleanup stopped. `units` also lists local branches shaped like a unit id, never a `-phase-N` branch.
+4. Fixed: the bare-mode checkpoint key and branch had no shell recipe. runtime.md now has one that reads the branch and builds the JSON through argv; executed with an unusual name.
+5. Fixed: the guard's generic placeholders (`name`, `target`, `x`, `unit`, `path`, `entry`, `n`) are now refused in git/gh commands. Also fixed: the dead `U=`/`UNIT=` alternatives, more branch-cut forms (`-B`, flags before `-b`, `git branch x BASE`, line continuations), Python heredocs, `$@`/`$*`, nested fences, and text inside single quotes treated as literal.
+6. Fixed: the in-flight bound now covers local branches too, and `unfetched` is defined (judge by PRs; with none, in flight). Kept: one `gh` call per dated branch.
+7. Kept and disclosed: the exact-match fallback in merge detection now also matches a branch checked out in a worktree, which the old `^[* ]` pattern never matched. A branch is "merged locally" only if its tip is reachable from the default branch. `git worktree remove` still refuses a dirty tree, and the confirmation gate still applies.
+8. Fixed: list markup in promote and replan.
+9. Fixed: an unreadable directory is counted (`unreadable`) and skipped.
+
+The mutation pass was re-run with 8 more mutations covering the fixes: 20 of 20 killed. The suite now has 1176 tests.

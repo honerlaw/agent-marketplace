@@ -78,6 +78,8 @@ def common_dir(cwd: Path | None = None) -> Path:
 # A unit id is also a branch name and a directory name, and the repository it comes from may
 # not be the user's, so only ids of this shape are ever used (`units`, `state_path`).
 UNIT_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+UNIT_BRANCH_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-")
+PHASE_BRANCH_RE = re.compile(r"-phase-\d+$")
 
 
 def is_unit_id(name: str) -> bool:
@@ -93,31 +95,50 @@ def state_path(unit: str, cwd: Path | None = None) -> Path:
 def unit_ids(cwd: Path | None = None) -> dict:
     """Every work-unit id this project holds that is safe to use, and how many were refused.
 
-    Reads directory names only: the primary checkout's `.minerva/work` and `.minerva/worktrees`,
-    each worktree's `.minerva/work`, and this working tree's `.minerva/work`. A refused name
-    is counted, never printed.
+    Reads names only: the `.minerva/work` and `.minerva/worktrees` directories of the primary
+    checkout and of this working tree (or of `cwd` outside Git), each worktree's
+    `.minerva/work`, and local branches shaped like a unit id (`YYYY-MM-DD-…` or `NNN-…`, not
+    a `-phase-N` branch), so a unit whose worktree is gone can still be cleaned up. A refused
+    name is counted, never printed; a directory that cannot be read is counted as unreadable.
     """
     cwd = (cwd or Path.cwd()).resolve()
-    common = common_dir(cwd)
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd,
-                         capture_output=True, text=True).stdout.strip()
-    roots = {Path(top)} if top else set()
-    if common.name == ".git":
-        roots.add(common.parent)
-    parents = []
+    try:
+        common = common_dir(cwd)
+    except ValueError:
+        common = None
+    roots = {cwd} if common is None else set()
+    if common is not None:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd,
+                             capture_output=True, text=True).stdout.strip()
+        roots |= {Path(top)} if top else set()
+        if common.name == ".git":
+            roots.add(common.parent)
+    found, refused, unreadable = set(), set(), 0
+
+    def entries(directory: Path) -> list:
+        nonlocal unreadable
+        try:
+            return sorted(directory.iterdir()) if directory.is_dir() else []
+        except OSError:
+            unreadable += 1
+            return []
+
     for root in sorted(roots):
-        parents += [root / ".minerva" / "work", root / ".minerva" / "worktrees"]
-        worktrees = root / ".minerva" / "worktrees"
-        if worktrees.is_dir():
-            parents += [entry / ".minerva" / "work" for entry in sorted(worktrees.iterdir())]
-    found, refused = set(), set()
-    for parent in parents:
-        if not parent.is_dir():
-            continue
-        for entry in parent.iterdir():
+        worktrees = entries(root / ".minerva" / "worktrees")
+        for parent in [root / ".minerva" / "work", *(w / ".minerva" / "work" for w in worktrees)]:
+            for entry in entries(parent):
+                if entry.is_dir():
+                    (found if is_unit_id(entry.name) else refused).add(entry.name)
+        for entry in worktrees:
             if entry.is_dir():
                 (found if is_unit_id(entry.name) else refused).add(entry.name)
-    return {"units": sorted(found), "refused": len(refused)}
+    if common is not None:
+        branches = subprocess.run(["git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads/"],
+                                  cwd=cwd, capture_output=True, text=True).stdout.split()  # ref names hold no whitespace
+        for name in branches:
+            if UNIT_BRANCH_RE.match(name) and not PHASE_BRANCH_RE.search(name):
+                (found if is_unit_id(name) else refused).add(name)
+    return {"units": sorted(found), "refused": len(refused), "unreadable": unreadable}
 
 
 def validate(state: dict, unit: str, repository: str) -> dict:

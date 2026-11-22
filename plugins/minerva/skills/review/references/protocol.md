@@ -29,7 +29,7 @@ Decide what to review:
 1. Run `git status --porcelain`.
    - **Non-empty** → review the working-tree diff (`git diff HEAD` for tracked changes, plus the contents of untracked files).
    - **Empty** → review the branch diff against the default branch.
-2. Default-branch detection (only needed when the working tree is clean): run the runtime contract's default-branch snippet ("Names are data"), then, in the same shell call, compute the diff as `git diff "$(git merge-base "${BASE:?}" HEAD)"...HEAD`.
+2. Default-branch detection (only needed when the working tree is clean): run the runtime contract's default-branch snippet ("Names are data"), then, in the same shell call, compute the diff as `git diff "${BASE:?}"...HEAD` (three dots diff from the merge base).
 3. **Empty diff** (clean tree, no commits ahead of default) → report "nothing to review" and stop.
 4. **Non-git repo** → report and stop.
 
