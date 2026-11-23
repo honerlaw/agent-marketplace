@@ -126,15 +126,24 @@ def test_every_lorestrom_skill_a_skill_names_exists_or_arrives_later():
             assert name in real or name in LATER, (path, name)
 
 
+# minerva's skills the guard below refuses. `minerva:status` is also a unit property, so the
+# read-only status skill is the one name left out.
+GUARDED = ("lint", "migrate", "migrate-fix", "init", "propose", "work", "review", "promote",
+           "ship", "cleanup", "replan", "propose-ship", "propose-ship-auto", "debug", "explore",
+           "grill-plan", "one-by-one", "using-minerva")
+
+
+def test_the_guard_covers_every_minerva_skill_but_status():
+    skills = {path.parent.name for path in MINERVA_SKILLS.glob("*/SKILL.md")}
+    assert set(GUARDED) == skills - {"status"}
+
+
 def test_no_skill_names_a_minerva_skill_it_would_run():
     """In a linked repository minerva's skills must not run: no step loads one."""
+    names = "|".join(sorted(map(re.escape, GUARDED), key=len, reverse=True))
     for path in skill_texts():
         text = path.read_text(encoding="utf-8")
-        # `minerva:status` is also a unit property, so the read-only status skill is not listed.
-        named = set(re.findall(r"minerva:(?:lint|migrate|migrate-fix|init|propose|work|review|"
-                               r"promote|ship|cleanup|replan|propose-ship|"
-                               r"propose-ship-auto|debug|explore|grill-plan|one-by-one|"
-                               r"using-minerva)\b(?![-:])", text))
+        named = set(re.findall(rf"minerva:(?:{names})\b(?![-:])", text))
         assert named == set(), (path, named)
 
 
