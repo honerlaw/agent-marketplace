@@ -122,9 +122,12 @@ Skills name Lorestrom tools and the host adapters map them. Vendored tool names,
 
 ## Phases
 
-1. **Setup and read path (4.1.0)** — project node, discovery and its cache and pointer; the module's setup and read parts and `check-tree`; the runtime section; the contract's read and import operations; the inventory; init (local, `--shared`, `--backend files`, confirmed import); knowledge reads in explore, propose, grill-plan, review, debug and status; lint and the migrate skills say not applicable. Until 4.2.0 every other record write stops with one sentence in runtime.md ("the Lorestrom backend is read-only until minerva 4.2.0; run minerva:init --backend files to keep using files in this clone"), and init says so before linking. Criteria: 1–6 as far as they apply, and a test anchoring the refusal and the write sites' route to it.
-2. **Work units, promotion and release (4.2.0)** — Approach 4–6 for a unit's own lifecycle: propose and both orchestrators, work, replan, review, decision logs, promote, ship, and cleanup's release, confirm, abandon and repair; the refusal is removed. Criteria: 1–6, including double release; the six Target-resolution blocks name the lorestrom lookup and stay in sync; cleanup's scoping is in place.
-3. **Pull reconciliation (4.3.0)** — cleanup's sweep finds this project's open units with `find_docs` and applies `reconcile_action` from the sweeper's own evidence; status lists them with age and action. It is separate because it acts on other people's units from another clone. Criteria: the table-driven test carries the safety rules; the prose test checks only that the sweep calls `reconcile_action`.
+As replanned on 2026-11-23 (a separate Lorestrom-only plugin) and 2026-11-24 (the lifecycle split); `replan.md` holds the plans these replace.
+
+1. **Connect and publish (lorestrom 0.1.0)** — plugin skeleton, helper, `using-lorestrom` with the storage contract, `init` with a confirmed knowledge import; the repo's minerva files stay authoritative.
+2. **Lifecycle and handover (lorestrom 0.2.0)** — every skill that writes records (propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore, one-by-one, debug), checkpoints, the contract's write rows, and init's handover; Lorestrom becomes authoritative.
+3. **Orchestrators (lorestrom 0.3.0)** — propose-ship and propose-ship-auto; the `--auto` hooks become live.
+4. **Sweep and lint (lorestrom 0.4.0)** — cleanup's sweep of other clones' units, status ages, and lint over Lorestrom docs.
 
 ## Open Questions
 
