@@ -72,18 +72,24 @@ def common_dir(cwd: Path | None = None) -> Path:
 
 # A unit id is also a branch name and a directory name, and the repository it comes from may
 # not be the user's, so only ids of this shape are ever used (`units`, `state_path`).
-UNIT_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+UNIT_ID_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*")
+BARE_KEY_RE = re.compile(r"bare-[0-9a-f]{64}")
 UNIT_BRANCH_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-")
 PHASE_BRANCH_RE = re.compile(r"-phase-\d+$")
 
 
 def is_unit_id(name: str) -> bool:
-    return UNIT_ID_RE.fullmatch(name) is not None and ".." not in name
+    """The helper's unit-id shape (`lorestrom_backend.UNIT_ID_RE`), so both agree on a name."""
+    return isinstance(name, str) and UNIT_ID_RE.fullmatch(name) is not None
+
+
+def is_checkpoint_key(name: str) -> bool:
+    return is_unit_id(name) or (isinstance(name, str) and BARE_KEY_RE.fullmatch(name) is not None)
 
 
 def state_path(unit: str, cwd: Path | None = None) -> Path:
-    if not is_unit_id(unit):
-        raise ValueError("unit must be a slug, not a path")
+    if not is_checkpoint_key(unit):
+        raise ValueError("unit must be a work-unit id or a bare-ship key, not a path")
     return common_dir(cwd) / STATE_DIR / "runtime" / unit / "run.json"
 
 
@@ -265,7 +271,10 @@ def unit_token(unit: str, cwd: Path | None = None, new: bool = False) -> str:
     if path.exists():
         if new:
             raise ValueError("this unit already has an operation token; read it instead")
-        return path.read_text(encoding="utf-8").strip()
+        token = path.read_text(encoding="utf-8").strip()
+        if not re.fullmatch(r"[0-9a-f]{32}", token):
+            raise ValueError("this unit's operation token is damaged: recover with the user")
+        return token
     if not new:
         raise ValueError("no operation token for this unit")
     import secrets

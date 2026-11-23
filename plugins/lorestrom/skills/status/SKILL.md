@@ -64,8 +64,8 @@ git -C "$WORK_ROOT" fetch --quiet origin 2>/dev/null
 gh pr list --state all --limit 200 --json number,state,headRefName 2>/dev/null
 ```
 
-For each open unit, run the helper's `phases --unit <date-slug>` on its proposal record and
-the head names of MERGED PRs (`storage:unit.read`). Join PRs on each phase's `branch`, never by
+For each open unit, run the helper's `phases --unit <date-slug>` on its proposal record, the
+head names of MERGED PRs and the unit doc's recorded heads and base (`storage:unit.read`). Join PRs on each phase's `branch`, never by
 string equality with the slug: a phased unit ships phases 2+ on `<date-slug>-phase-N`. The
 unit doc's `minerva:pr_<n>` is the PR ship recorded; prefer it when it is a number.
 

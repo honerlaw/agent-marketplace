@@ -22,9 +22,9 @@ Removing the worktree between phases destroys the workspace the remaining phases
 
 A merged phase-1 branch means *that phase* shipped, not that the unit is done. Ask the helper —
 never infer it from the branch name: fetch the default branch, then run `phases --unit
-<date-slug>` on `{"proposal": <the proposal record>, "mergedPrs": [...]}` (`storage:unit.read`),
-with the head names `gh pr list --state merged --json headRefName` returns for the unit's
-phase branches.
+<date-slug>` on `{"proposal": <the proposal record>, "mergedPrs": [...], "heads": {...},
+"base": <sha>}` (`storage:unit.read`), with the head names `gh pr list --state merged --json
+headRefName` returns for the unit's phase branches and the unit doc's recorded heads and base.
 
 - **`complete: False`** → skip teardown. Report the unit as `phase N of M — teardown deferred`.
 - **`complete: True`** → tear down, and prune the unit's merged phase branches too (below).

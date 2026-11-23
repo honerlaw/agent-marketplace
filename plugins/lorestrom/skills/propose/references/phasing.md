@@ -91,8 +91,9 @@ and pushed head are recorded on the unit (`storage:unit.ship`).
 ## Progress is derived, never written
 
 Which phases are done is read off **which phase branches have merged**, via the helper's
-`phases` (`storage:unit.read`): it reads local merges itself and takes the head names of MERGED
-PRs from `gh pr list`. There is no checkbox in the proposal and no progress marker in the
+`phases` (`storage:unit.read`): it takes the head names of MERGED PRs from `gh pr list`, and
+counts a local merge only for a phase whose recorded head differs from the unit's base and is
+on the default branch. There is no checkbox in the proposal and no progress marker in the
 scratchpad.
 
 This is not a stylistic preference. minerva's one hand-maintained lifecycle marker — promote's —

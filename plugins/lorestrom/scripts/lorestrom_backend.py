@@ -884,24 +884,31 @@ def unit_ids(docs: list, project: str) -> dict:
     return {"units": sorted(found), "refused": refused}
 
 
-def unit_phases(root, unit: str, proposal: str, merged_prs=()) -> dict:
+def unit_phases(root, unit: str, proposal: str, merged_prs=(), heads=None, base=None) -> dict:
     """A unit's phase progress, from its proposal's `## Phases` and live merge evidence.
 
     `merged_prs` are head branch names of MERGED PRs (`gh pr list --state merged`): a squash
-    merge leaves the branch unmerged to git. Local merges are read here, against the default
-    branch the helper finds. Names are only compared with the unit's own phase branches.
+    merge leaves the branch unmerged to git. A local merge counts only for a phase whose
+    recorded head (`heads`, phase number → sha, from the unit doc) differs from the unit's
+    recorded `base` and is an ancestor of the default branch the helper finds: records are not
+    committed, so a fresh phase branch sits on the default branch and must not read as merged.
+    Names are only compared with the unit's own phase branches.
     """
     if not UNIT_ID_RE.fullmatch(unit or ""):
         raise BackendError(f"not a work-unit id: {ascii(unit)}")
     top = _top(root)
     merged = {name for name in merged_prs if isinstance(name, str)}
-    if top is not None:
-        default = _default_branch(top)
-        if default is not None:
-            listed = _git(top, "for-each-ref", "--merged", default,
-                          "--format=%(refname:lstrip=2)", "refs/heads/").stdout
-            merged |= set(listed.split())  # ref names hold no whitespace
     phases = read_phases(proposal)
+    heads = heads if isinstance(heads, dict) else {}
+    default = _default_branch(top) if top is not None else None
+    if default is not None and isinstance(base, str) and SHA_RE.fullmatch(base):
+        for n in range(1, len(phases) + 1):
+            head = heads.get(str(n))
+            if not (isinstance(head, str) and SHA_RE.fullmatch(head)) or head == base:
+                continue
+            if _commit(top, head) and _git(top, "merge-base", "--is-ancestor", head, default,
+                                           ok=(0, 1)).returncode == 0:
+                merged.add(phase_branch(unit, n))
     progress = phase_progress(phases, merged, unit)
     progress["phases"] = [{"position": n, "written": written, "name": phase_name(title),
                            "branch": phase_branch(unit, n), "merged": phase_branch(unit, n) in merged}
@@ -940,21 +947,24 @@ def reconcile_action(evidence: dict) -> dict:
     base = {"stale": stale, "phases": len(numbers)}
     if evidence.get("abandon") is True:
         return {**base, "action": "abandon", "reason": "explicit --abandon"}
-    closed = [n for n in numbers if prs.get(n) == "CLOSED"]
+    merged = [n for n in numbers if n not in no_head and (
+        prs.get(n) == "MERGED" or ancestors.get(n) is True or confirmed.get(n) is True)]
+    # A closed PR abandons only a phase no other evidence shows merged, and whose head does
+    # not already merge cleanly as a no-op (its changes may have landed another way: ask).
+    closed = [n for n in numbers if prs.get(n) == "CLOSED" and n not in merged
+              and trees.get(n) != "noop"]
     if closed:
         return {**base, "action": "abandon",
                 "reason": f"phase {closed[0]}'s PR was closed without merging"}
     if no_head:
         return {**base, "action": "wait",
                 "reason": f"phase {no_head[0]} has no recorded head, or its head is the base"}
-    merged = [n for n in numbers
-              if prs.get(n) == "MERGED" or ancestors.get(n) is True or confirmed.get(n) is True]
     rest = [n for n in numbers if n not in merged]
     if not rest:
         return {**base, "action": "release", "reason": "every phase has merged"}
     if any(prs.get(n) == "OPEN" for n in rest):
         return {**base, "action": "wait", "reason": "a phase's PR is still open"}
-    if all(prs.get(n) is None and trees.get(n) == "noop" for n in rest):
+    if all(prs.get(n) in (None, "CLOSED") and trees.get(n) == "noop" for n in rest):
         return {**base, "action": "confirm", "phasesToConfirm": rest,
                 "reason": "no PR evidence, but merging each head changes nothing: ask the user"}
     return {**base, "action": "wait",
@@ -979,8 +989,11 @@ def merge_evidence(root, request: dict) -> dict:
     """Collect `reconcile_action`'s git evidence. Shas are untrusted: only 40-hex ever reaches git.
 
     `request`: `phases`, `heads` and `base` (the shas the unit doc records), `prs`, `abandon`,
-    `merged` (phase number → a sha the user named with `--merged`) and `age_days`. The
-    default branch is found here, never taken from input.
+    `merged` (phase number → a sha the user named with `--merged`), `userConfirmed` (the phase
+    numbers the user said yes to after a `confirm` answer; never set by `--yes`) and
+    `age_days`. A confirmation counts only for a phase this same evidence would ask about
+    (`phasesToConfirm`): it cannot stand in for missing evidence elsewhere. The default branch
+    is found here, never taken from input.
     """
     top = _top(root)
     if top is None:
@@ -994,6 +1007,9 @@ def merge_evidence(root, request: dict) -> dict:
         raise BackendError("the unit's recorded base is not a commit in this clone")
     new_enough = _git_version(top) >= MERGE_TREE_GIT
     default_tree = _tree(top, default)
+    # Commits the default branch made itself: a head among them is a mainline commit, not a
+    # merged unit branch, unless its PR says it merged (a fast-forward merge).
+    mainline = set(_git(top, "rev-list", "--first-parent", default).stdout.split())
     evidence = {"phases": request["phases"], "abandon": request.get("abandon") is True,
                 "age_days": request.get("age_days") or 0, "heads": {}, "prs": {},
                 "ancestors": {}, "differs": {}, "merge_tree": {}, "confirmed": {}}
@@ -1009,8 +1025,9 @@ def merge_evidence(root, request: dict) -> dict:
             evidence["merge_tree"][n] = "missing"
             continue
         evidence["differs"][n] = head != base and _tree(top, head) != _tree(top, base)
-        evidence["ancestors"][n] = _git(top, "merge-base", "--is-ancestor", head, default,
-                                        ok=(0, 1)).returncode == 0
+        evidence["ancestors"][n] = (
+            (head not in mainline or evidence["prs"][n] == "MERGED")
+            and _git(top, "merge-base", "--is-ancestor", head, default, ok=(0, 1)).returncode == 0)
         named = merged.get(n)
         if isinstance(named, str) and SHA_RE.fullmatch(named) and _commit(top, named):
             evidence["confirmed"][n] = _git(top, "merge-base", "--is-ancestor", named, default,
@@ -1024,8 +1041,21 @@ def merge_evidence(root, request: dict) -> dict:
         else:
             tree = result.stdout.split("\n", 1)[0].strip()
             evidence["merge_tree"][n] = "noop" if tree == default_tree else "changes"
-    return {"evidence": evidence, "decision": reconcile_action(evidence),
-            "default": ascii(default)[1:-1]}
+    decision = reconcile_action(evidence)
+    said_yes = request.get("userConfirmed") or []
+    if not isinstance(said_yes, list):
+        raise BackendError("userConfirmed must be a list of phase numbers")
+    askable = set(decision.get("phasesToConfirm") or [])
+    refused = [n for n in said_yes if n not in askable]
+    for n in said_yes:
+        if n in askable:
+            evidence["confirmed"][n] = True
+    if said_yes:
+        decision = reconcile_action(evidence)
+    out = {"evidence": evidence, "decision": decision, "default": ascii(default)[1:-1]}
+    if refused:
+        out["refusedConfirmations"] = [ascii(n) if not isinstance(n, str) else n for n in refused]
+    return out
 
 
 # --- reference docs ------------------------------------------------------------------------
@@ -1114,11 +1144,16 @@ def reference_list(root, project: str) -> dict:
     return {"docs": docs, "refused": refused}
 
 
+# A doc in one of these holds the file's content for good; draft (an interrupted import) and
+# archived (retired, may be deleted) do not.
+REMOVABLE_STATUSES = ("current", "superseded", "deprecated")
+
+
 def removal_plan(root, project: str, docs: list) -> dict:
     """Which imported minerva files a handover commit may remove, given `find_docs` results.
 
     A file is removable only when this project's doc with its key holds the file's exact
-    digest: the file's content is in Lorestrom. Any other file is kept and named, with why.
+    digest and is current, superseded or deprecated: the file's content is in Lorestrom. Any other file is kept and named, with why.
     Paths come only from `import-list` and `reference-list`, never from the docs.
     """
     if not isinstance(docs, list):
@@ -1142,7 +1177,7 @@ def removal_plan(root, project: str, docs: list) -> dict:
             keep.append({"path": row["path"], "reason": "no single doc in Lorestrom holds it"})
         elif digest != row["digest"]:
             keep.append({"path": row["path"], "reason": "its digest differs from its doc's"})
-        elif matches[0].get("status") != "current":
+        elif matches[0].get("status") not in REMOVABLE_STATUSES:
             keep.append({"path": row["path"], "reason": f"its doc is {ascii(matches[0].get('status'))}"})
         else:
             remove.append(row["path"])
@@ -1158,7 +1193,8 @@ def read_repo_reference(root, file) -> tuple:
     checked, and `read_entry` refuses a symlinked file.
     """
     directory = Path(os.path.abspath(_reference_dir(root)))
-    path = Path(os.path.abspath(Path(root) / file))
+    top = _top(root) or Path(os.path.realpath(root))
+    path = Path(os.path.abspath(top / file))
     try:
         rel = path.relative_to(directory)
     except ValueError as error:
@@ -1200,7 +1236,7 @@ def main(argv=None) -> int:
     plan.add_argument("--project", required=True)
     ids = commands.add_parser("unit-ids", help="stdin: find_docs' unit docs; the checked ids")
     ids.add_argument("--project", required=True)
-    phases = commands.add_parser("phases", help="stdin: {proposal, mergedPrs}; phase progress")
+    phases = commands.add_parser("phases", help="stdin: {proposal, mergedPrs, heads, base}; phase progress")
     phases.add_argument("--unit", required=True)
     commands.add_parser("release-outcome", help="stdin: {code, gate}")
     commands.add_parser("repair-flips", help="stdin: {gate, docs}")
@@ -1247,7 +1283,7 @@ def main(argv=None) -> int:
         elif args.command == "phases":
             value = _stdin_json()
             out = unit_phases(args.cwd, args.unit, value.get("proposal") or "",
-                              value.get("mergedPrs") or [])
+                              value.get("mergedPrs") or [], value.get("heads"), value.get("base"))
         elif args.command == "release-outcome":
             value = _stdin_json()
             out = release_outcome(value.get("code"), value.get("gate"))

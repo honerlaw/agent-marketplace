@@ -8,12 +8,14 @@ import hashlib
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
 from tests import lorestrom_scripts
 
 backend = lorestrom_scripts.backend()
+runtime_module = lorestrom_scripts.load("lorestrom_runtime")["lorestrom_runtime"]
 SCRIPT = lorestrom_scripts.SCRIPTS / "lorestrom_backend.py"
 
 PROJECT = "33333333-3333-4333-8333-333333333333"
@@ -191,6 +193,15 @@ CASES = [
     ("open PR, even when merging changes nothing", one(prs={"1": "OPEN"}, merge_tree={"1": "noop"}), "wait"),
     ("closed PR", one(prs={"1": "CLOSED"}), "abandon"),
     ("closed PR with no head", ev(prs={"1": "CLOSED"}), "abandon"),
+    ("closed PR, but the user confirmed the merge",
+     one(prs={"1": "CLOSED"}, merge_tree={"1": "changes"}, confirmed={"1": True}), "release"),
+    ("closed PR, but the head is on the default branch",
+     one(prs={"1": "CLOSED"}, ancestors={"1": True}), "release"),
+    ("closed PR, but merging the head changes nothing",
+     one(prs={"1": "CLOSED"}, merge_tree={"1": "noop"}), "confirm"),
+    ("a closed later phase abandons even when an earlier one merged",
+     ev(2, heads={"1": H1, "2": H2}, differs={"1": True, "2": True},
+        prs={"1": "MERGED", "2": "CLOSED"}, merge_tree={"2": "changes"}), "abandon"),
     ("explicit --abandon", one(prs={"1": "MERGED"}, abandon=True), "abandon"),
     ("stale: no head after 14 days still waits", ev(age_days=30), "wait"),
     ("phase 1 merged, phase 2 not started",
@@ -254,11 +265,25 @@ def test_a_fresh_branch_waits(repo):
     assert got["decision"]["action"] == "wait"
 
 
-def test_a_fast_forwarded_head_releases(repo):
+def test_a_merged_head_releases(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    head = branch_with_change(repo, "unit")
+    git(repo, "merge", "-q", "--no-ff", "-m", "merge unit", "unit")
+    assert evidence(repo, heads={"1": head}, base=base)["decision"]["action"] == "release"
+
+
+def test_a_head_on_the_mainline_needs_a_merged_pr(repo):
+    # A fast-forward leaves the head a default-branch commit, which a head copied from the
+    # default branch also is: only the PR tells them apart, and without one the user is asked.
     base = git(repo, "rev-parse", "HEAD")
     head = branch_with_change(repo, "unit")
     git(repo, "merge", "-q", "--ff-only", "unit")
-    assert evidence(repo, heads={"1": head}, base=base)["decision"]["action"] == "release"
+    got = evidence(repo, heads={"1": head}, base=base)
+    assert got["evidence"]["ancestors"]["1"] is False
+    assert got["decision"]["action"] == "confirm"
+    merged = evidence(repo, heads={"1": head}, base=base, prs={"1": "MERGED"})
+    assert merged["evidence"]["ancestors"]["1"] is True
+    assert merged["decision"]["action"] == "release"
 
 
 def test_a_squash_merge_without_gh_asks_for_confirmation(repo):
@@ -345,11 +370,44 @@ def test_the_default_branch_is_found_not_taken_from_input(repo):
 def test_reconcile_cli(repo):
     base = git(repo, "rev-parse", "HEAD")
     head = branch_with_change(repo, "unit")
-    git(repo, "merge", "-q", "--ff-only", "unit")
+    git(repo, "merge", "-q", "--no-ff", "-m", "merge unit", "unit")
     request = {"phases": 1, "heads": {"1": head}, "base": base}
     result = run(repo, "reconcile", stdin=json.dumps(request))
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["decision"]["action"] == "release"
+
+
+def squashed_unit(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    head = branch_with_change(repo, "unit")
+    git(repo, "merge", "-q", "--squash", "unit")
+    commit(repo, "squashed unit")
+    return base, head
+
+
+def reconcile_cli(repo, **request):
+    result = run(repo, "reconcile", stdin=json.dumps({"phases": 1, **request}))
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def test_a_user_confirmation_reaches_reconcile_through_the_request(repo):
+    base, head = squashed_unit(repo)
+    asked = reconcile_cli(repo, heads={"1": head}, base=base)
+    assert asked["decision"]["action"] == "confirm"
+    assert asked["decision"]["phasesToConfirm"] == ["1"]
+    said = reconcile_cli(repo, heads={"1": head}, base=base, userConfirmed=["1"])
+    assert said["decision"]["action"] == "release"
+    assert said["evidence"]["confirmed"]["1"] is True
+
+
+def test_a_confirmation_counts_only_for_a_phase_reconcile_asked_about(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    head = branch_with_change(repo, "unit")  # unmerged: reconcile waits, never asks
+    got = reconcile_cli(repo, heads={"1": head}, base=base, userConfirmed=["1", "2"])
+    assert got["decision"]["action"] == "wait"
+    assert got["refusedConfirmations"] == ["1", "2"]
+    assert "1" not in got["evidence"]["confirmed"]
 
 
 # --- reference docs --------------------------------------------------------------------------
@@ -431,6 +489,17 @@ def test_reference_payload_cli_reads_only_reference_docs(repo, file):
     assert result.returncode == 2
 
 
+def test_reference_payload_reads_through_a_symlinked_cwd(repo, tmp_path):
+    add_reference(repo, "a.md", "# a\n")
+    linked = tmp_path / "linked-clone"
+    linked.symlink_to(repo, target_is_directory=True)
+    digest = hashlib.sha256(b"# a\n").hexdigest()
+    result = run(linked, "reference-payload", ".minerva/reference/a.md",
+                 "--project", PROJECT, "--digest", digest)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["properties"]["minerva:path"] == "a.md"
+
+
 def test_reference_payload_cli_refuses_a_symlinked_subdirectory(repo, tmp_path):
     outside = tmp_path / "elsewhere"
     outside.mkdir()
@@ -503,9 +572,45 @@ def test_phases_counts_a_squash_merged_pr_and_ignores_other_names(repo):
     assert out["merged"] == 1 and out["next_branch"] == f"{UNIT}-phase-2"
 
 
+def test_a_fresh_phase_branch_is_not_merged(repo):
+    # Records are not committed: a fresh unit branch sits on the default branch.
+    base = git(repo, "rev-parse", "HEAD")
+    git(repo, "branch", UNIT)
+    git(repo, "branch", f"{UNIT}-phase-2")
+    out = backend.unit_phases(repo, UNIT, PHASED, [], {"1": base}, base)
+    assert out["merged"] == 0 and [p["merged"] for p in out["phases"]] == [False, False]
+    assert backend.unit_phases(repo, UNIT, PHASED, [])["merged"] == 0
+
+
+def test_a_recorded_head_on_the_default_branch_is_merged(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    head = branch_with_change(repo, UNIT)
+    git(repo, "merge", "-q", "--no-ff", "-m", "merge", UNIT)
+    other = branch_with_change(repo, "unmerged", text="three\n")
+    out = backend.unit_phases(repo, UNIT, PHASED, [], {"1": head, "2": other}, base)
+    assert [p["merged"] for p in out["phases"]] == [True, False]
+    result = run(repo, "phases", "--unit", UNIT,
+                 stdin=json.dumps({"proposal": PHASED, "heads": {"1": head}, "base": base}))
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["merged"] == 1
+
+
 def test_an_unphased_proposal_has_no_phases(repo):
     out = backend.unit_phases(repo, UNIT, "# Proposal\n\n## Goal\nx\n", [])
     assert out["phased"] is False and out["phases"] == []
+
+
+def test_loading_lorestroms_scripts_leaves_minervas_imports_alone():
+    saved = sys.modules.pop("plugin_guard", None)
+    try:
+        lorestrom_scripts.backend()
+        lorestrom_scripts.load("lorestrom_runtime")
+        import plugin_guard
+        assert "plugins/minerva/" in Path(plugin_guard.__file__).resolve().as_posix()
+    finally:
+        sys.modules.pop("plugin_guard", None)
+        if saved is not None:
+            sys.modules["plugin_guard"] = saved
 
 
 def test_phases_refuses_an_unchecked_unit_id(repo):
@@ -556,11 +661,21 @@ def test_removal_plan_removes_only_files_whose_doc_holds_their_digest(repo):
     assert plan["keep"] == [{"path": b["path"], "reason": "its digest differs from its doc's"}]
 
 
-@pytest.mark.parametrize("change", ["draft", "other project", "wrong kind", "duplicate", "absent"])
+@pytest.mark.parametrize("status", ["superseded", "deprecated"])
+def test_removal_plan_removes_a_file_whose_retired_doc_holds_its_digest(repo, status):
+    listed, _ = handover_repo(repo)
+    a = listed["entries"][0]
+    plan = backend.removal_plan(repo, PROJECT, [doc(a, "minerva:knowledge", status=status)])
+    assert a["path"] in plan["remove"]
+
+
+@pytest.mark.parametrize("change", ["draft", "archived", "other project", "wrong kind",
+                                    "duplicate", "absent"])
 def test_removal_plan_keeps_a_file_without_one_current_doc_of_its_own(repo, change):
     listed, _ = handover_repo(repo)
     a = listed["entries"][0]
     docs = {"draft": [doc(a, "minerva:knowledge", status="draft")],
+            "archived": [doc(a, "minerva:knowledge", status="archived")],
             "other project": [{**doc(a, "minerva:knowledge"),
                                "properties": {"minerva:project": "x",
                                               "minerva:digest": a["digest"]}}],
@@ -655,6 +770,34 @@ def test_a_unit_token_is_made_once_and_read_back(repo):
     assert made.returncode == 0 and len(made.stdout.strip()) == 32
     assert runtime(repo, "token", "--unit", UNIT).stdout == made.stdout
     assert runtime(repo, "token", "--unit", UNIT, "--new").returncode == 1
+
+
+@pytest.mark.parametrize("damage", ["", "abc", "0" * 31, "0" * 33, "Z" * 32])
+def test_a_damaged_token_is_refused_not_read_as_empty(repo, damage):
+    assert runtime(repo, "token", "--unit", UNIT, "--new").returncode == 0
+    path = repo / ".git" / "lorestrom" / "runtime" / UNIT / "token"
+    path.write_text(damage)
+    got = runtime(repo, "token", "--unit", UNIT)
+    assert got.returncode == 1 and got.stdout == ""
+
+
+@pytest.mark.parametrize("name", ["2026-11-23-Upper", "2026-11-23-a_b", "2026-11-23-a.b",
+                                  "2026-11-23-a--b", "2026-11-23-", "x-thing", "12-thing"])
+def test_the_runtime_takes_the_helpers_unit_id_shape(repo, name):
+    first = json.dumps({"revision": 0, "branch": name, "caller": None})
+    assert runtime(repo, "write", "--unit", name, stdin=first).returncode == 1
+    assert runtime(repo, "token", "--unit", name, "--new").returncode == 1
+    assert runtime_module.is_unit_id(name) is False and backend.UNIT_ID_RE.fullmatch(name) is None
+
+
+def test_the_runtime_and_the_helper_share_one_unit_id_pattern():
+    assert runtime_module.UNIT_ID_RE.pattern == backend.UNIT_ID_RE.pattern
+
+
+def test_a_bare_ship_key_is_still_a_checkpoint(repo):
+    key = "bare-" + "a" * 64
+    first = json.dumps({"revision": 0, "branch": "feature", "caller": None})
+    assert runtime(repo, "write", "--unit", key, stdin=first).returncode == 0
 
 
 def test_a_missing_token_is_not_invented(repo):

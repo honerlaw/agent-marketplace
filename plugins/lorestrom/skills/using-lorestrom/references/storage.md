@@ -235,9 +235,12 @@ properties. A read-only skill shows it and writes nothing.
 Find the unit doc by key (`find_docs`, `kinds` `["minerva:work_unit"]`, compare `key`), then
 its records with `find_docs` `gateId` the unit's doc id and `kinds` `["minerva:record"]`, and
 `get_doc` the record needed. A unit's phases come from its proposal: write
-`{"proposal": <markdown>, "mergedPrs": [<head names of MERGED PRs>]}` to a `mktemp` file and
-run `phases --unit <date-slug>`. The head names come from `gh pr list --state merged --json
-headRefName`, run for each phase branch `phases` names, never typed.
+`{"proposal": <markdown>, "mergedPrs": [<head names of MERGED PRs>], "heads": {"<pr>": <sha>},
+"base": <sha>}` to a `mktemp` file and run `phases --unit <date-slug>`. The head names come
+from `gh pr list --state merged --json headRefName`, run for each phase branch `phases` names,
+never typed. `heads` maps each phase number to the unit doc's `minerva:head_<n>` and `base` is
+its `minerva:base`: a local merge counts only for a phase whose recorded head differs from the
+base and is on the default branch, since a fresh phase branch sits on the default branch.
 
 ## `unit.create`
 
@@ -350,7 +353,10 @@ Releasing needs `edit` on the unit. Pending lore can lag a merge until cleanup r
 When `reconcile` says `confirm` (no PR evidence, but merging each head changes nothing): show
 the phases it names and ask the user to confirm the merge, or to name the merge commit with
 `lorestrom:cleanup <unit> --merged <sha>` (`reconcile` checks it is on the default branch).
-`--yes` never confirms. On a yes, re-run `reconcile` with `confirmed`, then `unit.release`.
+`--yes` never confirms. On a yes, re-run `reconcile` with the same request plus
+`userConfirmed`, the list of phase numbers the user said yes to (`["1"]`), then act on its new
+answer. It counts a confirmation only for a phase this evidence lists in `phasesToConfirm` and
+reports any other under `refusedConfirmations`.
 
 ## `unit.abandon`
 

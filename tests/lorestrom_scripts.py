@@ -4,7 +4,9 @@
 symlinks to minerva's. `lorestrom_backend` imports `knowledge_lint` and `knowledge_spans` by
 plain name, so a plain import would bind minerva's copies. These loaders execute lorestrom's
 own files, swapping them into `sys.modules` only while loading, then restore whatever was
-there and keep the loaded modules under unique names.
+there and keep the loaded modules under unique names. `sys.path` is restored too:
+`work_status` puts its own directory first, which would make a later plain import (say of
+`plugin_guard`) bind lorestrom's copy instead of minerva's.
 """
 import importlib.util
 import sys
@@ -17,6 +19,7 @@ PREFIX = "lorestrom_plugin_"
 def load(*names):
     """Each named module (in dependency order) from lorestrom's scripts, freshly executed."""
     saved = {name: sys.modules.get(name) for name in names}
+    saved_path = list(sys.path)
     loaded = {}
     try:
         for name in names:
@@ -26,6 +29,7 @@ def load(*names):
             spec.loader.exec_module(module)
             loaded[name] = module
     finally:
+        sys.path[:] = saved_path
         for name, module in saved.items():
             if module is None:
                 sys.modules.pop(name, None)

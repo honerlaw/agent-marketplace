@@ -49,8 +49,8 @@ invent phases for a unit that did not declare them.
 
 If it *is* phased, resolve which phase this run is shipping. Never rebuild the branch names by
 hand: fetch the default branch first, then run the helper's `phases --unit <date-slug>` on
-`{"proposal": <the proposal record>, "mergedPrs": [...]}` written to a `mktemp` file
-(`storage:unit.read`). `mergedPrs` holds the head names `gh pr list --state merged --json
+`{"proposal": <the proposal record>, "mergedPrs": [...], "heads": {...}, "base": <sha>}` written to a `mktemp`
+file (`storage:unit.read`), with the unit doc's recorded heads and base. `mergedPrs` holds the head names `gh pr list --state merged --json
 headRefName` returns for the unit's phase branches, so a squash merge counts.
 
 The helper reads local merges against the default branch it finds; fetch first, since a stale
