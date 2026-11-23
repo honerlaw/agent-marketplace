@@ -35,6 +35,12 @@
 - [reviewed — clean] completion, lorestrom phase 1: Verifier accept, criteria 1–6 and phase 1 scope met; non-blocking: the sync rule lives in lorestrom's README and the drift test only, since minerva's README cannot change (tier: reviewer; floor: completion is always a Verifier)
 - [solo] review triage, lorestrom phase 1: M1, M2, L1–L4 all FIX, no replan: defects inside the approved plan (tier: solo; each has one dominant disposition)
 
+## Decisions 2026-11-24
+- [user-directed] merge: the user had #152 merged and phase 2 started; phase 1 cleanup deferred teardown (phase 1 of 3 merged, counted from merged PRs because a squash merge hides the branch); the old draft branch is kept until the unit's final cleanup
+- [reviewed — folded] new-plan acceptance (replan 2026-11-24, split the lifecycle phase): Skeptic revise, 1–6 folded (grill-plan, explore, one-by-one and debug into 0.2.0; the disable instruction kept with the orchestrators-in-0.3.0 note; size estimate and copy-then-adapt commits; inert --auto hooks; the case for four phases; per-phase guard coverage) (tier: reviewer; floor: new-plan acceptance is always reviewed)
+- [rechecked — escalated] new-plan acceptance: 1–6 addressed; N1, debug's live reference write against a unit's held replace and the waiting-for-merge rule → Adjudicator
+- [adjudicated — proceed] new-plan acceptance: N1 resolved; Lorestrom's release fails a held replace STALE after a later live edit; amendment: a unit reads the doc in the same step as its hold and the contract states the remaining window; the rule change is stated explicitly; applied after the ruling
+
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
 - `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` has a summary over Lorestrom's 1000-character property limit: import refuses and reports it, per Approach 2.

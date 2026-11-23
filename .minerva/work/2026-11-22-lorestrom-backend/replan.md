@@ -136,3 +136,97 @@ scrubbed the same way. The old local branch is kept, renamed, until phase 1 merg
 4. Default init leaves `git status --porcelain` empty.
 5. Each phase bumps lorestrom's version everywhere it is pinned.
 6. Every SKILL.md in both plugins at or under 9216 bytes.
+
+## 2026-11-24 — Split the lifecycle phase
+
+### Original plan
+
+The replan of 2026-11-23 has three phases: 0.1.0 connect and publish (merged), 0.2.0 the whole
+lifecycle (14 skills ported from minerva, the write rows of the storage contract, checkpoints,
+`reference_payload`, init's handover sync and offers, and Lorestrom becoming authoritative),
+0.3.0 the sweep and lint.
+
+### What changed
+
+Building 0.2.0 showed it is too large for one reviewable PR. The 14 skills are 35 files and
+about 4,000 lines of minerva text (propose 850, promote 648, propose-ship-auto 595, ship 417,
+cleanup 249, status 246, review 217, debug 200, work 147, propose-ship 128, one-by-one 99,
+replan 98, explore 58, grill-plan 47), much of it shell snippets under the names-are-data rules.
+Phase 1's PR was about 4,250 lines and needed review fixes; 0.2.0 whole would pass 7,000.
+The pure functions every split needs are already built and tested on the phase 2 branch
+(`unit_state`, `release_outcome`, `repair_flips`, `reconcile_action`, `merge_evidence`,
+`reference_payload`, their CLI commands; 104 tests).
+
+### New plan
+
+Four phases. The rule that orders them: **authority over a linked repo's records moves in the
+same release as every skill that writes them, or hands off to one that does**, so no release
+writes records to Lorestrom while the repo's files are authoritative, and none leaves minerva's
+auto-triggered skills writing files Lorestrom ignores.
+
+1. **Connect and publish (0.1.0)** — merged, unchanged.
+2. **Lifecycle and handover (0.2.0)** — checkpoints under `<git-common-dir>/lorestrom/runtime/`;
+   the storage contract's write rows (unit, records, knowledge, reference, release, confirm,
+   abandon, repair); propose, work, replan, review, promote, ship, cleanup (release, confirm,
+   abandon, repair), status, grill-plan, explore, one-by-one and debug, on the foundation
+   already built; init's handover sync, then its separately confirmed, default-keep offers
+   (replace the AGENTS.md section, remove the imported files) and its instruction for disabling
+   minerva in that repository, which says the orchestrators arrive in 0.3.0 and that until then
+   the lifecycle runs skill by skill; Lorestrom becomes authoritative.
+   - Why these skills together: propose and replan load grill-plan before they write; explore
+     hands off to propose; debug writes reference docs and hands findings to promote; review and
+     status read unit records that from 0.2.0 exist only in Lorestrom.
+   - Reference docs: inside a unit, a reference update is a held `write_body` replace on the
+     unit's gate, as the 2026-11-23 replan says, built from the doc's body read in the same step
+     as its `hold_write`; the contract states that the remaining window between that read and the
+     hold is not detected. debug updates one outside any unit, as minerva's debug overwrites the
+     file: a live `write_doc_body` replace after the user confirms the new text, which Lorestrom
+     snapshots and attributes, and which also updates the doc's `minerva:digest` (read,
+     `merge-properties`, `update_doc`). Before writing, debug reads this project's open units'
+     gates with `get_gate`; if one holds a write on that doc, debug shows the unit and asks
+     whether to hold the update on that gate instead or write live knowing the unit's replace
+     will fail STALE at release, and never proceeds without that answer. Lorestrom's release
+     fails a held replace STALE when the body changed after it was held, so a live edit is never
+     silently overwritten; cleanup reports a STALE reference replace with its unit and doc, and
+     it is re-applied only deliberately. The contract has a row for each path.
+   - **Amendment:** debug's confirmed live update outside any unit amends both the proposal's
+     "changes to existing lore wait for the merge" and the 2026-11-23 replan's "updated only
+     under a unit's gate", for that case only, matching minerva's debug, which edits reference
+     files outside any unit.
+   - The core skills' `--auto` hooks (ship, work, replan, review, promote) are ported as they
+     are and documented as inert until 0.3.0.
+   - Size: about 3,270 lines of source skills plus the handover, contract rows, checkpoints and
+     tests; roughly 5,000–6,000 lines. No split by skills keeps the authority rule (units need
+     promote, ship and cleanup; knowledge needs promote), so the PR is made reviewable by its
+     commits: first a commit that copies minerva's files verbatim (checked mechanically), then
+     the adaptation commits, which are what review reads.
+   - Until 0.3.0, minerva's orchestrators must not run in a linked repository: `using-lorestrom`
+     and init's handover say so, and the orchestrators run only when invoked.
+3. **Orchestrators (0.3.0)** — propose-ship and propose-ship-auto; the `--auto` hooks become live.
+4. **Sweep and lint (0.4.0)** — the old phase 3, unchanged.
+
+**Why four, past the soft ceiling of about three:** the authority rule puts every writer into
+0.2.0, which is already the largest PR this unit can review, so the orchestrators cannot join it;
+and the sweep stays separate, as the original proposal argued, because it acts on other people's
+units from another clone. Merging 0.3.0 into 0.4.0 would only lengthen the window in which
+minerva's orchestrators must not run.
+
+**Criteria,** as the replan of 2026-11-23 states them, applied per phase, and explicitly:
+- the parametrized guards and the path inventory cover each ported skill in the phase it lands;
+- in 0.2.0, criterion 4 (default init leaves `git status --porcelain` empty) holds because every
+  handover offer defaults to keep;
+- the verbatim-copy commit is checked against minerva's files at that commit.
+
+The phase 2 branch keeps its foundation commit and continues as phase 2.
+
+### Rejected
+
+- **The builder's split** (0.2.0 core lifecycle without review, status or handover; 0.3.0 the
+  rest with the handover): 0.2.0's promote would write knowledge to Lorestrom while the repo's
+  files were still authoritative, and review and status could not read units that exist only in
+  Lorestrom.
+- **Holding explore, debug and grill-plan for 0.3.0:** propose and replan would call a missing
+  skill, and minerva's explore and debug would keep writing files after the handover.
+- **Handover first, writers later:** minerva's promote would keep writing files that Lorestrom
+  then ignores.
+- **One large PR:** over 7,000 lines, beyond what one review can check.
