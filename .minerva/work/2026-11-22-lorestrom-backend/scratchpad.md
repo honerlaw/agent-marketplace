@@ -176,3 +176,36 @@
   - `find_docs` filters in the ground rules now include `properties`, `statuses`, `tags` and `gateId` (Lorestrom's public tool surface); the pinned safety clause was reworded deliberately.
   - `--merged <sha>` and `--abandon` are new cleanup arguments, feeding `reconcile`.
 - Deletion pass 2026-11-24, 28 chosen mutations over the new helper, runtime and guard rules: 22 caught at first. Fixed by tests: `removal-plan` keeping refused files, `unit-ids` kind filter (the test's record shared a real unit's id), `phases` filtering unhashable names. The `removal-plan` single-doc check was an equivalent mutant (an earlier branch already keeps duplicates) and was simplified away. One survivor remains: a prose contradiction ("…also after a no") added beside an offer's "On a yes" passes the structural offer test; the "kept by default" and "No earlier yes…" pins still hold. After fixes: 26 of 27 caught. Safety clauses are exact-string pins: removing one fails its row by construction.
+
+## Review triage 2026-11-24 (lorestrom phase 2)
+Verifier and the two code reviews; every item FIX inside the approved plan, no replan. Each test below fails with its fix reverted in a throwaway worktree.
+- B1 fixed: `reconcile` takes `userConfirmed` (phase numbers), counted only for `phasesToConfirm`, others reported as `refusedConfirmations`; storage.md's `unit.confirm` passes it — `test_a_user_confirmation_reaches_reconcile_through_the_request`, `test_a_confirmation_counts_only_for_a_phase_reconcile_asked_about`.
+- S1 fixed: `phases` takes the unit's recorded `heads` and `base` and counts a local merge only for a head ≠ base that is an ancestor of default; storage, ship, cleanup, status and phasing pass them — `test_a_fresh_phase_branch_is_not_merged`, `test_a_recorded_head_on_the_default_branch_is_merged`.
+- S2 fixed: merged evidence first; a CLOSED PR abandons only an unmerged phase whose merge is not a no-op (CLOSED+noop asks) — CASES closed+confirmed, closed+ancestor, closed+noop, closed later phase.
+- S3 fixed: `lorestrom_scripts.load` restores `sys.path` — `test_loading_lorestroms_scripts_leaves_minervas_imports_alone`.
+- S4 fixed: `read_repo_reference` builds the path from the repository top — `test_reference_payload_reads_through_a_symlinked_cwd`.
+- S5 fixed: the guard list (`GUARDED`) adds debug, explore, grill-plan, one-by-one, using-minerva — `test_the_guard_covers_every_minerva_skill_but_status`.
+- S6 fixed: a head on `rev-list --first-parent <default>` is an ancestor only with a MERGED PR — `test_a_head_on_the_mainline_needs_a_merged_pr` (the fast-forward test now asks; a `--no-ff` merge releases).
+- S7 fixed: runtime `UNIT_ID_RE` is the helper's pattern; checkpoints also accept `bare-<sha256>` keys — `test_the_runtime_takes_the_helpers_unit_id_shape`, `test_the_runtime_and_the_helper_share_one_unit_id_pattern`, `test_a_bare_ship_key_is_still_a_checkpoint`.
+- S8 fixed: a token that is not 32 hex fails the read — `test_a_damaged_token_is_refused_not_read_as_empty`.
+- K1 fixed: issue title and body written to mktemp files with a file tool; `--title "$(cat "$T")" --body-file "$B"` — `test_no_skill_puts_text_into_a_shell_heredoc`, `test_promote_files_an_issue_from_two_temp_files`.
+- K2 fixed: Will abandon section; abandon only on a yes naming the unit, or an explicit `<unit> --abandon` — safety pins + `test_the_cleanup_gate_has_a_will_abandon_section`.
+- K3 fixed: on-approval step 2 resumes this clone's own aborted unit (token matches the doc's first line) under its original id — safety pin.
+- K4 fixed: with no link or server, nothing under `.lorestrom/worktrees/` is torn down — safety pin.
+- K5 fixed: cleanup's explicit argument exempts `--abandon` and `--merged` from "merged" — safety pin.
+- K6 fixed: the proposal rewrite uses `storage:record.write`; `storage:unit.finish` is Mode A's last step — `test_unit_finish_is_promotes_last_step`.
+- K7 fixed: `git commit -F <temp file>` — `test_ship_commits_from_a_message_file`, heredoc test.
+- K8 fixed: resurrection checks out `refs/remotes/origin/<branch>` (phased: `next_branch`), otherwise asks — safety pins.
+- K9 fixed: `removal-plan` also removes for superseded and deprecated docs; draft, archived and no match keep — `test_removal_plan_removes_a_file_whose_retired_doc_holds_its_digest`, archived case, `test_removal_keeps_retired_docs_removable`.
+- K10 fixed: debug shows the text and gets a yes before an inside-unit hold; cleanup's Will release line lists held reference writes — safety pins + gate test.
+- K11 fixed: `list_doc_changes` pages by `limit`/`before` until the import's own write — safety pins.
+- K12 fixed: `git diff --cached --quiet` first, then `git commit -F <temp file> -- <listed path>…` — safety pins.
+- K13 fixed: `checkout --no-track -b` on the phase cut — `test_the_phase_cut_does_not_track_the_default_branch`.
+- K14 fixed: `unit.ship` re-recorded after every push, including CI fixes — safety pins.
+- K15 fixed: runtime Scope states one rule (no orchestrator passes `--auto` until 0.3.0; a user-typed one changes only the gates it names) — safety pin, reworded deliberately.
+- K16 fixed: the five session-context steps drop a trailing `-phase-N` (cleanup's variant has no branch-name step) — `test_every_session_context_step_strips_the_phase_suffix`.
+- N1 fixed: rows gain `update_doc` (unit.list, record.write, reference.write) and `hold_write`/`reference-payload` (reference.update); `test_each_rows_columns_name_every_tool_and_helper_its_section_uses` checks completeness.
+- N2 fixed: work, grill-plan and one-by-one say records, not files — `test_no_skill_assumes_record_files`.
+- N3 fixed: every "`propose-ship-*` orchestrators" says (0.3.0) — `test_every_orchestrator_mention_says_it_arrives_in_0_3_0`.
+- N4 fixed: a minerva-begun unit finishes on minerva's skills run one by one, never its orchestrators — safety pin.
+- each fix reverted in turn: 29 of 29 caught
