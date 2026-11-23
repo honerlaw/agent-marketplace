@@ -40,6 +40,8 @@
 - [reviewed — folded] new-plan acceptance (replan 2026-11-24, split the lifecycle phase): Skeptic revise, 1–6 folded (grill-plan, explore, one-by-one and debug into 0.2.0; the disable instruction kept with the orchestrators-in-0.3.0 note; size estimate and copy-then-adapt commits; inert --auto hooks; the case for four phases; per-phase guard coverage) (tier: reviewer; floor: new-plan acceptance is always reviewed)
 - [rechecked — escalated] new-plan acceptance: 1–6 addressed; N1, debug's live reference write against a unit's held replace and the waiting-for-merge rule → Adjudicator
 - [adjudicated — proceed] new-plan acceptance: N1 resolved; Lorestrom's release fails a held replace STALE after a later live edit; amendment: a unit reads the doc in the same step as its hold and the contract states the remaining window; the rule change is stated explicitly; applied after the ruling
+- [reviewed — folded] completion, lorestrom phase 2: Verifier reject on B1 (a plain confirm never reaches reconcile), everything else met; B1 is an implementation defect against the unchanged Approach 6, not a criterion the plan cannot meet, so it is fixed in the review round with no replan (tier: reviewer; floor: completion is always a Verifier)
+- [solo] review triage, lorestrom phase 2: B1, the skill-text review's 2 high, 8 medium and 6 low, the scripts review's 3 high, 2 medium and 3 low, and the Verifier's notes N1–N4 all FIX, no replan: each is a defect inside the approved plan (tier: solo; each has one dominant disposition)
 
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
