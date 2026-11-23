@@ -8,7 +8,7 @@ does with what it receives.
 
 The send half is called from the sibling-session step of
 `skills/propose/references/in-flight-check.md`. The receive half applies
-**whenever a message arrives** — mid-`minerva:work`, mid-review, or in a session running no
+**whenever a message arrives** — mid-`lorestrom:work`, mid-review, or in a session running no
 lifecycle skill at all. Read it when you send a peer message, and when one lands.
 
 ## The line — "adds to their workstream"
@@ -120,7 +120,7 @@ the same way: one line in the final report, no user contact, no counter.
 ## Not covered: subagents
 
 **Independent agent dispatch is delegation by design, and minerva depends on it** —
-`minerva:review`'s reviewers, every orchestrator reviewer gate. A subagent is this session's own instrument, dispatched with a brief and returning to the
+`lorestrom:review`'s reviewers, every orchestrator reviewer gate. A subagent is this session's own instrument, dispatched with a brief and returning to the
 session that spawned it; it has no workstream of its own to protect.
 
 This contract binds **peer sessions** only. That exemption covers the whole channel, not just the

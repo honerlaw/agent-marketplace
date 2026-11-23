@@ -1,19 +1,19 @@
 ---
 name: ship
-description: Ships the current work — commits outstanding changes to a branch, opens a pull request, watches CI without blocking (a tracked watcher that resumes when checks settle, backed by a long scheduled fallback), fixes CI failures, and enables auto-merge. Use when the user asks to ship, push, open a PR for, or merge the current work — closing the minerva lifecycle after `minerva:work` / `minerva:promote` / `minerva:review` — or when they invoke `minerva:ship`.
+description: Ships the current work — commits outstanding changes to a branch, opens a pull request, watches CI without blocking (a tracked watcher that resumes when checks settle, backed by a long scheduled fallback), fixes CI failures, and enables auto-merge. Use when the user asks to ship, push, open a PR for, or merge the current work — closing the minerva lifecycle after `lorestrom:work` / `lorestrom:promote` / `lorestrom:review` — or when they invoke `lorestrom:ship`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Close the minerva lifecycle by committing outstanding work to a branch, opening a PR titled and described from the active work unit's `proposal.md`, watching CI to green with a bounded auto-fix loop (3 iterations), and enabling auto-merge when repo permissions allow. The host adapter observes CI completion; checkpointed progress supports scheduled re-entry where available and explicit manual resumption elsewhere.
 
 ## Usage
 
-- `minerva:ship` — ships the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous, or runs in **bare mode** if no work unit is found
-- `minerva:ship 005-add-payments` — ship the named unit explicitly
-- `minerva:ship <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
+- `lorestrom:ship` — ships the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous, or runs in **bare mode** if no work unit is found
+- `lorestrom:ship 005-add-payments` — ship the named unit explicitly
+- `lorestrom:ship <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
 
 ## Orchestrated mode (`--auto`)
 
@@ -53,12 +53,12 @@ The full step protocols live verbatim in `references/protocol.md` — **read it 
 
 Ship keeps untracked runtime checkpoints outside the work-unit records and never appends a `## Shipped` marker to `scratchpad.md`. The checkpoint stores the PR number and retry budget; GitHub remains the source of truth for PR state. Re-running on a branch that already has an open PR will detect that (`gh pr view`) and pick up at the CI-watch step instead of re-creating.
 
-Scheduled or manual resumes re-invoke `minerva:ship`; the skill detects the existing PR and resumes using the persisted iteration count, validated against the resume prompt.
+Scheduled or manual resumes re-invoke `lorestrom:ship`; the skill detects the existing PR and resumes using the persisted iteration count, validated against the resume prompt.
 
 ## Out of scope
 
-- **Writing to `.minerva/knowledge/` directly.** All durable knowledge goes through `minerva:promote`.
-- **Running `minerva:promote` or `minerva:review` automatically.** Only nudges, never auto-invokes — keeps the user in control of what gets promoted and reviewed.
-- **Worktree cleanup.** Owned by `minerva:cleanup`.
+- **Writing to `.minerva/knowledge/` directly.** All durable knowledge goes through `lorestrom:promote`.
+- **Running `lorestrom:promote` or `lorestrom:review` automatically.** Only nudges, never auto-invokes — keeps the user in control of what gets promoted and reviewed.
+- **Worktree cleanup.** Owned by `lorestrom:cleanup`.
 - **A strict mode** that turns nudges into hard blockers. Deferred; users who want strict ordering can run the skills in order themselves.
 - **Replacing `ship-it` for non-minerva projects.** This skill assumes a `.minerva/` project or runs in explicit bare mode; the generic `ship-it` skill is still the right tool when the user is not in a minerva project.

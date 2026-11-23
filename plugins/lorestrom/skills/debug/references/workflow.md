@@ -125,7 +125,7 @@ The `.minerva/` directory has two read tiers, and this skill uses both different
 
 - **`.minerva/reference/`** — thematic, present-tense, operational facts about how the system is configured *right now*. Files named by topic (`topology.md`, `observability.md`, `database.md`, etc.). Replace-on-change. Debug uses it for "how does this layer work in this project?" — the operational map.
 
-The distinction is time-shape: knowledge accumulates; reference snapshots. New durable learnings from a debug go to knowledge via `minerva:promote`. Updates to operational facts overwrite the relevant reference file directly.
+The distinction is time-shape: knowledge accumulates; reference snapshots. New durable learnings from a debug go to knowledge via `lorestrom:promote`. Updates to operational facts overwrite the relevant reference file directly.
 
 ## `.minerva/reference/` discovery
 

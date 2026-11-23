@@ -1,6 +1,6 @@
 # The deferral bar — what may be deferred, and where it goes
 
-**This file is the single statement of the rule.** `minerva:review`'s triage, `minerva:promote`'s
+**This file is the single statement of the rule.** `lorestrom:review`'s triage, `lorestrom:promote`'s
 TODO disposition, and the `propose-ship-*` orchestrators point here rather than restating
 it. If you are about to write the bar into another skill's prose, don't — add a pointer instead.
 Six copies of a block held together by a plea to keep them in sync is a shape this project
@@ -61,7 +61,7 @@ own. An allowlist's refusals are complete
 ## The outlets
 
 Every forward-looking item lands in exactly one of these, **tried in this order**. The only
-other disposition is to seed a new proposal (the TODO gate in `minerva:promote`'s "Mode A — no argument (end-of-work full pass)"), which a user may
+other disposition is to seed a new proposal (the TODO gate in `lorestrom:promote`'s "Mode A — no argument (end-of-work full pass)"), which a user may
 choose for any item they want designed rather than recorded. "Leave it in the scratchpad" is not
 a disposition.
 
@@ -81,8 +81,8 @@ absorbable defect that only surfaces at promote was missed earlier, and **it doe
 inside promote**. Code written after review would ship without a reviewer seeing it. Stop the
 promote pass before it writes anything, fix the defect, log it in the scratchpad as a review
 fix, and send the new commits back through review. An orchestrator returns to its review phase
-and then re-runs promote. Run standalone, promote stops and recommends `minerva:review`, then a
-fresh `minerva:promote`.
+and then re-runs promote. Run standalone, promote stops and recommends `lorestrom:review`, then a
+fresh `lorestrom:promote`.
 
 An absorbed fix is **in scope, not scope creep**. Log it in the scratchpad as
 `- Absorbed fix: <file> — <failure scenario it closes>` so review's spec-fidelity lens and
@@ -123,7 +123,7 @@ Write it as what *is*, not as what someone should do:
 
 This is not a euphemism — it is the reframing that makes the item durable. A TODO expires the
 moment someone does it or decides not to. A description of the system stays true until the
-system changes, and `minerva:review` reads `.minerva/knowledge/` on **every** future unit, so it
+system changes, and `lorestrom:review` reads `.minerva/knowledge/` on **every** future unit, so it
 resurfaces by locality when relevant code is next touched.
 
 **It carries no burn-down obligation, and that is the point.** `followups.md` rotted because it
@@ -158,4 +158,4 @@ A stale doc is not future work. It is a part of the current change that was left
   a deliberate choice, and the honest caveat is that this project's own corpus notes an
   unenforced constraint tends to get violated
   (`2026-08-11-pattern-an-unenforced-constraint-is-aspirational`). If documentation drift shows
-  up repeatedly, that entry is the argument for adding the lens to `minerva:review`.
+  up repeatedly, that entry is the argument for adding the lens to `lorestrom:review`.

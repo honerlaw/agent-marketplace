@@ -1,19 +1,19 @@
 ---
 name: replan
-description: Records a course-correction for the current minerva work unit — drafts Original plan / What changed / New plan, stress-tests it via `minerva:grill-plan`, then appends a dated divergence entry to `.minerva/work/YYYY-MM-DD-slug/replan.md`. Use when work has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting — or to amend an approved proposal before `minerva:work` starts (pre-work tweaks), or when the user invokes `minerva:replan`.
+description: Records a course-correction for the current minerva work unit — drafts Original plan / What changed / New plan, stress-tests it via `lorestrom:grill-plan`, then appends a dated divergence entry to `.minerva/work/YYYY-MM-DD-slug/replan.md`. Use when work has diverged from the proposal in a load-bearing way — a core assumption was wrong, the approach is changing, or scope is shifting — or to amend an approved proposal before `lorestrom:work` starts (pre-work tweaks), or when the user invokes `lorestrom:replan`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Append a dated replan entry to the current work unit when reality has diverged from the proposal, OR amend an approved proposal pre-work.
 
 ## Usage
 
-- `minerva:replan` — operates on the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
-- `minerva:replan 005-add-payments` — operate on the named unit explicitly (slug or path)
-- `minerva:replan <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
+- `lorestrom:replan` — operates on the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
+- `lorestrom:replan 005-add-payments` — operate on the named unit explicitly (slug or path)
+- `lorestrom:replan <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
 
 ## Orchestrated mode (`--auto`)
 
@@ -25,38 +25,38 @@ judgment about who is calling (`2026-06-07-decision-phase-handoff-rides-observab
 Absent it, every gate behaves exactly as written.
 
 It satisfies steps 3, 5 and 7 below: the orchestrator supplies the clarifying answers,
-`minerva:grill-plan` is **not** invoked (it is a one-question-at-a-time user interview), and the
+`lorestrom:grill-plan` is **not** invoked (it is a one-question-at-a-time user interview), and the
 orchestrator's acceptance stands in for the hard gate.
 
 ## When to use
 
-- **Mid-work divergence** (most common): a core assumption broke, the approach is shifting, scope changed. `minerva:work` auto-triggers this protocol.
+- **Mid-work divergence** (most common): a core assumption broke, the approach is shifting, scope changed. `lorestrom:work` auto-triggers this protocol.
 - **Pre-work amendment**: the proposal was approved but the user wants to tweak it before implementation starts. Same protocol — the replan entry's `Original plan` is just the freshly written proposal, and `What changed` is "before implementation: user wants to adjust X".
 
 ## Target resolution
 
-Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
+Same pattern used by `lorestrom:work`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — if the user passed a slug or path, resolve it. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
+1. **Explicit argument** — if the user passed a slug or path, resolve it. Look in both `.minerva/work/<date-slug>/` and `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` (both id forms), pick by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.lorestrom/worktrees/*/.minerva/work/*/` (both id forms), pick by directory mtime.
 4. **Ambiguity** — list candidates, ask the user.
-5. **None found** — "no work units found — run `minerva:propose` first" and stop.
+5. **None found** — "no work units found — run `lorestrom:propose` first" and stop.
 
 ## Worktree addressing
 
 After resolving the target and before reading or writing any files:
 
 - `<date-slug>` is a checked id (runtime contract, "Names are data").
-- **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
-- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- **Do not call `EnterWorktree`** — minerva worktrees live under `.lorestrom/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- If the resolved target's docs live at `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.lorestrom/worktrees/<date-slug>/`, and run every git command as `git -C .lorestrom/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo directly.
 
 This keeps the skill correct regardless of where it's invoked from — every file path it touches names the right working tree explicitly.
 
 ## Protocol
 
-Same brainstorming pattern as `minerva:propose`, but framed around divergence:
+Same brainstorming pattern as `lorestrom:propose`, but framed around divergence:
 
 1. **Read the existing context first.** Read `proposal.md`, any prior `replan.md` entries, and the current `scratchpad.md`. The brainstorm must be grounded in what actually happened.
 2. **Frame the replan around three pieces:**
@@ -65,7 +65,7 @@ Same brainstorming pattern as `minerva:propose`, but framed around divergence:
    - **New plan** — the revised approach
 3. **Ask clarifying questions one at a time** to fill in any of the three pieces that aren't already obvious from the conversation or files.
 4. **Propose 2–3 alternative new plans** if the path forward isn't already settled. Iterate.
-5. **Draft the replan entry internally**, then **stress-test it before showing it for approval.** Assemble the Original plan / What changed / New plan triple in conversation (do not write to disk yet) and invoke the `minerva:grill-plan` skill via the skill loader against it (no argument needed — it reads the draft from conversation). Let grill-plan walk the decision tree, edit affected pieces in place as answers surface, and return only once shared understanding is reached. The entry that exits grilling is what step 6 presents.
+5. **Draft the replan entry internally**, then **stress-test it before showing it for approval.** Assemble the Original plan / What changed / New plan triple in conversation (do not write to disk yet) and invoke the `lorestrom:grill-plan` skill via the skill loader against it (no argument needed — it reads the draft from conversation). Let grill-plan walk the decision tree, edit affected pieces in place as answers surface, and return only once shared understanding is reached. The entry that exits grilling is what step 6 presents.
 6. **Present the resulting entry** for approval before writing.
 7. **Hard gate:** do not append to the file until the user — or, under `--auto=<orchestrator>`, that
    orchestrator's new-plan acceptance — has approved the entry.
@@ -91,8 +91,8 @@ Same brainstorming pattern as `minerva:propose`, but framed around divergence:
 
 3. **Update Success criteria if the new plan changes them.** If the replan changes what "done" looks like, also edit `proposal.md`'s `## Success criteria` section to reflect the new bar. Otherwise leave it alone — the replan entry will still supersede the proposal on conflict.
 
-4. Report the path and the title of the appended entry. Suggest resuming `minerva:work` next.
+4. Report the path and the title of the appended entry. Suggest resuming `lorestrom:work` next.
 
 ## Out of scope
 
-This skill stops at appending to `replan.md` (and optionally editing `proposal.md`'s Success criteria). It does **not** invoke implementation — return control to `minerva:work` (or its in-progress session) after writing.
+This skill stops at appending to `replan.md` (and optionally editing `proposal.md`'s Success criteria). It does **not** invoke implementation — return control to `lorestrom:work` (or its in-progress session) after writing.

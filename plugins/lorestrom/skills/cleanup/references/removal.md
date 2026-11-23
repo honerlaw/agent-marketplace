@@ -6,7 +6,7 @@ prefers to refuse and surface than to force.
 
 For each confirmed worktree (`<date-slug>` is a checked id: see the runtime contract's "Names are data".):
 
-1. **Remove the worktree** — `git worktree remove .minerva/worktrees/<date-slug>`.
+1. **Remove the worktree** — `git worktree remove .lorestrom/worktrees/<date-slug>`.
 
    If this fails because the worktree has uncommitted changes, **surface the error and skip**.
    Do not force-remove without explicit user direction: uncommitted changes sitting in a

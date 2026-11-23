@@ -2,7 +2,7 @@
 
 ## Knowledge entry template
 
-The `**Context**` field is a stable pointer that should remain meaningful even after the work-unit worktree is removed (`minerva:cleanup`). Use the canonical `.minerva/work/<date-slug>` path even if the actual files currently live in a worktree — after merge + cleanup, the docs are reconstructible from git history at that path on the merge commit.
+The `**Context**` field is a stable pointer that should remain meaningful even after the work-unit worktree is removed (`lorestrom:cleanup`). Use the canonical `.minerva/work/<date-slug>` path even if the actual files currently live in a worktree — after merge + cleanup, the docs are reconstructible from git history at that path on the merge commit.
 
 The `**Theme**` and `**Summary**` fields are **required**. Together they are the entry's
 catalog line: the knowledge catalog is never stored, it is derived on read by
@@ -17,7 +17,7 @@ orientation, and `knowledge_lint` errors on it for any entry dated on or after 2
 
   ```bash
   ROOT="$(git rev-parse --show-toplevel)"
-  PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+  PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
   [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
   python3 "$PLUGIN_SCRIPTS/knowledge_catalog.py" "$ROOT/.minerva/knowledge" --themes
   ```

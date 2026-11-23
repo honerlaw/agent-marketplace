@@ -2,11 +2,11 @@
 
 ## Target resolution
 
-Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:ship`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
+Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:ship`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
+1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — explicit mention in this session.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` (both id forms) by directory mtime.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.lorestrom/worktrees/*/.minerva/work/*/` (both id forms) by directory mtime.
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → **no minerva context**. Skip to [Code review invocation](#code-review-invocation) — do not stop.
 
@@ -14,13 +14,13 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 
 After resolving the target and before reading docs or running git commands:
 
-- **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- **Do not call `EnterWorktree`** — minerva worktrees live under `.lorestrom/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
 - `<date-slug>` is a checked id: see the runtime contract's "Names are data".
-- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …` (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+- If the resolved target's docs live at `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads with `.lorestrom/worktrees/<date-slug>/`, and run every git command as `git -C .lorestrom/worktrees/<date-slug> …` (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being reviewed retrospectively), operate on the parent repo directly.
 - If target resolution returned no minerva context, skip this step — the code review pass runs in whatever working tree the user invoked the skill from.
 
-Diff resolution, file reads, and `code-review:code-review` all run against the resolved working tree (the worktree via its `.minerva/worktrees/<date-slug>/` prefix, or the parent repo).
+Diff resolution, file reads, and `code-review:code-review` all run against the resolved working tree (the worktree via its `.lorestrom/worktrees/<date-slug>/` prefix, or the parent repo).
 
 ## Diff resolution
 
@@ -42,7 +42,7 @@ Before generating findings, read:
 1. `proposal.md` — the original design.
 2. **All** `replan.md` entries chronologically. On conflict, the latest replan wins.
 3. Current `scratchpad.md` — so review doesn't re-raise items already noted there. **Check for prior triage state** under `## Review triage YYYY-MM-DD` headers (see [Triage persistence](#triage-persistence)) and pre-fill dispositions from the most recent block when the underlying finding is re-surfaced.
-4. Deferred work — `followups.md` if present, **and** open followup issues where the repo has them: `gh issue list --label "minerva:followup" --state open --json number,title,labels,url`. Since `minerva:promote` files kept TODOs as issues wherever it can, the file alone no longer sees everything already deferred. Skip the query without comment if `gh` is unavailable or the repo has no issues.
+4. Deferred work — `followups.md` if present, **and** open followup issues where the repo has them: `gh issue list --label "minerva:followup" --state open --json number,title,labels,url`. Since `lorestrom:promote` files kept TODOs as issues wherever it can, the file alone no longer sees everything already deferred. Skip the query without comment if `gh` is unavailable or the repo has no issues.
 5. `.minerva/knowledge/` — at minimum entries with `Type: pattern` and `Type: constraint`, since these encode invariants the diff may violate. Skim `Type: decision` and `Type: bug` entries too if the diff touches areas they describe.
 
 ### Finding generation
@@ -56,14 +56,14 @@ Tag each finding with severity (`high` / `medium` / `low`) and a one-line descri
 
 ### Load-bearing divergence
 
-If a finding reveals that the implementation diverged from the proposal in a way that's a different approach (not just a bug), suggest `minerva:replan` instead of (or alongside) a FIX. Same heuristic as `minerva:work`:
+If a finding reveals that the implementation diverged from the proposal in a way that's a different approach (not just a bug), suggest `lorestrom:replan` instead of (or alongside) a FIX. Same heuristic as `lorestrom:work`:
 
 - Core assumption from the proposal turned out to be wrong → replan.
 - The approach itself changed → replan.
 - Scope shifted in or out → replan.
 - Routine implementation choice or small edge case → just FIX.
 
-If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and invoke the `minerva:replan` skill via the skill loader. Invoke `minerva:review` again via the skill loader once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
+If the user agrees, **persist the in-progress triage first** (see [Triage persistence](#triage-persistence) — flush pending dispositions to scratchpad so they survive the round trip), then exit review and invoke the `lorestrom:replan` skill via the skill loader. Invoke `lorestrom:review` again via the skill loader once the new plan is in place; prior dispositions will be pre-filled where the same findings re-surface.
 
 ## Code review invocation
 
@@ -101,7 +101,7 @@ When no minerva context exists, the code quality review output is the only resul
 Present findings as a numbered list. For each finding, propose a default disposition and let the user redirect:
 
 - **FIX** — apply a concrete code change. Show the proposed change (file + diff) before writing.
-- **SUGGEST** — append a note to `scratchpad.md` so the next `minerva:promote` decides whether it's durable knowledge.
+- **SUGGEST** — append a note to `scratchpad.md` so the next `lorestrom:promote` decides whether it's durable knowledge.
 - **IGNORE** — explicitly accept. Optionally log rationale to scratchpad as a `→ accepted` line.
 
 **SUGGEST is not the safe default, and it used to behave like one.** It is the lowest-friction
@@ -137,11 +137,11 @@ Before any disposition is applied — and again any time the triage is interrupt
 
 On re-run, read the **most recent** such block and pre-fill the matching findings' dispositions. Pre-filled items still go through user confirmation (the user can override) but don't have to be re-triaged from scratch. Pending items stay pending — the new run resumes where the old one stopped.
 
-The triage block is a normal scratchpad entry from `minerva:promote`'s point of view (it's neither a `→ promoted` marker nor protected); `promote` will decide whether to discard it as routine noise or merge any FIX summaries into the proposal.
+The triage block is a normal scratchpad entry from `lorestrom:promote`'s point of view (it's neither a `→ promoted` marker nor protected); `promote` will decide whether to discard it as routine noise or merge any FIX summaries into the proposal.
 
 ## On approval — file writes
 
-- **FIX items** → make the code edits directly using the editor tools. After each fix, append a one-line entry to `scratchpad.md` so `minerva:promote` can pick it up (e.g. `- Review fix: <file> — <one-line summary>`).
+- **FIX items** → make the code edits directly using the editor tools. After each fix, append a one-line entry to `scratchpad.md` so `lorestrom:promote` can pick it up (e.g. `- Review fix: <file> — <one-line summary>`).
 - **SUGGEST items** → append to `scratchpad.md` under a single `## Review finding YYYY-MM-DD` header so they're distinguishable from regular scratchpad noise. One bullet per suggestion. `promote` treats these as MERGE-INTO-PROPOSAL by default (see promote/SKILL.md).
 - **IGNORE items** → optional scratchpad entry only if the rationale is non-obvious (e.g. "intentionally skipped tests for X because Y"). Usually skip — silence is the default for ignored findings.
 
@@ -162,7 +162,7 @@ Next:            <recommendation>
 
 The recommendation:
 
-- **Any FIX or SUGGEST items applied** → recommend `minerva:promote` so the new scratchpad entries get folded into durable knowledge / the proposal.
-- **Replan triggered** → recommend `minerva:work` to resume implementation under the new plan, then re-run `minerva:review` afterward.
-- **All ignored or zero findings** → recommend `minerva:ship` if implementation is complete, otherwise nothing.
+- **Any FIX or SUGGEST items applied** → recommend `lorestrom:promote` so the new scratchpad entries get folded into durable knowledge / the proposal.
+- **Replan triggered** → recommend `lorestrom:work` to resume implementation under the new plan, then re-run `lorestrom:review` afterward.
+- **All ignored or zero findings** → recommend `lorestrom:ship` if implementation is complete, otherwise nothing.
 

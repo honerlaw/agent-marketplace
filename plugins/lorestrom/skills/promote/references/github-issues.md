@@ -29,7 +29,7 @@ permission check, and step 5 catches it when it fails.
 
 Run the probe from wherever the skill is already operating. A minerva worktree shares its
 remotes with the parent repo, so `gh` resolves the same `nameWithOwner` from inside
-`.minerva/worktrees/<date-slug>/` as from the repo root — no `-C` juggling needed.
+`.lorestrom/worktrees/<date-slug>/` as from the repo root — no `-C` juggling needed.
 
 ## Step 2 — Priority
 
@@ -79,7 +79,7 @@ ensure_label() {  # $1 name, $2 hex colour, $3 description
 # Collect the flags for the labels that are actually usable. USABLE is what step 4 passes;
 # a label that could not be ensured simply contributes no flag.
 USABLE=()
-ensure_label "minerva:followup"   5319E7 "Deferred work recorded by minerva:promote" \
+ensure_label "minerva:followup"   5319E7 "Deferred work recorded by lorestrom:promote" \
   && USABLE+=(--label "minerva:followup")
 ensure_label "priority: $LEVEL"   "$COLOUR" "$DEFINITION" \
   && USABLE+=(--label "priority: $LEVEL")
@@ -96,7 +96,7 @@ Note the degradation in the report.
 
 Then, before creating anything, ask whether this unit's followups are already filed.
 Creating an issue is the only externally-visible side effect promote has, and a duplicate
-is a notification on someone's repo — the same reason `minerva:ship` checks `gh pr view`
+is a notification on someone's repo — the same reason `lorestrom:ship` checks `gh pr view`
 before `gh pr create`. Check three sources, cheapest and most reliable first:
 
 1. **This run's own record** — issue numbers created earlier in this same promote run.
@@ -156,7 +156,7 @@ gh issue create \
 
 **Priority**: <level> — <that level's definition from step 2>
 
-Deferred from `.minerva/work/<date-slug>/` by `minerva:promote`.
+Deferred from `.minerva/work/<date-slug>/` by `lorestrom:promote`.
 MINERVA_ISSUE_BODY
 )"
 ```
@@ -181,7 +181,7 @@ Two substitution rules, because the item's text is copied verbatim and you do no
 Keep the back-link line exactly as written — it is what the step-3 search matches on.
 
 Only **Keep** items become issues. A **Seed new proposal** item still goes to
-`minerva:propose`, which produces a full `proposal.md` — a richer record than a one-line
+`lorestrom:propose`, which produces a full `proposal.md` — a richer record than a one-line
 issue. A **Discard** item is still dropped.
 
 ## Step 5 — Fail-soft, per item
@@ -214,7 +214,7 @@ skipped lies by omission
 ## Reading deferred work back
 
 The skills that read `followups.md` read open followup issues alongside it —
-`minerva:review`, and the `propose-ship-*` orchestrators at both their context-assembly and
+`lorestrom:review`, and the `propose-ship-*` orchestrators at both their context-assembly and
 their TODO-disposition steps:
 
 ```bash

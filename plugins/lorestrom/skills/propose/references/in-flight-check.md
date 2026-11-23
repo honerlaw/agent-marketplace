@@ -29,7 +29,7 @@ result is not a guarantee. A clean result means *no evidence was found*, nothing
 ## Step 1 — Local work units
 
 List the checked unit ids (`units`, runtime contract "Names are data") found under
-`.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`. For each unit holding a
+`.minerva/work/*/` plus `.lorestrom/worktrees/*/.minerva/work/*/`. For each unit holding a
 `proposal.md`, ask `work_status`, with `PLUGIN_SCRIPTS` resolved as the runtime contract says:
 
 ```bash
@@ -86,7 +86,7 @@ was abandoned, so it is never aged out.
 
 ## Step 3 — Open pull requests
 
-Run the capability probe in `minerva:promote`'s "Step 1 — Capability probe", exactly as written
+Run the capability probe in `lorestrom:promote`'s "Step 1 — Capability probe", exactly as written
 there. A non-zero exit (no `gh`, not authenticated, no GitHub remote) or `hasIssuesEnabled:
 false` means **skip this step silently**.
 
@@ -187,7 +187,7 @@ orchestrator it **increments the run's global escalation counter**. It is not ex
 Ask with the user question operation, naming what was found and where it came from (which unit, branch,
 PR, or session):
 
-- **Resume that work** — the existing unit becomes the target; `minerva:work <date-slug>`.
+- **Resume that work** — the existing unit becomes the target; `lorestrom:work <date-slug>`.
 - **Start fresh anyway** — proceed as asked, having been told.
 - **Abandon this run** — stop; nothing is created.
 

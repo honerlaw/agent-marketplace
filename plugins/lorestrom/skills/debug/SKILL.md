@@ -5,7 +5,7 @@ description: Investigate a bug end-to-end — gather evidence first, then diagno
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 # Debug
 

@@ -1,6 +1,6 @@
 ---
 name: status
-description: Prints the current overall status of a project's minerva workstream as markdown tables — every unit's lifecycle stage, phase progress, branch/PR state and the next lifecycle step to run, plus knowledge-wiki health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `minerva:status`.
+description: Prints the current overall status of a project's minerva workstream as markdown tables — every unit's lifecycle stage, phase progress, branch/PR state and the next lifecycle step to run, plus knowledge-wiki health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `lorestrom:status`.
 allowed-tools:
   - Bash
   - Read
@@ -10,10 +10,10 @@ allowed-tools:
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Answer **"where does everything stand, and what should I do next?"** in one screen.
-`minerva:status` aggregates the records that already exist — every work unit's declared
+`lorestrom:status` aggregates the records that already exist — every work unit's declared
 state, its phase topology, the knowledge wiki's health, the deferred backlog — and renders
 them as three markdown tables.
 
@@ -34,7 +34,7 @@ They answer different questions and are resolved differently. Do not collapse th
 
 ```bash
 WORK_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 ```
 
@@ -42,8 +42,8 @@ PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" reso
 --show-toplevel`.** Every other minerva skill anchors on `--show-toplevel`, correctly:
 their target is the worktree-local `.minerva/knowledge/`, so per-branch semantics are the
 point. They are wrong for this skill. Inside a linked worktree `--show-toplevel` returns
-*the worktree*, which contains no `.minerva/worktrees/` directory at all — so a status
-walk invoked from a worktree, which is where `minerva:work` sessions live and exactly the
+*the worktree*, which contains no `.lorestrom/worktrees/` directory at all — so a status
+walk invoked from a worktree, which is where `lorestrom:work` sessions live and exactly the
 "resuming agent" case this skill exists for, would report every sibling unit as absent.
 
 The `cd … && pwd` wrapper is not decoration. Bare `dirname "$(git rev-parse
@@ -70,7 +70,7 @@ MERGED="$(gh pr list --state merged --limit 200 --json headRefName -q '.[].headR
 ```
 
 **Merged-PR first, `git branch --merged` only as a fallback** — the same order and the
-same reason as `minerva:cleanup`'s "Merge detection": a squash-merged branch is not an
+same reason as `lorestrom:cleanup`'s "Merge detection": a squash-merged branch is not an
 ancestor of the default branch, so `git branch --merged` cannot see it. Do not union the
 two sources: `git branch --merged` also lists a *freshly created* branch that has no
 commits yet, which would report an unstarted phase as shipped.
@@ -100,14 +100,14 @@ git -C "$WORK_ROOT" branch --list
 ```
 
 Both are optional. If `gh` is unavailable, unauthenticated, or the repo has no GitHub
-remote — run the probe in `minerva:promote`'s "Step 1 — Capability probe" exactly as
+remote — run the probe in `lorestrom:promote`'s "Step 1 — Capability probe" exactly as
 written there, then **skip the PR column silently** and render `—`. Never stall or
 apologise for an absent tracker; the stage-only table is coarser and still correct.
 
 **Resolve a unit's branch names through `phase_branch()`, never by string equality with
 the slug.** A phased unit ships one PR per phase: phase 1 on the bare `<date-slug>`,
 phases 2+ on `<date-slug>-phase-N`. The script already returns each phase's branch in
-`phases[].branch`; join on those. `minerva:cleanup`'s "Why this step has to exist at all"
+`phases[].branch`; join on those. `lorestrom:cleanup`'s "Why this step has to exist at all"
 is explicit that exact-match on `<date-slug>` can never match a `-phase-N` branch.
 
 ## Step 5 — Render the tables
@@ -117,7 +117,7 @@ column list, and the full **Next step** mapping. Two rules from it are load-bear
 to state here:
 
 - **`worktree_present` on an incomplete phased unit is not a cleanup signal.** That unit
-  keeps its worktree *by design* — `minerva:cleanup`'s "Teardown waits" defers teardown
+  keeps its worktree *by design* — `lorestrom:cleanup`'s "Teardown waits" defers teardown
   until the final phase, because removing the worktree between phases destroys the
   workspace the remaining phases are cut in. Its next step is the next phase, not cleanup.
 - **List only the unfinished units.** Finished ones are counted in the rollup. A 60-row
@@ -126,7 +126,7 @@ to state here:
 ## Out of scope
 
 - **Any file mutation**, and any lifecycle advancement. This skill is read-only: it names
-  the next step, does not run it, and never invokes `minerva:work` / `ship` / `promote` /
+  the next step, does not run it, and never invokes `lorestrom:work` / `ship` / `promote` /
   `cleanup`. The action it *names* is the one way it can still cause damage — see the
   phase-first ordering in the Next step mapping.
 - **Re-deriving lifecycle state.** `unit_state`, `read_phases`, `phase_progress` and

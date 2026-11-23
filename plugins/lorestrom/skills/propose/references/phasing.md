@@ -2,7 +2,7 @@
 
 Work that is too big for one pull request splits its **plan**, not its **work unit**.
 
-One unit. One `proposal.md`, one `scratchpad.md`, one worktree, one `minerva:promote`, one
+One unit. One `proposal.md`, one `scratchpad.md`, one worktree, one `lorestrom:promote`, one
 knowledge pass — shipping as an ordered series of pull requests, one per phase.
 
 **Read this file before declaring `## Phases` on a proposal, and before shipping or cleaning
@@ -31,7 +31,7 @@ Phasing keeps the reviewable-increment benefit and pays the ceremony once.
 - **Do neither** when the work fits one PR. Most work fits one PR. An unphased unit is the
   normal case and nothing in this file applies to it.
 
-**Soft ceiling: about three phases.** This matches `minerva:propose`'s own long-standing
+**Soft ceiling: about three phases.** This matches `lorestrom:propose`'s own long-standing
 calibration for decomposition ("work that should be three separate units"). More than three is
 allowed but must be **argued in the proposal** — name why the work does not fit in three.
 More than about five is evidence the scope itself is wrong, not evidence of five phases; go
@@ -70,12 +70,12 @@ before this mechanism existed. That inertness is what made phasing safe to add t
 | N | `<date-slug>-phase-N` |
 
 Phase N's branch is cut from the **default branch**, and only **after phase N−1 has merged**.
-Every phase PR is therefore an ordinary PR against the default branch: `minerva:ship`'s
+Every phase PR is therefore an ordinary PR against the default branch: `lorestrom:ship`'s
 one-branch-one-PR logic and its idempotency guarantee run unchanged, N times.
 
 **Phase 1 keeps the bare slug deliberately.** It leaves the worktree directory and the phase-1
-branch matched, so all six `Target resolution` blocks, `minerva:propose`'s duplicate-slug check,
-and `minerva:cleanup`'s merge detection keep working untouched on a phased unit's first phase.
+branch matched, so all six `Target resolution` blocks, `lorestrom:propose`'s duplicate-slug check,
+and `lorestrom:cleanup`'s merge detection keep working untouched on a phased unit's first phase.
 Only phases 2+ introduce a name those consumers have not seen.
 
 Never rebuild these names by hand. Resolve them through `phase_branch()` in
@@ -103,16 +103,16 @@ hand-maintained progress marker would be the same bug with a new name
 
 `phase_progress()` takes the merged-branch set as an **argument** rather than shelling out to
 git, so `work_status.py` stays a pure reader of declarations and its tests need no repo. The
-caller — `minerva:ship`, `minerva:cleanup` — already holds the `git branch --merged` /
+caller — `lorestrom:ship`, `lorestrom:cleanup` — already holds the `git branch --merged` /
 `gh pr list` result.
 
 ## Promote: Mode B during, Mode A at the end
 
-The full `minerva:promote` Mode A pass — knowledge entries, proposal rewrite, scratchpad archive,
+The full `lorestrom:promote` Mode A pass — knowledge entries, proposal rewrite, scratchpad archive,
 the `**Closes**` field — runs **once**, after the final phase. That is the whole point: the
 ceremony is paid once.
 
-But **do not let durable knowledge wait for it.** Use `minerva:promote`'s existing **Mode B**
+But **do not let durable knowledge wait for it.** Use `lorestrom:promote`'s existing **Mode B**
 (single-item mid-work promotion) as findings arrive, so each phase's PR carries the knowledge
 that phase produced. Without this, a unit abandoned after phase 1 strands everything it learned.
 
@@ -129,13 +129,13 @@ trigger is the next phase, and the report is what makes its absence noticeable.
 ## The orchestrator loop
 
 `minerva:propose-ship` and `minerva:propose-ship-auto` both end with: ship → poll the PR → on
-`MERGED`, run `minerva:cleanup` → report and exit. **On a phased unit that last step is wrong**,
+`MERGED`, run `lorestrom:cleanup` → report and exit. **On a phased unit that last step is wrong**,
 and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
 reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.
 
 So every orchestrator's cleanup gate gains one branch, before it reports:
 
-> After `minerva:cleanup` returns on a `MERGED` phase, re-derive `phase_progress()`. If
+> After `lorestrom:cleanup` returns on a `MERGED` phase, re-derive `phase_progress()`. If
 > `complete` is false, **loop back to the ship phase** for `next_branch` — cut it from the
 > freshly fetched default branch and ship it. Only when `complete` is true does the run report
 > and exit.

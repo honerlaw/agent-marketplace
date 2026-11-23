@@ -1,6 +1,6 @@
 # Merge detection per worktree
 
-`<date-slug>` is a checked id: see the runtime contract's "Names are data". For each `.minerva/worktrees/<date-slug>/` candidate, determine if its branch (`<date-slug>` by convention) has been merged into the default branch:
+`<date-slug>` is a checked id: see the runtime contract's "Names are data". For each `.lorestrom/worktrees/<date-slug>/` candidate, determine if its branch (`<date-slug>` by convention) has been merged into the default branch:
 
 1. **Branch exists?** `git rev-parse --verify --quiet "refs/heads/<date-slug>"` — if the branch is already gone (was deleted upstream and locally), the worktree is orphaned and can be removed.
 2. **Merged via PR (preferred)** — `gh pr list --head <date-slug> --state merged --json number,mergedAt --limit 1`. If a merged PR exists, the work is shipped.

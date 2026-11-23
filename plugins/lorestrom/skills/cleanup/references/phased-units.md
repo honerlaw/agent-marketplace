@@ -10,7 +10,7 @@ the normal case — and nothing here applies to it.
 Background, branch topology and the soft ceiling live in
 `skills/propose/references/phasing.md`.
 
-Knowledge needs no per-phase handling: an entry `minerva:promote`'s Mode B lands in a phase's PR
+Knowledge needs no per-phase handling: an entry `lorestrom:promote`'s Mode B lands in a phase's PR
 is complete when that PR merges, because the catalog is derived on read from the entries
 themselves. Nothing is deferred to the final phase or to cleanup.
 
@@ -25,9 +25,9 @@ that owns the topology — never infer it from the branch name:
 
 ```bash
 # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
-# worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
+# worktree when invoked inside one, and these paths reach *into* .lorestrom/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 UNIT="<date-slug>"                               # a checked id
 # BASE comes from the runtime contract's default-branch snippet ("Names are data"), run first in this shell call.
@@ -38,10 +38,10 @@ merged = subprocess.run(["git", "branch", "--merged", sys.argv[4], "--format=%(r
                         capture_output=True, text=True).stdout.split()
 proposal = sys.argv[2]
 print(phase_progress(read_phases(open(proposal).read()), merged, sys.argv[3]))
-' "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/$UNIT/.minerva/work/$UNIT/proposal.md" "$UNIT" "${BASE:?}"
+' "$PLUGIN_SCRIPTS" "$ROOT/.lorestrom/worktrees/$UNIT/.minerva/work/$UNIT/proposal.md" "$UNIT" "${BASE:?}"
 ```
 
-**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
+**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `LORESTROM_SCRIPTS` directory. Never silently fall back to consumer code.
 
 The scripts path uses the installed runtime resolver, never a consumer-project fallback — a bare
 `sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory. Cleanup

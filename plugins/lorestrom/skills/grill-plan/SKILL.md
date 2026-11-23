@@ -1,11 +1,11 @@
 ---
 name: grill-plan
-description: Use when a plan has just been drafted in conversation and needs stress-testing before approval — invoked by `minerva:propose` after approach selection and by `minerva:replan` after the new-plan brainstorm, also usable standalone on any drafted plan. Interviews the user relentlessly about the drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached.
+description: Use when a plan has just been drafted in conversation and needs stress-testing before approval — invoked by `lorestrom:propose` after approach selection and by `lorestrom:replan` after the new-plan brainstorm, also usable standalone on any drafted plan. Interviews the user relentlessly about the drafted plan, one question at a time, with the LLM's recommended answer leading each question, until shared understanding is reached.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Stress-test a drafted plan by interviewing the user about it until shared understanding is reached. Modeled on mattpocock/skills' `productivity/grill-me`.
 
@@ -13,8 +13,8 @@ Stress-test a drafted plan by interviewing the user about it until shared unders
 
 A plan is already in conversation context. It may be:
 
-- A `minerva:propose` design draft (Goal / Why / Approach / Success criteria / Open Questions), not yet written to disk.
-- A `minerva:replan` entry draft (Original plan / What changed / New plan), not yet appended to `replan.md`.
+- A `lorestrom:propose` design draft (Goal / Why / Approach / Success criteria / Open Questions), not yet written to disk.
+- A `lorestrom:replan` entry draft (Original plan / What changed / New plan), not yet appended to `replan.md`.
 - An ad-hoc plan the user has shared or pointed at (e.g., an existing `proposal.md` they want re-grilled).
 
 No flag distinguishes these — read the conversation and act on whichever plan is in front of you.
@@ -42,6 +42,6 @@ Walk down the decision tree of the drafted plan one question at a time, resolvin
 
 ## Out of scope
 
-- File writes — the caller skill (`minerva:propose`, `minerva:replan`) owns persistence.
+- File writes — the caller skill (`lorestrom:propose`, `lorestrom:replan`) owns persistence.
 - Approval gates — the caller skill runs its own approval flow after this skill returns.
 - Scope re-decomposition — if grilling reveals the plan should be split into multiple work units, surface that to the user and return; the caller decides how to handle it.

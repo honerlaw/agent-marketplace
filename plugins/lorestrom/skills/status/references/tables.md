@@ -17,8 +17,8 @@ corpus is 65 units, and a 65-row table is not a status check.
 
 | Unit | Stage | Phase | Branch | PR | Next step |
 |---|---|---|---|---|---|
-| `2026-08-27-deferral-cost-model` | in-progress | 1 of 2 | `…-phase-2` | #101 merged | `minerva:work` — phase 2 |
-| `2026-08-28-status-skill` | draft | — | `2026-08-28-status-skill` | — | `minerva:work` |
+| `2026-08-27-deferral-cost-model` | in-progress | 1 of 2 | `…-phase-2` | #101 merged | `lorestrom:work` — phase 2 |
+| `2026-08-28-status-skill` | draft | — | `2026-08-28-status-skill` | — | `lorestrom:work` |
 
 - **Unit** — the `<date-slug>`. It is also the worktree directory name and the phase-1
   branch name, which is why one column serves all three.
@@ -73,7 +73,7 @@ corpus and a clean one are different states, and only one is good news.
 
 Name the skill that closes each gap; do not run it, and do not reproduce its findings.
 There is no post-merge knowledge step to wait for: each unit's PR carries its own
-knowledge entries, so a merged unit's next step is `minerva:cleanup` (worktree and branch
+knowledge entries, so a merged unit's next step is `lorestrom:cleanup` (worktree and branch
 teardown) or nothing.
 
 ## The Next step mapping
@@ -83,16 +83,16 @@ from falling into the cleanup arm.
 
 | Condition | Next step |
 |---|---|
-| `progress.phased` and not `progress.complete` | `minerva:work` — phase `next_position` of `total` |
-| PR `MERGED` and `worktree_present` | `minerva:cleanup` |
-| `stage` is `promoted`, no open PR | `minerva:ship` |
+| `progress.phased` and not `progress.complete` | `lorestrom:work` — phase `next_position` of `total` |
+| PR `MERGED` and `worktree_present` | `lorestrom:cleanup` |
+| `stage` is `promoted`, no open PR | `lorestrom:ship` |
 | `stage` is `promoted`, PR open | wait for CI / merge — no action |
-| `stage` is `in-progress` | `minerva:review`, then `minerva:promote` |
-| `stage` is `draft` | `minerva:work` |
-| `stage` is `shipped`, `worktree_present` | `minerva:cleanup` |
+| `stage` is `in-progress` | `lorestrom:review`, then `lorestrom:promote` |
+| `stage` is `draft` | `lorestrom:work` |
+| `stage` is `shipped`, `worktree_present` | `lorestrom:cleanup` |
 
 **Why the phase arm comes first.** A phase-1-merged unit has a merged PR *and* a worktree
-on disk, so the naive reading is "cleanup is overdue". It is not: `minerva:cleanup`'s
+on disk, so the naive reading is "cleanup is overdue". It is not: `lorestrom:cleanup`'s
 "Teardown waits" defers teardown until the final phase, because removing the worktree
 between phases destroys the workspace the remaining phases are cut in. `worktree_present`
 on an incomplete phased unit is **expected state**, not a backlog item. Recommending
@@ -102,4 +102,4 @@ damage, through the action it names.
 **When `gh` was unavailable**, the two PR-dependent arms cannot fire. Fall back to the
 stage-only arms and mark the PR column `—`. The result is coarser and never wrong: a
 `promoted` unit reads as "needs shipping", which is true whether or not a PR is already
-open — and `minerva:ship` is idempotent about an existing one.
+open — and `lorestrom:ship` is idempotent about an existing one.

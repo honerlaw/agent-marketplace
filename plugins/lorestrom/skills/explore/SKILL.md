@@ -1,11 +1,11 @@
 ---
 name: explore
-description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `minerva:propose` to design it. Use `minerva:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a minerva project (`.minerva/` present), use this instead of generic brainstorming skills — it is the minerva-native front-end that hands off to `minerva:propose`.
+description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `lorestrom:propose` to design it. Use `lorestrom:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a minerva project (`.minerva/` present), use this instead of generic brainstorming skills — it is the minerva-native front-end that hands off to `lorestrom:propose`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 # Explore an idea
 
@@ -15,16 +15,16 @@ Turn a fuzzy idea into clarity through open-ended, collaborative dialogue — **
 
 `explore` is **commitment-free by construction.** It **writes no file**, allocates no work unit (no slug, no date id), and creates no branch or worktree. Everything it produces lives in the conversation. That is the whole point: exploration should cost nothing to abandon.
 
-`minerva:propose`, by contrast, is *convergent* — its job is to produce the `proposal.md` artifact (plus the branch and worktree). Reach for `minerva:propose` directly when you already know what you want to build. Reach for `explore` when you don't yet.
+`lorestrom:propose`, by contrast, is *convergent* — its job is to produce the `proposal.md` artifact (plus the branch and worktree). Reach for `lorestrom:propose` directly when you already know what you want to build. Reach for `explore` when you don't yet.
 
 The two diverge on **different axes** and compose cleanly, so a handoff is never redundant:
 
 - `explore` diverges on the **problem / direction** axis — *what* to build, or *whether* to build anything at all.
-- `minerva:propose` diverges on the **implementation-approach** axis — *how* to build the direction you chose.
+- `lorestrom:propose` diverges on the **implementation-approach** axis — *how* to build the direction you chose.
 
-`explore` settles the direction; `minerva:propose` then designs it.
+`explore` settles the direction; `lorestrom:propose` then designs it.
 
-Exploration is conversation only — everything it produces lives in the transcript; no files, work units, branches, or worktrees are created here. When the user converges and wants to commit, hand off to `minerva:propose`, which owns all file, branch, and worktree creation.
+Exploration is conversation only — everything it produces lives in the transcript; no files, work units, branches, or worktrees are created here. When the user converges and wants to commit, hand off to `lorestrom:propose`, which owns all file, branch, and worktree creation.
 
 ## The process
 
@@ -43,16 +43,16 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 ## Handing off to propose
 
-When — and *only* when — the user has converged on a direction and wants to turn it into a real work unit, hand off by invoking the `minerva:propose` skill **via the skill loader**, passing the converged direction as the inline argument:
+When — and *only* when — the user has converged on a direction and wants to turn it into a real work unit, hand off by invoking the `lorestrom:propose` skill **via the skill loader**, passing the converged direction as the inline argument:
 
-> invoke the `minerva:propose` skill with argument `"<the converged direction, in one phrase>"`
+> invoke the `lorestrom:propose` skill with argument `"<the converged direction, in one phrase>"`
 >
-> — or, when exploration surfaced an open issue the user wants to execute, `"<the converged direction> (adopting #NN)"`. That exact parenthetical is what lets `minerva:propose` skip its own open-issue match instead of asking the user to adopt an issue they just adopted.
+> — or, when exploration surfaced an open issue the user wants to execute, `"<the converged direction> (adopting #NN)"`. That exact parenthetical is what lets `lorestrom:propose` skip its own open-issue match instead of asking the user to adopt an issue they just adopted.
 
-Passing the direction inline lets `minerva:propose` pick up exactly where exploration left off: it treats the direction as the draft goal and proceeds straight to designing *how* to build it, rather than re-asking what you want to build or re-opening the problem space you just closed. Do **not** merely describe the handoff in prose and stop ("you should now run propose"); actually invoke the skill.
+Passing the direction inline lets `lorestrom:propose` pick up exactly where exploration left off: it treats the direction as the draft goal and proceeds straight to designing *how* to build it, rather than re-asking what you want to build or re-opening the problem space you just closed. Do **not** merely describe the handoff in prose and stop ("you should now run propose"); actually invoke the skill.
 
 ## Out of scope
 
-- **Writing anything durable.** `explore` produces no `proposal.md`, no `scratchpad.md`, no knowledge entry, and no notes file. If exploration surfaces something genuinely durable mid-stream, that is the signal you are ready to hand off to `minerva:propose` — not a reason to start writing files here.
-- **Stress-testing a drafted plan.** That is `minerva:grill-plan`'s job — it interrogates an already-*drafted* plan to convergence. `explore` is upstream of any draft, so the two do not overlap.
+- **Writing anything durable.** `explore` produces no `proposal.md`, no `scratchpad.md`, no knowledge entry, and no notes file. If exploration surfaces something genuinely durable mid-stream, that is the signal you are ready to hand off to `lorestrom:propose` — not a reason to start writing files here.
+- **Stress-testing a drafted plan.** That is `lorestrom:grill-plan`'s job — it interrogates an already-*drafted* plan to convergence. `explore` is upstream of any draft, so the two do not overlap.
 - **Implementation.** `explore` never writes code. It stops at shared understanding of the problem and a chosen direction (or a decision not to proceed).

@@ -1,18 +1,18 @@
 ---
 name: one-by-one
-description: Walks the user through the questions already outstanding in the current session, one at a time, showing the running position and total ("Question 3 of 10") and waiting for each answer before the next. Every question offers three to five concrete options, marks a recommended answer or says there is none, and always accepts the user's own direction instead. Use when several questions have piled up and answering them in one reply would be awkward, or the user says "ask me one by one", "one at a time", "go through these questions", "walk me through the open questions" or "what do you still need from me". Takes a finite list that already exists; to probe a drafted plan with new questions until understanding is reached, use `minerva:grill-plan` instead. Use also when the user invokes `minerva:one-by-one`.
+description: Walks the user through the questions already outstanding in the current session, one at a time, showing the running position and total ("Question 3 of 10") and waiting for each answer before the next. Every question offers three to five concrete options, marks a recommended answer or says there is none, and always accepts the user's own direction instead. Use when several questions have piled up and answering them in one reply would be awkward, or the user says "ask me one by one", "one at a time", "go through these questions", "walk me through the open questions" or "what do you still need from me". Takes a finite list that already exists; to probe a drafted plan with new questions until understanding is reached, use `lorestrom:grill-plan` instead. Use also when the user invokes `lorestrom:one-by-one`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Turn a pile of open questions into a walk-through the user can answer one at a time, always knowing how far along they are.
 
 ## Usage
 
-- `minerva:one-by-one` — collect the questions from the current session.
-- `minerva:one-by-one "<topic or list>"` — limit it to a topic, or supply the questions directly.
+- `lorestrom:one-by-one` — collect the questions from the current session.
+- `lorestrom:one-by-one "<topic or list>"` — limit it to a topic, or supply the questions directly.
 
 ## Protocol
 
@@ -95,5 +95,5 @@ The skill ends there and takes no action of its own. A caller, or work this sess
 ## Out of scope
 
 - **Writing files.** The answers live in the conversation; a caller owns any persistence.
-- **Generating new questions.** Probing a drafted plan is `minerva:grill-plan`; weighing directions before a plan exists is `minerva:explore`.
+- **Generating new questions.** Probing a drafted plan is `lorestrom:grill-plan`; weighing directions before a plan exists is `lorestrom:explore`.
 - **Gating an orchestrator.** No orchestrator calls this skill, and an autonomous run's escalations stay as they are.

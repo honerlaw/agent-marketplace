@@ -2,11 +2,11 @@
 
 ## Target resolution
 
-Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:cleanup`. **Keep all six blocks in sync if you edit one.**
+Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
+1. **Explicit argument** — slug or path. Look in both `.minerva/work/<date-slug>/` and `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`.
 2. **Current-session context** — explicit mention in this session.
-3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.minerva/worktrees/*/.minerva/work/*/` by directory mtime. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`; a digit-anchored glob misses date-named units entirely.
+3. **Most-recently-modified across both locations** — scan `.minerva/work/*/` AND `.lorestrom/worktrees/*/.minerva/work/*/` by directory mtime. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`; a digit-anchored glob misses date-named units entirely.
 4. **Ambiguity** → list candidates, ask.
 5. **None found** → run in **bare mode**: ship from git state alone, no proposal-derived PR title/body. Bare mode is a first-class fallback, not an error path.
 
@@ -14,9 +14,9 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 
 After resolving the target and before running any git commands:
 
-- **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- **Do not call `EnterWorktree`** — minerva worktrees live under `.lorestrom/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
 - `<date-slug>` is a checked id: see the runtime contract's "Names are data".
-- If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .minerva/worktrees/<date-slug> …` and prefix any file path with `.minerva/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
+- If the resolved target's docs live at `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`, run every git command for this skill as `git -C .lorestrom/worktrees/<date-slug> …` and prefix any file path with `.lorestrom/worktrees/<date-slug>/`. The work-unit branch is already checked out there, so branch detection, commit, push, and PR open all run against the correct branch automatically.
 - If the docs live only on the default branch (a shipped unit being re-shipped — rare; usually a no-op anyway) or no minerva context was found (bare mode), do **not** address a worktree. Ship from whatever working tree the user invoked the skill from. If the user is intentionally on a different branch, warn that the PR body will not reflect the work-unit proposal.
 
 ## Checkpoint entry
@@ -49,13 +49,13 @@ hand; ask the module that owns them:
 
 ```bash
 # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
-# worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
+# worktree when invoked inside one, and these paths reach *into* .lorestrom/worktrees/.
 ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
 [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 UNIT="<date-slug>"                               # a checked id
 # BASE comes from the runtime contract's default-branch snippet ("Names are data"), run first in this shell call.
-WT="$ROOT/.minerva/worktrees/$UNIT"              # the unit's worktree, addressed by prefix
+WT="$ROOT/.lorestrom/worktrees/$UNIT"              # the unit's worktree, addressed by prefix
 python3 -c '
 import subprocess, sys; sys.path.insert(0, sys.argv[1])
 from work_status import read_phases, phase_progress, phase_name
@@ -72,7 +72,7 @@ print(state, [phase_name(t) for n, t in phases if n >= (state["next_position"] o
 **Both paths are anchored, not CWD-relative**, and that is load-bearing twice over:
 
 - The scripts path uses the installed plugin runtime resolver (`minerva:lint`,
-  `minerva:migrate-fix`, and `minerva:cleanup` use the same resolver). A bare
+  `minerva:migrate-fix`, and `lorestrom:cleanup` use the same resolver). A bare
   `sys.path.insert(0, 'scripts')` raises `ModuleNotFoundError` from any subdirectory
   (`2026-06-03-constraint-skill-wraps-script-via-importable-api`).
 - The proposal path carries the `$WT` prefix because **ship never enters the worktree** — the
@@ -82,7 +82,7 @@ print(state, [phase_name(t) for n, t in phases if n >= (state["next_position"] o
   `read_phases` succeeds, `phase_progress` returns a wrong `next_branch`, and ship targets the
   wrong phase without erroring.
 
-**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
+**If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `LORESTROM_SCRIPTS` directory. Never silently fall back to consumer code.
 
 Use `--merged` against a **freshly fetched** default branch; a stale local ref
 reports a phase as unmerged after its PR landed, which would try to re-ship it.
@@ -98,8 +98,8 @@ there with the previous phase. `BASE_NAME` comes from the default-branch snippet
 the same shell call:
 
 ```bash
-git -C .minerva/worktrees/<date-slug> fetch origin "refs/heads/${BASE_NAME:?}"
-git -C .minerva/worktrees/<date-slug> checkout -b <date-slug>-phase-N "refs/remotes/origin/${BASE_NAME:?}"
+git -C .lorestrom/worktrees/<date-slug> fetch origin "refs/heads/${BASE_NAME:?}"
+git -C .lorestrom/worktrees/<date-slug> checkout -b <date-slug>-phase-N "refs/remotes/origin/${BASE_NAME:?}"
 ```
 
 Full rules — the soft ceiling, why phase 1 keeps the bare slug, and why progress is derived
@@ -138,7 +138,7 @@ Only if `git status --porcelain` is non-empty:
    - List of filenames changed.
    In bare mode, use the diff and recent commit messages as the source.
 
-   If `work_status.is_post_promote(scratchpad_text)` is true, the unit is in its post-`minerva:promote` state and there is nothing to skim — fall back to `## Goal` + filenames only. Use that predicate rather than comparing against the canonical marker string: the marker has had at least nine spellings, and a string match reads a validly-promoted unit as un-promoted.
+   If `work_status.is_post_promote(scratchpad_text)` is true, the unit is in its post-`lorestrom:promote` state and there is nothing to skim — fall back to `## Goal` + filenames only. Use that predicate rather than comparing against the canonical marker string: the marker has had at least nine spellings, and a string match reads a validly-promoted unit as un-promoted.
 2. **Hard gate #1 (commit message).** Show the draft and prompt the user to redirect or accept. (Under `--auto=<orchestrator>`, or when the user has pre-authorized non-interactive shipping, accept the draft without prompting — this applies to gate #2 as well.)
 3. `git add` with **specific file paths** (never `-A` or `.`) for tracked changes and untracked files the user wants included.
 4. `git commit -m "$(cat <<'EOF' ... EOF)"` using a HEREDOC for clean formatting. Honor the project's git footer conventions if any are visible in recent commits.
@@ -178,7 +178,7 @@ If nothing is uncommitted, skip this step entirely.
    **Re-verify each entry against the diff before emitting it.** The field may have been written
    at intake, when the user adopted an open issue and no diff existed yet
    (`skills/propose/references/issue-match.md`), and ship is reached without
-   `minerva:promote` often enough for that to matter — this skill nudges, it does not enforce
+   `lorestrom:promote` often enough for that to matter — this skill nudges, it does not enforce
    ordering, and an autonomous orchestrator auto-accepts the PR-body gate below, so this is the
    last point anything checks. Drop an entry the diff does not resolve and say which, in the
    report. This is not inference in the sense the next paragraph forbids: dropping an unsupported
@@ -225,7 +225,7 @@ The old fixed cadence (a wake-up every 270s) was wrong in both directions — me
    automatic re-entry, arm the scheduled resume operation at **1800s** with:
 
    ```
-   minerva:ship <date-slug> --watch-iteration=<N> [--auto=<orchestrator>]
+   lorestrom:ship <date-slug> --watch-iteration=<N> [--auto=<orchestrator>]
    ```
 
    **Carry `--auto=<orchestrator>` verbatim when it was passed.** Preserve
@@ -276,7 +276,7 @@ Once checks are no longer pending:
 
 ### Track iteration count across wakes
 
-Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `minerva:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-auto`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
+Persist the iteration count **and any `--auto=<orchestrator>`** in the wake-up `prompt` payload (e.g. `lorestrom:ship 005-add-payments --watch-iteration=2 --auto=propose-ship-auto`) so both the loop bound and the caller hold across wake-ups. A resume never resets the saved count. A genuinely new run/phase requires the completed-checkpoint transition in the runtime contract; a next declared phase uses `write --start-phase` to retain aggregate governance counters.
 
 ## Auto-merge
 
@@ -314,9 +314,9 @@ in two days on this project, every one found by accident.
 
 The recommendation:
 
-- **Phased unit with phases outstanding** → "Phase N merged. Run `minerva:ship` again to start phase N+1 (`<next branch>`); `minerva:promote` waits for the final phase — use its Mode B for durable knowledge found meanwhile."
-- Auto-merge enabled and CI green → "GitHub will merge when checks pass. Run `minerva:cleanup` afterward to remove the worktree."
-- Auto-merge declined by repo → "Merge manually when ready: `gh pr merge <pr-number>`. Run `minerva:cleanup` after merge."
+- **Phased unit with phases outstanding** → "Phase N merged. Run `lorestrom:ship` again to start phase N+1 (`<next branch>`); `lorestrom:promote` waits for the final phase — use its Mode B for durable knowledge found meanwhile."
+- Auto-merge enabled and CI green → "GitHub will merge when checks pass. Run `lorestrom:cleanup` afterward to remove the worktree."
+- Auto-merge declined by repo → "Merge manually when ready: `gh pr merge <pr-number>`. Run `lorestrom:cleanup` after merge."
 - CI failed after 3 fix iterations → "Investigate the failure manually; the fix loop bailed."
 - CI still pending → state whether automatic re-entry is actually scheduled; otherwise print **pending — manual resume required** and the exact resume prompt.
 
@@ -329,25 +329,25 @@ paths applies is decided by an observable fact, not a guess:
   orchestrators document, which skips phases 1-6 and runs their cleanup gate.
 - **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
   invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate
-  twice — a second `minerva:cleanup`.
+  twice — a second `lorestrom:cleanup`.
 
-Either way, do not print the "Run `minerva:cleanup` afterward" recommendation: it addresses a human
+Either way, do not print the "Run `lorestrom:cleanup` afterward" recommendation: it addresses a human
 who is not driving this run.
 
 ## Lifecycle nudges
 
-`minerva:ship` does **not** run `minerva:promote` or `minerva:review` for the user. It surfaces nudges, not blockers:
+`lorestrom:ship` does **not** run `lorestrom:promote` or `lorestrom:review` for the user. It surfaces nudges, not blockers:
 
-- If `scratchpad.md` contains entries that look unpromoted (i.e. it's not just the post-promote state per `work_status.is_post_promote`) → "Consider running `minerva:promote` before shipping so the PR body picks up durable knowledge."
-- If `minerva:review` has not obviously been run for this branch (no `## Review triage` blocks in scratchpad, no review-fix commits) → "Consider running `minerva:review` before shipping."
+- If `scratchpad.md` contains entries that look unpromoted (i.e. it's not just the post-promote state per `work_status.is_post_promote`) → "Consider running `lorestrom:promote` before shipping so the PR body picks up durable knowledge."
+- If `lorestrom:review` has not obviously been run for this branch (no `## Review triage` blocks in scratchpad, no review-fix commits) → "Consider running `lorestrom:review` before shipping."
 
 Surface both nudges as part of the initial summary, then proceed. The user can ship and skip — strict ordering is not enforced.
 
 ## Worktree handling
 
-The [Worktree addressing](#worktree-addressing) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `minerva:propose`, so the rest of ship works against the correct state automatically.
+The [Worktree addressing](#worktree-addressing) section above handles entering the work unit's worktree before any git operations run. Once entered, the branch and remote tracking are already set up by `lorestrom:propose`, so the rest of ship works against the correct state automatically.
 
-After merge, the worktree and its branch should be cleaned up via `minerva:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
+After merge, the worktree and its branch should be cleaned up via `lorestrom:cleanup` — `ship` does not delete them automatically since CI may still be running asynchronously.
 
-On a **phased** unit the worktree survives between phases: `minerva:cleanup` defers teardown while any declared phase is unmerged, and phase N+1 is cut inside that same worktree. Running cleanup between phases is still correct; it reports the teardown as deferred and changes nothing.
+On a **phased** unit the worktree survives between phases: `lorestrom:cleanup` defers teardown while any declared phase is unmerged, and phase N+1 is cut inside that same worktree. Running cleanup between phases is still correct; it reports the teardown as deferred and changes nothing.
 
