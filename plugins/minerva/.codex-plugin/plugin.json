@@ -1,6 +1,6 @@
 {
   "name": "minerva",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Durable record discipline for software work in Claude Code and Codex — promotion, not accumulation.",
   "author": {"name": "Derek Honerlaw"},
   "skills": "./skills/",

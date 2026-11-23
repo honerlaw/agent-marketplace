@@ -28,6 +28,43 @@ Retain the distinction between current working-tree corpus paths and primary
 checkout paths reaching sibling worktrees. Address active worktrees by full
 path and use `git -C`; never switch the session into a host-managed worktree.
 
+## Names are data
+
+Branch and ref names, and the unit ids that become branch and directory names, come from
+the repository, which may not be the user's. Git allows names that are not safe as command
+text. So:
+
+- **Never paste a branch or ref name into a command or into Python source.** Obtain it
+  inside the shell call that uses it, keep it in a variable, and pass it quoted: after a
+  `refs/…` prefix, as a flag's value, or after `--`. Python receives it in `sys.argv`.
+- **The default branch** comes from this snippet, repeated in each shell call that uses it.
+  The `:?` in `"${BASE:?}"` stops a call that skipped it. It cannot stop a call from inside
+  `$(…)` or a pipeline, so never put it there; start such a line with `: "${BASE:?}" &&`. A branch or worktree cut from `BASE` takes
+  `--no-track`, so a fallback to origin's ref never sets the default branch as upstream.
+
+  ```bash
+  unset BASE BASE_NAME
+  BASE_NAME="$(git symbolic-ref -q refs/remotes/origin/HEAD)" && BASE_NAME="${BASE_NAME#refs/remotes/origin/}"
+  for n in "$BASE_NAME" main master; do
+    [ -n "$n" ] || continue
+    if git show-ref --verify --quiet "refs/heads/$n"; then BASE_NAME="$n" BASE="refs/heads/$n"; break; fi
+    if git show-ref --verify --quiet "refs/remotes/origin/$n"; then BASE_NAME="$n" BASE="refs/remotes/origin/$n"; break; fi
+  done
+  ```
+
+  `BASE` is the full ref (local when it exists, otherwise origin's); `BASE_NAME` is the
+  bare name, used only as `"refs/heads/${BASE_NAME:?}"` when fetching.
+- **Commit ids and PR numbers** come from git output or `gh … --json number` inside the
+  same shell call, never typed in by hand.
+- **A unit id is used only once it is checked.** A checked id is one printed by
+  `python3 "$PLUGIN_SCRIPTS/minerva_runtime.py" units` (resolve `PLUGIN_SCRIPTS` as below),
+  or a new id made by `minerva:propose`'s slug step. An id from an argument, a branch name
+  or a PR head must equal a printed one. Otherwise stop on that id, and say how many names
+  `units` refused; a sweep over many units skips it and reports it instead. This applies
+  before a command is printed for the user as well as before one is run. A checked id is
+  the only name that may appear as `<date-slug>` in a command, and never inside Python
+  source.
+
 ## Shared operations
 
 - **Skill loader:** load the named skill's instructions using the host adapter,
@@ -104,7 +141,16 @@ For legacy runs, reconstruct Git/PR progress and seed counters from explicit
 usage requires user recovery rather than pretending zero. For bare shipping,
 use `bare-` plus the SHA-256 of the branch name as the checkpoint key and give
 the user the current branch and bare ship prompt (do not treat that key as a
-work unit). Bare shipping can mark done after its PR is confirmed merged; no
+work unit). Read the branch and derive both in the shell, so its name is never typed:
+
+```bash
+BR="$(git branch --show-current)"
+KEY="$(python3 -c 'import hashlib, sys; print("bare-" + hashlib.sha256(sys.argv[1].encode()).hexdigest())' "$BR")"
+python3 -c 'import json, sys; print(json.dumps({"revision": 0, "branch": sys.argv[1], "caller": None}))' "$BR" \
+  | python3 "$PLUGIN_SCRIPTS/minerva_runtime.py" write --unit "$KEY"
+```
+
+Later writes build their JSON the same way. Bare shipping can mark done after its PR is confirmed merged; no
 unit teardown is needed. A pending bare run resumes on its recorded branch.
 
 Do not clear progress while anything is pending. After live evidence confirms

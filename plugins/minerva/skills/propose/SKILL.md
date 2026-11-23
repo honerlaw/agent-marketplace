@@ -56,4 +56,4 @@ The full on-approval sequence — slug derivation, duplicate check, date id, def
 ## Out of scope
 
 - **Implementation.** This skill stops at writing and confirming the files. `minerva:work` is the next phase.
-- **Worktree abandonment.** If the user rejects at the post-write gate and wants to abandon the work unit, they run `git worktree remove .minerva/worktrees/<date-slug>` plus `git branch -D <date-slug>` manually. Propose does not offer an `--abandon` flow; cleanup is reserved for shipped work.
+- **Worktree abandonment.** If the user rejects at the post-write gate and wants to abandon the work unit, they run `git worktree remove .minerva/worktrees/<date-slug>` plus `git branch -D <date-slug>` manually. `<date-slug>` is a checked id (runtime contract, "Names are data"). Propose does not offer an `--abandon` flow; cleanup is reserved for shipped work.

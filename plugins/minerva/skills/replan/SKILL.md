@@ -47,6 +47,7 @@ Same pattern used by `minerva:work`, `minerva:promote`, `minerva:review`, `miner
 
 After resolving the target and before reading or writing any files:
 
+- `<date-slug>` is a checked id (runtime contract, "Names are data").
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
 - If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads or writes with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and silently misroute edits onto the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being inspected), operate on the parent repo directly.

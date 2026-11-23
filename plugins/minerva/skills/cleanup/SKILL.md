@@ -20,7 +20,7 @@ Tidy up after shipped work — remove `.minerva/worktrees/<date-slug>/` director
 Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `minerva:review`, `minerva:ship`. **Keep all six blocks in sync if you edit one.** For `minerva:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
 1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<date-slug>/` and `.minerva/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
-2. **No argument** → scan all `.minerva/worktrees/*/` directories and check each branch's merge state. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
+2. **No argument** → scan all `.minerva/worktrees/*/` directories and check each branch's merge state. Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
 ## Checkpoint entry
@@ -44,12 +44,8 @@ Bail with a clear message on any failure:
 
 ## Default-branch detection
 
-Resolve **once** at the start:
-
-1. `git symbolic-ref refs/remotes/origin/HEAD` → parse `refs/remotes/origin/<name>`.
-2. Fall back to `main`, then `master`.
-
-Use the resolved value for all merge checks.
+Use the runtime contract's default-branch snippet ("Names are data") in each shell call that
+runs a merge check, and refer to the result only as `"${BASE:?}"`.
 
 ## Merge detection per worktree
 

@@ -15,6 +15,7 @@ Same pattern used by `minerva:work`, `minerva:replan`, `minerva:promote`, `miner
 After resolving the target and before reading docs or running git commands:
 
 - **Do not call `EnterWorktree`** — minerva worktrees live under `.minerva/worktrees/`, which that tool does not reliably enter; the session's working directory stays the parent repo.
+- `<date-slug>` is a checked id: see the runtime contract's "Names are data".
 - If the resolved target's docs live at `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`, address the worktree explicitly: prefix every file path this skill reads with `.minerva/worktrees/<date-slug>/`, and run every git command as `git -C .minerva/worktrees/<date-slug> …` (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
 - If the docs live only on the default branch (a shipped unit being reviewed retrospectively), operate on the parent repo directly.
 - If target resolution returned no minerva context, skip this step — the code review pass runs in whatever working tree the user invoked the skill from.
@@ -28,10 +29,7 @@ Decide what to review:
 1. Run `git status --porcelain`.
    - **Non-empty** → review the working-tree diff (`git diff HEAD` for tracked changes, plus the contents of untracked files).
    - **Empty** → review the branch diff against the default branch.
-2. Default-branch detection (only needed when the working tree is clean):
-   - Try `git symbolic-ref refs/remotes/origin/HEAD` (parse out `refs/remotes/origin/<name>`).
-   - Fall back to `main`, then `master`.
-   - Compute the diff as `git diff $(git merge-base <default> HEAD)...HEAD`.
+2. Default-branch detection (only needed when the working tree is clean): run the runtime contract's default-branch snippet ("Names are data"), then, in the same shell call, compute the diff as `git diff "${BASE:?}"...HEAD` (three dots diff from the merge base).
 3. **Empty diff** (clean tree, no commits ahead of default) → report "nothing to review" and stop.
 4. **Non-git repo** → report and stop.
 

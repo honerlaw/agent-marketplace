@@ -28,12 +28,15 @@ result is not a guarantee. A clean result means *no evidence was found*, nothing
 
 ## Step 1 — Local work units
 
-List `.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`. For each unit holding a
-`proposal.md`, ask `work_status`:
+List the checked unit ids (`units`, runtime contract "Names are data") found under
+`.minerva/work/*/` plus `.minerva/worktrees/*/.minerva/work/*/`. For each unit holding a
+`proposal.md`, ask `work_status`, with `PLUGIN_SCRIPTS` resolved as the runtime contract says:
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '<scripts>'); from work_status import unit_state; print(unit_state('.minerva/work/<date-slug>')['in_flight'])"
+python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from work_status import unit_state; print(unit_state(sys.argv[2])["in_flight"])' "$PLUGIN_SCRIPTS" ".minerva/work/<date-slug>"
 ```
+
+`<date-slug>` is a checked id: see the runtime contract's "Names are data".
 
 `in_flight` is `Status is Draft` **or** not promoted. **Call the predicate — do not restate it
 as a string comparison**: the promote marker has eight spellings in this corpus and `Status`
@@ -54,12 +57,23 @@ Use `git ls-remote`, **not** `git branch -r`: remote-tracking refs are only as f
 last fetch, so `git branch -r` reads clean for a branch pushed five minutes ago.
 
 **Bound this source for staleness.** A pushed-and-abandoned branch otherwise produces a
-recurring false collision on every future intake touching its theme, forever. Two bounds:
+recurring false collision on every future intake touching its theme, forever. Two bounds, read
+for every work-unit branch, local and remote, in one call, so no branch name is typed into a
+command:
 
 ```bash
-git log -1 --format=%cI <branch>              # newest commit — older than 14 days is stale
-gh pr list --state all --head <branch> --json number,state   # merged/closed is not in flight
+{ git ls-remote --heads origin 2>/dev/null; git for-each-ref --format='%(objectname) %(refname)' refs/heads/; } |
+while read -r sha ref; do
+  b="${ref#refs/heads/}"
+  case "$b" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*|[0-9][0-9][0-9]-*) ;; *) continue ;; esac
+  printf '%s\t%s\t' "$b" "$(git log -1 --format=%cI "$sha" 2>/dev/null || echo unfetched)"   # newest commit — older than 14 days is stale
+  gh pr list --state all --head "$b" --json number,state </dev/null 2>/dev/null || echo   # merged/closed is not in flight
+done
 ```
+
+Each line is a branch (a branch both local and pushed appears twice), its newest commit date
+and its PRs as JSON. `unfetched` means the pushed commit is not local: judge that branch by its
+PRs alone, and with none treat it as in flight, never stale.
 
 Use `--state all`, not the `--state open` query in step 3: that one cannot tell a branch whose
 PR merged from a branch that never had one. A branch whose PR is merged or closed is **not** in

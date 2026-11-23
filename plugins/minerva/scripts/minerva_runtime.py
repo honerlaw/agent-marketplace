@@ -75,10 +75,70 @@ def common_dir(cwd: Path | None = None) -> Path:
     return (cwd / result.stdout.strip()).resolve()
 
 
+# A unit id is also a branch name and a directory name, and the repository it comes from may
+# not be the user's, so only ids of this shape are ever used (`units`, `state_path`).
+UNIT_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+UNIT_BRANCH_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-")
+PHASE_BRANCH_RE = re.compile(r"-phase-\d+$")
+
+
+def is_unit_id(name: str) -> bool:
+    return UNIT_ID_RE.fullmatch(name) is not None and ".." not in name
+
+
 def state_path(unit: str, cwd: Path | None = None) -> Path:
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", unit) or ".." in unit:
+    if not is_unit_id(unit):
         raise ValueError("unit must be a slug, not a path")
     return common_dir(cwd) / "minerva" / "runtime" / unit / "run.json"
+
+
+def unit_ids(cwd: Path | None = None) -> dict:
+    """Every work-unit id this project holds that is safe to use, and how many were refused.
+
+    Reads names only: the `.minerva/work` and `.minerva/worktrees` directories of the primary
+    checkout and of this working tree (or of `cwd` outside Git), each worktree's
+    `.minerva/work`, and local branches shaped like a unit id (`YYYY-MM-DD-…` or `NNN-…`, not
+    a `-phase-N` branch), so a unit whose worktree is gone can still be cleaned up. A refused
+    name is counted, never printed; a directory that cannot be read is counted as unreadable.
+    """
+    cwd = (cwd or Path.cwd()).resolve()
+    try:
+        common = common_dir(cwd)
+    except ValueError:
+        common = None
+    roots = {cwd} if common is None else set()
+    if common is not None:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd,
+                             capture_output=True, text=True).stdout.strip()
+        roots |= {Path(top)} if top else set()
+        if common.name == ".git":
+            roots.add(common.parent)
+    found, refused, unreadable = set(), set(), 0
+
+    def entries(directory: Path) -> list:
+        nonlocal unreadable
+        try:
+            return sorted(directory.iterdir()) if directory.is_dir() else []
+        except OSError:
+            unreadable += 1
+            return []
+
+    for root in sorted(roots):
+        worktrees = entries(root / ".minerva" / "worktrees")
+        for parent in [root / ".minerva" / "work", *(w / ".minerva" / "work" for w in worktrees)]:
+            for entry in entries(parent):
+                if entry.is_dir():
+                    (found if is_unit_id(entry.name) else refused).add(entry.name)
+        for entry in worktrees:
+            if entry.is_dir():
+                (found if is_unit_id(entry.name) else refused).add(entry.name)
+    if common is not None:
+        branches = subprocess.run(["git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads/"],
+                                  cwd=cwd, capture_output=True, text=True).stdout.split()  # ref names hold no whitespace
+        for name in branches:
+            if UNIT_BRANCH_RE.match(name) and not PHASE_BRANCH_RE.search(name):
+                (found if is_unit_id(name) else refused).add(name)
+    return {"units": sorted(found), "refused": len(refused), "unreadable": unreadable}
 
 
 def validate(state: dict, unit: str, repository: str) -> dict:
@@ -230,6 +290,8 @@ def main(argv=None) -> int:
     resolve = sub.add_parser("resolve")
     resolve.add_argument("--skill-file", type=Path, required=True)
     resolve.add_argument("--scripts")
+    units = sub.add_parser("units", help="the safe work-unit ids in this project")
+    units.add_argument("--cwd", type=Path)
     for operation in ("read", "write", "clear"):
         command = sub.add_parser(operation)
         command.add_argument("--unit", required=True)
@@ -246,6 +308,8 @@ def main(argv=None) -> int:
             print(resolve_scripts(args.skill_file, args.scripts))
         elif args.operation == "write":
             print(json.dumps(write_state(args.unit, json.load(sys.stdin), args.cwd, args.start_phase), indent=2))
+        elif args.operation == "units":
+            print(json.dumps(unit_ids(args.cwd), indent=2))
         elif args.operation == "clear":
             clear_state(args.unit, args.revision, args.cwd)
         else:

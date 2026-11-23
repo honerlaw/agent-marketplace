@@ -58,7 +58,7 @@ these limits when switching sessions.
 
 After `minerva:ship` returns, check PR merge state and decide what to do with the worktree:
 
-1. Read the PR state for the work-unit branch: `gh pr view <branch> --json state,mergedAt 2>/dev/null`.
+1. Read the PR state by the number ship reported (on resume, the checkpoint's PR number): `gh pr view <pr-number> --json state,mergedAt 2>/dev/null`. No branch name is typed.
 2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
 3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. When a scheduler supports re-entry, schedule a wake-up:
    - the scheduled resume operation with `delaySeconds: 300` and a `prompt` of `minerva:propose-ship --cleanup-only <date-slug> --retry=N` so the next firing re-enters this gate.

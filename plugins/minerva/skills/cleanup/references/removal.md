@@ -4,7 +4,7 @@ Runs once the [Confirmation gate](../SKILL.md#confirmation-gate) has passed. Eve
 deliberately conservative: cleanup's failure mode is destroying unmerged work, so each operation
 prefers to refuse and surface than to force.
 
-For each confirmed worktree:
+For each confirmed worktree (`<date-slug>` is a checked id: see the runtime contract's "Names are data".):
 
 1. **Remove the worktree** — `git worktree remove .minerva/worktrees/<date-slug>`.
 
