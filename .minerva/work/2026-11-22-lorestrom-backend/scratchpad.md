@@ -150,3 +150,14 @@
 - [FIX] L3 low — the UTF-8 re-exec dropped `-I`/`-E`/`-s`: carried over
 - [FIX] L4 low — property keys trimmed as Python, not as Lorestrom (JavaScript) trims: explicit set
 - Each fix reverted in turn: its test fails (5 of 5). Full suite green after.
+
+## Work notes (lorestrom phase 2)
+- Size check before porting: the 14 lifecycle skills are 35 files and about 4,000 lines of minerva prose, much of it shell snippets under the names-are-data guard. Phase 1's PR was 4,250 inserted lines across 31 files and needed review fixes. A full phase 2 PR would plausibly pass 7,000 lines, too large to review well. The work stopped at a foundation commit, and the split goes back to the orchestrator as a question (it changes the replan's phases).
+- Foundation, inside the replan and proposal Approach 4–6, and needed by any split. In `lorestrom_backend.py`:
+  - `unit_key`, `record_key`, `unit_state` (the gate is the authority, `refresh` when `minerva:state` lags), `release_outcome` (a CONFLICT is success only when `get_gate` shows the gate released) and `repair_flips` (failed `set_status current` writes whose entry is still `draft`);
+  - `reconcile_action` (pure safety table) and `merge_evidence` (git evidence: 40-hex shas only, default branch found, never input; `merge-tree --write-tree` needs git 2.38);
+  - `reference_payload`, `reference_list` and `read_repo_reference` (no symlinks followed, byte-faithful, digest confirmed);
+  - CLI commands `unit-state`, `release-outcome`, `repair-flips`, `reconcile`, `reference-list` and `reference-payload`.
+- `reconcile_action` choices: a CLOSED PR in any phase abandons, as Approach 6 says. `--merged <sha>` confirms one phase, and only when that commit is on the default branch. `--yes` has no input here, so it cannot confirm. Staleness (no head after 14 days) only flags.
+- Deletion pass 2026-11-23, 20 chosen mutations over the new rules: 18 caught at first. "Confirm needs no PR" is an equivalent mutant: OPEN already waits, MERGED counts as merged and CLOSED abandons, so the clause is defensive. "Reference read stays in its directory" survived because no test asked for an existing `.md` outside it; the test was added and the mutant is now caught. As before, this measures only the mutations chosen.
+- Not started: the 14 skills, storage contract rows, init's handover, runtime checkpoints under `<git-common-dir>/lorestrom/runtime/`, the version bump to 0.2.0.

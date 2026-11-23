@@ -65,6 +65,19 @@ STATE_DIR = "lorestrom"  # under the common Git directory: the link cache, later
 SHARED_CONFIG = Path(".lorestrom") / "config.json"
 WORKTREES = ".lorestrom/worktrees/"
 KNOWLEDGE = Path(".minerva") / "knowledge"  # the import source, never written
+REFERENCE = Path(".minerva") / "reference"  # the handover source, never written
+KIND_UNIT = "minerva:work_unit"
+KIND_REFERENCE = "minerva:reference"
+# A work unit's id, as minerva names it: a date (or legacy NNN) prefix, then a slug.
+UNIT_ID_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*")
+RECORDS = ("proposal", "scratchpad", "replan", "followups")
+# The states a gate (changeset) can be in; `minerva:state` mirrors the unit gate's.
+GATE_STATES = ("open", "releasing", "released", "abandoned")
+SHA_RE = re.compile(r"[0-9a-f]{40}")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+STALE_DAYS = 14
+MERGE_TREE_GIT = (2, 38)  # `git merge-tree --write-tree`
+PR_STATES = ("OPEN", "MERGED", "CLOSED")
 # Any of these in a `.git` directory claims a repository, readable by git or not.
 REPO_MEMBERS = {"HEAD", "config", "objects", "commondir", STATE_DIR}
 RETIRED = ("archived", "deprecated", "superseded")
@@ -767,6 +780,311 @@ def _default_branch(top):
     return None
 
 
+# --- work units ---------------------------------------------------------------------------
+
+
+def unit_key(project: str, unit: str) -> str:
+    if not UNIT_ID_RE.fullmatch(unit or ""):
+        raise BackendError(f"not a work-unit id: {ascii(unit)}")
+    return check_key(f"minerva:u/{_project_id(project)}/{unit}")
+
+
+def record_key(unit: str, record: str) -> str:
+    """A unit record's key: the unit's key, then the record's name."""
+    if record not in RECORDS:
+        raise BackendError(f"not a unit record: {ascii(record)}")
+    if not unit.startswith("minerva:u/"):
+        raise BackendError("a record key extends a unit key")
+    return check_key(f"{unit}/{record}")
+
+
+def unit_state(properties: dict, gate_state=None) -> dict:
+    """What a unit doc says about its lifecycle, with the gate as the authority on its state.
+
+    Lorestrom refuses held writes to a gate's own doc, so `minerva:state` is a live property
+    that can lag the gate. Read the gate (`get_gate`) before acting on a unit, and pass its
+    state here: `refresh` is the value to write back when the property is stale.
+    """
+    if gate_state is not None and gate_state not in GATE_STATES:
+        raise BackendError(f"not a gate state: {ascii(gate_state)}")
+    status = properties.get("minerva:status")
+    promoted = properties.get("minerva:promoted")
+    recorded = properties.get("minerva:state")
+    state = gate_state if gate_state is not None else recorded
+    return {
+        "promoted": isinstance(promoted, str) and bool(DATE_RE.fullmatch(promoted)),
+        "shipped": isinstance(status, str) and status.startswith("Shipped ("),
+        "state": state if state in GATE_STATES else None,
+        "refresh": gate_state if gate_state is not None and recorded != gate_state else None,
+    }
+
+
+def release_outcome(code, gate_state) -> dict:
+    """Whether a `release_gate` call released the unit.
+
+    `code` is the tool's error code, or None when it returned a release. A CONFLICT is
+    success only when `get_gate` then shows the gate released: another clone (or an earlier
+    attempt of this one) released it first. Anything else is a failure to report.
+    """
+    if code is None:
+        return {"released": True, "by": "this call"}
+    if code == "CONFLICT" and gate_state == "released":
+        return {"released": True, "by": "an earlier release"}
+    return {"released": False, "code": code, "gate": gate_state}
+
+
+def repair_flips(gate: dict, docs: list) -> dict:
+    """The failed `set_status current` writes of a released unit gate that can still be made.
+
+    `gate` is `get_gate`'s result; `docs` is `find_docs` with that `gateId`. Only an entry
+    that is still `draft` is repaired: one superseded, archived or otherwise changed since
+    is reported, never flipped, and so is one this agent cannot see.
+    """
+    if gate.get("state") != "released":
+        raise BackendError("repair runs only after the unit's gate is released")
+    status = {doc["id"]: doc["status"] for doc in docs}
+    repair, skipped = [], []
+    for write in gate.get("writes", []):
+        payload = write.get("write") or {}
+        if payload.get("op") != "set_status" or payload.get("status") != "current":
+            continue
+        if write.get("state") != "failed":
+            continue
+        doc = payload.get("id")
+        why = (write.get("outcome") or {}).get("code")
+        if doc not in status:
+            skipped.append({"id": doc, "reason": "not visible to you, or deleted", "code": why})
+        elif status[doc] != "draft":
+            skipped.append({"id": doc, "reason": f"now {status[doc]}, not draft", "code": why})
+        else:
+            repair.append({"id": doc, "code": why})
+    return {"repair": repair, "skipped": skipped}
+
+
+# --- merge evidence ------------------------------------------------------------------------
+
+
+def _phase_numbers(phases) -> list:
+    if type(phases) is not int or not 1 <= phases <= 20:
+        raise BackendError("phases is the number of declared phases (1 for an unphased unit)")
+    return [str(n) for n in range(1, phases + 1)]
+
+
+def reconcile_action(evidence: dict) -> dict:
+    """What cleanup does with a unit: release, confirm, abandon, or wait. Pure.
+
+    Records are not committed, so a fresh unit branch equals the default branch and git alone
+    reads it as merged. A phase counts as merged only with a recorded head that differs from
+    the unit's base and either a MERGED PR, a head that is an ancestor of the fetched default
+    branch, or the user's confirmation. Releasing needs every declared phase merged.
+    `evidence` per phase number (as a string): `heads`, `prs` (OPEN/MERGED/CLOSED or None),
+    `ancestors`, `differs` (head tree differs from the base tree), `merge_tree` ("noop",
+    "changes", "conflict", "unsupported", "missing") and `confirmed`; plus `abandon` (an
+    explicit `--abandon`) and `age_days`.
+    """
+    numbers = _phase_numbers(evidence.get("phases"))
+    get = lambda name: evidence.get(name) or {}  # noqa: E731
+    heads, prs, ancestors = get("heads"), get("prs"), get("ancestors")
+    differs, trees, confirmed = get("differs"), get("merge_tree"), get("confirmed")
+    no_head = [n for n in numbers if not heads.get(n) or not differs.get(n)]
+    stale = bool(no_head) and (evidence.get("age_days") or 0) >= STALE_DAYS
+    base = {"stale": stale, "phases": len(numbers)}
+    if evidence.get("abandon") is True:
+        return {**base, "action": "abandon", "reason": "explicit --abandon"}
+    closed = [n for n in numbers if prs.get(n) == "CLOSED"]
+    if closed:
+        return {**base, "action": "abandon",
+                "reason": f"phase {closed[0]}'s PR was closed without merging"}
+    if no_head:
+        return {**base, "action": "wait",
+                "reason": f"phase {no_head[0]} has no recorded head, or its head is the base"}
+    merged = [n for n in numbers
+              if prs.get(n) == "MERGED" or ancestors.get(n) is True or confirmed.get(n) is True]
+    rest = [n for n in numbers if n not in merged]
+    if not rest:
+        return {**base, "action": "release", "reason": "every phase has merged"}
+    if any(prs.get(n) == "OPEN" for n in rest):
+        return {**base, "action": "wait", "reason": "a phase's PR is still open"}
+    if all(prs.get(n) is None and trees.get(n) == "noop" for n in rest):
+        return {**base, "action": "confirm", "phasesToConfirm": rest,
+                "reason": "no PR evidence, but merging each head changes nothing: ask the user"}
+    return {**base, "action": "wait",
+            "reason": f"phase {rest[0]} has no merge evidence ({trees.get(rest[0]) or 'unknown'})"}
+
+
+def _git_version(top) -> tuple:
+    out = _git(top, "version").stdout
+    found = re.search(r"(\d+)\.(\d+)", out)
+    return (int(found.group(1)), int(found.group(2))) if found else (0, 0)
+
+
+def _commit(top, sha) -> bool:
+    return _git(top, "cat-file", "-e", f"{sha}^{{commit}}", ok=(0, 1, 128)).returncode == 0
+
+
+def _tree(top, rev) -> str:
+    return _git(top, "rev-parse", "--verify", "--quiet", f"{rev}^{{tree}}").stdout.strip()
+
+
+def merge_evidence(root, request: dict) -> dict:
+    """Collect `reconcile_action`'s git evidence. Shas are untrusted: only 40-hex ever reaches git.
+
+    `request`: `phases`, `heads` and `base` (the shas the unit doc records), `prs`, `abandon`,
+    `merged` (phase number → a sha the user named with `--merged`) and `age_days`. The
+    default branch is found here, never taken from input.
+    """
+    top = _top(root)
+    if top is None:
+        raise BackendError("merge evidence needs a git repository")
+    numbers = _phase_numbers(request.get("phases"))
+    default = _default_branch(top)
+    if default is None:
+        raise BackendError("no default branch: fetch origin first")
+    base = request.get("base")
+    if not (isinstance(base, str) and SHA_RE.fullmatch(base) and _commit(top, base)):
+        raise BackendError("the unit's recorded base is not a commit in this clone")
+    new_enough = _git_version(top) >= MERGE_TREE_GIT
+    default_tree = _tree(top, default)
+    evidence = {"phases": request["phases"], "abandon": request.get("abandon") is True,
+                "age_days": request.get("age_days") or 0, "heads": {}, "prs": {},
+                "ancestors": {}, "differs": {}, "merge_tree": {}, "confirmed": {}}
+    prs, merged = request.get("prs") or {}, request.get("merged") or {}
+    for n in numbers:
+        head = (request.get("heads") or {}).get(n)
+        state = prs.get(n)
+        evidence["prs"][n] = state if state in PR_STATES else None
+        if not (isinstance(head, str) and SHA_RE.fullmatch(head)):
+            continue
+        evidence["heads"][n] = head
+        if not _commit(top, head):
+            evidence["merge_tree"][n] = "missing"
+            continue
+        evidence["differs"][n] = head != base and _tree(top, head) != _tree(top, base)
+        evidence["ancestors"][n] = _git(top, "merge-base", "--is-ancestor", head, default,
+                                        ok=(0, 1)).returncode == 0
+        named = merged.get(n)
+        if isinstance(named, str) and SHA_RE.fullmatch(named) and _commit(top, named):
+            evidence["confirmed"][n] = _git(top, "merge-base", "--is-ancestor", named, default,
+                                            ok=(0, 1)).returncode == 0
+        if not new_enough:
+            evidence["merge_tree"][n] = "unsupported"
+            continue
+        result = _git(top, "merge-tree", "--write-tree", default, head, ok=(0, 1))
+        if result.returncode == 1:
+            evidence["merge_tree"][n] = "conflict"
+        else:
+            tree = result.stdout.split("\n", 1)[0].strip()
+            evidence["merge_tree"][n] = "noop" if tree == default_tree else "changes"
+    return {"evidence": evidence, "decision": reconcile_action(evidence),
+            "default": ascii(default)[1:-1]}
+
+
+# --- reference docs ------------------------------------------------------------------------
+
+
+def reference_key(project: str, relpath: str) -> str:
+    return check_key(f"minerva:r/{_project_id(project)}/{relpath[:-3]}")
+
+
+def _reference_relpath(relpath: str) -> str:
+    parts = relpath.split("/")
+    if not relpath.endswith(".md") or not all(SAFE_STEM_RE.fullmatch(part) for part in parts):
+        raise BackendError("the path has characters the handover does not accept")
+    if any(part in (".", "..") for part in parts):
+        raise BackendError("the path leaves the reference directory")
+    return relpath
+
+
+def reference_payload(relpath: str, text: str, project: str) -> dict:
+    """One `.minerva/reference/` doc as tool inputs. Present tense: no edges, never superseded."""
+    relpath = _reference_relpath(relpath)
+    _storable(text, relpath)
+    if _units(text) > MAX_MARKDOWN:
+        raise BackendError(f"{relpath} is over {MAX_MARKDOWN} characters")
+    title = next((line[2:].strip() for _, line in unfenced(text.splitlines())
+                  if line.startswith("# ") and line[2:].strip()), None)
+    title = title or Path(relpath).stem
+    if _units(title) > MAX_TITLE:
+        title = title[:MAX_TITLE]
+        while _units(title) > MAX_TITLE - 1:
+            title = title[:-1]
+        title += "…"
+    return {
+        "key": reference_key(project, relpath),
+        "kind": KIND_REFERENCE,
+        "title": title,
+        "properties": check_properties({
+            "minerva:path": relpath,
+            "minerva:project": project,
+            "minerva:digest": hashlib.sha256(text.encode()).hexdigest(),
+        }),
+        "markdown": text,
+    }
+
+
+def _reference_dir(root) -> Path:
+    top = _top(root)
+    base = (top or Path(root).resolve()) / REFERENCE.parent
+    directory = base / REFERENCE.name
+    if base.is_symlink() or directory.is_symlink():
+        raise BackendError(f"{directory}: the handover does not follow symlinks")
+    return directory
+
+
+def reference_list(root, project: str) -> dict:
+    """What the handover would send of `.minerva/reference/`, without any body.
+
+    It walks without following symlinks: a symlinked file or directory is refused, never read.
+    """
+    directory = _reference_dir(root)
+    docs, refused = [], []
+    if not directory.is_dir():
+        return {"docs": docs, "refused": refused}
+    found = []
+    for here, dirs, files in os.walk(directory, followlinks=False):
+        for name in sorted(dirs):
+            if (Path(here) / name).is_symlink():
+                found.append((Path(here) / name, "a symlinked directory"))
+        dirs[:] = sorted(d for d in dirs if not (Path(here) / d).is_symlink())
+        for name in sorted(files):
+            path = Path(here) / name
+            if name.endswith(".md") or path.is_symlink():
+                found.append((path, None))
+    for path, problem in sorted(found, key=lambda item: item[0].as_posix()):
+        relpath = path.relative_to(directory).as_posix()
+        try:
+            if problem:
+                raise BackendError(f"{problem}: the handover does not follow symlinks")
+            payload = reference_payload(relpath, read_entry(path), project)
+        except (BackendError, OSError, UnicodeError) as error:
+            refused.append({"file": ascii(relpath), "reason": str(error)})
+            continue
+        docs.append({"path": f"{REFERENCE.as_posix()}/{relpath}", "key": payload["key"],
+                     "title": payload["title"],
+                     "digest": payload["properties"]["minerva:digest"]})
+    return {"docs": docs, "refused": refused}
+
+
+def read_repo_reference(root, file) -> tuple:
+    """A doc of this project's reference directory, and no other file, with its relpath.
+
+    No symlink is followed: each directory between the reference directory and the file is
+    checked, and `read_entry` refuses a symlinked file.
+    """
+    directory = Path(os.path.abspath(_reference_dir(root)))
+    path = Path(os.path.abspath(Path(root) / file))
+    try:
+        rel = path.relative_to(directory)
+    except ValueError as error:
+        raise BackendError(f"{ascii(path.name)} is not in {REFERENCE.as_posix()}") from error
+    probe = directory
+    for part in rel.parts[:-1]:
+        probe = probe / part
+        if probe.is_symlink():
+            raise BackendError(f"{ascii(path.name)}: the handover does not follow symlinks")
+    return _reference_relpath(rel.as_posix()), read_entry(path)
+
+
 def _stdin_json():
     try:
         return json.load(sys.stdin)
@@ -791,6 +1109,16 @@ def main(argv=None) -> int:
     entry.add_argument("--digest", help="the digest the user confirmed (required without --stem)")
     listing = commands.add_parser("import-list", help="what an import would send, with no bodies")
     listing.add_argument("--project", required=True)
+    commands.add_parser("unit-state", help="stdin: {properties, gate}")
+    commands.add_parser("release-outcome", help="stdin: {code, gate}")
+    commands.add_parser("repair-flips", help="stdin: {gate, docs}")
+    commands.add_parser("reconcile", help="stdin: {phases, heads, base, prs, abandon, merged, age_days}")
+    refs = commands.add_parser("reference-list", help="what the handover would send, no bodies")
+    refs.add_argument("--project", required=True)
+    ref = commands.add_parser("reference-payload", help="one reference doc as tool inputs")
+    ref.add_argument("file")
+    ref.add_argument("--project", required=True)
+    ref.add_argument("--digest", required=True, help="the digest the user confirmed")
     args = parser.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -814,8 +1142,26 @@ def main(argv=None) -> int:
             if not args.stem and args.digest != hashlib.sha256(text.encode()).hexdigest():
                 raise BackendError(f"{ascii(path.name)} is not what was confirmed: list it again")
             out = entry_payload(args.stem or path.stem, text, args.project, args.context)
-        else:
+        elif args.command == "import-list":
             out = import_list(args.cwd, args.project)
+        elif args.command == "unit-state":
+            value = _stdin_json()
+            out = unit_state(value.get("properties") or {}, value.get("gate"))
+        elif args.command == "release-outcome":
+            value = _stdin_json()
+            out = release_outcome(value.get("code"), value.get("gate"))
+        elif args.command == "repair-flips":
+            value = _stdin_json()
+            out = repair_flips(value["gate"], value["docs"])
+        elif args.command == "reconcile":
+            out = merge_evidence(args.cwd, _stdin_json())
+        elif args.command == "reference-list":
+            out = reference_list(args.cwd, args.project)
+        else:
+            relpath, text = read_repo_reference(args.cwd, args.file)
+            if args.digest != hashlib.sha256(text.encode()).hexdigest():
+                raise BackendError(f"{ascii(relpath)} is not what was confirmed: list it again")
+            out = reference_payload(relpath, text, args.project)
         print(json.dumps(out, indent=2, ensure_ascii=False))
     except Exception as error:  # every failure stops the caller; none means "unlinked"
         print(f"lorestrom-backend: {type(error).__name__}: {error}", file=sys.stderr)
