@@ -95,6 +95,11 @@ LORESTROM_INERT = {
     "org id", "workspace id", "client id", "projectId", "listed path", "listed digest",
     "label", "server", "tool", "operation", "git-common-dir",
     "minerva:theme", "minerva:id", "minerva:summary",
+    # 0.2.0: Lorestrom ids and keys, a commit the helper checks as 40 hex digits (never a ref),
+    # a phase number, a temp file the agent made, and report and template fields
+    "project id", "unit key", "record", "path without .md", "token", "temp file", "sha",
+    "phase", "entry id", "markdown", "the draft", "the proposal record",
+    "head names of MERGED PRs", "value", "list with reason", "unit — doc — code",
 }
 LORESTROM_VARS = {
     "LORESTROM_PLUGIN_ROOT", "LORESTROM_SKILL_FILE", "LORESTROM_SCRIPTS",

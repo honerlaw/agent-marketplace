@@ -460,3 +460,192 @@ def test_reference_payload_cli_refuses_a_markdown_file_outside_the_directory(rep
     digest = hashlib.sha256(b"# private notes\n").hexdigest()
     result = run(repo, "reference-payload", "notes.md", "--project", PROJECT, "--digest", digest)
     assert result.returncode == 2 and "is not in" in result.stderr
+
+
+# --- unit ids and phases --------------------------------------------------------------------
+
+
+def unit_doc(unit, project=PROJECT, kind="minerva:work_unit"):
+    return {"kind": kind, "key": f"minerva:u/{project}/{unit}",
+            "properties": {"minerva:project": project}}
+
+
+def test_unit_ids_prints_only_this_projects_well_formed_units():
+    other = "44444444-4444-4444-8444-444444444444"
+    docs = [unit_doc(UNIT), unit_doc("2026-11-24-b"), unit_doc("bad;id"),
+            unit_doc("2026-11-24-c", project=other), unit_doc(UNIT, kind="minerva:record"),
+            {"kind": "minerva:work_unit", "key": f"minerva:u/{PROJECT}/../x",
+             "properties": {"minerva:project": PROJECT}}]
+    assert backend.unit_ids(docs, PROJECT) == {"units": [UNIT, "2026-11-24-b"], "refused": 2}
+
+
+PHASED = """# Proposal: x
+
+## Phases
+
+1. **First** — the start.
+3. **Second** — the rest.
+
+## Open Questions
+"""
+
+
+def test_phases_names_branches_and_gaps(repo):
+    out = backend.unit_phases(repo, UNIT, PHASED, [])
+    assert [p["branch"] for p in out["phases"]] == [UNIT, f"{UNIT}-phase-2"]
+    assert [p["name"] for p in out["phases"]] == ["First", "Second"]
+    assert out["gaps"] == [(2, 3)] and out["total"] == 2
+
+
+def test_phases_counts_a_squash_merged_pr_and_ignores_other_names(repo):
+    out = backend.unit_phases(repo, UNIT, PHASED, [UNIT, "unrelated", 7])
+    assert out["merged"] == 1 and out["next_branch"] == f"{UNIT}-phase-2"
+
+
+def test_an_unphased_proposal_has_no_phases(repo):
+    out = backend.unit_phases(repo, UNIT, "# Proposal\n\n## Goal\nx\n", [])
+    assert out["phased"] is False and out["phases"] == []
+
+
+def test_phases_refuses_an_unchecked_unit_id(repo):
+    with pytest.raises(backend.BackendError):
+        backend.unit_phases(repo, "x;rm -rf", PHASED, [])
+
+
+# --- the handover's removal plan -----------------------------------------------------------
+
+
+ENTRY = """# A finding
+
+**Date**: 2026-10-02
+**Type**: decision
+**Theme**: testing
+**Summary**: a finding worth keeping
+
+## Finding
+It holds.
+"""
+
+
+def handover_repo(repo):
+    knowledge = repo / ".minerva" / "knowledge"
+    knowledge.mkdir(parents=True)
+    (knowledge / "2026-10-02-decision-a.md").write_text(ENTRY)
+    (knowledge / "2026-10-02-decision-b.md").write_text(ENTRY.replace("It holds.", "Also."))
+    add_reference(repo, "topology.md", "# Topology\n\nOne box.\n")
+    commit(repo, "minerva files")
+    listed = backend.import_list(repo, PROJECT)
+    refs = backend.reference_list(repo, PROJECT)
+    return listed, refs
+
+
+def doc(row, kind, status="current", digest=None):
+    return {"key": row["key"], "kind": kind, "status": status,
+            "properties": {"minerva:project": PROJECT,
+                           "minerva:digest": digest or row["digest"]}}
+
+
+def test_removal_plan_removes_only_files_whose_doc_holds_their_digest(repo):
+    listed, refs = handover_repo(repo)
+    a, b = listed["entries"]
+    docs = [doc(a, "minerva:knowledge"), doc(b, "minerva:knowledge", digest="0" * 64),
+            doc(refs["docs"][0], "minerva:reference")]
+    plan = backend.removal_plan(repo, PROJECT, docs)
+    assert plan["remove"] == sorted([a["path"], refs["docs"][0]["path"]])
+    assert plan["keep"] == [{"path": b["path"], "reason": "its digest differs from its doc's"}]
+
+
+@pytest.mark.parametrize("change", ["draft", "other project", "wrong kind", "duplicate", "absent"])
+def test_removal_plan_keeps_a_file_without_one_current_doc_of_its_own(repo, change):
+    listed, _ = handover_repo(repo)
+    a = listed["entries"][0]
+    docs = {"draft": [doc(a, "minerva:knowledge", status="draft")],
+            "other project": [{**doc(a, "minerva:knowledge"),
+                               "properties": {"minerva:project": "x",
+                                              "minerva:digest": a["digest"]}}],
+            "wrong kind": [doc(a, "minerva:reference")],
+            "duplicate": [doc(a, "minerva:knowledge"), doc(a, "minerva:knowledge")],
+            "absent": []}[change]
+    plan = backend.removal_plan(repo, PROJECT, docs)
+    assert a["path"] not in plan["remove"]
+    assert a["path"] in [row["path"] for row in plan["keep"]]
+
+
+def test_removal_plan_changes_nothing_in_the_clone(repo):
+    """Criterion 4: the handover's default is keep, and planning a removal is not making one."""
+    listed, refs = handover_repo(repo)
+    docs = [doc(row, "minerva:knowledge") for row in listed["entries"]]
+    docs += [doc(row, "minerva:reference") for row in refs["docs"]]
+    result = run(repo, "removal-plan", "--project", PROJECT, stdin=json.dumps(docs))
+    assert result.returncode == 0, result.stderr
+    assert len(json.loads(result.stdout)["remove"]) == 3
+    assert git(repo, "status", "--porcelain") == ""
+
+
+def test_removal_plan_takes_no_path_from_the_docs(repo):
+    listed, _ = handover_repo(repo)
+    docs = [{**doc(listed["entries"][0], "minerva:knowledge"), "path": "app.py",
+             "properties": {"minerva:project": PROJECT, "minerva:path": "../../app.py",
+                            "minerva:digest": listed["entries"][0]["digest"]}}]
+    plan = backend.removal_plan(repo, PROJECT, docs)
+    assert all(path.startswith(".minerva/") for path in plan["remove"])
+
+
+# --- checkpoints and tokens -----------------------------------------------------------------
+
+
+RUNTIME = lorestrom_scripts.SCRIPTS / "lorestrom_runtime.py"
+
+
+def runtime(root, *args, stdin=None):
+    return subprocess.run([sys.executable, "-B", str(RUNTIME), *args, "--cwd", str(root)],
+                          input=stdin, capture_output=True, text=True)
+
+
+def test_checkpoints_live_under_lorestroms_runtime_apart_from_minervas(repo):
+    first = json.dumps({"revision": 0, "branch": UNIT, "caller": None})
+    assert runtime(repo, "write", "--unit", UNIT, stdin=first).returncode == 0
+    assert (repo / ".git" / "lorestrom" / "runtime" / UNIT / "run.json").is_file()
+    assert not (repo / ".git" / "minerva").exists()
+    state = json.loads(runtime(repo, "read", "--unit", UNIT).stdout)
+    assert state["revision"] == 1 and state["phase"] == "ship"
+
+
+def test_a_stale_checkpoint_revision_is_refused(repo):
+    first = json.dumps({"revision": 0, "branch": UNIT, "caller": None})
+    runtime(repo, "write", "--unit", UNIT, stdin=first)
+    again = runtime(repo, "write", "--unit", UNIT, stdin=first)
+    assert again.returncode == 1 and "stale checkpoint revision" in again.stderr
+
+
+def test_minervas_legacy_callers_are_not_lorestrom_callers(repo):
+    first = json.dumps({"revision": 0, "branch": UNIT, "caller": "propose-ship-quick"})
+    assert runtime(repo, "write", "--unit", UNIT, stdin=first).returncode == 1
+
+
+def test_a_resume_prompt_names_lorestroms_skills(repo):
+    first = json.dumps({"revision": 0, "branch": UNIT, "caller": None})
+    runtime(repo, "write", "--unit", UNIT, stdin=first)
+    prompt = runtime(repo, "read", "--unit", UNIT, "--host", "claude").stdout
+    assert prompt.startswith(f"/lorestrom:ship {UNIT}")
+
+
+def test_units_lists_lorestrom_worktrees_and_unit_branches_only(repo):
+    (repo / ".lorestrom" / "worktrees" / UNIT).mkdir(parents=True)
+    (repo / ".minerva" / "worktrees" / "2026-11-20-minervas").mkdir(parents=True)
+    git(repo, "branch", "2026-11-21-branch-only")
+    git(repo, "branch", "2026-11-21-branch-only-phase-2")
+    out = json.loads(runtime(repo, "units").stdout)
+    assert out["units"] == ["2026-11-21-branch-only", UNIT]
+
+
+def test_a_unit_token_is_made_once_and_read_back(repo):
+    made = runtime(repo, "token", "--unit", UNIT, "--new")
+    assert made.returncode == 0 and len(made.stdout.strip()) == 32
+    assert runtime(repo, "token", "--unit", UNIT).stdout == made.stdout
+    assert runtime(repo, "token", "--unit", UNIT, "--new").returncode == 1
+
+
+def test_a_missing_token_is_not_invented(repo):
+    assert runtime(repo, "token", "--unit", UNIT).returncode == 1
+    assert runtime(repo, "token", "--unit", "../x", "--new").returncode == 1

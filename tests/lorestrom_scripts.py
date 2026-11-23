@@ -37,4 +37,4 @@ def load(*names):
 
 
 def backend():
-    return load("knowledge_spans", "knowledge_lint", "lorestrom_backend")["lorestrom_backend"]
+    return load("knowledge_spans", "knowledge_lint", "work_status", "lorestrom_backend")["lorestrom_backend"]
