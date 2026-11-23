@@ -204,6 +204,11 @@ def test_every_spelling_of_a_remote_is_one_label_without_credentials(url):
     "git@example.com:/Users/someone/private/repo",
     "https://example.com/acme/../api",
     "https://exam\tple.com/acme/api",
+    # An SSH path under a home directory names a person.
+    "ssh://me@devbox/home/someone/proj.git",
+    "ssh://devbox/~someone/proj",
+    "devbox:~someone/proj",
+    "me@devbox:Users/someone/proj.git",
 ])
 def test_a_local_unusable_or_unknown_remote_has_no_label(url):
     assert backend.repo_label(url) is None
@@ -1168,3 +1173,43 @@ def test_the_stock_python_imports_and_runs_every_script(repo):
         assert json.loads(subprocess.run(
             [STOCK_PYTHON, "-B", str(SCRIPT), "--cwd", str(repo), "label"],
             capture_output=True, text=True).stdout) == {"remote": LABEL}
+
+
+# --- review fixes ----------------------------------------------------------------
+
+
+def test_the_cli_keeps_crlf_and_digests_the_files_bytes(repo):
+    import hashlib
+    path = add_file(repo)
+    raw = entry().replace("\n", "\r\n").encode("utf-8")
+    path.write_bytes(raw)
+    listed = json.loads(run(repo, "import-list", "--project", PROJECT).stdout)
+    digest = hashlib.sha256(raw).hexdigest()
+    assert [e["digest"] for e in listed["entries"]] == [digest]
+    result = run(repo, "entry-payload", listed["entries"][0]["path"], "--project", PROJECT,
+                 "--digest", digest)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["markdown"].encode("utf-8") == raw
+
+
+def test_the_utf8_reexec_keeps_isolation_flags(monkeypatch):
+    import types
+    calls = []
+    flags = types.SimpleNamespace(utf8_mode=0, dont_write_bytecode=1, isolated=1,
+                                  ignore_environment=1, no_user_site=1)
+    fake = types.SimpleNamespace(flags=flags, argv=["x", "resolve"], executable="/py")
+    monkeypatch.setattr(backend, "sys", fake)
+    monkeypatch.delenv(backend.REEXEC_ENV, raising=False)
+    monkeypatch.setattr(backend.os, "execve", lambda exe, argv, env: calls.append(argv))
+    backend.ensure_utf8_mode()
+    assert calls and calls[0][1:5] == ["-X", "utf8", "-B", "-I"]
+    flags.isolated = 0
+    calls.clear()
+    backend.ensure_utf8_mode()
+    assert calls[0][1:6] == ["-X", "utf8", "-B", "-E", "-s"]
+
+
+def test_property_keys_are_trimmed_as_lorestrom_trims_them():
+    with pytest.raises(backend.BackendError):
+        backend.check_properties({"\ufeffk": 1})
+    assert backend.check_properties({"k\x1f": 1}) == {"k\x1f": 1}

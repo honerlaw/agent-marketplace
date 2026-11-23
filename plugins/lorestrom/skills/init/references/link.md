@@ -25,11 +25,15 @@ helper as the runtime contract shows, from the repository's root.
    in its place. Ask for a workspace from `list_workspaces`, or a name for a new one. Show
    the organization, workspace and label and wait for a yes **before any create**. Then:
    - `create_workspace`, if it is new;
-   - look for key `minerva:p/<label>` with `find_docs` before making a folder. A doc with
-     that key is an existing project. If it is archived, deprecated or superseded, stop and
-     say so: never set it current again, and only a person can restore it. If it has no
-     `minerva:remotes`, resume its missing update. Otherwise ask whether it is this project:
-     a yes reuses it, and on a no ask for a name to use as the key in the label's place;
+   - look for key `minerva:p/<label>` before making a folder. `find_docs` has no key
+     filter: page it with the workspace's `workspaceId` and no `kinds`, and compare each
+     doc's `key`. A doc with that key is an existing project. If it is archived, deprecated
+     or superseded, stop and say so: never set it current again, and only a person can
+     restore it. Otherwise always ask whether it is this project, showing its title, kind,
+     status and `minerva:remotes`: an empty or missing alias list does not mean it is yours,
+     because a project with no remote is created with an empty one. A yes reuses it (a
+     `draft` with no `minerva:remotes` key then gets its missing update), and on a no ask
+     for a name to use as the key in the label's place;
    - `create_folder` named for the repository, at the workspace root. A retry in this run
      reuses that folder's id;
    - `create_doc` in it, kind `minerva:project`, key `minerva:p/<label>`, titled for the

@@ -30,6 +30,10 @@
 - [rechecked — escalated] new-plan acceptance: 1–7 and the deviation accepted; R1 stale bridge copies, R2 encoding, R3 guard scope → Adjudicator
 - [adjudicated — proceed] new-plan acceptance: R1–R3 resolved with amendments (reference docs wait for 0.2.0's confirmed handover sync; UTF-8 mode with a subprocess locale test; only scanning checks parametrized); applied after the ruling
 - [user-directed] branch: rebuilt from main as fresh commits; the old local branch is kept as `2026-11-22-lorestrom-backend-minerva-draft` until phase 1 merges
+- [solo] UTF-8 guard, lorestrom phase 1: `entry_payload` raises unless files are read as UTF-8 (UTF-8 mode or a UTF-8 locale), not only in UTF-8 mode; the amendment's aim, never guessing an encoding, holds either way (tier: solo; small, reversible, inside the adjudicated amendment's intent)
+- [solo] 3.11 gate: run with `--with pyyaml` online; 1539 passed, same as 3.13 (tier: solo; operational, no plan change)
+- [reviewed — clean] completion, lorestrom phase 1: Verifier accept, criteria 1–6 and phase 1 scope met; non-blocking: the sync rule lives in lorestrom's README and the drift test only, since minerva's README cannot change (tier: reviewer; floor: completion is always a Verifier)
+- [solo] review triage, lorestrom phase 1: M1, M2, L1–L4 all FIX, no replan: defects inside the approved plan (tier: solo; each has one dominant disposition)
 
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
@@ -137,3 +141,12 @@
   - the install version
 - The survivor was a helper misspelled `import_list` in the contract table: the helper regex skipped underscores. The test now takes every code span in the cell. Re-run, it is red, as is a sharper loader mutant (minerva's `knowledge_lint` already imported, lorestrom's not loaded). The restored copy is green.
 - This measures only the mutations I thought of. Not exercised: a live Lorestrom server, or an agent following the skill text.
+
+## Review triage 2026-11-23 (lorestrom phase 1)
+- [FIX] M1 medium — a project with no remote was resumed silently by another repo typing the same name: init now always asks, showing title, kind, status and aliases
+- [FIX] M2 medium — CRLF entries were normalised and their digest was not the file's: read byte-faithfully; CLI test checks digest = sha256 of the bytes
+- [FIX] L1 low — `find_docs` has no key filter: page by workspace without `kinds` and compare keys; a same-key doc of another kind is refused
+- [FIX] L2 low — SSH remotes under a home directory gave a label naming a person: no label
+- [FIX] L3 low — the UTF-8 re-exec dropped `-I`/`-E`/`-s`: carried over
+- [FIX] L4 low — property keys trimmed as Python, not as Lorestrom (JavaScript) trims: explicit set
+- Each fix reverted in turn: its test fails (5 of 5). Full suite green after.

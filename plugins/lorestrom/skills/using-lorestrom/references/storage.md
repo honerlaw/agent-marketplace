@@ -140,9 +140,11 @@ entries, the files in `.minerva/knowledge/`, and never writes them.
    - **Same `minerva:digest`:** complete. Never rewrite it or reset its status.
    - **Any other doc:** report it as changed. Never overwrite it or add its edges.
    - **`create_doc` refused as bad input** (`BAD_REQUEST`, or the MCP client's input
-     validation error): read once more. A doc now there follows the rules above. With none,
-     report the entry as refused (a key held by a deleted or unseen doc, or invalid input),
-     do not retry it, and go on.
+     validation error): read once more, paging `find_docs` with `workspaceId` and no
+     `kinds`, since a doc of another kind can hold the key. A `minerva:knowledge` doc now
+     there follows the rules above. A doc of another kind, or none, means report the entry
+     as refused (a key held by another kind, a deleted or unseen doc, or invalid input), do
+     not retry it, and go on.
 5. Edges last: those of `import-list`'s `edges` with an entry in `declaredBy` that was
    created, resumed or same-digest, so one to or from an existing successor is still added.
    Skip an edge whose target is this project's and changed. Report missing, ambiguous and

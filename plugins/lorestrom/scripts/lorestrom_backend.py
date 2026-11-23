@@ -73,6 +73,10 @@ SAFE_STEM_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 HOST_RE = re.compile(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?")
 # Markup Lorestrom's markdown parser drops when it is not code.
 LOSSY_RE = re.compile(r"<[A-Za-z!/?]|!\[")
+# First path segments that put an SSH remote under a person's home directory.
+HOME_DIRS = ("home", "users")
+# What JavaScript's String.prototype.trim removes (Lorestrom checks property keys with it).
+JS_WHITESPACE = "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
 REPO_SEGMENT_RE = re.compile(r"(?:[\w.~+-]|%20)+")
 REEXEC_ENV = "LORESTROM_UTF8_REEXEC"
 
@@ -108,6 +112,11 @@ def ensure_utf8_mode(argv=None) -> None:
         raise SystemExit("lorestrom-backend: Python did not enter UTF-8 mode; run it as python3 -X utf8")
     args = sys.argv[1:] if argv is None else argv
     flags = ["-X", "utf8", *(["-B"] if sys.flags.dont_write_bytecode else [])]
+    if sys.flags.isolated:
+        flags.append("-I")
+    else:
+        flags += [*(["-E"] if sys.flags.ignore_environment else []),
+                  *(["-s"] if sys.flags.no_user_site else [])]
     env = {**os.environ, REEXEC_ENV: "1"}
     os.execve(sys.executable, [sys.executable, *flags, os.path.abspath(__file__), *args], env)
 
@@ -314,7 +323,8 @@ def repo_label(url):
             return None
         if parts.scheme not in ("http", "https", "ssh", "git", "git+ssh") or not host:
             return None
-        if parts.scheme not in ("http", "https") or port in (80, 443):
+        ssh_like = parts.scheme not in ("http", "https")
+        if ssh_like or port in (80, 443):
             port = None
         path = parts.path
     else:
@@ -322,11 +332,14 @@ def repo_label(url):
         if not scp:
             return None
         host, path = scp.groups()
+        ssh_like = True
         path = re.split(r"[?#]", path, maxsplit=1)[0]
     host = host.lower()
     if not HOST_RE.fullmatch(host) or host in ("localhost", "127.0.0.1"):
         return None
     path = re.sub(r"\.git$", "", path.strip("/"), flags=re.IGNORECASE).rstrip("/")
+    if ssh_like and (path.startswith("~") or path.split("/", 1)[0].lower() in HOME_DIRS):
+        return None
     if not all(part not in (".", "..") and REPO_SEGMENT_RE.fullmatch(part)
                for part in path.split("/")):
         return None
@@ -420,7 +433,7 @@ def check_properties(properties: dict) -> dict:
     if len(properties) > MAX_PROPERTIES:
         raise BackendError(f"more than {MAX_PROPERTIES} properties")
     for key, value in properties.items():
-        if not key or key != key.strip() or _units(key) > 64:
+        if not key or key != key.strip(JS_WHITESPACE) or _units(key) > 64:
             raise BackendError(f"not a property key: {key!r}")
         _storable(key, "a property key")
         if isinstance(value, str):
@@ -545,11 +558,16 @@ def _knowledge_dir(root) -> Path:
 
 
 def read_entry(path: Path) -> str:
-    """An entry file's text: a regular file, strictly UTF-8."""
+    """An entry file's text: a regular file, strictly UTF-8, line endings as written.
+
+    `newline=""` keeps CRLF and lone CR, so the body is the file and the digest is the
+    sha256 of its bytes.
+    """
     if path.is_symlink() or not path.is_file():
         raise BackendError(f"{ascii(path.name)} is not a regular file")
     try:
-        return path.read_text(encoding="utf-8")
+        with open(path, encoding="utf-8", newline="") as handle:
+            return handle.read()
     except UnicodeDecodeError as error:
         raise BackendError(f"{ascii(path.name)} is not UTF-8 text") from error
 
