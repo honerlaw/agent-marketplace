@@ -16,7 +16,7 @@ issue-creation protocol said so outright — *"Never lose a kept item"* — and 
 stated a budget, a bar, or a cost for filing. A judgment with a stated cost on one side and none
 on the other only ever falls one way.
 
-The result, measured on this repo: ~150 bullets across 24 `followups.md` files, 18 tracker
+The result, measured on minerva's own repo: ~150 bullets across 24 `followups.md` files, 18 tracker
 issues of which 15 were filed in a single backfill batch, and an entire skill written for no
 purpose but to excavate the backlog after it rotted. The old `low` priority tier was defined as
 *"It does not matter whether we do it"* — and filed an issue anyway.
@@ -111,10 +111,9 @@ An item that fails condition 1 or condition 2 and was not absorbed lands here.
 
 A maintainability hazard, a duplicated block, an inconsistency, a "we should probably", a
 real-but-unurgent defect too large to absorb — these
-are **standing facts about the system**, and that is exactly what a `reference` entry in
-`.minerva/knowledge/` is for
-(`2026-08-09-decision-reference-is-a-fifth-entry-type`; one of the four entries that justified
-adding the type was a curated followups backlog).
+are **standing facts about the system**, and that is exactly what a knowledge entry of type
+`reference` is for (one of the four entries that justified adding the type was a curated
+followups backlog).
 
 Write it as what *is*, not as what someone should do:
 
@@ -123,10 +122,10 @@ Write it as what *is*, not as what someone should do:
 
 This is not a euphemism — it is the reframing that makes the item durable. A TODO expires the
 moment someone does it or decides not to. A description of the system stays true until the
-system changes, and `lorestrom:review` reads `.minerva/knowledge/` on **every** future unit, so it
+system changes, and `lorestrom:review` reads the project's lore on **every** future unit, so it
 resurfaces by locality when relevant code is next touched.
 
-**It carries no burn-down obligation, and that is the point.** `followups.md` rotted because it
+**It carries no burn-down obligation, and that is the point.** minerva's `followups.md` rotted because it
 was a list you were implicitly supposed to finish and nobody ever did. A corpus of standing
 facts has nothing to finish.
 
@@ -141,7 +140,7 @@ all — it is a definition-of-done condition on the work, alongside tests passin
 Scope is bounded by the diff, so the question is always answerable:
 
 - **In scope** — every doc describing behavior the change **added, altered, or removed**:
-  `.minerva/reference/` pages, skill prose, READMEs, the docs site, docstrings. This includes
+  the project's reference docs (`storage:reference.write`), skill prose, READMEs, the docs site, docstrings. This includes
   writing a doc that should now exist for behavior that did not exist before.
 - **Out of scope** — docs the diff did not invalidate. "While I'm here, the docs could be
   better" is below-bar work like any other; it does not ride along.
@@ -150,12 +149,11 @@ A stale doc is not future work. It is a part of the current change that was left
 
 ## What this rule does not do
 
-- It does not apply retroactively. Existing `followups.md` files and already-filed issues stay
+- It does not apply retroactively. Existing followups (records or minerva's `followups.md` files) and already-filed issues stay
   as they are, still greppable, never re-triaged — re-triaging a legacy backlog is precisely the
   attention cost this bar exists to remove.
 - It does not gate shipping. Nothing here blocks a PR; it governs what gets *recorded*.
 - It is not audited. The documentation rule in particular is stated, not enforced by a check —
   a deliberate choice, and the honest caveat is that this project's own corpus notes an
-  unenforced constraint tends to get violated
-  (`2026-08-11-pattern-an-unenforced-constraint-is-aspirational`). If documentation drift shows
+  unenforced constraint tends to get violated. If documentation drift shows
   up repeatedly, that entry is the argument for adding the lens to `lorestrom:review`.

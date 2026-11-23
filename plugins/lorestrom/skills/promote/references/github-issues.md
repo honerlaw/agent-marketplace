@@ -2,9 +2,9 @@
 
 The **Keep** disposition in [Mode A step 5](modes.md) has two paths. On a GitHub repo whose
 issues this session can create, a kept item becomes an **issue** carrying an explicit
-priority. Everywhere else it becomes a `followups.md` bullet, exactly as before.
+priority. Everywhere else it becomes a bullet in the unit's followups record.
 
-`followups.md` is write-only: nothing in it ever marks an item done, so a backlog of them
+The followups record is write-only: nothing in it ever marks an item done, so a backlog of them
 has to be re-read in full every time someone scopes work. An issue has the state the file
 lacks — it closes, and a closed issue drops out of every query below on its own.
 
@@ -17,17 +17,17 @@ paraphrase them.
 gh repo view --json nameWithOwner,hasIssuesEnabled
 ```
 
-- **Non-zero exit** — no `gh` on PATH, not authenticated, or no GitHub remote → **file
-  path**. Take `followups.md` for every kept item and skip the rest of this file.
-- **`hasIssuesEnabled` is `false`** — issues are turned off for this repo → **file path**.
+- **Non-zero exit** — no `gh` on PATH, not authenticated, or no GitHub remote → **record
+  path**. Take the followups record for every kept item and skip the rest of this file.
+- **`hasIssuesEnabled` is `false`** — issues are turned off for this repo → **record path**.
 - **Otherwise** → **issue path**. Record `nameWithOwner`; it names the repo in the report.
 
 Do **not** gate on `viewerPermission`. On GitHub anyone with read access can open an issue
 while issues are enabled, so requiring `WRITE` or above would wrongly push a capable
-outside contributor onto the file path. The creation attempt in step 4 is the real
+outside contributor onto the record path. The creation attempt in step 4 is the real
 permission check, and step 5 catches it when it fails.
 
-Run the probe from wherever the skill is already operating. A minerva worktree shares its
+Run the probe from wherever the skill is already operating. A lorestrom worktree shares its
 remotes with the parent repo, so `gh` resolves the same `nameWithOwner` from inside
 `.lorestrom/worktrees/<date-slug>/` as from the repo root — no `-C` juggling needed.
 
@@ -100,8 +100,8 @@ is a notification on someone's repo — the same reason `lorestrom:ship` checks 
 before `gh pr create`. Check three sources, cheapest and most reliable first:
 
 1. **This run's own record** — issue numbers created earlier in this same promote run.
-2. **The unit's `proposal.md` `## Deferred work` section** (step 6). Local, exact, and
-   instant — this is the authority for a re-run after a partial failure.
+2. **The proposal record's `## Deferred work` section** (step 6). Exact and
+   cheap — this is the authority for a re-run after a partial failure.
 3. **A repository search**, for a re-run from a different clone or session:
 
    ```bash
@@ -156,7 +156,7 @@ gh issue create \
 
 **Priority**: <level> — <that level's definition from step 2>
 
-Deferred from `.minerva/work/<date-slug>/` by `lorestrom:promote`.
+Deferred from work unit `<date-slug>` by `lorestrom:promote`.
 MINERVA_ISSUE_BODY
 )"
 ```
@@ -181,18 +181,18 @@ Two substitution rules, because the item's text is copied verbatim and you do no
 Keep the back-link line exactly as written — it is what the step-3 search matches on.
 
 Only **Keep** items become issues. A **Seed new proposal** item still goes to
-`lorestrom:propose`, which produces a full `proposal.md` — a richer record than a one-line
+`lorestrom:propose`, which produces a full proposal — a richer record than a one-line
 issue. A **Discard** item is still dropped.
 
 ## Step 5 — Fail-soft, per item
 
-If `gh issue create` fails for an item, that item falls back to `followups.md` verbatim,
-exactly as on the file path. **Never lose a kept item.** Do not abort the remaining items —
-a repo-wide failure will simply drop them all to the file, which is the correct outcome.
+If `gh issue create` fails for an item, that item falls back to the followups record verbatim,
+exactly as on the record path. **Never lose a kept item.** Do not abort the remaining items —
+a repo-wide failure will simply drop them all to the record, which is the correct outcome.
 
 ## Step 6 — Record and report
 
-Write the created issues into the unit's `proposal.md` under a `## Deferred work` section:
+Write the created issues into the proposal record (`storage:record.write`: read it, then `mode: replace`) under a `## Deferred work` section:
 
 ```markdown
 ## Deferred work
@@ -202,19 +202,18 @@ Write the created issues into the unit's `proposal.md` under a `## Deferred work
 ```
 
 This is a historical fact — *this unit deferred that item to that issue* — so it cannot go
-stale the way a `followups.md` entry does once the work is finished. Do **not** also write
-the item's prose to `followups.md`; the issue is the record, and a second copy is what
-made the file rot in the first place.
+stale the way a followups entry does once the work is finished. Do **not** also write
+the item's prose to the followups record; the issue is the record, and a second copy is what
+made minerva's `followups.md` files rot in the first place.
 
 The Mode A step-8 report then names, for each kept item: the issue URL, or `already filed
-as #N`, or `fell back to followups.md` with the reason. A report that omits an item it
-skipped lies by omission
-(`.minerva/knowledge/2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption.md`).
+as #N`, or `fell back to the followups record` with the reason. A report that omits an item it
+skipped lies by omission.
 
 ## Reading deferred work back
 
-The skills that read `followups.md` read open followup issues alongside it —
-`lorestrom:review`, and the `propose-ship-*` orchestrators at both their context-assembly and
+The skills that read the followups record read open followup issues alongside it —
+`lorestrom:review`, and the `propose-ship-*` orchestrators (0.3.0) at both their context-assembly and
 their TODO-disposition steps:
 
 ```bash
@@ -226,5 +225,5 @@ gh issue list --label "minerva:followup" --state open \
 Closed issues fall out of that query by themselves, which is the entire point. Skip the
 query without comment when the step-1 probe says the repo has no issues.
 
-This applies to **new** items only. The `followups.md` files already in a repo are not
-migrated — they stay exactly as they are, and stay worth grepping.
+This applies to **new** items only. A repository's minerva `followups.md` files are not
+imported — they stay exactly as they are, and stay worth grepping.

@@ -26,8 +26,8 @@ For each confirmed worktree (`<date-slug>` is a checked id: see the runtime cont
    answer, and it is not git.
 
 3. **Phased unit only** — prune the unit's other merged `<date-slug>-phase-N` branches the same
-   way, with the identical `-D` fallback and the identical per-phase precondition. Resolve every
-   name through `phase_branch()` in `scripts/work_status.py` rather than rebuilding the string.
+   way, with the identical `-D` fallback and the identical per-phase precondition. Take every
+   name from the `branch` of each phase the helper's `phases` printed rather than rebuilding it.
    Full rules in [phased-units.md](phased-units.md).
 
 4. **Prune metadata** — `git worktree prune`, which cleans up any stale worktree entries left by

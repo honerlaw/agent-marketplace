@@ -2,25 +2,20 @@
 
 ## Knowledge entry template
 
-The `**Context**` field is a stable pointer that should remain meaningful even after the work-unit worktree is removed (`lorestrom:cleanup`). Use the canonical `.minerva/work/<date-slug>` path even if the actual files currently live in a worktree — after merge + cleanup, the docs are reconstructible from git history at that path on the merge commit.
+The `**Context**` field is a stable pointer that stays meaningful after the work-unit worktree is removed (`lorestrom:cleanup`): name the unit, `lorestrom unit <date-slug>`. Its records stay in Lorestrom, and `storage:knowledge.write` also records the unit's key as the entry's `minerva:context`.
 
 The `**Theme**` and `**Summary**` fields are **required**. Together they are the entry's
 catalog line: the knowledge catalog is never stored, it is derived on read by
-`knowledge_catalog.py` (and the Routing section's one-liner), which groups entries by
-`**Theme**` and prints each one's `**Summary**`. An entry missing either is invisible to
-orientation, and `knowledge_lint` errors on it for any entry dated on or after 2026-10-01.
+`storage:knowledge.list`, which groups entries by `minerva:theme` and prints each one's
+`minerva:summary` — both read from these lines. An entry missing either is invisible to
+orientation, and the helper's `entry-payload` refuses it for any entry dated on or after
+2026-10-01.
 
 - **`**Summary**`** — the ≤15-word condensation of the Finding. Declarative, specific, no
   leading article.
 - **`**Theme**`** — one lowercase kebab-case name (`knowledge-wiki`, `concurrency`).
-  **Reuse an existing theme**; list them first:
-
-  ```bash
-  ROOT="$(git rev-parse --show-toplevel)"
-  PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
-  [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-  python3 "$PLUGIN_SCRIPTS/knowledge_catalog.py" "$ROOT/.minerva/knowledge" --themes
-  ```
+  **Reuse an existing theme**; list them first from `storage:knowledge.list` (the distinct
+  themes of this project's entries).
 
   Coin a new theme only when no existing one fits — a near-duplicate splits a group in
   the catalog, and lint warns about a theme only one entry uses.
@@ -30,9 +25,9 @@ orientation, and `knowledge_lint` errors on it for any entry dated on or after 2
 
 **Date**: YYYY-MM-DD
 **Type**: decision | bug | pattern | constraint | reference
-**Theme**: <existing kebab-case theme — see `knowledge_catalog.py --themes`>
+**Theme**: <existing kebab-case theme — see `storage:knowledge.list`>
 **Summary**: <≤15-word condensation of the Finding — the entry's catalog line>
-**Context**: .minerva/work/<date-slug> (see git history if the worktree has been cleaned up)
+**Context**: lorestrom unit <date-slug>
 
 ## Context
 The situation that led to this entry. Constraints, prior state, or the
@@ -54,25 +49,25 @@ things future work has to honor, gotchas to watch for, tradeoffs accepted.
 ```
 
 The `## Related` block is the canonical cross-reference surface. It holds **forward links
-only**: the reverse direction is derived (`knowledge_catalog.py --links-to <stem>`), so
-promote never writes a back-link into another entry. To retire an older entry, the new
-entry says so — `- [[<old-stem>]] — supersedes` — and the catalog marks the old one
-superseded. Nothing is written into the old entry; a supersession banner is a legacy form
-the catalog still reads but promote never writes.
+only**: `storage:knowledge.write` turns each line into a Lorestrom relation, and the reverse
+direction is read from the relations (`get_relations` gives both), so promote never writes a
+back-link into another entry. To retire an older entry, the new entry says so —
+`- [[<old-stem>]] — supersedes` — and the relation marks the old one superseded once the
+unit merges. Nothing is written into the old entry's body; a supersession banner is a legacy
+form promote never writes.
 
 ## Wiki maintenance (add-only)
 
-**A promote run writes new entry files and nothing else.** No catalog, no edit to any
-existing entry, no supersession banner, no catalog file (there is none).
+**A promote run writes new entries and their edges, and nothing else.** No catalog, no edit
+to any existing entry's body, no supersession banner.
 
-This is the invariant that makes concurrent work units safe. A work-unit branch's
-entire `.minerva/` footprint is *newly-added files*, and new files merge cleanly no
-matter how many PRs are in flight. There is also nothing left to do after merge: the
-catalog, backlinks and supersession are all computed from the entries when they are
-read, so the knowledge update ships complete in the unit's own PR.
+This is the invariant that makes concurrent work units safe. Each unit's writes are new docs
+under its own gate, and an edge that touches an existing entry is held on that gate, so it
+takes effect only when the unit merges and is discarded if it is abandoned. The catalog,
+backlinks and supersession are computed from the entries and edges when they are read.
 
 Do not edit an older entry "while you're here" to add a back-link or a banner. Every
-shared or cross-entry write is a surface two concurrent PRs fight over.
+shared or cross-entry write is a surface two concurrent units fight over.
 
 ### Entry naming
 
@@ -87,11 +82,9 @@ units promoting concurrently never negotiate for an id, and **several entries sh
 date is normal, not a collision** — identity is the whole `YYYY-MM-DD-<type>-<slug>`
 stem.
 
-This replaced a cross-branch allocator that existed because a *number* is scarce: two
-units picking the same NNN produced two different filenames, so git merged both cleanly
-and the duplicate shipped silently. Under stem identity that failure cannot happen — two
-entries with the same stem are the same path, so git raises an add/add conflict and one
-side must resolve it. The guard moved from a script into the filesystem.
+Under stem identity a duplicate cannot ship silently: two entries with the same stem have
+the same Lorestrom key, and a key another doc holds is refused rather than overwritten
+(`storage:knowledge.write`).
 
 Do not add a disambiguating suffix to "avoid" a shared date. If two entries on one day
 really do share a type and slug, they are the same entry and want merging, not renaming.
@@ -100,10 +93,10 @@ really do share a type and slug, they are the same entry and want merging, not r
 
 For **each** newly-written knowledge entry, before the gate:
 
-1. **Pick the theme.** Run `knowledge_catalog.py --themes` and reuse the theme whose
+1. **Pick the theme.** List the themes (`storage:knowledge.list`) and reuse the theme whose
    existing entries this one belongs beside.
 2. **Neighbor discovery (recall-complete floor).** List the catalog
-   (`knowledge_catalog.py .minerva/knowledge`) to narrow candidates by theme and summary,
+   (`storage:knowledge.list`) to narrow candidates by theme and summary,
    then read the Findings of the plausible neighbours and identify genuine relationships.
    Dedup candidate hits by target **stem**: a date is shared by design, so deduping on the
    id alone would collapse distinct same-day entries into one.
@@ -115,16 +108,17 @@ For **each** newly-written knowledge entry, before the gate:
    it (optionally followed by `:` and an explanation) retires the target in the derived
    catalog. Use it only when the new entry genuinely replaces the old one.
 
-   Do **not** write anything into the neighbor.
-4. **Gate.** Surface the new entry files as concrete diffs in the same confirmation
-   gate that approves the promote (Mode A step 6 / Mode B step 4). There are no
-   neighbor or catalog diffs to show — if you find yourself with one, something has
-   gone wrong.
+   Do **not** write anything into the neighbor's body.
+4. **Gate.** Surface the new entries' text, and every edge onto an existing entry, in the
+   same confirmation gate that approves the promote (Mode A step 6 / Mode B step 4). There
+   are no neighbor body or catalog changes to show — if you find yourself with one,
+   something has gone wrong.
 
 ### Idempotency
 
-Re-running promote is a byte-level no-op on an entry that already exists: the file
-name is derived from the date and slug rather than allocated, and a `## Related` line
+Re-running promote is a no-op on an entry that already exists: its key is derived from
+the date and slug rather than allocated, a retry finishes its own entry under the unit's
+gate (`storage:knowledge.write`), and a `## Related` line
 is added only if no existing line in that block references the target **stem**
 (insert-iff-absent, set semantics keyed on the stem — keying on the id would treat two
 same-day entries as one and silently drop the second relationship). Promote never edits

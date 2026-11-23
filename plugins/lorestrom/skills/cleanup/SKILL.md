@@ -1,26 +1,28 @@
 ---
 name: cleanup
-description: Removes `.lorestrom/worktrees/YYYY-MM-DD-slug/` directories whose branches have been merged into the default branch, prunes the corresponding local branches. Idempotent; never force-removes unmerged work, never commits, and opens no PR — the knowledge wiki needs no post-merge pass because its catalog, backlinks and supersession are derived on read. Use after a PR merges, when the user asks to remove merged worktrees, prune stale minerva branches, or generally tidy up after shipped work, or when they invoke `lorestrom:cleanup`.
+description: In a repository linked to Lorestrom, releases a merged work unit's gate so its pending knowledge becomes current, then removes `.lorestrom/worktrees/YYYY-MM-DD-slug/` directories whose branches have been merged into the default branch and prunes the corresponding local branches. Acts only on live merge evidence; abandons a unit whose PR closed unmerged. Idempotent; never force-removes unmerged work, never commits, and opens no PR. Use after a PR merges, when the user asks to remove merged worktrees, prune stale lorestrom branches, or generally tidy up after shipped work, or when they invoke `lorestrom:cleanup`.
 ---
 
 ## Runtime
 
 Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
-Tidy up after shipped work — remove `.lorestrom/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
+Tidy up after shipped work — release each merged unit's Lorestrom gate, then remove `.lorestrom/worktrees/<date-slug>/` directories whose branches have been merged into the default branch, and prune the corresponding local branches. Idempotent: safe to run on a clean tree (reports zero items removed).
 
 ## Usage
 
 - `lorestrom:cleanup` — sweep all merged worktrees + branches in the current repo
-- `lorestrom:cleanup 005-add-payments` — clean up only the named work unit (slug or path)
-- `lorestrom:cleanup --dry-run` — list what would be removed, changing nothing
+- `lorestrom:cleanup 005-add-payments` — clean up only the named work unit (a checked id)
+- `lorestrom:cleanup 005-add-payments --merged <sha>` — name the merge commit when no PR shows it
+- `lorestrom:cleanup 005-add-payments --abandon` — abandon the unit: discard its held writes
+- `lorestrom:cleanup --dry-run` — list what would be released and removed, changing nothing
 
 ## Target resolution
 
 Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`. **Keep all six blocks in sync if you edit one.** For `lorestrom:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
-1. **Explicit argument** (slug or path) → operate on just that work unit. Check both `.minerva/work/<date-slug>/` and `.lorestrom/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
-2. **No argument** → scan all `.lorestrom/worktrees/*/` directories and check each branch's merge state. Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and legacy `NNN-<slug>`. A glob anchored on digits-then-dash (`[0-9][0-9][0-9]-*`) does **not** match `2026-08-09-slug`, so a date-named worktree would be silently skipped and never cleaned up.
+1. **Explicit argument** (a checked id: one `storage:unit.list` or the runtime's `units` printed) → operate on just that work unit: its Lorestrom unit and `.lorestrom/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
+2. **No argument** → scan all `.lorestrom/worktrees/*/` directories and this project's units with open gates (`storage:unit.list`), and check each branch's merge state. Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and `NNN-<slug>`; a digit-anchored glob would silently skip date-named worktrees.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
 ## Checkpoint entry
@@ -31,8 +33,7 @@ authorization for `--yes`. Save phase `cleanup` before waiting, and mark this sh
 pass `done` after safe teardown (or a phased unit's teardown deferral — it can finish this
 pass while keeping its worktree for the next phase). If blocked, retain pending/blocked
 state and provide an exact resume prompt. For multi-unit cleanup, maintain a checkpoint
-per unit. Dry-run writes none. A 2.x checkpoint saved at the legacy `reconciliation` phase
-has nothing left to do: revalidate the merge and mark it `done`.
+per unit. Dry-run writes none.
 
 ## Pre-flight checks
 
@@ -55,18 +56,28 @@ lives in `references/merge-detection.md`. **Read it before removing anything.**
 On a phased unit teardown waits for the final phase — **read `references/phased-units.md`** before
 tearing anything down. The rule itself is stated once, in `references/merge-detection.md`.
 
+## Release the unit's gate
+
+Before removing a merged unit's worktree, decide its gate on live evidence with the helper's
+`reconcile` and release, confirm, abandon or wait as it answers. **Read `references/release.md`
+before releasing or abandoning anything.** A STALE reference replace is reported with its unit
+and doc and never re-applied automatically. A unit whose gate waits keeps its worktree.
+
 ## Orchestrated mode (`--yes`)
 
 **Mode argument**: `--yes`
 
 With an explicit single-unit argument `--yes` satisfies the confirmation gate below — how the
-autonomous orchestrators invoke cleanup. Act on the argument, not on who you think is calling.
+autonomous orchestrators (0.3.0) invoke cleanup. Act on the argument, not on who you think is calling.
+`--yes` never confirms a merge `reconcile` could not prove (`storage:unit.confirm`), and never abandons.
 
 ## Confirmation gate
 
 Before removing anything, present the list:
 
 ```
+Will release:
+  005-add-payments, 006-add-ship-skill   (gates: release — merged)
 Will remove:
   .lorestrom/worktrees/005-add-payments/   (branch 005-add-payments, merged via PR #42 on 2026-05-12)
   .lorestrom/worktrees/006-add-ship-skill/ (branch 006-add-ship-skill, merged via PR #45 on 2026-05-15)
@@ -75,7 +86,7 @@ Will skip:
 ```
 
 Ask:
-> "Remove these worktrees and prune the matching local branches? [y/N]"
+> "Release these units' gates, remove these worktrees and prune the matching local branches? [y/N]"
 
 Default is no — destructive operations require explicit yes. The user can also batch ("yes, all" / "just the first two" / "skip 006").
 
@@ -89,6 +100,8 @@ cleanup's failure mode is destroying unmerged work. **Read [references/removal.m
 ## Final report
 
 ```
+Gates released:        N (<list>)   waiting: N (<list with reason>)   abandoned: N
+Held writes failed:    N (<unit — doc — code>, STALE reference replaces named)
 Worktrees removed:     N (<list>)
 Branches pruned:       N (<list>)
 Skipped (unmerged):    N (<list with branch names>)
@@ -98,28 +111,23 @@ Remaining worktrees:   N (<list>)
 
 If any worktrees were skipped due to uncommitted changes, recommend the user inspect each (`cd .lorestrom/worktrees/<slug>; git status`) and decide whether the changes are valuable.
 
-## No knowledge reconciliation
+## Knowledge: released, never rewritten
 
-Cleanup does **not** touch `.minerva/knowledge/`, and it opens no PR. There is nothing to catalogue after a
-merge: `lorestrom:promote` writes write-once entries carrying their own `**Theme**` and
-`**Summary**`, and the catalog, backlinks and supersession are derived on read by
-`knowledge_catalog.py` (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). The
-knowledge update ships complete in the unit's own PR. Earlier versions opened a
-`minerva/reconcile` PR here; do not recreate one. A stale local `minerva/reconcile` branch
-left by a 2.x run holds only squash-merged machine commits, so `git branch -d` refuses it:
-confirm no PR is open on it (`gh pr list --head minerva/reconcile --state open`), then
-delete it with `git branch -D`.
+Cleanup writes no knowledge entry and opens no PR. Its one knowledge effect is the gate
+release, which makes the unit's pending entries current and applies its held edges. Earlier
+minerva versions opened a `minerva/reconcile` PR here; do not recreate one.
 
 ## Idempotency
 
 Cleanup rederives candidates from live Git/PR evidence and retains only untracked
-runtime progress. Re-running on a fresh tree finds zero candidates and reports zero removed. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
+runtime progress. Releasing a released gate again is success (`release-outcome`), and an
+interrupted abandon finishes when called again. Re-running on a fresh tree finds zero candidates and reports zero removed. Running mid-CI for a branch with an auto-merge pending will correctly skip that worktree (PR is `OPEN`, not `MERGED`).
 
 If a user manually removed a worktree directory without running `git worktree remove`, the next `lorestrom:cleanup` call will see stale worktree metadata; `git worktree prune` at the end of the run handles this.
 
 ## Out of scope
 
-- **Removing the work-unit's `.minerva/work/<date-slug>/` directory from `main`.** The docs already moved into the worktree at `lorestrom:work` time and were merged into `main` via the PR; the canonical record lives at `.minerva/work/<date-slug>/` post-merge. `cleanup` only removes the worktree, not the merged docs.
-- **Removing knowledge files.** `.minerva/knowledge/` entries are permanent by design.
+- **Deleting a unit's records.** They stay in Lorestrom; the scratchpad was archived by promote.
+- **Re-applying a STALE reference replace.** Reported, never retried automatically.
 - **Force-removing unmerged work.** Always requires explicit user override; cleanup is conservative by default.
 - **Pruning remote branches.** GitHub usually auto-deletes the source branch after merge if the repo is configured for it. Local prune handles the local side; remote prune is `git fetch --prune` and not part of this skill.
