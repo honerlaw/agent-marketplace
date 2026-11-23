@@ -101,3 +101,39 @@
 - [SUGGEST] low phase 1 — standing facts: a submodule's main checkout keeps its pointer (as separate git dirs); a `.git` holding only `config` stops a non-Git project; lower-value surviving mutants
 - [FIX] the committed-marker loop is removed (decision above). Only this unit's own new test clause changed; no 4.0.0 assertion.
 - Known limit, for promote: with no Lorestrom server, a clone whose working tree and primary checkout both predate a marker on the default branch uses files until one has it, and can commit records as files. The helper binds it whenever it runs; tree.check catches such records only while they are unmerged. Init's text is unchanged: the limit is in runtime.md and the promoted entry.
+
+## Work notes (lorestrom phase 1)
+- Built `plugins/lorestrom/` 0.1.0 from the minerva draft branch, without its files backend. Removed: files resolution, opt-out, check-tree, stray records, `--backend`. `resolve` returns `state` `linked`, `discover` or `unlinked`. A broken link still raises; it never reads as unlinked.
+- Local state uses lorestrom's own names. The link is `<git-common-dir>/lorestrom/config.json`, `--shared` commits `.lorestrom/config.json`, and `link` excludes `/.lorestrom/worktrees/`. Kinds, keys and properties stay in the `minerva:` namespace, as the replan says.
+- UTF-8, a divergence in wording only: the helper re-execs itself with `-X utf8` (guarded by `LORESTROM_UTF8_REEXEC`, which exits instead of looping). `entry_payload` raises when the text encoding is not UTF-8, meaning neither UTF-8 mode nor a UTF-8 locale. The amendment said "not in UTF-8 mode". The invariant it protects, that `parse_entry`'s default-encoding read is UTF-8, holds either way. Requiring UTF-8 mode itself would break every in-process test on a UTF-8 locale. Raised in the report as a question.
+- Entries that are not UTF-8 are refused: `read_entry` decodes strictly, and `import-list` lists them under `refused`.
+- Tests load lorestrom's modules through `tests/lorestrom_scripts.py`. It runs the plugin's own files under unique `sys.modules` names and restores the shared ones. The root `scripts/` symlinks (minerva's copies) cannot stand in, and a test checks `co_filename`.
+- The locale test really runs here: with `env -i`, `LC_ALL=C` and `PYTHONUTF8=0`, the preferred encoding is US-ASCII. "Café" survives `import-list` → `entry-payload` only through the re-exec.
+- Gate gap: the directive's offline 3.11 command has no PyYAML, and uv's offline cache lacks it. So `test_site_catalog.py` and `test_skill_contracts.py` fail to collect, on main as well; both are untouched. The 3.11 run ignores those two modules. CI installs pyyaml.
+- Deletion pass, run in a throwaway copy (rsync of the worktree, no `.git`). Each case breaks one thing a new guard protects, runs that guard's module, then restores the file. 25 chosen mutations; 24 went red on the first run:
+  - drift (the failure message states the sync rule)
+  - a manifest version
+  - `.minerva/work` named in a skill
+  - `.minerva/knowledge` named outside the import
+  - an unknown tool in a row
+  - `upsert_doc` in a row
+  - a missing operation row
+  - a safety clause reworded
+  - the helper run without `-X utf8`
+  - an ADR mention in the README
+  - the re-exec removed
+  - the re-exec guard disabled
+  - `entry_payload`'s encoding check removed
+  - a lenient decode
+  - a 3.9-breaking annotation
+  - the loader shadowed
+  - SKILL.md over budget
+  - the runtime pointer dropped
+  - `AskUserQuestion` outside the adapter
+  - a `<branch>` placeholder
+  - an unknown `$VAR`
+  - the plugin guard removed
+  - the helper block resolving the wrong command
+  - the install version
+- The survivor was a helper misspelled `import_list` in the contract table: the helper regex skipped underscores. The test now takes every code span in the cell. Re-run, it is red, as is a sharper loader mutant (minerva's `knowledge_lint` already imported, lorestrom's not loaded). The restored copy is green.
+- This measures only the mutations I thought of. Not exercised: a live Lorestrom server, or an agent following the skill text.

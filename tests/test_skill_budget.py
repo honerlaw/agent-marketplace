@@ -26,6 +26,12 @@ from knowledge_spans import unfenced_lines
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
+# Every plugin whose skills these checks cover. minerva's pinned assertions below stay
+# on SKILLS_DIR; the per-skill checks run over each plugin's tree.
+PLUGIN_SKILLS = {
+    "minerva": SKILLS_DIR,
+    "lorestrom": REPO_ROOT / "plugins" / "lorestrom" / "skills",
+}
 
 # 9 KB. The number is the work unit's approved budget — see
 # .minerva/work/035-skill-progressive-disclosure/proposal.md.
@@ -90,7 +96,7 @@ def files_missing_read_directive(refs_dir: Path, body: str) -> list[str]:
     return missing
 
 
-def skill_docs(skill: str) -> list[Path]:
+def skill_docs(skill: str, skills_dir: Path = SKILLS_DIR) -> list[Path]:
     """Every prose file a skill ships: its ``SKILL.md`` plus its ``references/*.md``.
 
     The pointer-integrity checks below originally read ``SKILL.md`` alone, which made
@@ -103,7 +109,7 @@ def skill_docs(skill: str) -> list[Path]:
     the scan to reference files caught four already-dangling cross-skill pointers on the
     day it was written.
     """
-    d = SKILLS_DIR / skill
+    d = skills_dir / skill
     return [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]
 
 
@@ -135,18 +141,20 @@ def reference_mentions(body: str) -> list[tuple]:
     return qualified + bare
 
 
-def _discover_skills() -> list[str]:
+def _discover_skills(skills_dir: Path = SKILLS_DIR) -> list[str]:
     """Enumerate skill directories (those holding a SKILL.md) under SKILLS_DIR.
 
     Rooted at the repo's own ``plugins/minerva/skills`` — never a loose glob, so
     worktree copies under ``.minerva/worktrees/`` can't be picked up.
     """
     return sorted(
-        d.name for d in SKILLS_DIR.iterdir() if (d / "SKILL.md").is_file()
+        d.name for d in skills_dir.iterdir() if (d / "SKILL.md").is_file()
     )
 
 
 SKILLS = _discover_skills()
+CASES = [(plugin, skill) for plugin, root in PLUGIN_SKILLS.items()
+         for skill in _discover_skills(root)]
 
 
 def test_skills_discovered():
@@ -155,9 +163,16 @@ def test_skills_discovered():
     assert len(SKILLS) >= 13, f"expected >=13 skills, discovered {len(SKILLS)}: {SKILLS}"
 
 
-@pytest.mark.parametrize("skill", SKILLS)
-def test_skill_md_within_budget(skill):
-    path = SKILLS_DIR / skill / "SKILL.md"
+def test_every_plugins_skills_are_discovered():
+    for plugin, root in PLUGIN_SKILLS.items():
+        assert _discover_skills(root), plugin
+    assert {plugin for plugin, _ in CASES} == set(PLUGIN_SKILLS)
+
+
+@pytest.mark.parametrize("plugin,skill", CASES)
+def test_skill_md_within_budget(plugin, skill):
+    skills_dir = PLUGIN_SKILLS[plugin]
+    path = skills_dir / skill / "SKILL.md"
     size = path.stat().st_size
     assert size <= BUDGET_BYTES, (
         f"{skill}/SKILL.md is {size} bytes, over the {BUDGET_BYTES}-byte budget — "
@@ -165,15 +180,16 @@ def test_skill_md_within_budget(skill):
     )
 
 
-@pytest.mark.parametrize("skill", SKILLS)
-def test_every_reference_file_is_pointed_to(skill):
+@pytest.mark.parametrize("plugin,skill", CASES)
+def test_every_reference_file_is_pointed_to(plugin, skill):
+    skills_dir = PLUGIN_SKILLS[plugin]
     """No orphans: each references/*.md must be mentioned from its SKILL.md."""
-    refs_dir = SKILLS_DIR / skill / "references"
+    refs_dir = skills_dir / skill / "references"
     if not refs_dir.is_dir():
         return
     ref_files = sorted(refs_dir.glob("*.md"))
     assert ref_files, f"{skill}/references/ exists but holds no .md files"
-    body = (SKILLS_DIR / skill / "SKILL.md").read_text()
+    body = (skills_dir / skill / "SKILL.md").read_text()
     for ref in ref_files:
         assert f"references/{ref.name}" in body, (
             f"{skill}/references/{ref.name} is never mentioned in {skill}/SKILL.md — "
@@ -181,8 +197,9 @@ def test_every_reference_file_is_pointed_to(skill):
         )
 
 
-@pytest.mark.parametrize("skill", SKILLS)
-def test_every_reference_pointer_resolves(skill):
+@pytest.mark.parametrize("plugin,skill", CASES)
+def test_every_reference_pointer_resolves(plugin, skill):
+    skills_dir = PLUGIN_SKILLS[plugin]
     """No dangling pointers: each reference mention must exist.
 
     Scanned across ``SKILL.md`` **and** ``references/*.md`` (see `skill_docs`).
@@ -190,12 +207,12 @@ def test_every_reference_pointer_resolves(skill):
     ``plugins/minerva/skills/<other>/references/<f>.md`` mention resolves under
     the skill it names, so one skill can cite another's protocol by path.
     """
-    for doc in skill_docs(skill):
+    for doc in skill_docs(skill, skills_dir):
         body = _pointer_text(doc)
         for owner, mention in sorted(set(reference_mentions(body)), key=lambda t: (t[0] or "", t[1])):
-            target = SKILLS_DIR / (owner or skill) / mention
+            target = skills_dir / (owner or skill) / mention
             assert target.is_file(), (
-                f"{doc.relative_to(SKILLS_DIR)} points at {mention} under "
+                f"{doc.relative_to(skills_dir)} points at {mention} under "
                 f"{owner or skill}/, which does not exist — a dangling pointer "
                 "fails exactly when the detail is needed. Citing a sibling skill's "
                 "protocol needs the qualified plugins/minerva/skills/<skill>/"
@@ -203,26 +220,28 @@ def test_every_reference_pointer_resolves(skill):
             )
 
 
-@pytest.mark.parametrize("skill", SKILLS)
-def test_no_malformed_reference_pointers(skill):
+@pytest.mark.parametrize("plugin,skill", CASES)
+def test_no_malformed_reference_pointers(plugin, skill):
+    skills_dir = PLUGIN_SKILLS[plugin]
     """A pointer that lost its .md (``references/briefs``) dangles invisibly —
     the canonical-mention checks above never see it. Work unit 036.
 
     Scanned across ``SKILL.md`` and ``references/*.md`` alike."""
-    for doc in skill_docs(skill):
+    for doc in skill_docs(skill, skills_dir):
         bad = malformed_pointers(_pointer_text(doc))
         assert not bad, (
-            f"{doc.relative_to(SKILLS_DIR)} has malformed reference pointers {bad} — "
+            f"{doc.relative_to(skills_dir)} has malformed reference pointers {bad} — "
             "write the canonical references/<name>.md form so the integrity checks see them"
         )
 
 
-@pytest.mark.parametrize("skill", SKILLS)
-def test_every_reference_has_read_directive(skill):
+@pytest.mark.parametrize("plugin,skill", CASES)
+def test_every_reference_has_read_directive(plugin, skill):
+    skills_dir = PLUGIN_SKILLS[plugin]
     """Each reference file must be reachable through a mandatory instruction:
     at least one unfenced mention line containing 'read'. Work unit 036."""
-    body = (SKILLS_DIR / skill / "SKILL.md").read_text()
-    missing = files_missing_read_directive(SKILLS_DIR / skill / "references", body)
+    body = (skills_dir / skill / "SKILL.md").read_text()
+    missing = files_missing_read_directive(skills_dir / skill / "references", body)
     assert not missing, (
         f"{skill}: references/{missing} have no mention line with a read "
         "directive — a passing mention is not an instruction to load the detail"
