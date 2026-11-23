@@ -1137,7 +1137,7 @@ def removal_plan(root, project: str, docs: list) -> dict:
         matches = [doc for doc in by_key.get(row["key"], [])
                    if doc.get("kind") == kinds[kind]
                    and (doc.get("properties") or {}).get("minerva:project") == project]
-        digest = (matches[0].get("properties") or {}).get("minerva:digest") if len(matches) == 1 else None
+        digest = (matches[0].get("properties") or {}).get("minerva:digest") if matches else None
         if len(matches) != 1:
             keep.append({"path": row["path"], "reason": "no single doc in Lorestrom holds it"})
         elif digest != row["digest"]:

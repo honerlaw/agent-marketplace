@@ -473,7 +473,8 @@ def unit_doc(unit, project=PROJECT, kind="minerva:work_unit"):
 def test_unit_ids_prints_only_this_projects_well_formed_units():
     other = "44444444-4444-4444-8444-444444444444"
     docs = [unit_doc(UNIT), unit_doc("2026-11-24-b"), unit_doc("bad;id"),
-            unit_doc("2026-11-24-c", project=other), unit_doc(UNIT, kind="minerva:record"),
+            unit_doc("2026-11-24-c", project=other),
+            unit_doc("2026-11-24-record", kind="minerva:record"),
             {"kind": "minerva:work_unit", "key": f"minerva:u/{PROJECT}/../x",
              "properties": {"minerva:project": PROJECT}}]
     assert backend.unit_ids(docs, PROJECT) == {"units": [UNIT, "2026-11-24-b"], "refused": 2}
@@ -498,7 +499,7 @@ def test_phases_names_branches_and_gaps(repo):
 
 
 def test_phases_counts_a_squash_merged_pr_and_ignores_other_names(repo):
-    out = backend.unit_phases(repo, UNIT, PHASED, [UNIT, "unrelated", 7])
+    out = backend.unit_phases(repo, UNIT, PHASED, [UNIT, "unrelated", 7, {"not": "a name"}])
     assert out["merged"] == 1 and out["next_branch"] == f"{UNIT}-phase-2"
 
 
@@ -580,6 +581,16 @@ def test_removal_plan_changes_nothing_in_the_clone(repo):
     assert result.returncode == 0, result.stderr
     assert len(json.loads(result.stdout)["remove"]) == 3
     assert git(repo, "status", "--porcelain") == ""
+
+
+def test_removal_plan_keeps_and_names_a_file_the_list_refused(repo):
+    listed, _ = handover_repo(repo)
+    (repo / ".minerva" / "knowledge" / "2026-10-03-decision-bad name.md").write_text(ENTRY)
+    docs = [doc(row, "minerva:knowledge") for row in listed["entries"]]
+    plan = backend.removal_plan(repo, PROJECT, docs)
+    refused = [row for row in plan["keep"] if row["reason"].startswith("refused")]
+    assert len(refused) == 1 and "bad name" in refused[0]["path"]
+    assert not any("bad name" in path for path in plan["remove"])
 
 
 def test_removal_plan_takes_no_path_from_the_docs(repo):
