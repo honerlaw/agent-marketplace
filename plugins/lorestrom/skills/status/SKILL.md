@@ -1,6 +1,6 @@
 ---
 name: status
-description: Prints the current overall status of a project's minerva workstream as markdown tables — every unit's lifecycle stage, phase progress, branch/PR state and the next lifecycle step to run, plus knowledge-wiki health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `lorestrom:status`.
+description: Prints the current overall status of a Lorestrom-linked project's workstream as markdown tables — every unit's lifecycle stage and gate, phase progress, branch/PR state and the next lifecycle step to run, plus knowledge health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `lorestrom:status`.
 allowed-tools:
   - Bash
   - Read
@@ -13,14 +13,15 @@ allowed-tools:
 Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Answer **"where does everything stand, and what should I do next?"** in one screen.
-`lorestrom:status` aggregates the records that already exist — every work unit's declared
-state, its phase topology, the knowledge wiki's health, the deferred backlog — and renders
+`lorestrom:status` aggregates the records that already exist — every work unit's doc and gate
+in Lorestrom, its phase topology, the project's knowledge, the deferred backlog — and renders
 them as three markdown tables.
 
-> **Read-only contract.** This skill must not modify any file. Its `allowed-tools` is
-> host metadata; the read-only protocol applies regardless of available tools. Every command below is a read. It reports;
-> it never advances the lifecycle. The **Next step** column *names* the skill to run next
-> and stops there — running it is the user's call.
+> **Read-only contract.** This skill must not modify any file or Lorestrom doc, and writes no
+> checkpoint. Its `allowed-tools` is host metadata; the read-only protocol applies regardless
+> of available tools. Every call below is a read: it never writes back a refreshed
+> `minerva:state`, never releases a gate, and never advances the lifecycle. The **Next step**
+> column *names* the skill to run next and stops there — running it is the user's call.
 
 ## The failure this skill must not have
 
@@ -28,87 +29,55 @@ Under-reporting. A missing column is visible; a workstream that renders as "noth
 flight" looks exactly like a tidy project, and the reader's next action is to start work
 that already exists. Every resolution rule below is chosen for that failure direction.
 
-## Step 1 — Resolve the two roots
+## Step 1 — Resolve the link and the primary checkout
 
-They answer different questions and are resolved differently. Do not collapse them.
+Run `storage:project.discover` as a read-only skill. With no link, no connected server or no
+project, say so in one line, render only the local facts (worktrees and branches under
+`.lorestrom/worktrees/`, from the runtime's `units`) and stop: no unit table is better than a
+falsely clean one.
 
 ```bash
 WORK_ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
-[ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
 ```
 
 **`WORK_ROOT` is the PRIMARY checkout, and deliberately not `git rev-parse
---show-toplevel`.** Every other minerva skill anchors on `--show-toplevel`, correctly:
-their target is the worktree-local `.minerva/knowledge/`, so per-branch semantics are the
-point. They are wrong for this skill. Inside a linked worktree `--show-toplevel` returns
-*the worktree*, which contains no `.lorestrom/worktrees/` directory at all — so a status
-walk invoked from a worktree, which is where `lorestrom:work` sessions live and exactly the
-"resuming agent" case this skill exists for, would report every sibling unit as absent.
+--show-toplevel`.** Inside a linked worktree `--show-toplevel` returns *the worktree*, which
+holds no `.lorestrom/worktrees/` directory, so a status run from a worktree — exactly the
+"resuming agent" case this skill exists for — would report every sibling's worktree as
+absent. Bare `dirname "$(git rev-parse --git-common-dir)"` is relative in the common case;
+the `cd … && pwd` wrapper makes it absolute.
 
-The `cd … && pwd` wrapper is not decoration. Bare `dirname "$(git rev-parse
---git-common-dir)"` returns `.` from the primary checkout and a relative path from any
-subdirectory; it is absolute only from inside a linked worktree — i.e. it is wrong in the
-common case, silently, and in the direction that produces a falsely-clean table. The rule
-and its three-position test are
-`2026-08-28-constraint-worktree-reaching-paths-anchor-to-the-primary-checkout`; this skill
-is one of its cases, not a second statement of it.
+## Step 2 — Collect the units
 
-`PLUGIN_SCRIPTS` resolves from the installed skill through the shared runtime
-contract, including symlink handling, explicit overrides, and stale-code checks.
+`storage:unit.list`: only ids `unit-ids` printed are used, and its `refused` count is reported.
+For each unit, `get_gate` its doc and pipe its properties and the gate's state to `unit-state`
+(`promoted`, `shipped`, `state`). **The gate is the authority**: a stale `minerva:state`
+property is shown as stale, never trusted, and never rewritten here. Note each unit's
+`.lorestrom/worktrees/<date-slug>/` presence.
 
-## Step 2 — Collect the merged branches
+## Step 3 — Phases and merges
 
-`workstream_status` is a pure reader: it takes the merged set as an argument rather than
-shelling out, the same contract `work_status.phase_progress` already has. Fetch first — a
-stale ref reports a merged phase as unmerged.
+Fetch first — a stale ref reports a merged phase as unmerged:
 
 ```bash
 git -C "$WORK_ROOT" fetch --quiet origin 2>/dev/null
-MERGED="$(gh pr list --state merged --limit 200 --json headRefName -q '.[].headRefName' 2>/dev/null)"
-[ -z "$MERGED" ] && MERGED="$(D="$(git -C "$WORK_ROOT" symbolic-ref -q refs/remotes/origin/HEAD)"; D="${D#refs/remotes/origin/}"; git -C "$WORK_ROOT" branch --merged "refs/heads/${D:-main}" --format='%(refname:short)')"
-```
-
-**Merged-PR first, `git branch --merged` only as a fallback** — the same order and the
-same reason as `lorestrom:cleanup`'s "Merge detection": a squash-merged branch is not an
-ancestor of the default branch, so `git branch --merged` cannot see it. Do not union the
-two sources: `git branch --merged` also lists a *freshly created* branch that has no
-commits yet, which would report an unstarted phase as shipped.
-
-## Step 3 — Run the aggregator
-
-```bash
-python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
-from workstream_status import workstream_status; \
-print(json.dumps(workstream_status(sys.argv[3], sys.argv[2].split()), indent=2))" "$PLUGIN_SCRIPTS" "$MERGED" "$WORK_ROOT"
-```
-
-Returns `{units, counts, knowledge}`. Per unit: `slug`, the `work_status.unit_state()`
-keys (`promoted` / `status` / `in_flight` / …), `worktree_present`, `stage`, `phases` and
-`progress`. Every lifecycle predicate is **imported** from `work_status`, never restated —
-the in-flight rule once had four prose copies, and the promote marker it reads grew eight
-spellings while a one-string check misread 16 of 51 units.
-
-`stage` is one of `draft` → `in-progress` → `promoted` → `shipped`, derived from the
-filesystem alone, so it is available even with no `gh` and no network.
-
-## Step 4 — Join the branch and PR state
-
-```bash
 gh pr list --state all --limit 200 --json number,state,headRefName 2>/dev/null
-git -C "$WORK_ROOT" branch --list
 ```
 
-Both are optional. If `gh` is unavailable, unauthenticated, or the repo has no GitHub
-remote — run the probe in `lorestrom:promote`'s "Step 1 — Capability probe" exactly as
-written there, then **skip the PR column silently** and render `—`. Never stall or
-apologise for an absent tracker; the stage-only table is coarser and still correct.
+For each open unit, run the helper's `phases --unit <date-slug>` on its proposal record and
+the head names of MERGED PRs (`storage:unit.read`). Join PRs on each phase's `branch`, never by
+string equality with the slug: a phased unit ships phases 2+ on `<date-slug>-phase-N`. The
+unit doc's `minerva:pr_<n>` is the PR ship recorded; prefer it when it is a number.
 
-**Resolve a unit's branch names through `phase_branch()`, never by string equality with
-the slug.** A phased unit ships one PR per phase: phase 1 on the bare `<date-slug>`,
-phases 2+ on `<date-slug>-phase-N`. The script already returns each phase's branch in
-`phases[].branch`; join on those. `lorestrom:cleanup`'s "Why this step has to exist at all"
-is explicit that exact-match on `<date-slug>` can never match a `-phase-N` branch.
+If `gh` is unavailable, unauthenticated, or the repo has no GitHub remote — run the probe in
+`lorestrom:promote`'s "Step 1 — Capability probe" exactly as written there, then **skip the PR
+column silently** and render `—`. Never stall or apologise for an absent tracker.
+
+## Step 4 — Knowledge
+
+`storage:knowledge.list` for this project's entries: counts by `minerva:type`, distinct
+themes, unthemed entries, pending entries (status `draft` with a `minerva:context`, by unit)
+and incomplete imports. Reference docs: a count from `storage:reference.read`. Read no body.
 
 ## Step 5 — Render the tables
 
@@ -116,26 +85,20 @@ is explicit that exact-match on `<date-slug>` can never match a `-phase-N` branc
 column list, and the full **Next step** mapping. Two rules from it are load-bearing enough
 to state here:
 
-- **`worktree_present` on an incomplete phased unit is not a cleanup signal.** That unit
-  keeps its worktree *by design* — `lorestrom:cleanup`'s "Teardown waits" defers teardown
-  until the final phase, because removing the worktree between phases destroys the
-  workspace the remaining phases are cut in. Its next step is the next phase, not cleanup.
-- **List only the unfinished units.** Finished ones are counted in the rollup. A 60-row
-  table is not a status check.
+- **A worktree on an incomplete phased unit is not a cleanup signal.** That unit keeps its
+  worktree *by design* — `lorestrom:cleanup`'s "Teardown waits" — and its gate waits for the
+  final phase. Its next step is the next phase, not cleanup.
+- **List only the unfinished units.** Finished ones (gate released or abandoned, no worktree)
+  are counted in the rollup. A 60-row table is not a status check.
 
 ## Out of scope
 
-- **Any file mutation**, and any lifecycle advancement. This skill is read-only: it names
-  the next step, does not run it, and never invokes `lorestrom:work` / `ship` / `promote` /
-  `cleanup`. The action it *names* is the one way it can still cause damage — see the
-  phase-first ordering in the Next step mapping.
-- **Re-deriving lifecycle state.** `unit_state`, `read_phases`, `phase_progress` and
-  `phase_branch` are imported from `work_status`; `lint_knowledge` and
-  `knowledge_catalog` own wiki health. A status surface that restates any of them is a
-  copy that drifts.
-- **Judging wiki health.** The counts come from `minerva:lint`'s and the derived
-  catalog's own signals; interpreting them is `minerva:lint`'s (and, for a legacy corpus,
-  `minerva:migrate`'s) job, and this table only points at them.
-- **Updating a stale checkout.** The walk reads files, so it reports whatever the
-  primary checkout is on. Step 2 fetches and the rollup prints HEAD beside
-  `origin/<default>` so a stale tree is *visible* — but this skill never pulls.
+- **Any mutation**, of files, Lorestrom docs, gates or checkpoints, and any lifecycle
+  advancement. This skill names the next step and never invokes `lorestrom:work` / `ship` /
+  `promote` / `cleanup`. The action it *names* is the one way it can still cause damage — see
+  the phase-first ordering in the Next step mapping.
+- **Re-deriving lifecycle state.** `unit-state` and `phases` own it. A status surface that
+  restates either is a copy that drifts.
+- **Linting the knowledge.** Lint and sweep arrive in 0.4.0; this table counts, it does not judge.
+- **Updating a stale checkout.** The rollup prints HEAD beside `origin/<default>` so a stale
+  tree is *visible* — but this skill never pulls.

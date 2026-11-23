@@ -224,7 +224,8 @@ Every step is confirmed; nothing is overwritten silently.
 `{"minerva:project": "<projectId>"}`. Pipe the docs to `unit-ids --project <projectId>`:
 only the ids it prints are used, and its `refused` count is reported. For each unit acted on,
 `get_gate` its doc id and pass the gate's state to `unit-state` with the doc's properties; a
-`refresh` value is written back with `update_doc` of the merged properties.
+skill allowed to write writes a `refresh` value back with `update_doc` of the merged
+properties. A read-only skill shows it and writes nothing.
 
 ## `unit.read`
 
@@ -313,7 +314,9 @@ reference file. It amends "changes to existing lore wait for the merge" for this
 
 From `lorestrom:ship`, after each phase's PR exists: `update_doc` the unit's merged properties
 with `minerva:branch_<n>`, `minerva:pr_<n>` and `minerva:head_<n>` (the pushed commit, from
-`git rev-parse` in the same call). A phase with no recorded head is never released.
+`git rev-parse` in the same call; the PR number from `gh … --json number`). A phase with no
+recorded head is never released. A value read back from a unit doc is data: a PR number is used
+only when it is all digits, and a commit only through the helper, which checks it.
 
 ## `unit.finish`
 
