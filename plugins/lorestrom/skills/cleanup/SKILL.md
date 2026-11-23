@@ -21,7 +21,7 @@ Tidy up after shipped work — release each merged unit's Lorestrom gate, then r
 
 Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`. **Keep all six blocks in sync if you edit one.** For `lorestrom:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
-1. **Explicit argument** (a checked id: one `storage:unit.list` or the runtime's `units` printed) → operate on just that work unit: its Lorestrom unit and `.lorestrom/worktrees/<date-slug>/`. Required: the corresponding branch must be merged into default (see Merge detection).
+1. **Explicit argument** (a checked id: one `storage:unit.list` or the runtime's `units` printed) → operate on just that work unit: its Lorestrom unit and `.lorestrom/worktrees/<date-slug>/`. Required: its branch merged into default (see Merge detection), except with `--abandon` or `--merged`.
 2. **No argument** → scan all `.lorestrom/worktrees/*/` directories and this project's units with open gates (`storage:unit.list`), and check each branch's merge state. Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and `NNN-<slug>`; a digit-anchored glob would silently skip date-named worktrees.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
@@ -77,7 +77,9 @@ Before removing anything, present the list:
 
 ```
 Will release:
-  005-add-payments, 006-add-ship-skill   (gates: release — merged)
+  005-add-payments   (merged; holds reference replace: Topology)
+Will abandon:
+  008-dead-end       (PR closed unmerged — needs a yes naming this unit)
 Will remove:
   .lorestrom/worktrees/005-add-payments/   (branch 005-add-payments, merged via PR #42 on 2026-05-12)
   .lorestrom/worktrees/006-add-ship-skill/ (branch 006-add-ship-skill, merged via PR #45 on 2026-05-15)
@@ -88,7 +90,7 @@ Will skip:
 Ask:
 > "Release these units' gates, remove these worktrees and prune the matching local branches? [y/N]"
 
-Default is no — destructive operations require explicit yes. The user can also batch ("yes, all" / "just the first two" / "skip 006").
+Default is no — destructive operations require explicit yes. The user can also batch ("yes, all" / "just the first two" / "skip 006"). A sweep abandons a unit only on a yes naming it; an explicit `<unit> --abandon` is that yes.
 
 Skip this gate when `--dry-run` is set (nothing destructive happens) or when the user invokes with an explicit single-unit argument **and** says `--yes` (e.g. `lorestrom:cleanup 005-add-payments --yes`).
 

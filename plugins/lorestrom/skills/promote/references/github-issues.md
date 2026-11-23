@@ -143,13 +143,11 @@ test suite against the template above; this half rides a call the run was making
 ## Step 4 — Create the issue
 
 One issue per kept item. The **headline** is the item's one-line summary; the body carries
-the item's full prose so nothing is lost in compression:
+the item's full prose so nothing is lost in compression. Both come from shared docs, so neither
+goes through the shell: make two `mktemp` files, then write the headline to the first and the
+body to the second **with a file tool**. The body is:
 
-```bash
-gh issue create \
-  --title "$headline" \
-  "${USABLE[@]}" \
-  --body "$(cat <<'MINERVA_ISSUE_BODY'
+```markdown
 <the item's full prose, verbatim from the scratchpad>
 
 **Failure scenario**: <specific inputs or state → wrong output, crash, data loss, or exposure>
@@ -157,9 +155,19 @@ gh issue create \
 **Priority**: <level> — <that level's definition from step 2>
 
 Deferred from work unit `<date-slug>` by `lorestrom:promote`.
-MINERVA_ISSUE_BODY
-)"
 ```
+
+Then create the issue from the two files:
+
+```bash
+gh issue create \
+  --title "$(cat "$T")" \
+  "${USABLE[@]}" \
+  --body-file "$B"
+```
+
+`$T` and `$B` are the two `mktemp` paths: the only text on the command line is those paths
+and the shell's own quoting, whatever the headline or prose holds.
 
 **The `**Failure scenario**:` line is mandatory and must not be padded to satisfy the
 template.** It is the bar from [deferral-bar.md](deferral-bar.md) made structural: an item for
@@ -168,15 +176,10 @@ stop and send it to outlet 2 (a knowledge entry) rather than to soften the sente
 fits. Writing "could cause problems later" here defeats the entire mechanism — that phrase is
 what the bar exists to refuse.
 
-Two substitution rules, because the item's text is copied verbatim and you do not control it:
-
-- **Title.** Set `headline` as a shell variable and pass `"$headline"` — do **not** paste the
-  text straight into the command line. A headline like `Fix the "foo" parser` breaks a
-  double-quoted `--title`.
-- **Body.** The quoted `<<'MINERVA_ISSUE_BODY'` delimiter disables all expansion, so `$`,
-  backticks and quotes in the prose are safe. The one thing that still breaks it is a line
-  in the prose that is *exactly* the delimiter — hence the deliberately unlikely name. If
-  the item somehow contains it, pick another.
+The item's text is copied verbatim and you do not control it: **never** paste the headline
+or the body into a command, a shell variable assignment or a heredoc. A headline like
+`Fix the "foo" parser` breaks a quoted argument, and a line of prose can end a heredoc early.
+The file tool writes the bytes; the shell only reads them back.
 
 Keep the back-link line exactly as written — it is what the step-3 search matches on.
 

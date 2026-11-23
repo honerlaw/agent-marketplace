@@ -133,7 +133,8 @@ def test_no_skill_names_a_minerva_skill_it_would_run():
         # `minerva:status` is also a unit property, so the read-only status skill is not listed.
         named = set(re.findall(r"minerva:(?:lint|migrate|migrate-fix|init|propose|work|review|"
                                r"promote|ship|cleanup|replan|propose-ship|"
-                               r"propose-ship-auto)\b(?![-:])", text))
+                               r"propose-ship-auto|debug|explore|grill-plan|one-by-one|"
+                               r"using-minerva)\b(?![-:])", text))
         assert named == set(), (path, named)
 
 
@@ -256,6 +257,27 @@ def test_each_rows_tools_are_lorestrom_tools(operation):
     assert tools and set(tools) <= LORESTROM_TOOLS, set(tools) - LORESTROM_TOOLS
 
 
+def contract_section(name):
+    found = re.search(r"^## `" + re.escape(name) + r"`\n(.*?)(?=^## |\Z)", read(STORAGE),
+                      re.S | re.M)
+    return found.group(1) if found else None
+
+
+@pytest.mark.parametrize("operation", OPERATIONS)
+def test_each_rows_columns_name_every_tool_and_helper_its_section_uses(operation):
+    """A row is the operation's inventory: its section uses nothing the row leaves out."""
+    section = contract_section(operation)
+    if operation == "project.link":  # init's protocol, in init/references/link.md
+        assert section is None
+        return
+    assert section is not None, operation
+    words = set(re.findall(r"`([a-z][a-z_-]*)(?=[` ])", section))
+    row = contract_rows()[operation]
+    assert words & LORESTROM_TOOLS <= set(row["tools"]), words & LORESTROM_TOOLS - set(row["tools"])
+    helpers = words & helper_commands()
+    assert helpers <= set(row["helpers"]), helpers - set(row["helpers"])
+
+
 def test_no_row_uses_upsert_doc():
     assert all("upsert_doc" not in row["tools"] for row in contract_rows().values())
 
@@ -372,7 +394,28 @@ SAFETY = [
     (STORAGE, RELEASE_ROW, "A **STALE reference replace** is reported with its unit and doc and never re-applied automatically"),
     (STORAGE, RELEASE_ROW, "a CONFLICT with the gate released is success."),
     (STORAGE, CONFIRM, "`--yes` never confirms."),
-    (RUNTIME, SCOPE, "are **inert until 0.3.0**"),
+    # Review round 2026-11-24 (lorestrom phase 2).
+    (STORAGE, CONFIRM, "re-run `reconcile` with the same request plus `userConfirmed`"),  # B1
+    (STORAGE, "## `unit.read`", "a local merge counts only for a phase whose recorded head differs from the base and is on the default branch"),  # S1
+    (RELEASE, None, "**Abandoning needs a yes for that unit.**"),  # K2
+    (RELEASE, None, "A sweep never abandons without it, and `--yes` never stands in for it."),  # K2
+    ("cleanup/SKILL.md", None, "A sweep abandons a unit only on a yes naming it; an explicit `<unit> --abandon` is that yes."),  # K2
+    (RELEASE, None, "**With no link or no server, nothing under `.lorestrom/worktrees/` is torn down.**"),  # K4
+    ("cleanup/SKILL.md", None, "except with `--abandon` or `--merged`."),  # K5
+    ("debug/references/workflow.md", None, "show the new text and wait for the user's yes, then `storage:reference.write`"),  # K10
+    ("debug/references/workflow.md", None, "Never hold it without that yes; cleanup lists it on the unit's release line."),  # K10
+    (RELEASE, None, "list its held reference writes"),  # K10
+    ("propose/references/on-approval.md", None, "resume with that unit's **original id** (never today's date)"),  # K3
+    ("work/references/worktree-addressing.md", None, "Never start a fresh branch silently."),  # K8
+    ("work/references/worktree-addressing.md", None, "\"refs/remotes/origin/<date-slug>-phase-N\"`, so pushed work is kept."),  # K8
+    (STORAGE, SYNC, "paged by `limit` and `before`, never `offset`"),  # K11
+    (STORAGE, SYNC, "page until the import's own write appears"),  # K11
+    (HANDOVER, None, "`git diff --cached --quiet`: anything already staged stops the offer"),  # K12
+    (HANDOVER, None, "`git commit -F <temp file> -- <listed path>…`"),  # K12
+    ("ship/references/protocol.md", None, "and again after **every later push** to the PR branch (each CI fix)"),  # K14
+    ("ship/references/protocol.md", None, "Push to the PR branch, then re-record the pushed head (`storage:unit.ship`)."),  # K14
+    ("using-lorestrom/SKILL.md", None, "with minerva's skills run one by one, never its orchestrators."),  # N4
+    (RUNTIME, SCOPE, "**no orchestrator passes `--auto` until 0.3.0; a user-typed `--auto` changes only the gates it names.**"),
     (RUNTIME, SCOPE, "minerva's orchestrators must not run in a linked repository"),
     (RUNTIME, SCOPE, "A record write there stops and names `lorestrom:init`."),
     (HANDOVER, None, "**kept by default**"),
@@ -412,6 +455,86 @@ SAFETY = [
 def test_a_safety_clause_is_whole_in_its_section(rel, heading, clause):
     text = read(rel)
     assert flat(clause) in flat(section(text, heading) if heading else text)
+
+
+# --- review round 2026-11-24: structure the safety clauses cannot pin ------------
+
+
+def unfenced_blocks(text):
+    return re.findall(r"```[a-z]*\n(.*?)```", text, re.S)
+
+
+@pytest.mark.parametrize("path", skill_texts(), ids=lambda path: str(path.relative_to(SKILLS)))
+def test_no_skill_puts_text_into_a_shell_heredoc(path):  # K1, K7
+    """Doc and record text reach `gh` and `git` through files a file tool wrote, never a heredoc."""
+    text = path.read_text(encoding="utf-8")
+    assert not re.search(r"<<-?\s*['\"]?[A-Z_]+", text), path
+    assert "HEREDOC" not in text, path
+
+
+def test_promote_files_an_issue_from_two_temp_files():  # K1
+    text = read("promote/references/github-issues.md")
+    commands = "\n".join(block for block in unfenced_blocks(text) if "gh issue create" in block)
+    assert '--title "$(cat "$T")"' in commands and '--body-file "$B"' in commands
+    assert "--body " not in commands and "$headline" not in text
+
+
+def test_ship_commits_from_a_message_file():  # K7
+    text = flat(read("ship/references/protocol.md"))
+    assert "run `git commit -F <temp file>`" in text
+    assert "git commit -m" not in text
+
+
+def test_the_phase_cut_does_not_track_the_default_branch():  # K13
+    cuts = [line for line in read("ship/references/protocol.md").splitlines()
+            if "checkout" in line and "-phase-N" in line and "-b" in line]
+    assert cuts and all("--no-track" in line for line in cuts), cuts
+
+
+def test_the_cleanup_gate_has_a_will_abandon_section():  # K2, K10
+    gate = section(read("cleanup/SKILL.md"), "## Confirmation gate")
+    assert gate.index("Will release:") < gate.index("Will abandon:") < gate.index("Will remove:")
+    assert "holds reference replace" in gate
+
+
+def test_unit_finish_is_promotes_last_step():  # K6
+    modes = read("promote/references/modes.md")
+    mode_a = modes[modes.index("7. On confirmation:"):modes.index("### Mode B")]
+    finish = [n for n, line in enumerate(mode_a.splitlines()) if "storage:unit.finish" in line]
+    issues = [n for n, line in enumerate(mode_a.splitlines()) if "Apply TODO dispositions" in line]
+    assert len(finish) == 1 and issues and finish[0] > issues[0], (finish, issues)
+    assert "`storage:record.write`, record `proposal`" in flat(mode_a)
+
+
+def test_removal_keeps_retired_docs_removable():  # K9
+    text = flat(read(HANDOVER))
+    assert "is `current` —" not in text
+    assert "is current, superseded or deprecated" in text
+
+
+SESSION_STEP = ("2. **Current-session context** — a unit id or branch name mentioned in this session,"
+                " checked the same way. A branch name may end `-phase-N` (a phased unit's later"
+                " phases): drop that suffix, then check what remains.")
+
+
+def test_every_session_context_step_strips_the_phase_suffix():  # K16
+    steps = [line for path in skill_texts() for line in path.read_text().splitlines()
+             if line.startswith("2. **Current-session context**")]
+    assert len(steps) == 5 and set(steps) == {SESSION_STEP}, steps
+
+
+@pytest.mark.parametrize("rel,word", [("work/SKILL.md", "stranding"),
+                                      ("grill-plan/SKILL.md", "replan.md"),
+                                      ("grill-plan/SKILL.md", "proposal.md"),
+                                      ("one-by-one/SKILL.md", "proposal.md")])
+def test_no_skill_assumes_record_files(rel, word):  # N2
+    assert word not in read(rel)
+
+
+def test_every_orchestrator_mention_says_it_arrives_in_0_3_0():  # N3
+    for path in skill_texts():
+        for found in re.finditer(r"`propose-ship-\*` orchestrators(.{0,8})", flat(path.read_text())):
+            assert found.group(1).startswith(" (0.3.0)"), (path, found.group(0))
 
 
 def test_import_waits_for_the_yes_before_any_write():

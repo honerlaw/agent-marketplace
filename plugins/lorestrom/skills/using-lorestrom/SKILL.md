@@ -27,7 +27,8 @@ agents read one body of lore. It has no local file mode.
 - The orchestrators (`propose-ship`, `propose-ship-auto`) arrive in 0.3.0: until then run the
   lifecycle skill by skill. **minerva's orchestrators must not run in a linked repository** —
   they would write records as files Lorestrom ignores. Disable minerva for the repository, as
-  init says; a unit begun on minerva finishes on minerva first.
+  init says. A unit begun on minerva finishes on minerva first, with minerva's skills run one
+  by one, never its orchestrators.
 
 ## Detecting a linked repository
 

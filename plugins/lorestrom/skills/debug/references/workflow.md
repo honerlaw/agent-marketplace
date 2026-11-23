@@ -127,7 +127,7 @@ The project's lore in Lorestrom has two read tiers, and this skill uses both dif
 
 The distinction is time-shape: knowledge accumulates; reference snapshots. New durable learnings from a debug go to knowledge via `lorestrom:promote`. An update to an operational fact replaces the relevant reference doc:
 
-- **Inside a unit** (the debug runs in a unit's worktree, or the user names one): `storage:reference.write`, held on the unit's gate until it merges.
+- **Inside a unit** (the debug runs in a unit's worktree, or the user names one): show the new text and wait for the user's yes, then `storage:reference.write`, held on the unit's gate until it merges. Never hold it without that yes; cleanup lists it on the unit's release line.
 - **Outside any unit:** `storage:reference.update`, a live replace. Show the new text and wait for the user's yes; check open units' gates first and, if one holds a write on that doc, ask how to proceed, as the row says. Never write it without both answers. Never edit a reference file in the repository instead: in a linked repository Lorestrom is authoritative.
 
 ## Reference discovery

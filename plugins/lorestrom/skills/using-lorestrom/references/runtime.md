@@ -198,8 +198,8 @@ Worktrees live under `.lorestrom/worktrees/`, checkpoints under
 
 - The orchestrators (`propose-ship`, `propose-ship-auto`) arrive in 0.3.0. Until then run the
   lifecycle skill by skill. The `--auto` mode arguments in ship, work, replan, review and promote
-  are kept as minerva wrote them and are **inert until 0.3.0**: no lorestrom skill passes them,
-  and a user-typed one changes only the gates it names.
+  are kept as minerva wrote them, under one rule: **no orchestrator passes `--auto` until
+  0.3.0; a user-typed `--auto` changes only the gates it names.**
 - minerva's orchestrators must not run in a linked repository: they would write records as files
   that Lorestrom ignores.
 - A read-side skill in a repository with no link, no server or no project carries on without

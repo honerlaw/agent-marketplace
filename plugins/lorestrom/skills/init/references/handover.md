@@ -31,11 +31,14 @@ answers one. With every offer declined, `git status --porcelain` is unchanged.
 2. **The imported files.** Read this project's knowledge and reference docs with `find_docs`
    (paged, `kinds` `["minerva:knowledge", "minerva:reference"]`), write them to a `mktemp`
    file and run `removal-plan --project <projectId>` on it. It lists the files that may go —
-   those whose doc holds their exact `minerva:digest` and is `current` — and keeps and names
+   those whose doc holds their exact `minerva:digest` and is current, superseded or deprecated (never draft or archived) — and keeps and names
    every other one with why: a file whose digest differs from its doc's is never removed.
    Show both lists and offer **one commit** that removes exactly the `remove` paths with
-   `git rm -- <listed path>…`, using only the paths it printed. On a yes, commit on the current
-   branch with a message naming the count; nothing else is staged. minerva's work-unit records are never
+   `git rm -- <listed path>…`, using only the paths it printed. On a yes, first check
+   `git diff --cached --quiet`: anything already staged stops the offer, and the user is told
+   why. Then write a message naming the count to a `mktemp` file and commit on the current
+   branch with `git commit -F <temp file> -- <listed path>…`, so the commit holds those paths
+   only. minerva's work-unit records are never
    touched: past units stay in git history.
 
 ## 3. Disable minerva for this repository

@@ -28,11 +28,21 @@ is a row of `skills/using-lorestrom/references/storage.md`.
 |---|---|
 | `release` | `storage:unit.release`, then `storage:unit.repair` |
 | `confirm` | `storage:unit.confirm`: show the named phases and ask; `--yes` never confirms |
-| `abandon` | `storage:unit.abandon`, after showing what the gate created |
+| `abandon` | `storage:unit.abandon`, after showing what the gate created, and only on a yes naming this unit (below) |
 | `wait` | keep the gate; report the reason, and `stale` when it is |
 
 Releasing needs `edit` on the unit doc; a `FORBIDDEN` refusal is reported with the unit, and
 the gate stays open for someone who has it.
+
+**Abandoning needs a yes for that unit.** An `abandon` answer goes under **Will abandon** in
+the confirmation gate, with its reason, and is acted on only when the user's yes names that
+unit: "yes, all" for a gate with a Will abandon section is asked again for each unit there. A
+sweep never abandons without it, and `--yes` never stands in for it. The authorization is an
+explicit `lorestrom:cleanup <date-slug> --abandon`, or the user's yes naming the unit.
+
+**A release lands held reference writes.** Before the gate, `get_gate` each unit to release
+and list its held reference writes (`write_body` or `set_properties` on a `minerva:reference`
+doc) on its Will release line by doc title, so the user sees which reference docs change.
 
 ## After a release
 
@@ -48,6 +58,10 @@ the gate stays open for someone who has it.
 
 A unit whose worktree was removed by hand, or that was cleaned up by an older run, can still
 hold an open gate. The no-argument sweep lists this project's units with open gates
-(`storage:unit.list`) alongside the worktrees, and runs the same decision for each. With no
-link or no server, the sweep removes merged worktrees as before and says in one line that no
-gate was checked.
+(`storage:unit.list`) alongside the worktrees, and runs the same decision for each.
+
+**With no link or no server, nothing under `.lorestrom/worktrees/` is torn down.** Records are
+not committed, so a fresh unit branch equals its base and reads as merged to git, and a unit's
+phases are unknown without its proposal record: no gate check means no evidence. The sweep
+lists each such unit under Will skip with "no gate checked", says in one line that no gate was
+checked, and removes nothing.

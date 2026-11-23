@@ -44,14 +44,14 @@ as the runtime contract's "Installed paths and helpers" shows.
 | `knowledge.read` | `get_doc`, `get_relations` | — | yes |
 | `knowledge.import` | `whoami`, `find_docs`, `get_doc`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload` | yes |
 | `handover.sync` | `find_docs`, `get_doc`, `list_doc_changes`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload`, `reference-list`, `reference-payload`, `merge-properties`, `removal-plan` | yes |
-| `unit.list` | `find_docs`, `get_gate` | `unit-ids`, `unit-state` | yes |
+| `unit.list` | `find_docs`, `get_gate`, `update_doc` | `unit-ids`, `unit-state` | yes |
 | `unit.read` | `find_docs`, `get_doc`, `get_gate` | `unit-state`, `phases` | yes |
 | `unit.create` | `find_docs`, `get_doc`, `create_doc`, `update_doc`, `open_gate`, `get_gate` | `unit-ids`, `merge-properties` | yes |
-| `record.write` | `find_docs`, `hold_write`, `add_relation`, `write_doc_body`, `get_doc` | — | yes |
+| `record.write` | `find_docs`, `hold_write`, `update_doc`, `add_relation`, `write_doc_body`, `get_doc` | — | yes |
 | `knowledge.write` | `find_docs`, `hold_write`, `update_doc`, `add_relation`, `get_relations` | `entry-payload`, `merge-properties` | yes |
 | `reference.read` | `find_docs`, `get_doc` | — | yes |
-| `reference.write` | `find_docs`, `get_doc`, `hold_write` | `reference-payload`, `merge-properties` | yes |
-| `reference.update` | `find_docs`, `get_doc`, `get_gate`, `create_doc`, `write_doc_body`, `update_doc` | `unit-ids`, `merge-properties` | yes |
+| `reference.write` | `find_docs`, `get_doc`, `hold_write`, `update_doc` | `reference-payload`, `merge-properties` | yes |
+| `reference.update` | `find_docs`, `get_doc`, `get_gate`, `hold_write`, `create_doc`, `write_doc_body`, `update_doc` | `unit-ids`, `reference-payload`, `merge-properties` | yes |
 | `unit.ship` | `find_docs`, `update_doc` | `merge-properties` | yes |
 | `unit.finish` | `find_docs`, `update_doc`, `write_doc_body` | `merge-properties` | yes |
 | `unit.release` | `find_docs`, `get_gate`, `update_doc`, `release_gate` | `reconcile`, `release-outcome`, `unit-state`, `merge-properties` | yes |
@@ -203,7 +203,9 @@ Every step is confirmed; nothing is overwritten silently.
 
 1. `knowledge.import` for new entries, as above.
 2. **Changed entries.** For each entry `import-list` lists whose doc has another
-   `minerva:digest`, read the doc's change log (`list_doc_changes`). Show the entry, both
+   `minerva:digest`, read the doc's change log (`list_doc_changes`: newest first, paged by
+   `limit` and `before`, never `offset`; pass the oldest change on a page as `before` and page
+   until the import's own write appears or the log ends). Show the entry, both
    digests, and every change since its import that was not the import's own write: a person
    or agent may have edited the copy. Offer a replace for each, one by one. On a yes,
    `write_doc_body` (`mode: replace`) the payload's markdown, then `update_doc` the merged
@@ -328,14 +330,16 @@ only when it is all digits, and a commit only through the helper, which checks i
 
 ## `unit.finish`
 
-From `lorestrom:promote`: replace the proposal record's body (`write_doc_body` `mode` `replace`,
-after reading it), set the scratchpad record's status `archived` (`update_doc`), and
+From `lorestrom:promote`, as Mode A's **last** step, after the proposal rewrite
+(`record.write`), any issues and the followups record: replace the proposal record's body
+again only if it changed since (`write_doc_body` `mode` `replace`, after reading it), set the
+scratchpad record's status `archived` (`update_doc`), and
 `update_doc` the unit's merged properties with `minerva:status` `Shipped (YYYY-MM-DD)` and
-`minerva:promoted` (the date). `unit-state` reads these.
+`minerva:promoted` (the date). The unit's state is derived from these (`unit.read`).
 
 ## `unit.release`
 
-From `lorestrom:cleanup`. Write the unit's recorded `phases`, `heads`, `base` and PR states to
+From `lorestrom:cleanup`. Write the unit's recorded `"phases"`, `"heads"`, `"base"` and PR states to
 a `mktemp` file and run `reconcile`: it gathers git evidence itself (only 40-hex shas reach git)
 and returns `release`, `confirm`, `abandon` or `wait`. Act only on its answer.
 1. **release:** `update_doc` the unit's merged properties with `minerva:merge_commit`, then

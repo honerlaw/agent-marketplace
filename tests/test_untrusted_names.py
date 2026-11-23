@@ -104,6 +104,7 @@ LORESTROM_INERT = {
 LORESTROM_VARS = {
     "LORESTROM_PLUGIN_ROOT", "LORESTROM_SKILL_FILE", "LORESTROM_SCRIPTS",
     "F",  # a mktemp file the agent made
+    "T", "B",  # promote's issue title and body mktemp files
     "lorestrom",  # Codex's `$lorestrom:<name>` skill prefix, not a shell variable
 }
 # Lines that name a ref placeholder in prose or in a report the user reads, never in a

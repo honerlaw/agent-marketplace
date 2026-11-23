@@ -88,7 +88,7 @@ The total never changes silently. When an answer or the user adds a question, or
 
 Show a table of every question: number, question, answer, and how it was answered (recommended, another option, own words, skipped, dropped, not reached).
 
-If an answer resolves a work unit's `## Open Questions`, say so: it stays open in `proposal.md` until the work phase records it.
+If an answer resolves a work unit's `## Open Questions`, say so: it stays open in the unit's proposal record until the work phase records it.
 
 The skill ends there and takes no action of its own. A caller, or work this session was already doing, continues under the authorization it already had; with neither, stop. The answers grant nothing beyond what they say.
 

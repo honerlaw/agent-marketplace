@@ -20,7 +20,7 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 Same pattern used by `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
 1. **Explicit argument** — a unit id. Use it only when it equals an id `storage:unit.list` or the runtime's `units` printed (runtime contract, "Names are data"); otherwise stop on it.
-2. **Current-session context** — a unit id or branch name mentioned in this session, checked the same way.
+2. **Current-session context** — a unit id or branch name mentioned in this session, checked the same way. A branch name may end `-phase-N` (a phased unit's later phases): drop that suffix, then check what remains.
 3. **The only open unit** — if `storage:unit.list` shows exactly one of this project's units with an open gate, use it.
 4. **Ambiguity** — list the candidates, ask the user.
 5. **None found** — report "no work units found — run `lorestrom:propose` first" and stop.
@@ -112,7 +112,7 @@ Implementation is **done** when every item in `## Success criteria` (as amended 
 3. If any item is not met, do not suggest promote — keep working or trigger `lorestrom:replan` if the criterion itself is wrong.
 4. If every item is met, surface this checklist to the user and recommend `lorestrom:promote` as the next step. Do not run promote automatically — that's the user's call. **Under `--auto`, return the checklist to `<orchestrator>`'s completion-verification gate instead.**
 
-**On a unit declaring `## Phases`,** a phase is done when *its own* criteria are met: recommend `lorestrom:ship`, not promote. Mode A waits for the final phase — use promote's **Mode B** meanwhile, so each phase's PR carries its own knowledge instead of stranding it if the unit stalls (`skills/propose/references/phasing.md`).
+**On a unit declaring `## Phases`,** a phase is done when *its own* criteria are met: recommend `lorestrom:ship`, not promote. Mode A waits for the final phase — use promote's **Mode B** meanwhile, so a phase's knowledge is written as it is learned; it stays pending on the unit's gate until the final phase merges and cleanup releases it (`skills/propose/references/phasing.md`).
 
 If the proposal has no `## Success criteria` section (e.g. it was authored before that section existed), fall back to the proposal's `## Goal` paragraph as the implicit criterion and note the gap to the user.
 

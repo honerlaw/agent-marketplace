@@ -13,9 +13,9 @@ Stress-test a drafted plan by interviewing the user about it until shared unders
 
 A plan is already in conversation context. It may be:
 
-- A `lorestrom:propose` design draft (Goal / Why / Approach / Success criteria / Open Questions), not yet written to disk.
-- A `lorestrom:replan` entry draft (Original plan / What changed / New plan), not yet appended to `replan.md`.
-- An ad-hoc plan the user has shared or pointed at (e.g., an existing `proposal.md` they want re-grilled).
+- A `lorestrom:propose` design draft (Goal / Why / Approach / Success criteria / Open Questions), not yet written to the unit's proposal record.
+- A `lorestrom:replan` entry draft (Original plan / What changed / New plan), not yet appended to the unit's replan record.
+- An ad-hoc plan the user has shared or pointed at (e.g., an existing proposal record they want re-grilled).
 
 No flag distinguishes these — read the conversation and act on whichever plan is in front of you.
 

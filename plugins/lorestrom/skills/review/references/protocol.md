@@ -5,7 +5,7 @@
 Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:ship`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
 1. **Explicit argument** — a unit id. Use it only when it equals an id `storage:unit.list` or the runtime's `units` printed (runtime contract, "Names are data"); otherwise stop on it.
-2. **Current-session context** — a unit id or branch name mentioned in this session, checked the same way.
+2. **Current-session context** — a unit id or branch name mentioned in this session, checked the same way. A branch name may end `-phase-N` (a phased unit's later phases): drop that suffix, then check what remains.
 3. **The only open unit** — if `storage:unit.list` shows exactly one of this project's units with an open gate, use it.
 4. **Ambiguity** — list the candidates, ask the user.
 5. **None found** → **no unit context**. Skip to [Code review invocation](#code-review-invocation) — do not stop.
