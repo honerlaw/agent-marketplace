@@ -37,6 +37,7 @@ from knowledge_lint import (
     parse_entry,
 )
 from knowledge_spans import unfenced
+from work_status import phase_branch, phase_progress, read_phases
 
 
 class BackendError(ValueError):
@@ -68,6 +69,8 @@ KNOWLEDGE = Path(".minerva") / "knowledge"  # the import source, never written
 REFERENCE = Path(".minerva") / "reference"  # the handover source, never written
 KIND_UNIT = "minerva:work_unit"
 KIND_REFERENCE = "minerva:reference"
+KIND_RECORD = "minerva:record"
+PART_OF = "minerva:part_of"
 # A work unit's id, as minerva names it: a date (or legacy NNN) prefix, then a slug.
 UNIT_ID_RE = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*")
 RECORDS = ("proposal", "scratchpad", "replan", "followups")
@@ -861,6 +864,50 @@ def repair_flips(gate: dict, docs: list) -> dict:
     return {"repair": repair, "skipped": skipped}
 
 
+def unit_ids(docs: list, project: str) -> dict:
+    """The checked unit ids among `find_docs` results: this project's unit docs whose key is
+    `minerva:u/<project id>/<id>` with an id of a unit's shape. Anything else is counted,
+    never printed: a unit id becomes a branch and directory name.
+    """
+    prefix = f"minerva:u/{_project_id(project)}/"
+    found, refused = set(), 0
+    for doc in docs:
+        if doc.get("kind") != KIND_UNIT:
+            continue
+        if (doc.get("properties") or {}).get("minerva:project") != project:
+            continue
+        key = doc.get("key") or ""
+        unit = key[len(prefix):] if key.startswith(prefix) else ""
+        if UNIT_ID_RE.fullmatch(unit):
+            found.add(unit)
+        else:
+            refused += 1
+    return {"units": sorted(found), "refused": refused}
+
+
+def unit_phases(root, unit: str, proposal: str, merged_prs=()) -> dict:
+    """A unit's phase progress, from its proposal's `## Phases` and live merge evidence.
+
+    `merged_prs` are head branch names of MERGED PRs (`gh pr list --state merged`): a squash
+    merge leaves the branch unmerged to git. Local merges are read here, against the default
+    branch the helper finds. Names are only compared with the unit's own phase branches.
+    """
+    if not UNIT_ID_RE.fullmatch(unit or ""):
+        raise BackendError(f"not a work-unit id: {ascii(unit)}")
+    top = _top(root)
+    merged = {name for name in merged_prs if isinstance(name, str)}
+    if top is not None:
+        default = _default_branch(top)
+        if default is not None:
+            listed = _git(top, "for-each-ref", "--merged", default,
+                          "--format=%(refname:lstrip=2)", "refs/heads/").stdout
+            merged |= set(listed.split())  # ref names hold no whitespace
+    phases = read_phases(proposal)
+    progress = phase_progress(phases, merged, unit)
+    progress["branches"] = [phase_branch(unit, n) for n in range(1, len(phases) + 1)]
+    return progress
+
+
 # --- merge evidence ------------------------------------------------------------------------
 
 
@@ -1110,6 +1157,10 @@ def main(argv=None) -> int:
     listing = commands.add_parser("import-list", help="what an import would send, with no bodies")
     listing.add_argument("--project", required=True)
     commands.add_parser("unit-state", help="stdin: {properties, gate}")
+    ids = commands.add_parser("unit-ids", help="stdin: find_docs' unit docs; the checked ids")
+    ids.add_argument("--project", required=True)
+    phases = commands.add_parser("phases", help="stdin: {proposal, mergedPrs}; phase progress")
+    phases.add_argument("--unit", required=True)
     commands.add_parser("release-outcome", help="stdin: {code, gate}")
     commands.add_parser("repair-flips", help="stdin: {gate, docs}")
     commands.add_parser("reconcile", help="stdin: {phases, heads, base, prs, abandon, merged, age_days}")
@@ -1118,7 +1169,8 @@ def main(argv=None) -> int:
     ref = commands.add_parser("reference-payload", help="one reference doc as tool inputs")
     ref.add_argument("file")
     ref.add_argument("--project", required=True)
-    ref.add_argument("--digest", required=True, help="the digest the user confirmed")
+    ref.add_argument("--digest", help="the digest the user confirmed (required without --path)")
+    ref.add_argument("--path", help="the doc's path under reference/, when the file is a temp file")
     args = parser.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -1147,6 +1199,12 @@ def main(argv=None) -> int:
         elif args.command == "unit-state":
             value = _stdin_json()
             out = unit_state(value.get("properties") or {}, value.get("gate"))
+        elif args.command == "unit-ids":
+            out = unit_ids(_stdin_json(), args.project)
+        elif args.command == "phases":
+            value = _stdin_json()
+            out = unit_phases(args.cwd, args.unit, value.get("proposal") or "",
+                              value.get("mergedPrs") or [])
         elif args.command == "release-outcome":
             value = _stdin_json()
             out = release_outcome(value.get("code"), value.get("gate"))
@@ -1157,6 +1215,9 @@ def main(argv=None) -> int:
             out = merge_evidence(args.cwd, _stdin_json())
         elif args.command == "reference-list":
             out = reference_list(args.cwd, args.project)
+        elif args.path:
+            # The agent's own temp file: the new text of a reference doc.
+            out = reference_payload(args.path, read_entry(Path(args.file)), args.project)
         else:
             relpath, text = read_repo_reference(args.cwd, args.file)
             if args.digest != hashlib.sha256(text.encode()).hexdigest():
