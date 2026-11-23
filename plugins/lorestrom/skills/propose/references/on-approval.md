@@ -1,0 +1,163 @@
+# propose — on approval: worktree setup + file writes
+
+## On approval — worktree setup + file writes
+
+Steps 1–6 run from the parent repo (typically on the default branch). `<date-slug>` is a checked id: see the runtime contract's "Names are data". Step 7 establishes how to address the worktree. Steps 8–13 write into the worktree **via its prefixed path** — the session's working directory never changes.
+
+**Non-git repo escape clause:** in a non-git project (no `.git/` directory at the project root), there's nothing to commit and no worktree to create. Skip steps 4, 5, 6, 7, and 11 entirely; run steps 1–3 (the date id needs no git), then jump from step 3 to step 8 — create `.minerva/work/<date-slug>/` directly at the project root and continue with steps 9, 10, 12, 13.
+
+1. **Derive the slug silently** from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
+
+2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.minerva/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `minerva:replan` if they want to course-correct an in-flight work unit.
+
+   The `-phase-*` pattern is not optional. A phased unit's later phases live on `<date-slug>-phase-N` branches (see [phasing.md](phasing.md)), and `*-<slug>` cannot match them — the slug is no longer the tail. Without the second pattern this check reads clean against a unit that is actively mid-flight on phase 2, which is the exact false-clean this step exists to prevent.
+
+3. **Take today's date as the unit's id** — `date +%F`, giving `YYYY-MM-DD`. The unit is `<YYYY-MM-DD>-<slug>`.
+
+   No scan, no max+1, no cross-branch comparison: a date is read off the clock, so two units started in parallel never negotiate for an id. **Several units sharing a date is expected**, because a unit is identified by its whole `<date>-<slug>`, not by the date alone. The duplicate-**slug** check in step 2 is what prevents a genuine collision, and it already runs against every source.
+
+   This replaced a three-source NNN scan. That scan existed because a number is scarce — two units picking the same one collided invisibly. It is not needed for a date, and keeping it would reintroduce the coordination it was written to fix.
+
+4. **Resolve the default branch** with the runtime contract's default-branch snippet ("Names are data"), repeated in each shell call below that uses `BASE`.
+
+5. **Pre-flight gitignore check** — verify `.minerva/worktrees/` is ignored on the default branch. Check the default branch's `.gitignore` (not just the current working tree's) via `: "${BASE:?}" && git show "${BASE:?}:.gitignore" 2>/dev/null` piped to grep for a line matching `.minerva/worktrees/` (or a parent pattern like `.minerva/`).
+
+   - If present → continue.
+   - If missing → **abort**: "The `.minerva/worktrees/` entry is missing from `.gitignore` on the default branch. Run `minerva:init` first to install it (init handles this idempotently), or add `.minerva/worktrees/` to `.gitignore` and commit on the default branch manually before re-running `minerva:propose`."
+
+   Do not auto-edit `.gitignore` from propose: propose may be invoked from inside another worktree, where editing `.gitignore` would land the change on the wrong branch. Init is the one place that installs this entry.
+
+6. **Create the worktree and branch**, in the same shell call as the default-branch snippet:
+
+   ```
+   git worktree add --no-track -b <date-slug> .minerva/worktrees/<date-slug> "${BASE:?}"
+   ```
+
+   Branching explicitly from the default branch (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the work-unit directory so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch. Legacy branches keep their old `NNN-` names; only new ones are dated.
+
+7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.minerva/worktrees/`, which must be addressed directly in either host, so minerva never uses a host-managed worktree switch. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.minerva/worktrees/<date-slug>/` and run each git command as `git -C .minerva/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+
+8. **Create the work-unit directory** `.minerva/work/<date-slug>/`, addressed via the step-7 prefix (i.e. `.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/`).
+
+9. **Write `proposal.md`** using the approved content, structured as:
+
+   ```markdown
+   # Proposal: <slug>
+
+   **Date**: YYYY-MM-DD
+   **Status**: Draft
+   **Closes**: #12, #34          <- optional; omit the line entirely when nothing is closed
+   **Linked**: #56 — <title> (not adopted)   <- optional; see below
+
+   ## Goal
+   <approved goal>
+
+   ## Why
+   <approved motivation>
+
+   ## Approach
+   <approved approach — will be rewritten by minerva:promote to describe what shipped>
+
+   ## Success criteria
+   - <concrete, checkable item 1>
+   - <concrete, checkable item 2>
+   <each item must be objectively answerable yes/no when implementation is "done">
+
+   ## Phases
+   1. **<name>** — what ships in this PR, and its own success criteria.
+   2. **<name>** — what ships in this PR, and its own success criteria.
+   <omit this section entirely for a unit that fits one PR — which is most units>
+
+   ## Open Questions
+   - <any remaining items>
+   ```
+
+   **The `## Phases` section.** Optional, and **absent by default** — omit it unless the work
+   genuinely cannot be reviewed as one pull request. When present it declares an ordered list of
+   independently shippable increments, each shipping as its own PR while the unit keeps a single
+   proposal, scratchpad, promote and knowledge pass. Soft ceiling of about three; more must be
+   argued in the proposal. A unit without the section is unphased and every consumer treats it
+   exactly as before. **Read [phasing.md](phasing.md) before declaring it** — the branch
+   topology, the derived-progress rule, and the Mode B guidance all live there.
+
+   **The `**Closes**` field.** Optional, and normally absent at propose time — you rarely
+   know the issue numbers before the work is done. It is authored at the **end** of the
+   work phase, by whoever just wrote the diff and therefore knows what it actually closes.
+
+   **The one exception is an adopted issue.** When intake matched this request to an open
+   issue and the user chose to execute it (see `references/issue-match.md`), the number is
+   known before a line is written and the whole point of adopting it was to close it — so
+   write `**Closes**: #NN` here, at creation. That is the only case where the field is
+   authored this early; it does not license guessing at any other issue number.
+   `minerva:ship` reads it when composing the PR body and emits one `Closes #N` line per
+   entry, so GitHub closes the issues on merge.
+
+   **The `**Linked**` field.** Also optional. Written at creation in exactly one case: intake
+   matched this request to an open issue and the user chose **proceed as asked, link #NN**
+   rather than adopting it (see `references/issue-match.md`). It is a note to the end of the
+   work phase, not a promise — `minerva:promote` reads it and promotes it into `**Closes**`
+   only if the diff turned out to resolve the issue after all. Nothing else reads it, and it
+   never closes anything by itself.
+
+   Only list an issue the diff genuinely resolves. Nothing infers this field from the diff
+   or the branch name — a wrong auto-close destroys a real record, which is why the linkage
+   is authored rather than guessed.
+
+   Also write `scratchpad.md` with this header and nothing else:
+
+   ```markdown
+   # Scratchpad: <slug>
+
+   > **Ephemeral working memory.** Most of what lands here is noise — small
+   > decisions that don't matter, dead ends, momentary confusion. At feature
+   > completion, run `minerva:promote`: significant items get promoted to
+   > `.minerva/knowledge/`, `proposal.md` gets updated to match reality, and
+   > the raw scratchpad is archived.
+
+   ```
+
+10. **Self-review the written proposal.** Re-read `proposal.md` with fresh eyes and fix inline:
+    - **Placeholders** — any `TBD`, `TODO`, vague phrasing, or incomplete sections.
+    - **Internal consistency** — does `## Approach` actually achieve `## Goal`? Do `## Success criteria` cover what `## Goal` promises?
+    - **Ambiguity** — could any requirement be read two different ways? Pick one and make it explicit.
+    - **Scope** — is this still a single work unit? If the prose grew past what one PR can carry, the answer is almost always to add a `## Phases` section (see [phasing.md](phasing.md)), **not** to re-decompose: the ceremony of a second unit is real and the ceremony of a second phase is not. Re-decompose with the user only when the drift is into genuinely independent subsystems — work that would not share a proposal, a reviewer, or a record.
+    - **Phase numbering** — only if the proposal declares `## Phases`. Ask the parser, not your eyes:
+
+      ```bash
+      # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
+      # worktree when invoked inside one, and these paths reach *into* .minerva/worktrees/.
+      ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
+      PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+      [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
+      python3 -c "
+      import sys; sys.path.insert(0, sys.argv[1])
+      from work_status import read_phases, phase_numbering_gaps, phase_name
+      phases = read_phases(open(sys.argv[2]).read())
+      print('phases:', [(n, phase_name(t)) for n, t in phases])
+      print('numbering gaps:', phase_numbering_gaps(phases))
+      " "$PLUGIN_SCRIPTS" "$ROOT/.minerva/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md"
+      ```
+
+      **If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `MINERVA_SCRIPTS` directory. Never silently fall back to consumer code.
+
+      Any gap means a written ordinal disagrees with the phase's position. **Fix the proposal** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check the printed names: a phase whose name comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
+
+    Fix issues inline. No need to re-review — just fix and move on.
+
+11. **Commit the initial docs on the branch:**
+
+    ```
+    git -C .minerva/worktrees/<date-slug> add .minerva/work/<date-slug>/
+    git -C .minerva/worktrees/<date-slug> commit -m "chore: initialize <date-slug> work unit"
+    ```
+
+    (In a non-git repo, skip this step — there's no branch to commit on.)
+
+12. **Post-write user gate.** Report the created path and ask:
+
+    > "Proposal written to `.minerva/work/<date-slug>/proposal.md` on branch `<date-slug>` in worktree `.minerva/worktrees/<date-slug>/`. Please review the file directly and let me know if you want to change anything before we start work."
+
+    Wait for the user's response. If they request changes, edit `proposal.md` directly, re-run the self-review, and create a **follow-up commit** (no `--amend` — the initial commit was already published as the branch's starting state). Only once the user approves the written file is the proposal considered final.
+
+13. Suggest `minerva:work` as the next step. The work skill will detect the existing worktree and address it by the same prefix.
+
