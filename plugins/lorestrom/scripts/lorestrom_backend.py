@@ -37,7 +37,7 @@ from knowledge_lint import (
     parse_entry,
 )
 from knowledge_spans import unfenced
-from work_status import phase_branch, phase_progress, read_phases
+from work_status import phase_branch, phase_name, phase_numbering_gaps, phase_progress, read_phases
 
 
 class BackendError(ValueError):
@@ -904,7 +904,10 @@ def unit_phases(root, unit: str, proposal: str, merged_prs=()) -> dict:
             merged |= set(listed.split())  # ref names hold no whitespace
     phases = read_phases(proposal)
     progress = phase_progress(phases, merged, unit)
-    progress["branches"] = [phase_branch(unit, n) for n in range(1, len(phases) + 1)]
+    progress["phases"] = [{"position": n, "written": written, "name": phase_name(title),
+                           "branch": phase_branch(unit, n), "merged": phase_branch(unit, n) in merged}
+                          for n, (written, title) in enumerate(phases, start=1)]
+    progress["gaps"] = phase_numbering_gaps(phases)
     return progress
 
 

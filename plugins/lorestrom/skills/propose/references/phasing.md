@@ -2,7 +2,7 @@
 
 Work that is too big for one pull request splits its **plan**, not its **work unit**.
 
-One unit. One `proposal.md`, one `scratchpad.md`, one worktree, one `lorestrom:promote`, one
+One unit. One proposal, one scratchpad, one Lorestrom gate, one worktree, one `lorestrom:promote`, one
 knowledge pass — shipping as an ordered series of pull requests, one per phase.
 
 **Read this file before declaring `## Phases` on a proposal, and before shipping or cleaning
@@ -10,7 +10,7 @@ up a unit that declares them.**
 
 ## Why this exists
 
-minerva's previous answer to "too big" was to decompose into N separate work units and abort
+minerva's (and so lorestrom's) previous answer to "too big" was to decompose into N separate work units and abort
 the run: *"scope check resolved to decomposition — re-run with one sub-unit at a time."* That
 multiplies every per-unit cost by N — propose, worktree, review, promote, ship, cleanup,
 and a human gate at each transition — and each new unit
@@ -43,7 +43,7 @@ name.
 
 ## Declaring phases
 
-An ordered `## Phases` section in `proposal.md`, after `## Success criteria`:
+An ordered `## Phases` section in the proposal, after `## Success criteria`:
 
 ```markdown
 ## Phases
@@ -58,8 +58,7 @@ phase — it is the first half of one.
 
 **A unit with no `## Phases` section is unphased**, and every consumer behaves exactly as it did
 before this mechanism existed. That inertness is what made phasing safe to add to `ship`,
-`cleanup`, `work_status` and four orchestrators at once — the same argument
-`2026-08-09-decision-reference-is-a-fifth-entry-type` made for adding an initially empty entry type.
+`cleanup`, the phase parser and the orchestrators at once.
 
 ## Branch topology — sequential off the default branch
 
@@ -78,33 +77,27 @@ branch matched, so all six `Target resolution` blocks, `lorestrom:propose`'s dup
 and `lorestrom:cleanup`'s merge detection keep working untouched on a phased unit's first phase.
 Only phases 2+ introduce a name those consumers have not seen.
 
-Never rebuild these names by hand. Resolve them through `phase_branch()` in
-`scripts/work_status.py` — two derivations plus a comment asking them to agree is exactly the
-shape `2026-08-11-pattern-a-comment-cannot-enforce-a-shared-invariant` is about.
+Never rebuild these names by hand. Read them from the `branch` of each phase the helper's
+`phases` prints (`storage:unit.read`) — two derivations plus a comment asking them to agree is
+the shape a single source exists to prevent.
 
 ## The record propagates by ordinary merge
 
-`proposal.md` and `scratchpad.md` are committed into each phase's PR, so they land on the
-default branch with phase 1. Phase N+1, cut from that branch, inherits them automatically.
-
-Nothing carries the record forward; git does. To start phase N in the unit's existing worktree,
-fetch and cut the new branch from the updated default branch — the docs arrive with it.
+The record lives in Lorestrom for the unit's whole life, so every phase reads the same proposal
+and scratchpad, and nothing has to be carried forward. To start phase N in the unit's existing
+worktree, fetch and cut the new branch from the updated default branch. Each phase's branch, PR
+and pushed head are recorded on the unit (`storage:unit.ship`).
 
 ## Progress is derived, never written
 
-Which phases are done is read off **which phase branches have merged**, via `phase_progress()`
-in `scripts/work_status.py`. There is no checkbox in the proposal and no progress marker in the
+Which phases are done is read off **which phase branches have merged**, via the helper's
+`phases` (`storage:unit.read`): it reads local merges itself and takes the head names of MERGED
+PRs from `gh pr list`. There is no checkbox in the proposal and no progress marker in the
 scratchpad.
 
-This is not a stylistic preference. The one hand-maintained lifecycle marker minerva already had
-— promote's — acquired eight spellings across one corpus and misread 16 of 51 units. A second
-hand-maintained progress marker would be the same bug with a new name
-(`2026-08-10-pattern-presence-assertions-rot-into-green-lies`).
-
-`phase_progress()` takes the merged-branch set as an **argument** rather than shelling out to
-git, so `work_status.py` stays a pure reader of declarations and its tests need no repo. The
-caller — `lorestrom:ship`, `lorestrom:cleanup` — already holds the `git branch --merged` /
-`gh pr list` result.
+This is not a stylistic preference. minerva's one hand-maintained lifecycle marker — promote's —
+acquired eight spellings across one corpus and misread 16 of 51 units. A second hand-maintained
+progress marker would be the same bug with a new name.
 
 ## Promote: Mode B during, Mode A at the end
 
@@ -113,29 +106,28 @@ the `**Closes**` field — runs **once**, after the final phase. That is the who
 ceremony is paid once.
 
 But **do not let durable knowledge wait for it.** Use `lorestrom:promote`'s existing **Mode B**
-(single-item mid-work promotion) as findings arrive, so each phase's PR carries the knowledge
-that phase produced. Without this, a unit abandoned after phase 1 strands everything it learned.
+(single-item mid-work promotion) as findings arrive. Each entry is written under the unit's gate
+at once and is live as pending lore; it becomes current when the unit releases after its final
+phase. Abandoning the unit archives it.
 
 ## Reporting: never let a pending phase be silent
 
 Every phase's ship report **names the phases still outstanding**. A unit that stalls after phase
 1 must be visible as a unit that stalled, not as a unit that finished.
 
-This is the direct application of
-`2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption`: deferred work with no
-trigger, reported by a step that omits it, is undetectable. Both halves have to be closed — the
+Deferred work with no trigger, reported by a step that omits it, is undetectable. Both halves have to be closed — the
 trigger is the next phase, and the report is what makes its absence noticeable.
 
 ## The orchestrator loop
 
-`minerva:propose-ship` and `minerva:propose-ship-auto` both end with: ship → poll the PR → on
+The orchestrators (`propose-ship` and `propose-ship-auto`, arriving in 0.3.0) both end with: ship → poll the PR → on
 `MERGED`, run `lorestrom:cleanup` → report and exit. **On a phased unit that last step is wrong**,
 and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
 reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.
 
 So every orchestrator's cleanup gate gains one branch, before it reports:
 
-> After `lorestrom:cleanup` returns on a `MERGED` phase, re-derive `phase_progress()`. If
+> After `lorestrom:cleanup` returns on a `MERGED` phase, re-derive the phase progress (`phases`). If
 > `complete` is false, **loop back to the ship phase** for `next_branch` — cut it from the
 > freshly fetched default branch and ship it. Only when `complete` is true does the run report
 > and exit.
@@ -155,10 +147,9 @@ loop whose exit is silent is indistinguishable from a loop that completed.
 
 ## Cleanup: tear down once
 
-Knowledge needs nothing from cleanup: each phase's PR carries its own entries complete, and the
-catalog is derived on read, so an entry that lands in phase 1's PR is visible the moment it
-merges (`2026-10-01-decision-knowledge-aggregates-are-derived-on-read`). What phasing changes is
-teardown:
+Knowledge waits for cleanup: the unit's gate is released only when every declared phase has
+merged (`storage:unit.release`), and until then its entries are pending lore. Teardown changes
+too:
 
 - **Worktree teardown is deferred** while any declared phase is unmerged, and the unit's merged
   phase branches are pruned only once the final phase lands.

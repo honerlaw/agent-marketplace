@@ -24,7 +24,7 @@ The list is finite. Do not invent probing questions to extend it.
 
 ### 2. Reduce
 
-Drop what the session already answered. Answer what a quick look at the repo or `.minerva/knowledge/` settles, and report those in the announcement instead of asking them. Merge duplicates. A question a quick look does not settle stays a question.
+Drop what the session already answered. Answer what a quick look at the repo or this project's lore (`storage:knowledge.list`) settles, and report those in the announcement instead of asking them. Merge duplicates. A question a quick look does not settle stays a question.
 
 ### 3. Order
 

@@ -1,6 +1,6 @@
 ---
 name: work
-description: Implements a minerva work unit — reads the proposal and any replans, maintains a live scratchpad, auto-invokes the `lorestrom:replan` protocol when reality drifts in a load-bearing way, and checks proposal Open Questions on resume and Success criteria before signaling completion. Use when the user is ready to start coding on a proposed feature, wants to implement or resume a work unit ("pick up where we left off"), or invokes `lorestrom:work`.
+description: Implements a work unit in a repository linked to Lorestrom — reads the proposal and any replans, maintains a live scratchpad, auto-invokes the `lorestrom:replan` protocol when reality drifts in a load-bearing way, and checks proposal Open Questions on resume and Success criteria before signaling completion. Use when the user is ready to start coding on a proposed feature, wants to implement or resume a work unit ("pick up where we left off"), or invokes `lorestrom:work`.
 ---
 
 ## Runtime
@@ -11,29 +11,31 @@ Implement the active work unit while maintaining the scratchpad and honoring the
 
 ## Usage
 
-- `lorestrom:work` — resume the work unit inferred from current-session context, or the most-recently-modified if context is ambiguous
-- `lorestrom:work 005-add-payments` — operate on the named unit explicitly (slug or path accepted)
+- `lorestrom:work` — resume the work unit inferred from current-session context, or the only open one
+- `lorestrom:work 005-add-payments` — operate on the named unit explicitly (a checked unit id)
 - `lorestrom:work <date-slug> --auto=<orchestrator>` — orchestrated mode; see **Orchestrated mode** below
 
 ## Target resolution
 
 Same pattern used by `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`, `lorestrom:cleanup`. **Keep all six blocks in sync if you edit one.**
 
-1. **Explicit argument** — if the user passed a slug or path (`lorestrom:work 005-foo` or a full `.minerva/work/...` path), resolve it directly. Look in both `.minerva/work/<date-slug>/` and `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/` — whichever exists wins.
-2. **Current-session context** — if a unit slug, path, or branch name has been mentioned in this session, use it.
-3. **Most-recently-modified across both locations** — list candidates from `.minerva/work/*/` AND `.lorestrom/worktrees/*/.minerva/work/*/` (both id forms), take the most-recently-modified by directory mtime. Active work units (created by `lorestrom:propose`) live in worktrees; shipped + merged units live in `.minerva/work/` on the default branch — both locations must be scanned every time.
-4. **Ambiguity** — if multiple recent candidates exist and context can't pick, list them and ask the user.
+1. **Explicit argument** — a unit id. Use it only when it equals an id `storage:unit.list` or the runtime's `units` printed (runtime contract, "Names are data"); otherwise stop on it.
+2. **Current-session context** — a unit id or branch name mentioned in this session, checked the same way.
+3. **The only open unit** — if `storage:unit.list` shows exactly one of this project's units with an open gate, use it.
+4. **Ambiguity** — list the candidates, ask the user.
 5. **None found** — report "no work units found — run `lorestrom:propose` first" and stop.
+
+A unit's records live in Lorestrom (`storage:unit.read`), never in files. With no link, no server or no project, a record write stops and names `lorestrom:init`.
 
 ## Orchestrated mode (`--auto`)
 
 **Mode argument**: `--auto`
 
-`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator
-(`minerva:propose-ship-auto`) is driving this run and has substituted its
-own adjudication for the user gates below. Act on the argument — never on a judgment about who
-is calling. Per `2026-06-07-decision-phase-handoff-rides-observable-intake`, *"'An inline
-argument was passed' is observable; 'the prior phase converged' is an opinion."*
+`--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator is driving
+this run and has substituted its own adjudication for the user gates below. Act on the argument —
+never on a judgment about who is calling: "an inline argument was passed" is observable; "the
+prior phase converged" is an opinion. **Inert until 0.3.0:** no lorestrom skill passes it until
+the orchestrators arrive (runtime contract, "Scope of this version").
 
 When it is present:
 
@@ -48,19 +50,19 @@ Absent the argument every gate below behaves exactly as written; the interactive
 
 ## Worktree addressing (run before Setup)
 
-Every active work unit lives in an isolated git worktree created by `lorestrom:propose`, and **minerva never calls `EnterWorktree`** — the session cwd stays the parent repo and every path carries the `.lorestrom/worktrees/<date-slug>/` prefix. The full protocol — the primary path, the resurrection path when the worktree is gone, and the bail when neither location has the unit — lives in `references/worktree-addressing.md`. **Read it before Setup.**
+Every active work unit's code lives in an isolated git worktree created by `lorestrom:propose`, and **lorestrom never calls `EnterWorktree`** — the session cwd stays the parent repo and every repository path carries the `.lorestrom/worktrees/<date-slug>/` prefix. Records are Lorestrom docs, never files. The full protocol — the primary path, the resurrection path when the worktree is gone, and the bail when the unit has no doc — lives in `references/worktree-addressing.md`. **Read it before Setup.**
 
 ## Setup (run at the start of every `lorestrom:work` invocation)
 
-All paths below are **prefixed with** the worktree root (`.lorestrom/worktrees/<date-slug>/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .lorestrom/worktrees/<date-slug> …`. `<date-slug>` is a checked id (runtime contract, "Names are data").
+Repository paths are **prefixed with** the worktree root (`.lorestrom/worktrees/<date-slug>/`); the session cwd stays the parent repo, so write each path out in full and run git as `git -C .lorestrom/worktrees/<date-slug> …`. `<date-slug>` is a checked id (runtime contract, "Names are data"). Records come from `storage:unit.read`.
 
-1. Read `.minerva/work/<date-slug>/proposal.md`.
-2. Read **all** `.minerva/work/<date-slug>/replan.md` entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
-3. Read `.minerva/work/<date-slug>/scratchpad.md` to figure out where work left off.
+1. Read the proposal record.
+2. Read **all** replan record entries chronologically. When the latest replan conflicts with the original proposal, the replan wins.
+3. Read the scratchpad record to figure out where work left off.
 4. Glance at `git status` and the last 3 commits (run via `git -C .lorestrom/worktrees/<date-slug>`) to corroborate.
-5. **Resolve open questions.** If `## Open Questions` in `proposal.md` has unresolved items, surface them to the user before implementation begins:
+5. **Resolve open questions.** If `## Open Questions` in the proposal has unresolved items, surface them to the user before implementation begins:
    > "The proposal lists these open questions — let's settle them before implementing: [list]. Once answered, I'll edit the proposal to record the resolutions."
-   When the user answers, edit `proposal.md` to either remove resolved items from `## Open Questions` or move them into `## Approach` as decisions.
+   When the user answers, replace the proposal record (`storage:record.write`: read it, then `mode: replace`) to either remove resolved items from `## Open Questions` or move them into `## Approach` as decisions.
 6. **Summarize the resumption point** to the user in one short paragraph: what the goal is, what's been done, what's next. Confirm before proceeding.
 
 **Under `--auto`, skip steps 5-6** — the orchestrator owns both.
@@ -69,7 +71,7 @@ All paths below are **prefixed with** the worktree root (`.lorestrom/worktrees/<
 
 ### Scratchpad maintenance
 
-As you work, log to `scratchpad.md`. The bar for an entry is: **a future-self might want to see this**. Examples:
+As you work, log to the scratchpad record (`storage:record.write`, `mode: append`). The bar for an entry is: **a future-self might want to see this**. Examples:
 
 - An approach that was tried and dropped (with why)
 - A surprising constraint or gotcha
@@ -87,7 +89,7 @@ When a peer session messages you, read `skills/propose/references/cross-session.
 
 ### Divergence detection
 
-Continuously check: does the approach I'm taking still match `proposal.md` (as superseded by the latest `replan.md`)?
+Continuously check: does the approach I'm taking still match the proposal (as superseded by the latest replan entry)?
 
 **Invoke the `lorestrom:replan` skill (via the skill loader)** when reality diverges in a load-bearing way:
 - A core assumption from the proposal turns out to be wrong.
@@ -105,7 +107,7 @@ Continuously check: does the approach I'm taking still match `proposal.md` (as s
 
 Implementation is **done** when every item in `## Success criteria` (as amended by replans) can be honestly checked off. Before suggesting `lorestrom:promote`:
 
-1. Re-read `## Success criteria` from `proposal.md`.
+1. Re-read `## Success criteria` from the proposal record.
 2. For each item, state objectively whether it's met (with evidence: tests pass, file exists, behavior verified, etc.).
 3. If any item is not met, do not suggest promote — keep working or trigger `lorestrom:replan` if the criterion itself is wrong.
 4. If every item is met, surface this checklist to the user and recommend `lorestrom:promote` as the next step. Do not run promote automatically — that's the user's call. **Under `--auto`, return the checklist to `<orchestrator>`'s completion-verification gate instead.**

@@ -27,7 +27,7 @@ Walk down the decision tree of the drafted plan one question at a time, resolvin
 
 2. **Lead with your recommended answer.** For every question, state what you think the answer is based on the draft and project context, then ask the user to confirm or correct. Example: "The Approach says X. I'd expect this means Y because Z — is that right?"
 
-3. **Prefer codebase exploration over asking.** If a question can be resolved by reading code, `.minerva/knowledge/`, prior proposals, or other repo files, do that instead of asking the user. Only ask when the answer genuinely lives in the user's head.
+3. **Prefer codebase exploration over asking.** If a question can be resolved by reading code, this project's lore (`storage:knowledge.list`), prior proposals, or other repo files, do that instead of asking the user. Only ask when the answer genuinely lives in the user's head.
 
 4. **Push on the load-bearing parts.** Probe assumptions the plan is leaning on, ambiguities a reader could resolve two ways, success criteria that aren't objectively checkable, edge cases the Approach doesn't address, scope that might be drifting. Don't run a fixed checklist — let the plan itself tell you what to probe.
 

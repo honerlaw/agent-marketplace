@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The minerva analog of brainstorming — a divergent, commitment-free dialogue that writes no file, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `lorestrom:propose` to design it. Use `lorestrom:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a minerva project (`.minerva/` present), use this instead of generic brainstorming skills — it is the minerva-native front-end that hands off to `lorestrom:propose`.
+description: Use when the user wants to explore a fuzzy idea, think through a problem, or weigh directions BEFORE committing to a work unit — when it's not yet clear whether there's anything to build, or what. The lorestrom analog of brainstorming — a divergent, commitment-free dialogue that writes no file or Lorestrom doc, allocates no work unit, and creates no branch/worktree. Asks questions one at a time and weighs multiple high-level directions; may legitimately end in "don't build this" or "reframe the problem". When a direction is chosen, hands off to `lorestrom:propose` to design it. Use `lorestrom:propose` directly instead when you already know what you want to build and are ready to commit to a proposal. In a repository linked to Lorestrom, use this instead of generic brainstorming skills — it is the lorestrom-native front-end that hands off to `lorestrom:propose`.
 ---
 
 ## Runtime
@@ -9,13 +9,13 @@ Read `skills/using-lorestrom/references/runtime.md` before executing; follow its
 
 # Explore an idea
 
-Turn a fuzzy idea into clarity through open-ended, collaborative dialogue — **before** committing to any plan. This is minerva's divergent, exploratory front-end: the phase you reach for when you're not yet sure there's a work unit here at all, or what the real problem even is. It mirrors `superpowers:brainstorming`, adapted to the minerva lifecycle.
+Turn a fuzzy idea into clarity through open-ended, collaborative dialogue — **before** committing to any plan. This is lorestrom's divergent, exploratory front-end: the phase you reach for when you're not yet sure there's a work unit here at all, or what the real problem even is. It mirrors `superpowers:brainstorming`, adapted to the lorestrom lifecycle.
 
 ## What makes explore different from propose
 
-`explore` is **commitment-free by construction.** It **writes no file**, allocates no work unit (no slug, no date id), and creates no branch or worktree. Everything it produces lives in the conversation. That is the whole point: exploration should cost nothing to abandon.
+`explore` is **commitment-free by construction.** It **writes no file and no Lorestrom doc**, allocates no work unit (no slug, no date id), and creates no branch or worktree. Everything it produces lives in the conversation. That is the whole point: exploration should cost nothing to abandon.
 
-`lorestrom:propose`, by contrast, is *convergent* — its job is to produce the `proposal.md` artifact (plus the branch and worktree). Reach for `lorestrom:propose` directly when you already know what you want to build. Reach for `explore` when you don't yet.
+`lorestrom:propose`, by contrast, is *convergent* — its job is to produce the unit's proposal record (plus the branch and worktree). Reach for `lorestrom:propose` directly when you already know what you want to build. Reach for `explore` when you don't yet.
 
 The two diverge on **different axes** and compose cleanly, so a handoff is never redundant:
 
@@ -28,7 +28,7 @@ Exploration is conversation only — everything it produces lives in the transcr
 
 ## The process
 
-1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, `.minerva/knowledge/` (start from the derived catalog — the Routing section's one-liner, grouped by theme), and a couple of recent `.minerva/work/*/proposal.md` files. Understand what already exists before exploring what might.
+1. **Explore project context first.** Skim `CLAUDE.md` / `AGENTS.md`, the project's lore (`storage:knowledge.list`, one line per entry grouped by theme, then `storage:knowledge.read` what bears on the idea), and a couple of recent units' proposals (`storage:unit.list`, `storage:unit.read`). With no link, no server or no project, explore without lore and say so in one line. Understand what already exists before exploring what might.
 
 2. **Ask questions one at a time.** Prefer multiple-choice, but open-ended is fine. Only one question per message — if a topic needs more exploration, break it into several questions across several messages. Focus on understanding the *problem*: who has it, why it matters, what constrains it, what "better" would look like. Resist jumping to solutions.
 
@@ -53,6 +53,6 @@ Passing the direction inline lets `lorestrom:propose` pick up exactly where expl
 
 ## Out of scope
 
-- **Writing anything durable.** `explore` produces no `proposal.md`, no `scratchpad.md`, no knowledge entry, and no notes file. If exploration surfaces something genuinely durable mid-stream, that is the signal you are ready to hand off to `lorestrom:propose` — not a reason to start writing files here.
+- **Writing anything durable.** `explore` produces no proposal, no scratchpad, no knowledge entry, no Lorestrom doc and no notes file. If exploration surfaces something genuinely durable mid-stream, that is the signal you are ready to hand off to `lorestrom:propose` — not a reason to start writing files here.
 - **Stress-testing a drafted plan.** That is `lorestrom:grill-plan`'s job — it interrogates an already-*drafted* plan to convergence. `explore` is upstream of any draft, so the two do not overlap.
 - **Implementation.** `explore` never writes code. It stops at shared understanding of the problem and a chosen direction (or a decision not to proceed).

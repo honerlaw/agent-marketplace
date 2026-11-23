@@ -1,45 +1,41 @@
-# propose — on approval: worktree setup + file writes
+# propose — on approval: unit, worktree and records
 
-## On approval — worktree setup + file writes
+## On approval — unit setup + record writes
 
-Steps 1–6 run from the parent repo (typically on the default branch). `<date-slug>` is a checked id: see the runtime contract's "Names are data". Step 7 establishes how to address the worktree. Steps 8–13 write into the worktree **via its prefixed path** — the session's working directory never changes.
+Steps 1–5 run from the parent repo (typically on the default branch). `<date-slug>` is a checked id: see the runtime contract's "Names are data". The unit's records are Lorestrom docs written through `storage:` operations (`skills/using-lorestrom/references/storage.md`); code lives in the worktree, addressed **via its prefixed path** — the session's working directory never changes.
 
-**Non-git repo escape clause:** in a non-git project (no `.git/` directory at the project root), there's nothing to commit and no worktree to create. Skip steps 4, 5, 6, 7, and 11 entirely; run steps 1–3 (the date id needs no git), then jump from step 3 to step 8 — create `.minerva/work/<date-slug>/` directly at the project root and continue with steps 9, 10, 12, 13.
+**Prerequisites:** a Git repository linked to Lorestrom, with its MCP server connected. Without either, stop before step 1 and name `lorestrom:init`: nothing is written to a file instead.
 
 1. **Derive the slug silently** from the confirmed goal title: lowercase, replace whitespace/underscores with `-`, strip everything outside `[a-z0-9-]`.
 
-2. **Duplicate slug check** — look for `.minerva/work/<date-slug>/`, `.lorestrom/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing path / branch and suggest `lorestrom:replan` if they want to course-correct an in-flight work unit.
+2. **Duplicate slug check** — look for a unit id ending `-<slug>` among this project's units (`storage:unit.list`), `.lorestrom/worktrees/<date-slug>/`, and any branch named `*-<slug>` **or `*-<slug>-phase-*`** (`git branch --list "*-<slug>" "*-<slug>-phase-*"`, and the same two patterns via `git branch -r --list`). If found, do **not** proceed. Tell the user the existing unit / branch and suggest `lorestrom:replan` if they want to course-correct an in-flight work unit.
 
    The `-phase-*` pattern is not optional. A phased unit's later phases live on `<date-slug>-phase-N` branches (see [phasing.md](phasing.md)), and `*-<slug>` cannot match them — the slug is no longer the tail. Without the second pattern this check reads clean against a unit that is actively mid-flight on phase 2, which is the exact false-clean this step exists to prevent.
 
 3. **Take today's date as the unit's id** — `date +%F`, giving `YYYY-MM-DD`. The unit is `<YYYY-MM-DD>-<slug>`.
 
-   No scan, no max+1, no cross-branch comparison: a date is read off the clock, so two units started in parallel never negotiate for an id. **Several units sharing a date is expected**, because a unit is identified by its whole `<date>-<slug>`, not by the date alone. The duplicate-**slug** check in step 2 is what prevents a genuine collision, and it already runs against every source.
+   No scan, no max+1, no cross-branch comparison: a date is read off the clock, so two units started in parallel never negotiate for an id. **Several units sharing a date is expected**, because a unit is identified by its whole `<date>-<slug>`, not by the date alone. The duplicate-**slug** check in step 2 is what prevents a genuine collision, and `storage:unit.create` refuses a key another unit holds.
 
-   This replaced a three-source NNN scan. That scan existed because a number is scarce — two units picking the same one collided invisibly. It is not needed for a date, and keeping it would reintroduce the coordination it was written to fix.
+4. **Self-review the approved draft** (step 9 below) before anything is written, then **create the unit**: `storage:unit.create`. It saves an operation token, creates the unit doc and opens its gate; an interrupted create resumes on a retry, and a key held by another unit is a duplicate id: choose another slug. `minerva:base` is the default branch's commit, read in the same shell call as the default-branch snippet.
 
-4. **Resolve the default branch** with the runtime contract's default-branch snippet ("Names are data"), repeated in each shell call below that uses `BASE`.
+5. **Pre-flight ignore check** — verify `.lorestrom/worktrees/` is ignored: `git check-ignore -q .lorestrom/worktrees/probe`. `lorestrom:init` ignores it in this clone (or in `.gitignore` with `--shared`).
 
-5. **Pre-flight gitignore check** — verify `.lorestrom/worktrees/` is ignored on the default branch. Check the default branch's `.gitignore` (not just the current working tree's) via `: "${BASE:?}" && git show "${BASE:?}:.gitignore" 2>/dev/null` piped to grep for a line matching `.lorestrom/worktrees/` (or a parent pattern like `.minerva/`).
+   - If ignored → continue.
+   - If not → **abort**: "`.lorestrom/worktrees/` is not ignored here. Run `lorestrom:init` first, then re-run `lorestrom:propose`." The unit doc stays: a re-run finds it by its token and continues.
 
-   - If present → continue.
-   - If missing → **abort**: "The `.lorestrom/worktrees/` entry is missing from `.gitignore` on the default branch. Run `lorestrom:init` first to install it (init handles this idempotently), or add `.lorestrom/worktrees/` to `.gitignore` and commit on the default branch manually before re-running `lorestrom:propose`."
+   Do not edit `.gitignore` from propose: propose may be invoked from inside another worktree, where the change would land on the wrong branch.
 
-   Do not auto-edit `.gitignore` from propose: propose may be invoked from inside another worktree, where editing `.gitignore` would land the change on the wrong branch. Init is the one place that installs this entry.
-
-6. **Create the worktree and branch**, in the same shell call as the default-branch snippet:
+6. **Create the worktree and branch**, in the same shell call as the runtime contract's default-branch snippet ("Names are data"):
 
    ```
    git worktree add --no-track -b <date-slug> .lorestrom/worktrees/<date-slug> "${BASE:?}"
    ```
 
-   Branching explicitly from the default branch (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the work-unit directory so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch. Legacy branches keep their old `NNN-` names; only new ones are dated.
+   Branching explicitly from the default branch (not HEAD) prevents accidentally stacking the new work unit on top of another in-flight branch when propose is invoked from another worktree. The branch name matches the unit id so reviewers can tie a branch to its unit, and so the duplicate-slug check picks up in-flight worktrees by branch.
 
-7. **Address the worktree directly — do *not* call `EnterWorktree`.** minerva worktrees live under `.lorestrom/worktrees/`, which must be addressed directly in either host, so minerva never uses a host-managed worktree switch. The session's working directory stays the parent repo. For every remaining step, prefix each file path with `.lorestrom/worktrees/<date-slug>/` and run each git command as `git -C .lorestrom/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch (see `.minerva/knowledge/008-constraint-enter-worktree-absolute-paths.md`).
+7. **Address the worktree directly — do *not* call `EnterWorktree`.** lorestrom worktrees live under `.lorestrom/worktrees/`, which must be addressed directly in either host. The session's working directory stays the parent repo. For every later code step, prefix each file path with `.lorestrom/worktrees/<date-slug>/` and run each git command as `git -C .lorestrom/worktrees/<date-slug> …`. Relative paths resolve to the parent repo and will silently land edits on the wrong branch.
 
-8. **Create the work-unit directory** `.minerva/work/<date-slug>/`, addressed via the step-7 prefix (i.e. `.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/`).
-
-9. **Write `proposal.md`** using the approved content, structured as:
+8. **Write the proposal record** (`storage:record.write`, record `proposal`) using the approved content, structured as:
 
    ```markdown
    # Proposal: <slug>
@@ -103,7 +99,7 @@ Steps 1–6 run from the parent repo (typically on the default branch). `<date-s
    or the branch name — a wrong auto-close destroys a real record, which is why the linkage
    is authored rather than guessed.
 
-   Also write `scratchpad.md` with this header and nothing else:
+   Also write the scratchpad record (`storage:record.write`, record `scratchpad`) with this header and nothing else:
 
    ```markdown
    # Scratchpad: <slug>
@@ -111,53 +107,24 @@ Steps 1–6 run from the parent repo (typically on the default branch). `<date-s
    > **Ephemeral working memory.** Most of what lands here is noise — small
    > decisions that don't matter, dead ends, momentary confusion. At feature
    > completion, run `lorestrom:promote`: significant items get promoted to
-   > `.minerva/knowledge/`, `proposal.md` gets updated to match reality, and
+   > knowledge entries, the proposal gets updated to match reality, and
    > the raw scratchpad is archived.
 
    ```
 
-10. **Self-review the written proposal.** Re-read `proposal.md` with fresh eyes and fix inline:
+9. **Self-review the written proposal.** Re-read the proposal draft with fresh eyes and fix it before it is written:
     - **Placeholders** — any `TBD`, `TODO`, vague phrasing, or incomplete sections.
     - **Internal consistency** — does `## Approach` actually achieve `## Goal`? Do `## Success criteria` cover what `## Goal` promises?
     - **Ambiguity** — could any requirement be read two different ways? Pick one and make it explicit.
     - **Scope** — is this still a single work unit? If the prose grew past what one PR can carry, the answer is almost always to add a `## Phases` section (see [phasing.md](phasing.md)), **not** to re-decompose: the ceremony of a second unit is real and the ceremony of a second phase is not. Re-decompose with the user only when the drift is into genuinely independent subsystems — work that would not share a proposal, a reviewer, or a record.
-    - **Phase numbering** — only if the proposal declares `## Phases`. Ask the parser, not your eyes:
-
-      ```bash
-      # The PRIMARY checkout, resolvable from any CWD. `--show-toplevel` returns the LINKED
-      # worktree when invoked inside one, and these paths reach *into* .lorestrom/worktrees/.
-      ROOT="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
-      PLUGIN_SCRIPTS="$(python3 "$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$LORESTROM_SKILL_FILE")" || exit 1
-      [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
-      python3 -c "
-      import sys; sys.path.insert(0, sys.argv[1])
-      from work_status import read_phases, phase_numbering_gaps, phase_name
-      phases = read_phases(open(sys.argv[2]).read())
-      print('phases:', [(n, phase_name(t)) for n, t in phases])
-      print('numbering gaps:', phase_numbering_gaps(phases))
-      " "$PLUGIN_SCRIPTS" "$ROOT/.lorestrom/worktrees/<date-slug>/.minerva/work/<date-slug>/proposal.md"
-      ```
-
-      **If this raises `ImportError: cannot import name 'read_phases'`,** update the installed Minerva package or explicitly choose a complete `LORESTROM_SCRIPTS` directory. Never silently fall back to consumer code.
-
-      Any gap means a written ordinal disagrees with the phase's position. **Fix the proposal** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check the printed names: a phase whose name comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
+    - **Phase numbering** — only if the draft declares `## Phases`. Ask the parser, not your eyes: write `{"proposal": <the draft>}` to a `mktemp` file with a file tool and run the helper's `phases --unit <date-slug>` on it (runtime contract, "Installed paths and helpers"). Any entry in `gaps` means a written ordinal disagrees with the phase's position. **Fix the draft** so the two agree. Everything downstream keys off *position*, so a duplicated `2.` renders fine in markdown while pointing two phases at one branch — silent, and only visible by asking. Also sanity-check each phase's `name`: one that comes back as a fragment usually means the item is missing the `**Name** — …` opening the template asks for.
 
     Fix issues inline. No need to re-review — just fix and move on.
 
-11. **Commit the initial docs on the branch:**
+10. **Post-write user gate.** Report what was created and ask:
 
-    ```
-    git -C .lorestrom/worktrees/<date-slug> add .minerva/work/<date-slug>/
-    git -C .lorestrom/worktrees/<date-slug> commit -m "chore: initialize <date-slug> work unit"
-    ```
+    > "Unit `<date-slug>` created in Lorestrom with its proposal and scratchpad, on branch `<date-slug>` in worktree `.lorestrom/worktrees/<date-slug>/`. Please review the proposal and let me know if you want to change anything before we start work."
 
-    (In a non-git repo, skip this step — there's no branch to commit on.)
+    Show the proposal's text in the conversation as well. Wait for the user's response. If they request changes, replace the proposal record (`storage:record.write`: read it, then `mode: replace`) and re-run the self-review; Lorestrom keeps each version. Only once the user approves the written proposal is it considered final. No commit is made: the branch starts at the default branch, and records never enter git.
 
-12. **Post-write user gate.** Report the created path and ask:
-
-    > "Proposal written to `.minerva/work/<date-slug>/proposal.md` on branch `<date-slug>` in worktree `.lorestrom/worktrees/<date-slug>/`. Please review the file directly and let me know if you want to change anything before we start work."
-
-    Wait for the user's response. If they request changes, edit `proposal.md` directly, re-run the self-review, and create a **follow-up commit** (no `--amend` — the initial commit was already published as the branch's starting state). Only once the user approves the written file is the proposal considered final.
-
-13. Suggest `lorestrom:work` as the next step. The work skill will detect the existing worktree and address it by the same prefix.
-
+11. Suggest `lorestrom:work` as the next step. The work skill will detect the existing worktree and address it by the same prefix.

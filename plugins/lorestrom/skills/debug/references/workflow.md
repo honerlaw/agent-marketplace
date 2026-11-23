@@ -10,7 +10,7 @@ Collect evidence before forming any diagnosis. This phase produces an evidence l
 
 2. **Identify the candidate failing layer.** Which subsystem owns the symptom? Which call site does the evidence point at? If you're not sure, plan to pull evidence from multiple plausible layers and let the data pick.
 
-3. **Load relevant project references.** Use the discovery mechanism below to read `.minerva/reference/` files that describe how the failing layer works in this project. Also skim `.minerva/knowledge/` for past learnings — decisions, bugs, patterns, constraints, and standing references — that match the symptom.
+3. **Load relevant project references.** Use the discovery mechanism below to read the reference docs that describe how the failing layer works in this project. Also skim the knowledge catalog (`storage:knowledge.list`) for past learnings — decisions, bugs, patterns, constraints, and standing references — that match the symptom.
 
 4. **Pull evidence.** Gather concrete artifacts from multiple sources:
    - *Live incidents*: logs, metrics, dashboard panels, runtime state via read-only CLI access, read-only queries against operational stores.
@@ -23,7 +23,7 @@ Collect evidence before forming any diagnosis. This phase produces an evidence l
 
    Evidence is defined as the literal output of a tool invocation. Agent narration and interpretation are NOT evidence — they can accompany evidence entries as analysis, but they cannot substitute for tool output.
 
-6. **Always check the pattern catalog.** If `.minerva/reference/` contains a `bug-patterns.md`, `incidents.md`, or similarly-named pattern catalog, load it on every debug regardless of symptom — it's a cheap "have we seen this" check. If the symptom matches an entry, name the pattern explicitly.
+6. **Always check the pattern catalog.** If the reference docs include a `bug-patterns`, `incidents`, or similarly-named pattern catalog, load it on every debug regardless of symptom — it's a cheap "have we seen this" check. If the symptom matches an entry, name the pattern explicitly.
 
 7. **Minimum-breadth gate.** Do not proceed to Phase 2 until the evidence ledger contains entries from **>=2 distinct artifact categories**. If it does not, continue gathering.
 
@@ -119,21 +119,24 @@ Two sub-sections:
 
 ## Reading the project: knowledge vs. reference
 
-The `.minerva/` directory has two read tiers, and this skill uses both differently:
+The project's lore in Lorestrom has two read tiers, and this skill uses both differently:
 
-- **`.minerva/knowledge/`** — atomic, past-tense, durable learnings. Files named `<YYYY-MM-DD>-<type>-<slug>.md` where type is `decision`, `bug`, `constraint`, `pattern`, or `reference`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
+- **Knowledge entries** (`storage:knowledge.list`, `storage:knowledge.read`) — atomic, past-tense, durable learnings. Ids shaped `<YYYY-MM-DD>-<type>-<slug>` where type is `decision`, `bug`, `constraint`, `pattern`, or `reference`. Append-only. This is "what we learned" about this project, one concept per file. Debug uses it for "have we seen this symptom before?" pattern matching, and for understanding load-bearing constraints that might explain the failure.
 
-- **`.minerva/reference/`** — thematic, present-tense, operational facts about how the system is configured *right now*. Files named by topic (`topology.md`, `observability.md`, `database.md`, etc.). Replace-on-change. Debug uses it for "how does this layer work in this project?" — the operational map.
+- **Reference docs** (`storage:reference.read`) — thematic, present-tense, operational facts about how the system is configured *right now*. Docs named by topic (`topology`, `observability`, `database`, etc.). Replace-on-change. Debug uses it for "how does this layer work in this project?" — the operational map.
 
-The distinction is time-shape: knowledge accumulates; reference snapshots. New durable learnings from a debug go to knowledge via `lorestrom:promote`. Updates to operational facts overwrite the relevant reference file directly.
+The distinction is time-shape: knowledge accumulates; reference snapshots. New durable learnings from a debug go to knowledge via `lorestrom:promote`. An update to an operational fact replaces the relevant reference doc:
 
-## `.minerva/reference/` discovery
+- **Inside a unit** (the debug runs in a unit's worktree, or the user names one): `storage:reference.write`, held on the unit's gate until it merges.
+- **Outside any unit:** `storage:reference.update`, a live replace. Show the new text and wait for the user's yes; check open units' gates first and, if one holds a write on that doc, ask how to proceed, as the row says. Never write it without both answers. Never edit a reference file in the repository instead: in a linked repository Lorestrom is authoritative.
+
+## Reference discovery
 
 The skill cannot bake in project-specific filenames, so reference loading is dynamic:
 
-1. **List first.** `ls .minerva/reference/` to see what exists in this project. Don't read everything blindly.
-2. **Symptom-driven selection.** Pick 1-3 files for full read based on filenames + the one-sentence symptom restatement. Filenames are descriptive by convention (`topology.md` for system layout, `observability.md` for logging/metrics conventions, `database.md` for schema and read-only query recipes, etc.) — filename + symptom is enough to pick relevance without reading contents first.
-3. **Always load the pattern catalog.** Files matching `bug-patterns.md`, `incidents.md`, `patterns.md`, or similar pattern-catalog names get loaded on every debug regardless of symptom-based selection.
+1. **List first.** List this project's reference docs (`storage:reference.read`: titles and `minerva:path` only) to see what exists. Don't read everything blindly.
+2. **Symptom-driven selection.** Pick 1-3 files for full read based on filenames + the one-sentence symptom restatement. Paths are descriptive by convention (`topology.md` for system layout, `observability.md` for logging/metrics conventions, `database.md` for schema and read-only query recipes, etc.) — path + symptom is enough to pick relevance without reading contents first.
+3. **Always load the pattern catalog.** Docs whose path matches `bug-patterns.md`, `incidents.md`, `patterns.md`, or similar pattern-catalog names get loaded on every debug regardless of symptom-based selection.
 
-If `.minerva/reference/` doesn't exist or is empty, fall back to reading the codebase directly — the workflow still applies, you just have less project-specific context to lean on.
+If the project has no reference docs, or the repository is not linked, fall back to reading the codebase directly — the workflow still applies, you just have less project-specific context to lean on.
 
