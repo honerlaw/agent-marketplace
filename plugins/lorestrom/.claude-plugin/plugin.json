@@ -1,0 +1,8 @@
+{
+  "name": "lorestrom",
+  "version": "0.1.0",
+  "description": "minerva's durable records, kept in Lorestrom: link a repository to a shared Lorestrom workspace and publish its knowledge, read across repositories, people and agents.",
+  "author": {
+    "name": "Derek Honerlaw"
+  }
+}

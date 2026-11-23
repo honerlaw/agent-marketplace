@@ -16,6 +16,11 @@
       "name": "minerva",
       "source": "./plugins/minerva",
       "description": "Durable record discipline for software work — promotion, not accumulation. Proposal → work → replan → promote, with a persistence hierarchy of decisions, proposals, and scratchpads."
+    },
+    {
+      "name": "lorestrom",
+      "source": "./plugins/lorestrom",
+      "description": "minerva's durable records kept in Lorestrom — link a repository to a shared Lorestrom workspace through its MCP server and publish its knowledge. No local file mode; 0.1.0 connects and publishes, the lifecycle arrives in 0.2.0."
     }
   ]
 }
