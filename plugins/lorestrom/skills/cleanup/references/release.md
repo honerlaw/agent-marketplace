@@ -13,7 +13,7 @@ is a row of `skills/using-lorestrom/references/storage.md`.
 1. Read the unit doc (`storage:unit.read`): its recorded `minerva:base` and, for each phase,
    `minerva:head_<n>` and `minerva:pr_<n>`. The phase count comes from the proposal's
    `## Phases` (1 when unphased). A phase with no recorded head has not shipped: it waits.
-2. For each recorded PR, read its state with `gh pr view <n> --json state` (the number comes
+2. For each recorded PR, read its state with `gh pr view <pr> --json state` (the number, all digits, comes
    from the unit doc, written there by `lorestrom:ship` from `gh` output). Never type a state.
 3. Write `{"phases", "heads", "base", "prs", "abandon", "merged", "age_days"}` to a `mktemp`
    file and run the helper's `reconcile`. It validates every commit, finds the default branch
