@@ -41,38 +41,55 @@ REGISTERED_SITES = {
 _RESOLVE_RE = re.compile(r'PLUGIN_SCRIPTS="\$\(python3 "\$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime\.py" resolve')
 _GUARD_RE = re.compile(r'python3 "\$PLUGIN_SCRIPTS/plugin_guard\.py"')
 
+# The lorestrom plugin carries its own guard and resolves its scripts in one place: the
+# helper block of its runtime contract, which every lorestrom skill repeats.
+LORESTROM_SKILLS = REPO / "plugins" / "lorestrom" / "skills"
+LORESTROM_SITES = {"using-lorestrom/references/runtime.md"}
+_LORESTROM_RESOLVE_RE = re.compile(
+    r'PLUGIN_SCRIPTS="\$\(python3 "\$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime\.py" resolve')
 
-def _docs():
-    return sorted(p for p in SKILLS.rglob("*.md"))
+# plugin -> (skills directory, registered sites, resolution pattern)
+PLUGINS = {
+    "minerva": (SKILLS, REGISTERED_SITES, _RESOLVE_RE),
+    "lorestrom": (LORESTROM_SKILLS, LORESTROM_SITES, _LORESTROM_RESOLVE_RE),
+}
+CASES = [(plugin, rel) for plugin, (_, sites, _) in PLUGINS.items() for rel in sorted(sites)]
 
 
-def _resolving_files():
-    return {p for p in _docs() if _RESOLVE_RE.search(p.read_text())}
+def _docs(skills=SKILLS):
+    return sorted(p for p in skills.rglob("*.md"))
 
 
-def test_the_registered_set_matches_reality():
+def _resolving_files(skills=SKILLS, resolve=_RESOLVE_RE):
+    return {p for p in _docs(skills) if resolve.search(p.read_text())}
+
+
+@pytest.mark.parametrize("plugin", PLUGINS)
+def test_the_registered_set_matches_reality(plugin):
     """A new resolution site must be registered, not silently unguarded."""
-    found = {str(p.relative_to(SKILLS)) for p in _resolving_files()}
-    registered = set(REGISTERED_SITES)
+    skills, sites, resolve = PLUGINS[plugin]
+    found = {str(p.relative_to(skills)) for p in _resolving_files(skills, resolve)}
+    registered = set(sites)
     assert found == registered, (
         f"unregistered resolution sites: {sorted(found - registered)}; "
         f"registered but absent: {sorted(registered - found)}"
     )
 
 
-@pytest.mark.parametrize("rel", sorted(REGISTERED_SITES))
-def test_every_resolution_is_guarded(rel):
+@pytest.mark.parametrize("plugin,rel", CASES)
+def test_every_resolution_is_guarded(plugin, rel):
     """One guard per resolution. Counted, not merely present: a file with two resolution sites
     (e.g. `lint/SKILL.md`) must carry two guards, or one path is unprotected."""
-    text = (SKILLS / rel).read_text()
-    assert len(_GUARD_RE.findall(text)) == len(_RESOLVE_RE.findall(text)), (
-        f"{rel}: {len(_RESOLVE_RE.findall(text))} resolution site(s) but "
+    skills, _, resolve = PLUGINS[plugin]
+    text = (skills / rel).read_text()
+    assert len(_GUARD_RE.findall(text)) == len(resolve.findall(text)), (
+        f"{rel}: {len(resolve.findall(text))} resolution site(s) but "
         f"{len(_GUARD_RE.findall(text))} guard(s)"
     )
 
 
-@pytest.mark.parametrize("rel", sorted(REGISTERED_SITES))
-def test_each_resolution_line_is_paired_with_a_guard(rel):
+@pytest.mark.parametrize("plugin,rel", CASES)
+def test_each_resolution_line_is_paired_with_a_guard(plugin, rel):
     """One guard per resolution, positioned so it runs BEFORE the call it protects.
 
     Two shapes exist and both are legal: the assignment on its own line (guard on the next line),
@@ -80,9 +97,10 @@ def test_each_resolution_line_is_paired_with_a_guard(rel):
     before that call). What is illegal is a resolution with no guard reachable from it — and,
     specifically, a guard placed *after* a same-line call, which would run too late.
     """
-    lines = (SKILLS / rel).read_text().splitlines()
+    skills, _, resolve = PLUGINS[plugin]
+    lines = (skills / rel).read_text().splitlines()
     for i, line in enumerate(lines):
-        if not _RESOLVE_RE.search(line):
+        if not resolve.search(line):
             continue
         if "python3 -c" in line or re.search(r'; python3 "', line):
             assert _GUARD_RE.search(line), (
@@ -100,16 +118,24 @@ def test_each_resolution_line_is_paired_with_a_guard(rel):
             )
 
 
-def test_no_guard_reintroduces_the_root_interpolation():
+@pytest.mark.parametrize("plugin", PLUGINS)
+def test_no_guard_reintroduces_the_root_interpolation(plugin):
     """`tests/test_skill_snippets.py` byte-substitutes inside the `python3 -c` payload and then
     asserts no `$ROOT` survives. A guard written as `${PLUGIN_SCRIPTS:-$ROOT/scripts}` tripped
     that on the first attempt; the guard deliberately has no `$ROOT` fallback, which is also
     correct semantically — when PLUGIN_SCRIPTS is empty the fallback IS the working tree, so
     there is nothing to diverge from."""
+    skills, _, resolve = PLUGINS[plugin]
     invocation = re.compile(r'\[ -n "\$PLUGIN_SCRIPTS" \][^;]*;[^}]*\}')
-    for p in _resolving_files():
+    for p in _resolving_files(skills, resolve):
         for m in invocation.finditer(p.read_text()):
             # Scoped to the guard invocation itself: a combined line legitimately carries $ROOT
             # in its own `ROOT=` assignment and in the program body it feeds.
             assert "$ROOT" not in m.group(0), (
-                f"{p.relative_to(SKILLS)}: guard reintroduced $ROOT: {m.group(0)}")
+                f"{p.relative_to(skills)}: guard reintroduced $ROOT: {m.group(0)}")
+
+
+def test_each_plugin_resolves_through_its_own_runtime():
+    """Lorestrom's sites never resolve minerva's scripts, and minerva's never lorestrom's."""
+    assert not _resolving_files(LORESTROM_SKILLS, _RESOLVE_RE)
+    assert not _resolving_files(SKILLS, _LORESTROM_RESOLVE_RE)

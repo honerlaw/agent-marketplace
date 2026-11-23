@@ -8,6 +8,14 @@ REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins/minerva"
 SKILLS = PLUGIN / "skills"
 REFERENCES = SKILLS / "using-minerva/references"
+# Plugins whose skills share the runtime-pointer and host-tool checks, each with the skill
+# that owns its runtime contract and the files allowed to name Claude-only tools.
+PLUGINS = {
+    "minerva": ("using-minerva", {REFERENCES / "claude.md", SKILLS / "init/references/steps.md"}),
+    "lorestrom": ("using-lorestrom", {REPO / "plugins/lorestrom/skills/using-lorestrom/references/claude.md"}),
+}
+ALL_SKILLS = sorted(path for plugin in PLUGINS
+                    for path in (REPO / "plugins" / plugin / "skills").glob("*/SKILL.md"))
 
 
 def claude_dispatch_contract(body):
@@ -35,10 +43,11 @@ def test_both_manifests_expose_the_same_canonical_skill_tree_and_version():
     assert (REPO / entry["source"]["path"]).resolve() == PLUGIN
 
 
-@pytest.mark.parametrize("skill", sorted(SKILLS.glob("*/SKILL.md")), ids=lambda p: p.parent.name)
+@pytest.mark.parametrize("skill", ALL_SKILLS, ids=lambda p: f"{p.parents[2].name}:{p.parent.name}")
 def test_every_skill_requires_the_shared_runtime(skill):
     body = skill.read_text()
-    pointer = "references/runtime.md" if skill.parent.name == "using-minerva" else "skills/using-minerva/references/runtime.md"
+    owner = PLUGINS[skill.parents[2].name][0]
+    pointer = "references/runtime.md" if skill.parent.name == owner else f"skills/{owner}/references/runtime.md"
     assert "## Runtime" in body
     assert pointer in body
     assert f"Read `{pointer}` before executing" in body
@@ -64,11 +73,19 @@ def test_missing_codex_dispatch_protection_is_rejected(pin):
     assert not codex_dispatch_contract(body.replace(pin, ""))
 
 
-def test_only_host_adapter_names_claude_skill_and_question_tools():
-    for path in SKILLS.rglob("*.md"):
-        if path in {REFERENCES / "claude.md", SKILLS / "init/references/steps.md"}:
+@pytest.mark.parametrize("plugin", PLUGINS)
+def test_only_host_adapter_names_claude_skill_and_question_tools(plugin):
+    allowed = PLUGINS[plugin][1]
+    for path in (REPO / "plugins" / plugin / "skills").rglob("*.md"):
+        if path in allowed:
             continue
         body = path.read_text()
         assert "AskUserQuestion" not in body, path
         assert "ScheduleWakeup" not in body, path
         assert "via the `Skill`" not in body, path
+
+
+def test_every_plugin_with_skills_is_checked():
+    assert {p.parents[2].name for p in ALL_SKILLS} == set(PLUGINS)
+    for _, allowed in PLUGINS.values():
+        assert all(path.is_file() for path in allowed)

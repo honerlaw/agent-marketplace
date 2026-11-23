@@ -1,0 +1,16 @@
+{
+  "name": "lorestrom",
+  "version": "0.1.0",
+  "description": "minerva's durable records, kept in Lorestrom, in Claude Code and Codex.",
+  "author": {"name": "Derek Honerlaw"},
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lorestrom",
+    "shortDescription": "minerva records in Lorestrom",
+    "longDescription": "Link a repository to a Lorestrom workspace through its MCP server and publish its minerva knowledge for other repositories, people and agents to read.",
+    "developerName": "Derek Honerlaw",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["Link this repository to Lorestrom."]
+  }
+}

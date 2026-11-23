@@ -292,3 +292,47 @@ def test_guard_still_allows_every_read_only_gh_command_in_the_corpus():
         "gh auth status",
     ]:
         assert not mutating_commands(cmd), f"{cmd!r} wrongly rejected as mutating"
+
+
+# --- lorestrom: the runtime contract's helper block, executed ---------------------
+
+LORESTROM = REPO / "plugins" / "lorestrom"
+
+
+def lorestrom_helper_block() -> str:
+    """The helper block from lorestrom's runtime contract (read-only: it resolves)."""
+    blocks = fenced_blocks(LORESTROM / "skills" / "using-lorestrom" / "references" / "runtime.md",
+                           "bash", contains="lorestrom_backend.py")
+    assert len(blocks) == 1, f"expected one helper block, found {len(blocks)}"
+    return blocks[0]
+
+
+@pytest.mark.parametrize("shell", ["bash", "zsh"])
+def test_the_lorestrom_helper_block_resolves_a_scratch_repository(tmp_path, shell):
+    import json
+    import os
+    import shutil
+    if not shutil.which(shell):
+        pytest.skip(f"{shell} not installed")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin",
+                    "git@example.com:acme/api.git"], check=True)
+    env = {**os.environ, "LORESTROM_PLUGIN_ROOT": str(LORESTROM),
+           "LORESTROM_SKILL_FILE": str(LORESTROM / "skills" / "init" / "SKILL.md")}
+    env.pop("LORESTROM_SCRIPTS", None)
+    result = subprocess.run([shell, "-c", lorestrom_helper_block()], cwd=repo, env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"state": "discover", "link": None, "source": None,
+                                         "remote": "example.com/acme/api"}
+
+
+def test_the_lorestrom_helper_block_stops_on_a_foreign_skill_file(tmp_path):
+    import os
+    env = {**os.environ, "LORESTROM_PLUGIN_ROOT": str(LORESTROM),
+           "LORESTROM_SKILL_FILE": str(SKILLS / "init" / "SKILL.md")}
+    result = subprocess.run(["bash", "-c", lorestrom_helper_block()], cwd=tmp_path, env=env,
+                            capture_output=True, text=True)
+    assert result.returncode != 0 and result.stdout == ""

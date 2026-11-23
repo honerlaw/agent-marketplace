@@ -86,6 +86,21 @@ PYTHON_C = re.compile(r"python3?\s+(?:-[A-Za-z]+\s+)*-c\s+(\S)")
 PYTHON_HEREDOC = re.compile(r"python3?\s[^\n]*?<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n(.*?)^\s*\1\s*$", re.S | re.M)
 BRANCH_CUT = re.compile(r"worktree\s+add\b|checkout\b[^\n|;&]*\s-[bB]\b|switch\b[^\n|;&]*\s-[cC]\b"
                         r"|\bbranch\s+(?:-\S+\s+)*[^-\s\"]\S*\s+\"?\$\{BASE")
+# The lorestrom plugin's skills are scanned by the same rules, with its own classifications.
+# None holds a branch or ref name: ids from Lorestrom's tools, paths and digests
+# `import-list` printed, the helper's normalized remote label, and template fields.
+LORESTROM_SKILLS = SKILLS.parents[1] / "lorestrom" / "skills"
+LORESTROM_RUNTIME = LORESTROM_SKILLS / "using-lorestrom" / "references" / "runtime.md"
+LORESTROM_INERT = {
+    "org id", "workspace id", "client id", "projectId", "listed path", "listed digest",
+    "label", "server", "tool", "operation", "git-common-dir",
+    "minerva:theme", "minerva:id", "minerva:summary",
+}
+LORESTROM_VARS = {
+    "LORESTROM_PLUGIN_ROOT", "LORESTROM_SKILL_FILE", "LORESTROM_SCRIPTS",
+    "F",  # a mktemp file the agent made
+    "lorestrom",  # Codex's `$lorestrom:<name>` skill prefix, not a shell variable
+}
 # Lines that name a ref placeholder in prose or in a report the user reads, never in a
 # command: (file, the exact line or inline span) -> why.
 PROSE_EXEMPT = {
@@ -173,13 +188,13 @@ def subshell_depth(text: str, index: int) -> int:
 
 
 def violations(where: str, kind: str, text: str, runtime_snippet: bool = False,
-               rel: str = "") -> list:
+               rel: str = "", extra_inert=frozenset(), extra_vars=frozenset()) -> list:
     found = []
     text = re.sub(r"\\\n\s*", " ", text)  # a command continued across lines is one line
     for line in text.splitlines():
         exempt = (rel, line.strip()) in PROSE_EXEMPT
         for name in PLACEHOLDER.findall(line):
-            if name not in UNIT | REF | INERT | AMBIGUOUS:
+            if name not in UNIT | REF | INERT | AMBIGUOUS | extra_inert:
                 found.append(f"{where}: unclassified placeholder <{name}>")
             elif name in REF and not exempt:
                 found.append(f"{where}: branch or ref placeholder <{name}>")
@@ -198,7 +213,7 @@ def violations(where: str, kind: str, text: str, runtime_snippet: bool = False,
         quote = quoting(text, match.start())
         if quote == "single":
             continue  # literal text, e.g. an awk field or Python inside single quotes
-        if name not in NAME_VARS | OTHER_VARS:
+        if name not in NAME_VARS | OTHER_VARS | extra_vars:
             found.append(f"{where}: unknown variable ${name}")
         elif name in NAME_VARS and not runtime_snippet and quote != "double":
             found.append(f"{where}: ${name} is not double-quoted")
@@ -218,19 +233,39 @@ def violations(where: str, kind: str, text: str, runtime_snippet: bool = False,
     return found
 
 
-def corpus_violations() -> list:
+def corpus_violations(skills=SKILLS, runtime=RUNTIME, extra_inert=frozenset(),
+                      extra_vars=frozenset()) -> list:
     found = []
-    for md in sorted(SKILLS.rglob("*.md")):
+    for md in sorted(skills.rglob("*.md")):
         for kind, text, line in spans(md):
-            where = f"{md.relative_to(SKILLS)}:{line}"
-            snippet = md == RUNTIME and "unset BASE BASE_NAME" in text
+            where = f"{md.relative_to(skills)}:{line}"
+            snippet = md == runtime and "unset BASE BASE_NAME" in text
             found += violations(where, kind, text, runtime_snippet=snippet,
-                                rel=str(md.relative_to(SKILLS)))
+                                rel=str(md.relative_to(skills)), extra_inert=extra_inert,
+                                extra_vars=extra_vars)
     return found
 
 
 def test_no_skill_types_a_name_into_a_command_or_python_source():
     assert corpus_violations() == []
+
+
+def test_no_lorestrom_skill_types_a_name_into_a_command_or_python_source():
+    assert list(LORESTROM_SKILLS.rglob("*.md"))
+    assert corpus_violations(LORESTROM_SKILLS, LORESTROM_RUNTIME, frozenset(LORESTROM_INERT),
+                             frozenset(LORESTROM_VARS)) == []
+
+
+def test_lorestroms_classifications_do_not_widen_minervas():
+    assert not LORESTROM_INERT & (UNIT | REF | AMBIGUOUS)
+    assert not LORESTROM_VARS & NAME_VARS
+
+
+@pytest.mark.parametrize("text", ["git log <name>", "gh pr view <a-new-placeholder>",
+                                  "git push origin <branch>", 'echo "$UNKNOWN"'])
+def test_the_lorestrom_scan_still_fails_closed(text):
+    assert violations("sample", "inline", text, extra_inert=frozenset(LORESTROM_INERT),
+                      extra_vars=frozenset(LORESTROM_VARS))
 
 
 @pytest.mark.parametrize("kind,text", [
