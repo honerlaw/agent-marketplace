@@ -1,6 +1,6 @@
 ---
 name: lint
-description: Health-checks the `.minerva/knowledge/` wiki — runs the deterministic detector for mechanical defects (invalid ids, broken `## Related` links, missing `**Theme**` / `**Summary**` metadata, legacy `index.md` / `overview.md` still present, single-entry themes) and adds LLM-judged advisory findings (orphans by computed backlinks, contradictions, stale/superseded claims), presenting everything in `minerva:review`'s finding format. Read-only — it reports; repairs are made by hand, or by `minerva:migrate-fix` for a legacy corpus's metadata. Use when the knowledge-lint CI gate is failing, the user asks to health-check / audit the wiki, or wants to surface orphaned / contradictory / stale knowledge entries, or when they invoke `minerva:lint`.
+description: Health-checks the `.minerva/knowledge/` wiki — runs the deterministic detector for mechanical defects (invalid ids, broken `## Related` links, missing `**Theme**` / `**Summary**` metadata, legacy `index.md` / `overview.md` still present, single-entry themes) and adds LLM-judged advisory findings (orphans by computed backlinks, contradictions, stale/superseded claims), presenting everything in `lorestrom:review`'s finding format. Read-only — it reports; repairs are made by hand, or by `minerva:migrate-fix` for a legacy corpus's metadata. Use when the knowledge-lint CI gate is failing, the user asks to health-check / audit the wiki, or wants to surface orphaned / contradictory / stale knowledge entries, or when they invoke `lorestrom:lint`.
 allowed-tools:
   - Bash
   - Read
@@ -10,10 +10,10 @@ allowed-tools:
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Health-check the `.minerva/knowledge/` wiki and report its coherence problems.
-`minerva:lint` is **read-only**: it surfaces findings and stops. It is the
+`lorestrom:lint` is **read-only**: it surfaces findings and stops. It is the
 interactive, human-facing companion to the deterministic drift gate
 (`scripts/knowledge_lint.py`, shipped in work unit 021) — it makes that gate's
 mechanical failures *actionable* and adds the LLM-judged dimensions the gate
@@ -23,14 +23,14 @@ deliberately can't compute.
 > is host metadata; the read-only protocol applies regardless of available tools. It proposes no FIX disposition and
 > offers no "apply"/"write" affordance. Repairs are made by hand, except a legacy
 > corpus's missing metadata, which `minerva:migrate-fix` backfills. New knowledge
-> entries are written by `minerva:promote`, never through this skill.
+> entries are written by `lorestrom:promote`, never through this skill.
 
 ## Target
 
 The `.minerva/knowledge/` corpus of the **current working tree**, resolved from
 `git rev-parse --show-toplevel`. Run from the main repo it audits the canonical
 wiki; run from inside a worktree (mid-lifecycle) it audits that branch's corpus —
-the same per-branch semantics the unit-021 CI drift gate uses. `minerva:lint` takes
+the same per-branch semantics the unit-021 CI drift gate uses. `lorestrom:lint` takes
 no work-unit argument and reads no scratchpad — it audits the whole knowledge base
 of the working tree you are in.
 
@@ -46,7 +46,7 @@ path to the current working tree's root (`git rev-parse --show-toplevel`) so it 
 from any subdirectory and audits the corpus of the tree you're in:
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
+ROOT="$(git rev-parse --show-toplevel)"; PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1; [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }; python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
 from knowledge_lint import lint_knowledge; \
 print(json.dumps([f._asdict() for f in lint_knowledge(sys.argv[2])]))" "$PLUGIN_SCRIPTS" "$ROOT/.minerva/knowledge"
 ```
@@ -95,7 +95,7 @@ attention, so a clean result is not a guarantee).
 
   ```bash
   ROOT="$(git rev-parse --show-toplevel)"
-  PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
+  PLUGIN_SCRIPTS="$(python3 "$MINERVA_PLUGIN_ROOT/scripts/lorestrom_runtime.py" resolve --skill-file "$MINERVA_SKILL_FILE")" || exit 1
   [ -n "$PLUGIN_SCRIPTS" ] && { python3 "$PLUGIN_SCRIPTS/plugin_guard.py" || exit 1; }
   python3 -c "import sys, json; sys.path.insert(0, sys.argv[1]); \
   from knowledge_catalog import load_entries, backlinks, superseded_by; \
@@ -113,7 +113,7 @@ attention, so a clean result is not a guarantee).
   is an **orphan candidate for cross-linking**, *not* a defect. Whether an orphan should
   be linked (and to what) is the only LLM judgment here; many entries legitimately stand
   alone. Entries are write-once, so the fix is a forward link from the *newer* side —
-  usually a new entry written by `minerva:promote` — never an edit to an old neighbour.
+  usually a new entry written by `lorestrom:promote` — never an edit to an old neighbour.
 
 - **Contradictions.** Two entries whose findings disagree with no `contradicts` link
   or supersession between them. Report the pair and the apparent conflict.
@@ -125,7 +125,7 @@ attention, so a clean result is not a guarantee).
 
 ## Step 3 — Present (read-only)
 
-Present both passes in `minerva:review`'s finding format — mechanical findings, then
+Present both passes in `lorestrom:review`'s finding format — mechanical findings, then
 advisory ones — with how each would be remediated, and then **stop**: nothing is applied.
 The exact layout, the remediation wording per family, and the clean-run line live in
 `references/presentation.md`. **Read it before presenting.**

@@ -2,7 +2,7 @@
 
 ## Step 3 — Present (read-only)
 
-Present findings in `minerva:review`'s **finding presentation** format — numbered
+Present findings in `lorestrom:review`'s **finding presentation** format — numbered
 items, a severity tag, a one-line description, and the entry reference. Reuse only
 the *presentation*; do **not** run review's FIX / SUGGEST / IGNORE disposition
 machinery (that path writes files and assumes a work-unit scratchpad — out of scope
