@@ -34,8 +34,9 @@ COUNTERS = ("fix_iteration", "cleanup_retry", "escalations", "decisions", "revie
 PHASES = {"ship", "cleanup", "done"}
 FIELDS = {"version", "repository", "unit", "revision", "branch", "caller", "phase",
           "pr", "cleanup_deadline", "status", *COUNTERS}
-# A checkpoint's caller is the orchestrator a skill's `--auto=` named, or null.
-CALLERS = {None, "propose-ship", "propose-ship-auto"}
+# A checkpoint's caller is the orchestrator a skill's `--auto=` named, or null. Only
+# propose-ship-auto passes `--auto`; propose-ship passes none, so its runs record null.
+CALLERS = {None, "propose-ship-auto"}
 
 
 def canonical_caller(caller):

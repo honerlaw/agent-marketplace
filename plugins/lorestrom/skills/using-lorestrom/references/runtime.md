@@ -196,9 +196,10 @@ one-by-one, debug and the orchestrators propose-ship and propose-ship-auto write
 records as the storage contract says, never as files. Worktrees live under
 `.lorestrom/worktrees/`, checkpoints under `<git-common-dir>/lorestrom/runtime/`.
 
-- `lorestrom:propose-ship-auto` passes `--auto=propose-ship-auto` to ship, work, replan, review
-  and promote, and both orchestrators pass `--yes` to cleanup, as each orchestrator's
-  `## Delegated skills` table or cleanup gate says. **A flag changes only the gates its skill
+- `lorestrom:propose-ship-auto` invokes ship with `--auto=propose-ship-auto`, reads work,
+  review and promote in that mode (it inlines them), and restates replan's protocol without
+  running it; both orchestrators pass `--yes` to cleanup. The auto orchestrator's
+  `## Delegated skills` table is the authority. **A flag changes only the gates its skill
   names**: `--yes` never confirms a merge cleanup could not prove and never abandons a gate.
 - minerva's orchestrators must not run in a linked repository: they would write records as files
   that Lorestrom ignores.

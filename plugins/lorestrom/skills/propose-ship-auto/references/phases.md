@@ -76,7 +76,7 @@ This phase replaces the user-interactive setup and completion signal in `lorestr
 
 4. **Completion verification.** When the main LLM judges that every `## Success criteria` item appears met:
    - Compose a checklist: each criterion, the evidence (test name, file path, behavior observed), and a yes/no.
-   - Route it to the **Verifier**, always: completion has a reviewer floor and no other shape. The Verifier also checks that the diff changes no existing interface or contract *beyond what the proposal approved*. ARTIFACT = the checklist + `git -C .lorestrom/worktrees/<date-slug> diff "${BASE:?}"...HEAD` (with the default-branch snippet) + the proposal's `## Success criteria`.
+   - Route it to the **Verifier**, always: completion has a reviewer floor and no other shape. The Verifier also checks that the diff changes no existing interface or contract *beyond what the proposal approved*. ARTIFACT = the checklist + the worktree's diff as `lorestrom:review`'s "Diff resolution" computes it, run as `git -C .lorestrom/worktrees/<date-slug> …` (uncommitted and untracked work included; records are never in it) + the proposal's `## Success criteria`.
    - **Run review's finding generation alongside it.** In the same message as the Verifier, also send out Phase 3 step 3's code review over the same diff. Run Phase 3 step 3's inline unit audit while they run. These findings are **provisional** until completion passes:
      - **Completion passes** (Verifier `accept`): Phase 3 uses them as its step 3 output and does not re-run the code review.
      - **Completion fails** (Verifier `revise`/`reject`): go to Phase 2.5 as below. A replan always invalidates the audit findings, because it can rewrite `## Success criteria`, so Phase 3 re-runs the audit. If the resumed implementation also changes the diff, discard **both** the code-review and the audit findings, and Phase 3 generates them again against the final diff. If the diff is unchanged (a replan changes records, which are not in it), the code-review findings stand.
@@ -122,6 +122,7 @@ Replaces the user-interactive triage in `lorestrom:review`, whose protocol is re
 Replaces the user-interactive partition in `lorestrom:promote` Mode A, whose protocol is read in `--auto=propose-ship-auto` mode.
 
 1. **Read the records.** The proposal, scratchpad and replan records (`storage:unit.read`).
+   **Phased unit:** Before promote, run the helper's `phases` (`storage:unit.read`): on a phased unit whose next phase is not its final one (`next_position` is not `total`), run promote's **Mode B** for each durable finding only — never Mode A, so no `storage:unit.finish` — because Mode A belongs before the final phase's ship (`skills/propose/references/phasing.md`). Continue to Phase 5 after the Mode B writes.
 
 2. **Idempotency check.** Pipe the unit doc's properties and its gate's state to the helper's `unit-state`; if `promoted` is true, report "already promoted" and continue to Phase 5. Use that predicate, never a match against a marker string — minerva's marker has nine spellings in one 51-unit corpus and a string match reads 16 of them as un-promoted, re-running a mutating pass.
 
@@ -184,7 +185,7 @@ Identical to `lorestrom:propose-ship`'s Phase 7. After `lorestrom:ship` returns:
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave the worktree and the unit's open gate in place; surface manual cleanup instructions (`lorestrom:cleanup <date-slug> --abandon` discards the unit). Never abandon from this gate.
 6. **No PR found** → exit silently (ship must have bailed before opening one — already reported above).
-7. **Phased unit — not done yet.** Before reporting on a `MERGED` phase, re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, **loop back to Phase 6 and ship `next_branch`**, cut from the freshly fetched default branch — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `skills/propose/references/phasing.md`. No-op for unphased units.
+7. **Phased unit — not done yet.** Before reporting on a `MERGED` phase, re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, **loop back to Phase 2 (work) for `next_branch`**, cut from the freshly fetched default branch as `lorestrom:ship`'s Phase resolution says ("To **start** phase N", `skills/ship/references/protocol.md`), then Phases 3–6 for it — do not report and exit. Promote Mode A belongs before the FINAL phase's ship, not phase 1's; the review phase re-runs against each phase's own diff. A run that exits here silently is a unit that stalled while reporting success. Full loop rules: `skills/propose/references/phasing.md`. No-op for unphased units.
 
 When re-entered via `--cleanup-only`, skip phases 1–6 and re-run this phase directly.
 

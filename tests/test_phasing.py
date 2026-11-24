@@ -25,6 +25,10 @@ by_plugin = pytest.mark.parametrize("plugin", PLUGINS)
 # The predicate that re-derives phase progress, as each plugin's skills name it: minerva calls
 # `work_status.phase_progress`, lorestrom its helper's `phases` command, which wraps it.
 PROGRESS = {"minerva": "phase_progress", "lorestrom": "helper's `phases`"}
+# Where the loop goes back to. lorestrom loops to the work phase, so a later phase is built
+# before it is reviewed and shipped; minerva's rule names the ship phase.
+LOOP = {"minerva": "loop back to the ship phase", "lorestrom": "loop back to the work phase"}
+LOOP_TARGET = {"minerva": "Phase 6", "lorestrom": "Phase 2 (work)"}
 
 
 def _phasing(plugin):
@@ -64,14 +68,14 @@ def test_the_cleanup_gate_names_the_loop_target(skill, plugin):
     """
     gate = _cleanup_gate(skill, plugin)
     assert PROGRESS[plugin] in gate, f"{skill}'s cleanup gate does not re-derive phase progress"
-    assert "Phase 6" in gate, f"{skill}'s cleanup gate does not name the phase to loop back to"
+    assert LOOP_TARGET[plugin] in gate, f"{skill}'s cleanup gate does not name the phase to loop back to"
 
 
 @by_plugin
 def test_the_loop_rules_live_in_exactly_one_place(plugin):
     """Single-sourced, like the deferral bar. Three orchestrators restating a loop protocol is
     the six-copies shape (`2026-08-22-pattern-repeated-blocks-may-be-deliberate-divergence-not-duplication`)."""
-    sentence = "loop back to the ship phase"
+    sentence = LOOP[plugin]
     skills = PLUGIN_SKILLS[plugin]
     holders = [
         p.relative_to(skills) for p in sorted(skills.rglob("*.md"))

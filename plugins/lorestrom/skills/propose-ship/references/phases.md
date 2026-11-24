@@ -39,9 +39,9 @@ Always start at `lorestrom:propose` after the pre-flight check passes. Do not at
 2. Invoke `lorestrom:propose` via the skill loader. Wait for it to complete.
 3. Invoke `lorestrom:work` via the skill loader. Stay engaged through the work phase per the handoff rule above.
 4. Invoke `lorestrom:review` via the skill loader. Wait for it to complete. If review routes to `lorestrom:replan`, return to step 3 after the replan lands.
-5. Invoke `lorestrom:promote` via the skill loader. Wait for it to complete.
+5. Invoke `lorestrom:promote` via the skill loader. Wait for it to complete. Before promote, run the helper's `phases` (`storage:unit.read`): on a phased unit whose next phase is not its final one (`next_position` is not `total`), run promote's **Mode B** for each durable finding only — never Mode A, so no `storage:unit.finish` — because Mode A belongs before the final phase's ship (`skills/propose/references/phasing.md`).
 6. Apply the promote → ship gate: summarize the promote result, then wait for explicit user confirmation.
-7. Invoke `lorestrom:ship` via the skill loader.
+7. Invoke `lorestrom:ship` via the skill loader. First tell the user: if ship ends this turn on its CI watch, nothing hands back to this skill (it passes ship no `--auto`), so once ship reports, re-enter with `lorestrom:propose-ship --cleanup-only <date-slug>`.
 8. Run the cleanup gate ([Phase 7](#phase-7--cleanup-gate)).
 
 ## Phase 7 — cleanup gate
@@ -51,7 +51,10 @@ caller, escalation/decision/reviewer counters, cleanup retries and its absolute
 deadline. Save phase `cleanup` before waiting. The scheduled resume operation is
 conditional on a real re-entry capability: without it, checkpoint and report
 **pending — manual resume required**, with the exact host-correct
-`--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
+`lorestrom:propose-ship --cleanup-only <date-slug> --retry=N` prompt. Write that prompt
+yourself: this skill passes ship no `--auto`, so the checkpoint's caller is null and the
+helper's rendered prompt (`read --host`) is a bare `lorestrom:cleanup <date-slug>`, which would
+skip a phased unit's loop. Count each retry before waiting;
 cap at 12 or the original one-hour deadline, whichever comes first. Never reset
 these limits when switching sessions.
 
@@ -77,6 +80,6 @@ After `lorestrom:ship` returns, check PR merge state and decide what to do with 
 4. **`OPEN`, auto-merge declined / not enabled** → no automatic merge is coming. Surface "merge the PR manually when ready, then run `lorestrom:cleanup <date-slug>`" and exit. Do **not** schedule a wake-up — the gate has no signal to wait on.
 5. **`CLOSED` (not merged)** → the PR was closed without merging. Surface "PR closed without merging — worktree left in place at `.lorestrom/worktrees/<date-slug>/` and the unit's gate left open for manual review. Run `lorestrom:cleanup <date-slug> --abandon` if you want to discard it." Never abandon the gate from this gate. Exit.
 6. **No PR found** → ship must have bailed before opening one. Skip cleanup and exit.
-7. **Phased unit — not done yet.** After cleanup returns on a `MERGED` phase, re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, follow the loop rules in `skills/propose/references/phasing.md`: return to step 4 (review) for `next_branch`, cut from the freshly fetched default branch, and run review, promote and ship for it, with this skill's gates; promote's Mode A waits for the final phase. Report the phases still outstanding at each transition. No-op for unphased units.
+7. **Phased unit — not done yet.** After cleanup returns on a `MERGED` phase, re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, follow the loop rules in `skills/propose/references/phasing.md`: return to Execution step 3 (`lorestrom:work`) for `next_branch`, cut from the freshly fetched default branch as `lorestrom:ship`'s Phase resolution says ("To **start** phase N", `skills/ship/references/protocol.md`), then Execution steps 4–8 (review, promote — Mode B unless it is the final phase — the promote → ship gate, ship and this gate again), with this skill's gates. Report the phases still outstanding at each transition. No-op for unphased units.
 
 This phase is also the entry point when `propose-ship` is re-invoked via the wake-up (`--cleanup-only` flag) — in that mode, skip phases 1–7 and re-run phase 7 directly.

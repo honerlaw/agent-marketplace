@@ -43,6 +43,7 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 
 - Every decision logs one line to the unit's scratchpad record under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
 - Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so a tally can pair them: minerva's `scripts/decision_telemetry.py` reports an orphan line, and on logs dated 2026-11-19 (minerva 4.0.0) or later an escalation that no `[adjudicated — …]` line follows (a skipped rung). lorestrom keeps the same format and ships no tally yet.
+- After promote archives the scratchpad (`storage:unit.finish`), later decision lines still go into that archived record (`storage:record.write`), and the checkpoint's `decisions`, `reviewers` and `escalations` counters carry the totals, so a `--cleanup-only` re-entry reports from both.
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
 - The final report (success or bail) lists decisions per tier (solo / reviewer), total reviewer dispatches (Skeptic, fold-audit, Adjudicator, Verifier), and total escalations for the run.
 

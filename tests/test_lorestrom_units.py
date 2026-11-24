@@ -753,6 +753,14 @@ def test_minervas_legacy_callers_are_not_lorestrom_callers(repo):
     assert runtime(repo, "write", "--unit", UNIT, stdin=first).returncode == 1
 
 
+@pytest.mark.parametrize("caller", ["propose-ship", "propose-ship-auto"])
+def test_only_the_auto_orchestrator_is_a_caller(repo, caller):  # review R3
+    """propose-ship passes no `--auto`, so nothing records it; a checkpoint naming it is refused."""
+    first = json.dumps({"revision": 0, "branch": UNIT, "caller": caller})
+    expected = 0 if caller == "propose-ship-auto" else 1
+    assert runtime(repo, "write", "--unit", UNIT, stdin=first).returncode == expected
+
+
 def test_a_resume_prompt_names_lorestroms_skills(repo):
     first = json.dumps({"revision": 0, "branch": UNIT, "caller": None})
     runtime(repo, "write", "--unit", UNIT, stdin=first)

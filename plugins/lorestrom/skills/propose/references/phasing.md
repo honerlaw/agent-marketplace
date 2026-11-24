@@ -129,9 +129,10 @@ reports success, and phases 2..N never ship. The unit stalls at a report that sa
 So every orchestrator's cleanup gate gains one branch, before it reports:
 
 > After `lorestrom:cleanup` returns on a `MERGED` phase, re-derive the phase progress (`phases`). If
-> `complete` is false, **loop back to the ship phase** for `next_branch` — cut it from the
-> freshly fetched default branch and ship it. Only when `complete` is true does the run report
-> and exit.
+> `complete` is false, **loop back to the work phase** for `next_branch` — cut it from the
+> freshly fetched default branch, do that phase's work against its own criteria, then review,
+> promote (Mode B unless it is the final phase) and ship it. Only when `complete` is true does
+> the run report and exit.
 
 Two rules ride with the loop:
 

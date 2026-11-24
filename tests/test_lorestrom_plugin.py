@@ -470,6 +470,21 @@ SAFETY = [
     ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, follow the loop rules in `skills/propose/references/phasing.md`"),
     ("propose-ship-auto/SKILL.md", None, "the helper's `unit-state`, with the gate as the authority, never a property match"),
     ("propose-ship/references/phases.md", None, "the helper's `unit-state`, with the gate as the authority, never a property match"),
+    # Review round 2026-11-24 (lorestrom phase 3).
+    ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "return to Execution step 3 (`lorestrom:work`) for `next_branch`"),  # R1
+    ("propose-ship-auto/references/phases.md", "## Phase 7 — Cleanup gate", "**loop back to Phase 2 (work) for `next_branch`**"),  # R1
+    ("propose/references/phasing.md", "## The orchestrator loop", "**loop back to the work phase** for `next_branch`"),  # R1
+    ("propose/references/phasing.md", "## The orchestrator loop", "promote (Mode B unless it is the final phase) and ship it."),  # R1
+    ("propose-ship/references/phases.md", "## Execution", "never Mode A, so no `storage:unit.finish`"),  # R2
+    ("propose-ship-auto/references/phases.md", "## Phase 4 — Promote (inline)", "never Mode A, so no `storage:unit.finish`"),  # R2
+    ("promote/references/modes.md", "### Mode A — no argument (end-of-work full pass)", "On a phased unit whose next phase is not its final one (`complete` false and `next_position` not `total`), **stop**"),  # R2
+    ("propose-ship/references/phases.md", "## Execution", "once ship reports, re-enter with `lorestrom:propose-ship --cleanup-only <date-slug>`."),  # R3
+    ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "Write that prompt yourself: this skill passes ship no `--auto`, so the checkpoint's caller is null"),  # R3
+    (STORAGE, "## `record.write`", "An archived record still takes body writes, and its status stays archived"),  # R4
+    ("propose-ship-auto/references/governance.md", None, "later decision lines still go into that archived record (`storage:record.write`), and the checkpoint's `decisions`, `reviewers` and `escalations` counters carry the totals"),  # R4
+    (STORAGE, "## `record.write`", "A decision line is a replace: it goes inside the record's `## Decisions YYYY-MM-DD` block, not at its end."),  # R5
+    (RUNTIME, SCOPE, "and restates replan's protocol without running it"),  # R6
+    ("propose-ship-auto/references/phases.md", "## Phase 2 — Work (inline)", "the worktree's diff as `lorestrom:review`'s \"Diff resolution\" computes it"),  # R7
     (RUNTIME, SCOPE, "minerva's orchestrators must not run in a linked repository"),
     (RUNTIME, SCOPE, "A record write there stops and names `lorestrom:init`."),
     (HANDOVER, None, "**kept by default**"),
@@ -586,11 +601,39 @@ def test_no_skill_assumes_record_files(rel, word):  # N2
     assert word not in read(rel)
 
 
-def test_every_orchestrator_mention_names_an_orchestrator_that_exists():  # N3
+def test_every_orchestrator_mention_names_an_orchestrator_that_exists():  # N3, R8
     real = {path.parent.name for path in SKILLS.glob("propose-ship*/SKILL.md")}
     assert real == set(ORCHESTRATORS)
-    mentions = [path for path in skill_texts() if "`propose-ship-*` orchestrators" in path.read_text()]
-    assert mentions
+    named = set()
+    for path in skill_texts():
+        for name in re.findall(r"lorestrom:(propose-ship[a-z-]*)", path.read_text(encoding="utf-8")):
+            assert name in ORCHESTRATORS, (path, name)
+            named.add(name)
+    assert named == set(ORCHESTRATORS)
+
+
+def test_every_auto_value_the_auto_orchestrator_passes_is_its_own_name():  # R8
+    text = read("propose-ship-auto/references/phases.md")
+    values = re.findall(r"--auto=([A-Za-z<>_-]+)", text)
+    assert values and set(values) == {"propose-ship-auto"}, set(values)
+
+
+def test_no_loop_goes_back_to_review_or_ship():  # R1
+    for rel in ("propose-ship/references/phases.md", "propose-ship-auto/references/phases.md",
+                "propose/references/phasing.md"):
+        text = flat(read(rel))
+        for stale in ("return to step 4 (review)", "loop back to Phase 6", "loop back to the ship phase"):
+            assert stale not in text, (rel, stale)
+
+
+def test_promote_checks_the_phase_before_mode_a_writes_anything():  # R2
+    body = flat(section(read("promote/references/modes.md"), "### Mode A — no argument (end-of-work full pass)"))
+    check = body.index("**Phased unit check:**")
+    assert check < body.index("**Idempotency check:**") < body.rindex("`storage:unit.finish`")
+
+
+def test_record_writes_name_no_decision_line_as_an_append():  # R5
+    assert "(a scratchpad note, a decision line)" not in flat(section(read(STORAGE), "## `record.write`"))
 
 
 def test_import_waits_for_the_yes_before_any_write():
