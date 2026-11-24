@@ -1,13 +1,13 @@
 ---
 name: propose-ship
-description: Runs the full minerva lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `lorestrom:propose-ship`.
+description: In a repository linked to Lorestrom, runs the full lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `lorestrom:propose-ship`.
 ---
 
 ## Runtime
 
 Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
-Orchestrate the full minerva lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
+Orchestrate the full lorestrom lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
 
 ## Phase sequence
 
@@ -15,11 +15,11 @@ Orchestrate the full minerva lifecycle in one invocation by delegating to each s
 lorestrom:propose → lorestrom:work → lorestrom:review → lorestrom:promote → lorestrom:ship → lorestrom:cleanup
 ```
 
-`lorestrom:cleanup` closes the lifecycle by removing the merged worktree and branch. It writes nothing to the knowledge wiki: promote's write-once entries are the whole knowledge update, and the catalog, backlinks and supersession are derived on read — which is what keeps concurrent minerva PRs conflict-free with no post-merge pass.
+`lorestrom:cleanup` closes the lifecycle: on live merge evidence it releases the unit's Lorestrom gate, which makes the entries promote held on it current, then removes the merged worktree and branch. It writes no knowledge entry and opens no PR: the release is the whole knowledge update after merge, and a unit's records never enter git.
 
 Invoke each phase via the skill loader in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 
-The `lorestrom:propose` phase creates the work unit's branch + worktree at `.lorestrom/worktrees/<date-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `lorestrom:cleanup` is the only phase that runs from outside the worktree — it removes it.
+The `lorestrom:propose` phase creates the unit and its gate in Lorestrom, then the branch + worktree at `.lorestrom/worktrees/<date-slug>/`; every downstream phase addresses that worktree by its prefixed path, and reads and writes the unit's records through the storage contract (`skills/using-lorestrom/references/storage.md`). No phase makes the worktree its working directory; `lorestrom:cleanup` removes it.
 
 (Note: review runs **before** promote so review-derived scratchpad notes flow through the promote partition. This matches `using-lorestrom` and `review`. Re-cycle review/promote as needed. Cleanup runs only after the PR actually merges.)
 
@@ -28,7 +28,7 @@ The `lorestrom:propose` phase creates the work unit's branch + worktree at `.lor
 
 The full step protocols live verbatim in `references/phases.md` — **read it now, before executing**:
 
-- **Pre-flight: detect in-flight work** — the collision check that runs before `lorestrom:propose`, including the runnable `work_status.unit_state(...)["in_flight"]` invocation. Call the predicate; never restate it as a string comparison.
+- **Pre-flight: detect in-flight work** — the collision check that runs before `lorestrom:propose`, where a unit is in flight when the helper's `unit-state` says its gate is `open`. Call the helper; never restate it as a property comparison.
 
 When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 - **Handoff rules** — what advances each phase, and the work → review signal list.

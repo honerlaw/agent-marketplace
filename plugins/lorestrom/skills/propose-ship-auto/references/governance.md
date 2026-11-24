@@ -17,19 +17,20 @@ The worst case for one decision is therefore 3 dispatches — except a restarted
 **Per-phase abort triggers.**
 - Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `lorestrom:propose`." Every reviewer-tier escalation passes through the Adjudicator before reaching the user, so this should fire rarely; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
-**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an `[adjudicated — escalated]` outcome, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
+**Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an `[adjudicated — escalated]` outcome, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual lorestrom skills manually from the current state.
 
 **Hard escalation triggers (skip tier selection entirely).**
 - In-flight work collision (pre-flight) — the check in `skills/propose/references/in-flight-check.md`.
 - An open issue matching the seed at intake — the ask in `skills/propose/references/issue-match.md`; it counts toward the counter like any other.
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
+- At the cleanup gate, cleanup's wait on a confirmation of a merge it could not prove: `--yes` never confirms one (`lorestrom:cleanup`'s orchestrated mode).
 - Global escalation counter reaching 3.
 
 **Final report on bail.**
 - Phase reached.
 - Reason for bail (escalation count / hard trigger / CI failure).
-- Current state of `.minerva/work/<date-slug>/` (proposal status, scratchpad summary, committed state).
+- Current state of the unit (`storage:unit.read`: proposal status, scratchpad summary, gate state) and of its worktree's commits.
 - Exact next manual command (e.g., `lorestrom:work <date-slug>`, `lorestrom:ship <date-slug>`).
 
 ## Durable counters
@@ -40,14 +41,14 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 
 ## Observability
 
-- Every decision logs one line to `scratchpad.md` under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
-- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so `scripts/decision_telemetry.py` can pair them; it reports an orphan line, and on logs dated 2026-11-19 (minerva 4.0.0) or later it also reports an escalation that no `[adjudicated — …]` line follows (a skipped rung).
+- Every decision logs one line to the unit's scratchpad record under a `## Decisions YYYY-MM-DD` header per the Per-decision logging format in `references/decision-protocol.md`, naming its tier and why that tier was chosen.
+- Every `[reviewed — folded]` line at a Skeptic gate is immediately followed by its `[rechecked — …]` line, and every `[rechecked — escalated]` or `[reviewed — escalated]` line by its `[adjudicated — …]` line, so a tally can pair them: minerva's `scripts/decision_telemetry.py` reports an orphan line, and on logs dated 2026-11-19 (minerva 4.0.0) or later an escalation that no `[adjudicated — …]` line follows (a skipped rung). lorestrom keeps the same format and ships no tally yet.
 - Escalations log under the same header with `[escalated to user]` and a one-line summary of what was asked.
 - The final report (success or bail) lists decisions per tier (solo / reviewer), total reviewer dispatches (Skeptic, fold-audit, Adjudicator, Verifier), and total escalations for the run.
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `lorestrom:propose`, `lorestrom:work`, `lorestrom:review`, `lorestrom:promote`, `lorestrom:replan`, `lorestrom:ship`, and `lorestrom:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `lorestrom:ship` and `lorestrom:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
+- **Modifying any existing lorestrom skill at run time.** This skill orchestrates by *invocation only*. `lorestrom:propose`, `lorestrom:work`, `lorestrom:review`, `lorestrom:promote`, `lorestrom:replan`, `lorestrom:ship`, and `lorestrom:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `lorestrom:ship` and `lorestrom:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
 - **Sizing the whole run up front, or switching orchestrators mid-run.** Tier is chosen per decision; a change that grows simply makes its later decisions route higher (`2026-05-31-decision-per-decision-skip-over-sizing-gate`). There is no mode flag and no recommendation to hand the run to another skill.
 - **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the skill does not invoke `lorestrom:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.

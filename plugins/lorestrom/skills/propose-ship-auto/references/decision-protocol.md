@@ -9,7 +9,7 @@ This skill picks the adjudication **tier** each decision earns, one decision at 
 
 When the reviewer tier cannot settle a decision, it goes to the **user**. It never stops the run to recommend a different orchestrator. The whole ladder lives here because the run cannot know in advance which decisions will turn out load-bearing (`2026-05-31-decision-per-decision-skip-over-sizing-gate`).
 
-There is no multi-agent panel tier. The 3-agent consensus panel was removed in minerva 4.0.0: at matched compute, debate ties or loses to independent review, role-locked votes are not independent samples, and in this repo's own logs the panel's output was the fixes a single Skeptic also produces. The work unit `2026-11-19-remove-round-table-tier` holds the evidence.
+There is no multi-agent panel tier. The 3-agent consensus panel was removed in minerva 4.0.0, the protocol this skill was ported from: at matched compute, debate ties or loses to independent review, role-locked votes are not independent samples, and in this repo's own logs the panel's output was the fixes a single Skeptic also produces. minerva's work unit `2026-11-19-remove-round-table-tier`, in the marketplace repository that ships both plugins, holds the evidence.
 
 ## No whole-run sizing
 
@@ -25,12 +25,12 @@ Operational decisions (commit messages, PR bodies, file paths) take no tier. The
 
 For a drafted decision, take the first step that applies, then clamp the result to the row's floor in the [Decision taxonomy](#decision-taxonomy):
 
-1. **Hardcoded trigger → user.** In-flight collision, open-issue match at intake, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), global escalation counter at 3. See `references/governance.md`.
+1. **Hardcoded trigger → user.** In-flight collision, open-issue match at intake, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), cleanup's wait on a confirmation of a merge it could not prove, global escalation counter at 3. See `references/governance.md`.
 2. **Scrutiny predicate → reviewer.** Route to the reviewer if **any** clause holds, **or if you are unsure whether it holds**, and name each clause that fired (or that you could not rule out) in the reviewer's CONTEXT:
    - **genuine ambiguity** — you enumerated ≥2 viable options and none is dominant on the stated criteria;
    - **high blast radius / irreversible** — hard to walk back, or a broad rather than bounded surface;
    - **existing interface change** — the decision renames, removes or changes the behaviour of an **existing** public interface or cross-cutting contract that consumers **outside this work unit** already rely on. *Introducing* a new interface, package or tool surface is not this clause; it fails the solo predicate's "no new public interface" clause and lands at reviewer anyway. A consumer added inside the same unit does not make an interface "existing";
-   - **knowledge tension** — the decision would violate, or sits in tension with, a documented `.minerva/knowledge/` constraint.
+   - **knowledge tension** — the decision would violate, or sits in tension with, a constraint entry in the project's lore (pending entries included).
 3. **Solo predicate → solo.** Decide alone **only if every** clause holds:
    - **additive / low blast radius** — the artifact adds rather than rewrites, with a bounded surface;
    - **mechanically verifiable** — the supporting evidence is a named passing test, a file that exists, a count — not an opinion;
@@ -65,7 +65,7 @@ At every Skeptic gate — every row except completion — the reviewer tier is a
 
 The main model that drafted the decision also judges the critique, so "load-bearing" is defined behaviourally to keep that from collapsing into self-confirmation. A critique is **load-bearing** iff it identifies at least one of:
 
-- (a) a violation of a documented `.minerva/knowledge/` constraint, or of a stated success criterion;
+- (a) a violation of a constraint entry in the project's lore, or of a stated success criterion;
 - (b) a missed dependency or integration risk the decision did not account for;
 - (c) an overlooked scope surface or file;
 - (d) **[approach/scope gates]** a viable alternative that is **strictly dominant** on the stated criteria.
@@ -221,7 +221,7 @@ Never ask the user — up front or mid-run — to pick a tier, a "ceremony level
 
 ## Per-decision logging
 
-After every decision, append one line to the work unit's `scratchpad.md` under a `## Decisions YYYY-MM-DD` header. Append **inside that block**, not at the end of the file: a line under a later header (`## Work notes`, `## Review triage`) is invisible to `scripts/decision_telemetry.py`. Each line starts with its tier and outcome and ends with why that tier was chosen:
+After every decision, append one line to the work unit's scratchpad record under a `## Decisions YYYY-MM-DD` header (`storage:record.write`: read it, then `mode: replace`). Append **inside that block**, not at the end of the record: a line under a later header (`## Work notes`, `## Review triage`) is invisible to a tally that reads the block, such as minerva's `scripts/decision_telemetry.py`, whose format this is. Each line starts with its tier and outcome and ends with why that tier was chosen:
 
 ```
 ## Decisions 2026-11-19
@@ -256,7 +256,7 @@ These are scratchpad data. `lorestrom:promote` treats them as routine noise unle
 
 ## Re-measure
 
-The Adjudicator's trigger rate is a prediction, not a measurement. In the panel era, only 3 decisions moved up from a reviewer (all failed fold-audits on whole-proposal) and the anti-circularity escape never fired, so the Adjudicator should rarely run and the user should rarely be asked. `scripts/decision_telemetry.py` tallies tier × gate × outcome. Once ~10 runs have logged under this protocol, revisit it via `lorestrom:replan`:
+The Adjudicator's trigger rate is a prediction, not a measurement. In the panel era, only 3 decisions moved up from a reviewer (all failed fold-audits on whole-proposal) and the anti-circularity escape never fired, so the Adjudicator should rarely run and the user should rarely be asked. minerva's `scripts/decision_telemetry.py` tallies tier × gate × outcome from scratchpad files; lorestrom ships no tally yet, so its logs are counted by reading the records. Once ~10 runs have logged under this protocol, revisit it via `lorestrom:replan`:
 
 - How often the Adjudicator runs, and how often it escalates.
 - Whether the user-escalation rate rose against the panel era. If it did, look at what the escalations asked before adding any tier back.

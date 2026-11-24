@@ -1,13 +1,13 @@
 ---
 name: propose-ship-auto
-description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `lorestrom:propose-ship` (propose - work - review - promote - ship - cleanup), but each decision gets the adjudication tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer (a Skeptic, then a fold-audit after a fold, then a narrow Adjudicator if still unsettled; a Verifier at completion), told which risk to test when a decision is ambiguous, high-blast-radius, interface-changing or in tension with knowledge. No multi-agent votes. The user is asked only when the Adjudicator cannot settle a decision or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `lorestrom:propose-ship-auto`.
+description: In a repository linked to Lorestrom, runs the full lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `lorestrom:propose-ship` (propose - work - review - promote - ship - cleanup), but each decision gets the adjudication tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer (a Skeptic, then a fold-audit after a fold, then a narrow Adjudicator if still unsettled; a Verifier at completion), told which risk to test when a decision is ambiguous, high-blast-radius, interface-changing or in tension with knowledge. No multi-agent votes. The user is asked only when the Adjudicator cannot settle a decision or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `lorestrom:propose-ship-auto`.
 ---
 
 ## Runtime
 
 Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
-Run the full minerva lifecycle end-to-end with **per-decision adjudication** in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `lorestrom:ship` and `lorestrom:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can adjudicate them itself.
+Run the full lorestrom lifecycle end-to-end with **per-decision adjudication** in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `lorestrom:ship` and `lorestrom:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can adjudicate them itself.
 
 The mechanism: at each strategic or tactical decision point the main model drafts the decision, then picks its **tier** — **solo** (decide alone, only when a strict conjunctive predicate proves the decision small) or **reviewer** (one fresh-context Skeptic, or a Verifier at completion, arbitrated inline; a fold gets one fold-audit re-check, and a decision that still cannot be settled gets one narrow Adjudicator before it reaches the user). There is no multi-agent voting tier. There is no whole-run sizing and no recommendation to switch orchestrators. Operational decisions (commit messages, PR bodies, file paths) take no tier.
 
@@ -21,7 +21,7 @@ The mechanism: at each strategic or tactical decision point the main model draft
 
 Identical to `lorestrom:propose-ship`'s pre-flight section. This check is **not** tiered — wrong call here destroys real work, so escalation to the user is hardcoded.
 
-**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
+**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — this project's open units (the helper's `unit-state`, with the gate as the authority, never a property match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
 When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 
@@ -38,20 +38,20 @@ Binding floor, even before the reference is read:
 - **Decide first, then route.** Draft the decision, then choose its tier. Both predicates fail closed: doubt about a scrutiny clause routes to the reviewer and names the doubt in its brief; doubt about a solo clause denies solo.
 - **Never below the floor:** divergence confirmation, new-plan acceptance and replan-vs-FIX are always reviewed, never solo; completion verification is always a Verifier.
 - **Up the ladder, never sideways.** An unadjudicable critique or a failed fold-audit goes to the Adjudicator; an Adjudicator that leaves a disputed item unresolved sends the decision to the user. No step recommends switching to another orchestrator.
-- Every decision logs one line to `scratchpad.md` under `## Decisions YYYY-MM-DD`, naming its tier and why.
+- Every decision logs one line to the unit's scratchpad record under `## Decisions YYYY-MM-DD`, naming its tier and why.
 
 ## Phases
 
 Execute the phases in order. The full inline protocols — per-gate artifacts, tier handling, escalation aftermath and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
 
-1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered, dispatched as one parallel wave) → worktree + branch + file writes per `lorestrom:propose` → self-review. No post-write user gate.
+1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered, dispatched as one parallel wave) → unit + gate, worktree + branch and record writes per `lorestrom:propose` → self-review. No post-write user gate.
 2. **Work (inline)** — implement per `lorestrom:work`'s protocol; divergence confirmation (reviewer floor) when a load-bearing divergence is suspected; completion verification (always a Verifier) on the success-criteria checklist + diff, with Phase 3's code review dispatched alongside it.
-   - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan acceptance (reviewer floor); append to `replan.md`.
-3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); triage (solo by default); replan-vs-FIX (reviewer floor) if a load-bearing finding surfaces.
-4. **Promote (inline)** — partition and TODO disposition (solo by default); apply writes per `lorestrom:promote` Mode A; archive scratchpad.
+   - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan acceptance (reviewer floor); append to the replan record.
+3. **Review (inline)** — spec and lore audit + code review (optional PR skill or independent diff reviewer); triage (solo by default); replan-vs-FIX (reviewer floor) if a load-bearing finding surfaces.
+4. **Promote (inline)** — partition and TODO disposition (solo by default); apply writes per `lorestrom:promote` Mode A: entries held on the unit's gate, proposal rewritten, scratchpad archived.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
 6. **Ship (delegated)** — invoke `lorestrom:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never tiered.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `lorestrom:cleanup` via the skill loader with args `<date-slug> --yes` (worktree and branch teardown only — the knowledge update already shipped in the unit's PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `lorestrom:cleanup` via the skill loader with args `<date-slug> --yes` (it releases the unit's gate on live merge evidence, which makes its pending entries current, then tears down the worktree and branch); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 
@@ -59,4 +59,4 @@ Binding caps: a Skeptic gate spends at most **three** reviewer dispatches (Skept
 
 ## Out of scope
 
-Never modify any existing minerva skill at run time (this skill orchestrates by *invocation only*); never size the whole run up front; never recommend switching orchestrators mid-run; never auto-cascade into new work units; never cap implementation time; review/promote ordering is fixed. Rationale and detail: `references/governance.md`.
+Never modify any existing lorestrom skill at run time (this skill orchestrates by *invocation only*); never size the whole run up front; never recommend switching orchestrators mid-run; never auto-cascade into new work units; never cap implementation time; review/promote ordering is fixed. Rationale and detail: `references/governance.md`.

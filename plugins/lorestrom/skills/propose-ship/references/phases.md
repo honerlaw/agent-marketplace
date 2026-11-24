@@ -6,7 +6,7 @@ Read this file in full before executing the lifecycle; the SKILL.md core names t
 
 Before invoking `lorestrom:propose`, check whether the user's intent is **already in flight** — in this checkout, in another clone, or in a available live peer session.
 
-**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
+**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — this project's open units (the helper's `unit-state`, with the gate as the authority, never a property match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
 A collision stops the run and asks. Only proceed to `lorestrom:propose` after the user confirms a fresh start.
 
@@ -25,7 +25,7 @@ This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" 
 
 - **review → promote**: hand off automatically once `lorestrom:review` reaches its natural completion point AND triage is clean (zero pending, all FIX items applied). If review surfaced findings the user routed back to `lorestrom:replan`, return control to work and re-enter review afterward.
 
-- **promote → ship gate**: this is the single explicit gate. After `lorestrom:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. There is no catalog or overview to refresh: both are derived on read from the entries promote just wrote. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `lorestrom:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
+- **promote → ship gate**: this is the single explicit gate. After `lorestrom:promote` completes, briefly summarize what was promoted (each entry is pending lore on the unit's gate until cleanup releases it), what was merged into the proposal, and what was discarded. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `lorestrom:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
 
 - **ship → cleanup**: after `lorestrom:ship` returns, the PR may be `OPEN` (auto-merge pending), `MERGED`, or `CLOSED`. Cleanup runs only on `MERGED`. See [Phase 7](#phase-7--cleanup-gate) for the polling rules.
 
@@ -59,7 +59,7 @@ these limits when switching sessions.
 After `lorestrom:ship` returns, check PR merge state and decide what to do with the worktree:
 
 1. Read the PR state by the number ship reported (on resume, the checkpoint's PR number): `gh pr view <pr-number> --json state,mergedAt 2>/dev/null`. No branch name is typed.
-2. **`MERGED`** → invoke `lorestrom:cleanup <date-slug> --yes` via the skill loader. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
+2. **`MERGED`** → invoke `lorestrom:cleanup <date-slug> --yes` via the skill loader. Cleanup releases the unit's gate on live merge evidence, so its pending entries become current, then removes the worktree. `--yes` never confirms a merge cleanup could not prove: a gate that waits on a confirmation is reported with cleanup's own question, and the run asks the user. Report the cleanup result and exit, unless the unit is phased (step 7).
 3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. When a scheduler supports re-entry, schedule a wake-up:
    - the scheduled resume operation with `delaySeconds: 300` and a `prompt` of `lorestrom:propose-ship --cleanup-only <date-slug> --retry=N` so the next firing re-enters this gate.
    - Cap the retries at **12** (~1 hour total). Carry the retry count in the wake-up `prompt`.
@@ -75,7 +75,8 @@ After `lorestrom:ship` returns, check PR merge state and decide what to do with 
    ([[2026-07-29-pattern-wait-shape-matches-what-is-awaited]]).
    - On cap exhaustion, surface "auto-merge still pending after ~1 hour — run `lorestrom:cleanup <date-slug>` manually once the PR merges" and exit.
 4. **`OPEN`, auto-merge declined / not enabled** → no automatic merge is coming. Surface "merge the PR manually when ready, then run `lorestrom:cleanup <date-slug>`" and exit. Do **not** schedule a wake-up — the gate has no signal to wait on.
-5. **`CLOSED` (not merged)** → the PR was closed without merging. Surface "PR closed without merging — worktree left in place at `.lorestrom/worktrees/<date-slug>/` for manual review. Run `lorestrom:cleanup <date-slug>` if you want to discard it." Exit.
+5. **`CLOSED` (not merged)** → the PR was closed without merging. Surface "PR closed without merging — worktree left in place at `.lorestrom/worktrees/<date-slug>/` and the unit's gate left open for manual review. Run `lorestrom:cleanup <date-slug> --abandon` if you want to discard it." Never abandon the gate from this gate. Exit.
 6. **No PR found** → ship must have bailed before opening one. Skip cleanup and exit.
+7. **Phased unit — not done yet.** After cleanup returns on a `MERGED` phase, re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, follow the loop rules in `skills/propose/references/phasing.md`: return to step 4 (review) for `next_branch`, cut from the freshly fetched default branch, and run review, promote and ship for it, with this skill's gates; promote's Mode A waits for the final phase. Report the phases still outstanding at each transition. No-op for unphased units.
 
 This phase is also the entry point when `propose-ship` is re-invoked via the wake-up (`--cleanup-only` flag) — in that mode, skip phases 1–7 and re-run phase 7 directly.
