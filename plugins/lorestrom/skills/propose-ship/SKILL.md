@@ -1,38 +1,38 @@
 ---
 name: propose-ship
-description: Runs the full minerva lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `minerva:propose-ship`.
+description: Runs the full minerva lifecycle end-to-end in one command with the user in the loop — a human decision gate at each phase transition. Orchestrates propose - work - review - promote - ship - cleanup by delegating to each skill in sequence with no logic duplication, refuses to start if in-flight work exists for the same intent, advances out of the work phase only on explicit user signal, and waits for the PR to actually merge before invoking cleanup. Use when the user wants the whole lifecycle while staying in control — "propose and ship", "I want to approve each step" — or when they invoke `lorestrom:propose-ship`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
 Orchestrate the full minerva lifecycle in one invocation by delegating to each skill in order. This skill contains no logic of its own — it is a thin conductor.
 
 ## Phase sequence
 
 ```
-minerva:propose → minerva:work → minerva:review → minerva:promote → minerva:ship → minerva:cleanup
+lorestrom:propose → lorestrom:work → lorestrom:review → lorestrom:promote → lorestrom:ship → lorestrom:cleanup
 ```
 
-`minerva:cleanup` closes the lifecycle by removing the merged worktree and branch. It writes nothing to the knowledge wiki: promote's write-once entries are the whole knowledge update, and the catalog, backlinks and supersession are derived on read — which is what keeps concurrent minerva PRs conflict-free with no post-merge pass.
+`lorestrom:cleanup` closes the lifecycle by removing the merged worktree and branch. It writes nothing to the knowledge wiki: promote's write-once entries are the whole knowledge update, and the catalog, backlinks and supersession are derived on read — which is what keeps concurrent minerva PRs conflict-free with no post-merge pass.
 
 Invoke each phase via the skill loader in this exact order. Let each skill's own instructions handle all interactive parts, completion signals, and internal logic. Do not reproduce or shadow any skill's behavior here.
 
-The `minerva:propose` phase creates the work unit's branch + worktree at `.minerva/worktrees/<date-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `minerva:cleanup` is the only phase that runs from outside the worktree — it removes it.
+The `lorestrom:propose` phase creates the work unit's branch + worktree at `.lorestrom/worktrees/<date-slug>/` and enters it; every downstream phase enters that worktree automatically (or stays in it if already there). `lorestrom:cleanup` is the only phase that runs from outside the worktree — it removes it.
 
-(Note: review runs **before** promote so review-derived scratchpad notes flow through the promote partition. This matches `using-minerva` and `review`. Re-cycle review/promote as needed. Cleanup runs only after the PR actually merges.)
+(Note: review runs **before** promote so review-derived scratchpad notes flow through the promote partition. This matches `using-lorestrom` and `review`. Re-cycle review/promote as needed. Cleanup runs only after the PR actually merges.)
 
 
 ## Protocols
 
 The full step protocols live verbatim in `references/phases.md` — **read it now, before executing**:
 
-- **Pre-flight: detect in-flight work** — the collision check that runs before `minerva:propose`, including the runnable `work_status.unit_state(...)["in_flight"]` invocation. Call the predicate; never restate it as a string comparison.
+- **Pre-flight: detect in-flight work** — the collision check that runs before `lorestrom:propose`, including the runnable `work_status.unit_state(...)["in_flight"]` invocation. Call the predicate; never restate it as a string comparison.
 
 When a peer session messages you, read `skills/propose/references/cross-session.md`: inform, never delegate.
 - **Handoff rules** — what advances each phase, and the work → review signal list.
-- **Entry point** — always start at `minerva:propose`; do not resume mid-lifecycle state.
+- **Entry point** — always start at `lorestrom:propose`; do not resume mid-lifecycle state.
 - **Execution** — the eight numbered steps.
 - **Phase 7 — cleanup gate** — PR-state polling, the `--cleanup-only` re-entry, and why this wait is a constant where ship's is not.
 
@@ -40,7 +40,7 @@ When a peer session messages you, read `skills/propose/references/cross-session.
 
 This skill's identity is that **a human decides at every phase transition**. The one explicit gate is promote → ship: summarize what promote did, then wait for `ship it` / `proceed` / `yes`. The work → review handoff advances only on an explicit user signal, never silently.
 
-The autonomous sibling, `minerva:propose-ship-auto`, replaces those gates with machinery: each decision gets the scrutiny it earns — the main model alone, or one fresh-context reviewer with an independent re-check of its fixes — chosen per decision. Reach for it when the user wants the lifecycle run unattended; stay here when they want to approve each step.
+The autonomous sibling, `lorestrom:propose-ship-auto`, replaces those gates with machinery: each decision gets the scrutiny it earns — the main model alone, or one fresh-context reviewer with an independent re-check of its fixes — chosen per decision. Reach for it when the user wants the lifecycle run unattended; stay here when they want to approve each step.
 
 ## Out of scope
 

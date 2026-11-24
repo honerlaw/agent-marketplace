@@ -15,7 +15,7 @@ The worst case for one decision is therefore 3 dispatches — except a restarted
 **Provisional review findings.** Code review sent out alongside completion verification (`references/phases.md` Phase 2 step 4) is Phase 3's code-review pass, run early, not an extra reviewer. It is re-run only when a failed completion led to a changed diff.
 
 **Per-phase abort triggers.**
-- Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `minerva:propose`." Every reviewer-tier escalation passes through the Adjudicator before reaching the user, so this should fire rarely; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
+- Propose phase: if 2 of the 3 propose-phase decisions (scope, approach, whole-proposal) reach the user, abort the run. The strategic intent is too ambiguous for autonomous adjudication. Recommend: "switch to manual `lorestrom:propose`." Every reviewer-tier escalation passes through the Adjudicator before reaching the user, so this should fire rarely; `references/decision-protocol.md`'s *Re-measure* section checks whether it has gone inert.
 
 **Global escalation counter.** Maintain across the run; per-run state owned by the main orchestration loop (it survives the inline skill-loader delegations of Phases 6 / 7). Increment on every user escalation — an `[adjudicated — escalated]` outcome, or a hardcoded trigger. If it reaches **3**, halt before the next decision point and report status. Recovery: run the individual minerva skills manually from the current state.
 
@@ -30,7 +30,7 @@ The worst case for one decision is therefore 3 dispatches — except a restarted
 - Phase reached.
 - Reason for bail (escalation count / hard trigger / CI failure).
 - Current state of `.minerva/work/<date-slug>/` (proposal status, scratchpad summary, committed state).
-- Exact next manual command (e.g., `minerva:work <date-slug>`, `minerva:ship <date-slug>`).
+- Exact next manual command (e.g., `lorestrom:work <date-slug>`, `lorestrom:ship <date-slug>`).
 
 ## Durable counters
 
@@ -47,8 +47,8 @@ checkpoint; restore them on resume. A new session never grants a new budget.
 
 ## Out of scope
 
-- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `minerva:propose`, `minerva:work`, `minerva:review`, `minerva:promote`, `minerva:replan`, `minerva:ship`, and `minerva:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `minerva:ship` and `minerva:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
+- **Modifying any existing minerva skill at run time.** This skill orchestrates by *invocation only*. `lorestrom:propose`, `lorestrom:work`, `lorestrom:review`, `lorestrom:promote`, `lorestrom:replan`, `lorestrom:ship`, and `lorestrom:cleanup` are never altered by a run; Phases 6 and 7 only *invoke* `lorestrom:ship` and `lorestrom:cleanup`, leading with an auto-mode instruction to auto-accept their gates.
 - **Sizing the whole run up front, or switching orchestrators mid-run.** Tier is chosen per decision; a change that grows simply makes its later decisions route higher (`2026-05-31-decision-per-decision-skip-over-sizing-gate`). There is no mode flag and no recommendation to hand the run to another skill.
-- **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the skill does not invoke `minerva:propose-ship-auto` recursively in the same run.
+- **Auto-cascading into new work units.** If Phase 4 surfaces TODOs marked "seed new proposal", they are reported as suggestions — the skill does not invoke `lorestrom:propose-ship-auto` recursively in the same run.
 - **Capping implementation time.** Phase 2's implementation loop has no time or token bound. If the user wants to cap, they interrupt manually.
 - **Strict ordering of review and promote.** Same as the canonical lifecycle — review runs before promote so review-derived scratchpad notes flow through the promote partition. If review triggers a replan, Phase 3 cycles back to Phase 2; promote runs after the next review pass.

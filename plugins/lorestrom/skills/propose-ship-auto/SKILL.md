@@ -1,25 +1,25 @@
 ---
 name: propose-ship-auto
-description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `minerva:propose-ship` (propose - work - review - promote - ship - cleanup), but each decision gets the adjudication tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer (a Skeptic, then a fold-audit after a fold, then a narrow Adjudicator if still unsettled; a Verifier at completion), told which risk to test when a decision is ambiguous, high-blast-radius, interface-changing or in tension with knowledge. No multi-agent votes. The user is asked only when the Adjudicator cannot settle a decision or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `minerva:propose-ship-auto`.
+description: Runs the full minerva lifecycle end-to-end with no scheduled human gates — the one autonomous orchestrator, for any size of change ("do the whole thing without asking", "just ship this", "ship this with a second opinion", "auto propose and ship"). Same lifecycle as `lorestrom:propose-ship` (propose - work - review - promote - ship - cleanup), but each decision gets the adjudication tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer (a Skeptic, then a fold-audit after a fold, then a narrow Adjudicator if still unsettled; a Verifier at completion), told which risk to test when a decision is ambiguous, high-blast-radius, interface-changing or in tension with knowledge. No multi-agent votes. The user is asked only when the Adjudicator cannot settle a decision or a hardcoded trigger fires. Use for autonomous changes, or when the user invokes `lorestrom:propose-ship-auto`.
 ---
 
 ## Runtime
 
-Read `skills/using-minerva/references/runtime.md` before executing; follow its host adapter.
+Read `skills/using-lorestrom/references/runtime.md` before executing; follow its host adapter.
 
-Run the full minerva lifecycle end-to-end with **per-decision adjudication** in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `minerva:ship` and `minerva:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can adjudicate them itself.
+Run the full minerva lifecycle end-to-end with **per-decision adjudication** in place of human gates. This skill is a **hybrid orchestrator** — it delegates to `lorestrom:ship` and `lorestrom:cleanup` directly (those phases have no strategic gates) but inlines the propose / work / review / promote / replan phases so it can adjudicate them itself.
 
 The mechanism: at each strategic or tactical decision point the main model drafts the decision, then picks its **tier** — **solo** (decide alone, only when a strict conjunctive predicate proves the decision small) or **reviewer** (one fresh-context Skeptic, or a Verifier at completion, arbitrated inline; a fold gets one fold-audit re-check, and a decision that still cannot be settled gets one narrow Adjudicator before it reaches the user). There is no multi-agent voting tier. There is no whole-run sizing and no recommendation to switch orchestrators. Operational decisions (commit messages, PR bodies, file paths) take no tier.
 
 ## Usage
 
-- `minerva:propose-ship-auto "add rate limiting"` — start a new run with the inline description as the strategic seed.
-- `minerva:propose-ship-auto` — start with current-session chat context as the seed (only sensible if the chat already discussed what to build).
-- `minerva:propose-ship-auto --cleanup-only <date-slug> --retry=N` — internal re-entry from the cleanup-gate wake-up loop. Skips phases 1–6 and re-runs Phase 7.
+- `lorestrom:propose-ship-auto "add rate limiting"` — start a new run with the inline description as the strategic seed.
+- `lorestrom:propose-ship-auto` — start with current-session chat context as the seed (only sensible if the chat already discussed what to build).
+- `lorestrom:propose-ship-auto --cleanup-only <date-slug> --retry=N` — internal re-entry from the cleanup-gate wake-up loop. Skips phases 1–6 and re-runs Phase 7.
 
 ## Pre-flight: in-flight work collision
 
-Identical to `minerva:propose-ship`'s pre-flight section. This check is **not** tiered — wrong call here destroys real work, so escalation to the user is hardcoded.
+Identical to `lorestrom:propose-ship`'s pre-flight section. This check is **not** tiered — wrong call here destroys real work, so escalation to the user is hardcoded.
 
 **Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
 
@@ -44,14 +44,14 @@ Binding floor, even before the reference is read:
 
 Execute the phases in order. The full inline protocols — per-gate artifacts, tier handling, escalation aftermath and file-write steps — live in `references/phases.md`. **Before executing each phase, read that phase's section there**; the map below locates the work, it is not the protocol:
 
-1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered, dispatched as one parallel wave) → worktree + branch + file writes per `minerva:propose` → self-review. No post-write user gate.
-2. **Work (inline)** — implement per `minerva:work`'s protocol; divergence confirmation (reviewer floor) when a load-bearing divergence is suspected; completion verification (always a Verifier) on the success-criteria checklist + diff, with Phase 3's code review dispatched alongside it.
+1. **Propose (inline)** — assemble context → design synthesis → scope check → approach selection → whole-proposal soundness (each tiered, dispatched as one parallel wave) → worktree + branch + file writes per `lorestrom:propose` → self-review. No post-write user gate.
+2. **Work (inline)** — implement per `lorestrom:work`'s protocol; divergence confirmation (reviewer floor) when a load-bearing divergence is suspected; completion verification (always a Verifier) on the success-criteria checklist + diff, with Phase 3's code review dispatched alongside it.
    - **2.5 Replan (inline, if triggered)** — draft Original plan / What changed / New plan; new-plan acceptance (reviewer floor); append to `replan.md`.
 3. **Review (inline)** — minerva audit + code review (optional PR skill or independent diff reviewer); triage (solo by default); replan-vs-FIX (reviewer floor) if a load-bearing finding surfaces.
-4. **Promote (inline)** — partition and TODO disposition (solo by default); apply writes per `minerva:promote` Mode A; archive scratchpad.
+4. **Promote (inline)** — partition and TODO disposition (solo by default); apply writes per `lorestrom:promote` Mode A; archive scratchpad.
 5. **Ship gate** — no gate: silent advancement, except halt if the global escalation counter has reached 3.
-6. **Ship (delegated)** — invoke `minerva:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never tiered.
-7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `minerva:cleanup` via the skill loader with args `<date-slug> --yes` (worktree and branch teardown only — the knowledge update already shipped in the unit's PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
+6. **Ship (delegated)** — invoke `lorestrom:ship` via the skill loader with its auto-mode instruction (auto-accept hard gates #1 commit message and #2 PR title/body; everything else unchanged). CI auto-fix bails classified `other` are escalated to the user — never tiered.
+7. **Cleanup gate** — poll PR state via `gh pr view`; on `MERGED` invoke `lorestrom:cleanup` via the skill loader with args `<date-slug> --yes` (worktree and branch teardown only — the knowledge update already shipped in the unit's PR); on `OPEN` with auto-merge, use scheduled re-entry when available or checkpoint and report pending with a manual resume prompt (`--cleanup-only <date-slug> --retry=N`, cap 12); otherwise surface manual instructions.
 
 ## Failure modes, escalation, budget caps
 

@@ -14,18 +14,18 @@ on the invocation line. Never infer orchestrated mode from context — pass the 
 
 | Skill | How | Mode argument |
 |---|---|---|
-| `minerva:work` | inlined | `--auto=propose-ship-auto` |
-| `minerva:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
-| `minerva:review` | inlined | `--auto=propose-ship-auto` |
-| `minerva:promote` | inlined | `--auto=propose-ship-auto` |
-| `minerva:ship` | invoked | `--auto=propose-ship-auto` |
-| `minerva:cleanup` | invoked | `--yes` |
+| `lorestrom:work` | inlined | `--auto=propose-ship-auto` |
+| `lorestrom:replan` | cited | n/a — protocol restated in Phase 2.5, never run |
+| `lorestrom:review` | inlined | `--auto=propose-ship-auto` |
+| `lorestrom:promote` | inlined | `--auto=propose-ship-auto` |
+| `lorestrom:ship` | invoked | `--auto=propose-ship-auto` |
+| `lorestrom:cleanup` | invoked | `--yes` |
 
 ## Phase 1 — Propose (inline)
 
-This phase replaces the user-interactive intake in `minerva:propose`.
+This phase replaces the user-interactive intake in `lorestrom:propose`.
 
-1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone and conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `minerva:promote` files kept TODOs as issues wherever the repo can host them.
+1. **Assemble context.** Read: inline description, current chat history, `CLAUDE.md`/`AGENTS.md`, `.minerva/knowledge/` entries (at minimum `Type: pattern` and `Type: constraint`), the 2-3 most recent `.minerva/work/*/proposal.md` files for tone and conventions, and deferred work — any adjacent `followups.md` **and** open followup issues (`gh issue list --label "minerva:followup" --state open`), since `lorestrom:promote` files kept TODOs as issues wherever the repo can host them.
 
 2. **Open-issue match.** Before designing anything, check whether an **open** GitHub issue already tracks what the seed asks for, per `skills/propose/references/issue-match.md` — read it and run it. A match is a **hardcoded ask** (the user question operation: execute the issue instead / proceed as seeded and link it / adopt and extend), fired regardless of this run's decision policy, exactly as the in-flight-work collision is. Like every other escalation this skill counts, it **increments the global escalation counter**; it is not exempt. No match, or no reachable issue tracker, means no user contact at all. On adoption, `**Closes**: #NN` goes into `proposal.md` at creation.
 
@@ -47,31 +47,31 @@ This phase replaces the user-interactive intake in `minerva:propose`.
 
 6. **Whole-proposal soundness (tiered).** The main model reviews the full draft for internal consistency and soundness (does `## Approach` achieve `## Goal`; do the criteria cover the goal; is anything unsatisfiable or two-way ambiguous) and writes its verdict down. ARTIFACT = the complete draft, all five sections (post step 5); CONTEXT = the seed + the `.minerva/knowledge/` entries cited this session. Once the decision stands, the draft is final.
 
-7. **Worktree + branch creation.** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
+7. **Worktree + branch creation.** Identical to `lorestrom:propose`'s "On approval — worktree setup + file writes":
    - Derive slug, check for a duplicate slug across local work / local branches / remote branches, and take today's date as the id.
    - Resolve default branch.
-   - Pre-flight gitignore check on `.minerva/worktrees/` — abort to user if missing.
-   - `git worktree add --no-track -b <date-slug> .minerva/worktrees/<date-slug> "${BASE:?}"`, in the same shell call as the runtime contract's default-branch snippet ("Names are data").
-   - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.minerva/worktrees/`): prefix file paths with `.minerva/worktrees/<date-slug>/` and run git as `git -C .minerva/worktrees/<date-slug> …`.
+   - Pre-flight gitignore check on `.lorestrom/worktrees/` — abort to user if missing.
+   - `git worktree add --no-track -b <date-slug> .lorestrom/worktrees/<date-slug> "${BASE:?}"`, in the same shell call as the runtime contract's default-branch snippet ("Names are data").
+   - Address the worktree by prefix — **no `EnterWorktree`** (it does not reliably enter `.lorestrom/worktrees/`): prefix file paths with `.lorestrom/worktrees/<date-slug>/` and run git as `git -C .lorestrom/worktrees/<date-slug> …`.
 
-8. **File writes (inside the worktree).** Identical to `minerva:propose`'s "On approval — worktree setup + file writes":
+8. **File writes (inside the worktree).** Identical to `lorestrom:propose`'s "On approval — worktree setup + file writes":
    - Create `.minerva/work/<date-slug>/`.
-   - Write `proposal.md` with the approved content per the template in `minerva:propose`'s "On approval — worktree setup + file writes".
-   - Write `scratchpad.md` with the header-only template in `minerva:propose`'s "On approval — worktree setup + file writes".
+   - Write `proposal.md` with the approved content per the template in `lorestrom:propose`'s "On approval — worktree setup + file writes".
+   - Write `scratchpad.md` with the header-only template in `lorestrom:propose`'s "On approval — worktree setup + file writes".
    - Append the initial `## Decisions YYYY-MM-DD` block to `scratchpad.md` with the tiered decisions from steps 4–6.
    - `git add` the work-unit directory; commit `chore: initialize <date-slug> work unit`.
 
-9. **Self-review.** Re-read `proposal.md` with fresh eyes per `minerva:propose`'s "On approval — worktree setup + file writes" (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal soundness gate already covered that role.
+9. **Self-review.** Re-read `proposal.md` with fresh eyes per `lorestrom:propose`'s "On approval — worktree setup + file writes" (placeholders, internal consistency, ambiguity, scope). Fix inline. **No post-write user gate** — the whole-proposal soundness gate already covered that role.
 
 10. Continue to Phase 2.
 
 ## Phase 2 — Work (inline)
 
-This phase replaces the user-interactive setup and completion signal in `minerva:work`. Implementation work itself is unchanged — the main LLM writes code as normal, maintains `scratchpad.md` per `minerva:work`'s implementation protocol.
+This phase replaces the user-interactive setup and completion signal in `lorestrom:work`. Implementation work itself is unchanged — the main LLM writes code as normal, maintains `scratchpad.md` per `lorestrom:work`'s implementation protocol.
 
 1. **Setup.** Already inside the worktree from Phase 1. Read `proposal.md` and any `replan.md` entries (none on first pass). Skip the user-facing "resolve open questions" step — the whole-proposal gate already addressed open questions; any that remain are deferred deliberately and surface in the final report.
 
-2. **Implementation loop.** Main LLM implements per `minerva:work`'s "Implementation protocol" section in `--auto=propose-ship-auto` mode: scratchpad maintenance, divergence detection. **No upper bound on implementation time** — the auto skill doesn't cap coding work.
+2. **Implementation loop.** Main LLM implements per `lorestrom:work`'s "Implementation protocol" section in `--auto=propose-ship-auto` mode: scratchpad maintenance, divergence detection. **No upper bound on implementation time** — the auto skill doesn't cap coding work.
 
 3. **Divergence detection.** When the main LLM notices what looks like a load-bearing divergence (a core assumption broke, the approach is shifting, scope is shifting), the main model calls it (replan vs. routine choice), then sends that call through a **divergence gate** (Skeptic ladder, reviewer floor): ARTIFACT = the suspected divergence + the main model's call; CONTEXT = the proposal's `## Approach`. The outcome is the call as it stands once the gate settles, after any fold or Adjudicator ruling. A standing "replan" goes to [Phase 2.5](#phase-25--replan-inline-if-triggered); a standing "routine choice" continues implementing without replan. An Adjudicator escalation asks the user.
 
@@ -86,7 +86,7 @@ This phase replaces the user-interactive setup and completion signal in `minerva
 
 ## Phase 2.5 — Replan (inline, if triggered)
 
-Mirrors `minerva:replan`'s protocol; acceptance is always reviewed (Skeptic ladder, reviewer floor).
+Mirrors `lorestrom:replan`'s protocol; acceptance is always reviewed (Skeptic ladder, reviewer floor).
 
 1. Already inside the worktree. Read `proposal.md`, prior `replan.md` entries, current `scratchpad.md`.
 
@@ -94,47 +94,47 @@ Mirrors `minerva:replan`'s protocol; acceptance is always reviewed (Skeptic ladd
 
 3. **New-plan acceptance (Skeptic ladder).** ARTIFACT = the full replan entry draft + the proposal's current `## Approach` for comparison; CONTEXT = the divergence that triggered it. Once the gate settles — `[reviewed — clean]`, a fold with a clean or residual-folded fold-audit, or an `[adjudicated — proceed]` outcome — write the entry as it then stands. An Adjudicator escalation asks the user.
 
-4. **Write.** Append the entry to `replan.md` per `minerva:replan`'s "On approval — file write" section. If the new plan changes success criteria, also edit `proposal.md`'s `## Success criteria` section.
+4. **Write.** Append the entry to `replan.md` per `lorestrom:replan`'s "On approval — file write" section. If the new plan changes success criteria, also edit `proposal.md`'s `## Success criteria` section.
 
 5. Return control to Phase 2 (or Phase 3 if replan was triggered from review).
 
 ## Phase 3 — Review (inline)
 
-Replaces the user-interactive triage in `minerva:review`, whose protocol is read in `--auto=propose-ship-auto` mode. Diff resolution and finding generation use the optional OPEN-PR review skill when installed, otherwise the host adapter's independent diff reviewer; triage is solo unless the scrutiny predicate holds.
+Replaces the user-interactive triage in `lorestrom:review`, whose protocol is read in `--auto=propose-ship-auto` mode. Diff resolution and finding generation use the optional OPEN-PR review skill when installed, otherwise the host adapter's independent diff reviewer; triage is solo unless the scrutiny predicate holds.
 
 1. **Read context.** `proposal.md`, all `replan.md` entries, current `scratchpad.md` (including prior `## Review triage YYYY-MM-DD` blocks), `followups.md` **plus** open `minerva:followup` issues (`gh issue list --label "minerva:followup" --state open`), and relevant `.minerva/knowledge/` entries.
 
-2. **Diff resolution.** Same as `minerva:review`'s "Diff resolution" section.
+2. **Diff resolution.** Same as `lorestrom:review`'s "Diff resolution" section.
 
 3. **Generate findings.** If Phase 2 step 4 already generated them alongside completion verification and they still stand (no replan since, and no change to the diff outside `.minerva/work/`), use them and skip to step 4. Otherwise, two passes:
    - **Minerva audit** (inline): spec fidelity (does the diff achieve `## Goal`, `## Approach`, `## Success criteria`?) + knowledge compliance (does the diff violate any documented pattern/constraint/decision?).
-   - **Code review**: use `code-review:code-review` only for an OPEN PR when installed. Otherwise, use the independent PR/local diff review per `minerva:review`'s "Code review invocation" section and host adapter.
+   - **Code review**: use `code-review:code-review` only for an OPEN PR when installed. Otherwise, use the independent PR/local diff review per `lorestrom:review`'s "Code review invocation" section and host adapter.
 
 4. **Triage (solo by default).** The main model triages the full numbered finding set in one decision. ARTIFACT = the findings list + proposed dispositions (default by the deferral bar in `skills/promote/references/deferral-bar.md`, not by severity alone: a finding with a writable failure scenario → FIX, even outside the diff, unless too large to absorb — then SUGGEST (an issue candidate if `critical`/`high`, otherwise a standing fact); documentation for behavior this diff touched → always FIX, never deferred; a standing fact about the system → SUGGEST, phrased as what *is* so promote can route it to a `reference` entry; everything else → IGNORE). Solo unless the scrutiny predicate holds — in practice, a finding with two defensible dispositions and none dominant — in which case the set goes through the Skeptic ladder. The code-review pass already supplied an independent finding set.
 
-5. **Replan-vs-FIX check.** If any FIX finding reveals a load-bearing divergence (per `minerva:review`'s "Load-bearing divergence" heuristic), the main model makes the replan-vs-FIX call and sends it through a **replan-vs-FIX gate** (Skeptic ladder, reviewer floor): ARTIFACT = the finding + the call; CONTEXT = the proposal's `## Approach`. If "replan" is the call once the gate settles, persist current triage state to scratchpad per `minerva:review`'s "Triage persistence" section, then trigger [Phase 2.5](#phase-25--replan-inline-if-triggered). After replan completes, return to step 4 (re-run triage).
+5. **Replan-vs-FIX check.** If any FIX finding reveals a load-bearing divergence (per `lorestrom:review`'s "Load-bearing divergence" heuristic), the main model makes the replan-vs-FIX call and sends it through a **replan-vs-FIX gate** (Skeptic ladder, reviewer floor): ARTIFACT = the finding + the call; CONTEXT = the proposal's `## Approach`. If "replan" is the call once the gate settles, persist current triage state to scratchpad per `lorestrom:review`'s "Triage persistence" section, then trigger [Phase 2.5](#phase-25--replan-inline-if-triggered). After replan completes, return to step 4 (re-run triage).
 
-6. **Apply dispositions.** Per `minerva:review`'s "On approval — file writes" section. FIX items get edited directly; SUGGEST items append to scratchpad under `## Review finding YYYY-MM-DD`; IGNORE items optional.
+6. **Apply dispositions.** Per `lorestrom:review`'s "On approval — file writes" section. FIX items get edited directly; SUGGEST items append to scratchpad under `## Review finding YYYY-MM-DD`; IGNORE items optional.
 
 7. Continue to Phase 4.
 
 ## Phase 4 — Promote (inline)
 
-Replaces the user-interactive partition in `minerva:promote` Mode A, whose protocol is read in `--auto=propose-ship-auto` mode.
+Replaces the user-interactive partition in `lorestrom:promote` Mode A, whose protocol is read in `--auto=propose-ship-auto` mode.
 
 1. **Already inside the worktree.** Read `proposal.md`, `scratchpad.md`, `replan.md` if present.
 
 2. **Idempotency check.** If `work_status.unit_state(<unit-dir>)["promoted"]` is true, report "already promoted" and continue to Phase 5. Use that predicate, never a match against the marker string — the marker has nine spellings in one 51-unit corpus and a string match reads 16 of them as un-promoted, re-running a mutating pass.
 
-3. **Partition draft.** The main LLM proposes a four-way partition per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
+3. **Partition draft.** The main LLM proposes a four-way partition per `lorestrom:promote`'s "Mode A — no argument (end-of-work full pass)": PROMOTE / MERGE INTO PROPOSAL / DISCARD / TODO. Skip entries already marked `→ promoted to ...`.
 
 4. **Partition (solo by default).** ARTIFACT = the full partition with one-line justifications per entry. Solo unless an entry has two defensible buckets and none dominant, then the partition goes through the Skeptic ladder.
 
 5. **TODO disposition (solo by default).** Only if any entries landed in the TODO bucket. **Read the deferral bar in `skills/promote/references/deferral-bar.md` first** and pre-sort against it; a reviewer, if the scrutiny predicate sends it to one, reviews the sorting, not each item from scratch. Artifact = each TODO with its proposed outlet — fix now (a defect small enough to absorb; fix it, then return to Phase 3 so the fix is reviewed before promote re-runs), a GitHub issue (all three conditions: writable failure scenario, `critical`/`high` priority per `skills/promote/references/github-issues.md`, too large to absorb; carrying that `**Failure scenario**:` line, or `followups.md` where the repo cannot host issues; more than one per unit needs a logged justification), a `.minerva/knowledge/` `reference` entry (a standing fact, or a defect that is neither urgent nor absorbable), or discard. Documentation for behavior this diff touched is not on the list — it is done as part of the work. There is no `medium` or `low` tier.
 
-6. **Apply writes.** Per `minerva:promote`'s "Mode A — no argument (end-of-work full pass)": write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
+6. **Apply writes.** Per `lorestrom:promote`'s "Mode A — no argument (end-of-work full pass)": write PROMOTE items as `.minerva/knowledge/<YYYY-MM-DD>-<type>-<slug>.md` using the knowledge entry template; rewrite `proposal.md`'s `## Approach` (and Status to `Shipped (YYYY-MM-DD)`); apply TODO dispositions; archive the scratchpad and write the one-line promote marker.
 
-7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `minerva:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
+7. **TODO seed gate (if any).** If any TODO was marked "seed new proposal", do **not** auto-invoke `lorestrom:propose` in the same run — surface the list in the final report as suggested follow-up work units. Auto mode does not cascade into new auto runs without explicit user direction.
 
 8. Continue to Phase 5.
 
@@ -145,7 +145,7 @@ is left for after merge.
 
 ## Phase 5 — Ship gate
 
-There is no gate. The `promote → ship` confirmation that `minerva:propose-ship` requires is replaced by silent advancement. The completion gate, review triage and promote dispositions have already been adjudicated at their tiers; the run trusts those decisions and proceeds.
+There is no gate. The `promote → ship` confirmation that `lorestrom:propose-ship` requires is replaced by silent advancement. The completion gate, review triage and promote dispositions have already been adjudicated at their tiers; the run trusts those decisions and proceeds.
 
 If the global escalation counter has reached 3 by this point, halt instead of shipping (see the failure-modes caps in `references/governance.md`).
 
@@ -153,15 +153,15 @@ Otherwise continue to Phase 6.
 
 ## Phase 6 — Ship (delegated)
 
-Invoke `minerva:ship <date-slug> --auto=propose-ship-auto` via the skill loader. Before invoking, lead with this auto-mode instruction:
+Invoke `lorestrom:ship <date-slug> --auto=propose-ship-auto` via the skill loader. Before invoking, lead with this auto-mode instruction:
 
-> "You are running inside `minerva:propose-ship-auto`. When `minerva:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `minerva:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
+> "You are running inside `lorestrom:propose-ship-auto`. When `lorestrom:ship` reaches Hard gate #1 (commit message) and Hard gate #2 (PR title + body), accept the drafted content without prompting the user. All other `lorestrom:ship` behavior — pre-flight, branch creation, push, PR creation, CI watch loop, auto-merge — is unchanged."
 
 These two gates are operational and take no tier — the main LLM's draft from `proposal.md` is good enough by definition.
 
-If `minerva:ship`'s CI auto-fix classifier marks a failure as `other` or bails on a non-trivial test/build, **do not tier the bail** — escalate to the user with the failing job log. This is a hard escalation trigger.
+If `lorestrom:ship`'s CI auto-fix classifier marks a failure as `other` or bails on a non-trivial test/build, **do not tier the bail** — escalate to the user with the failing job log. This is a hard escalation trigger.
 
-When `minerva:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
+When `lorestrom:ship` returns **in this same turn**, continue to Phase 7. If instead it ended the
 turn on its CI watch, it re-enters this gate itself via `--cleanup-only` when checks settle — exactly
 one of the two paths runs, never both.
 
@@ -176,12 +176,12 @@ conditional on a real re-entry capability: without it, checkpoint and report
 cap at 12 or the original one-hour deadline, whichever comes first. Never reset
 these limits when switching sessions.
 
-Identical to `minerva:propose-ship`'s Phase 7. After `minerva:ship` returns:
+Identical to `lorestrom:propose-ship`'s Phase 7. After `lorestrom:ship` returns:
 
 1. `gh pr view <pr-number> --json state,mergedAt 2>/dev/null`, with the PR number ship
    reported (on resume, the checkpoint's PR number). No branch name is typed.
-2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. Cleanup removes the worktree and prunes the branch; it opens no PR, because the unit's knowledge entries were complete when its PR merged. Report and exit.
-3. **`OPEN`, auto-merge enabled** → when a scheduler supports re-entry, use the scheduled resume operation with `prompt: minerva:propose-ship-auto --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12. On exhaustion, surface manual instructions.
+2. **`MERGED`** → invoke `lorestrom:cleanup <date-slug> --yes` via the skill loader. Cleanup removes the worktree and prunes the branch; it opens no PR, because the unit's knowledge entries were complete when its PR merged. Report and exit.
+3. **`OPEN`, auto-merge enabled** → when a scheduler supports re-entry, use the scheduled resume operation with `prompt: lorestrom:propose-ship-auto --cleanup-only <date-slug> --retry=N`, `delaySeconds: 300`. Unlike ship's CI watch, this delay is deliberately a constant: what is being waited on is auto-merge landing, which can queue behind a required review or a merge queue rather than tracking CI duration, and 300 × the retry cap below is what makes that cap a ~1 hour wall-clock bound. Cap retries at 12. On exhaustion, surface manual instructions.
 4. **`OPEN`, auto-merge declined** → surface manual cleanup instructions; do not schedule wake-up.
 5. **`CLOSED` (not merged)** → leave worktree in place; surface manual cleanup instructions.
 6. **No PR found** → exit silently (ship must have bailed before opening one — already reported above).

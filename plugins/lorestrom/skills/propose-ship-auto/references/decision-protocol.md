@@ -252,11 +252,11 @@ After every decision, append one line to the work unit's `scratchpad.md` under a
 - `[escalated to user]` — what was asked and the answer.
 - `[user-directed]` — an unsolicited user directive; the directive is the justification.
 
-These are scratchpad data. `minerva:promote` treats them as routine noise unless a decision reveals a durable pattern.
+These are scratchpad data. `lorestrom:promote` treats them as routine noise unless a decision reveals a durable pattern.
 
 ## Re-measure
 
-The Adjudicator's trigger rate is a prediction, not a measurement. In the panel era, only 3 decisions moved up from a reviewer (all failed fold-audits on whole-proposal) and the anti-circularity escape never fired, so the Adjudicator should rarely run and the user should rarely be asked. `scripts/decision_telemetry.py` tallies tier × gate × outcome. Once ~10 runs have logged under this protocol, revisit it via `minerva:replan`:
+The Adjudicator's trigger rate is a prediction, not a measurement. In the panel era, only 3 decisions moved up from a reviewer (all failed fold-audits on whole-proposal) and the anti-circularity escape never fired, so the Adjudicator should rarely run and the user should rarely be asked. `scripts/decision_telemetry.py` tallies tier × gate × outcome. Once ~10 runs have logged under this protocol, revisit it via `lorestrom:replan`:
 
 - How often the Adjudicator runs, and how often it escalates.
 - Whether the user-escalation rate rose against the panel era. If it did, look at what the escalations asked before adding any tier back.
