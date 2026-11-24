@@ -21,8 +21,7 @@ Review the active changeset for both design compliance and code quality. Works a
 
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
 substituted its own adjudication for this skill's user gates. Act on the argument — never on a
-judgment about who is calling. Absent it, every gate behaves exactly as written. **Inert until 0.3.0:**
-no lorestrom skill passes it until the orchestrators arrive (runtime contract, "Scope of this version").
+judgment about who is calling. Absent it, every gate behaves exactly as written. `lorestrom:propose-ship-auto` passes it (its `## Delegated skills` table).
 
 It satisfies the triage hard gate in `references/protocol.md`.
 

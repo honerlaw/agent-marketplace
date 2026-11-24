@@ -22,7 +22,7 @@
    - **Seed new proposal** → after Mode A finishes, offer to invoke `lorestrom:propose "<the todo>"` for each chosen item. These never become issues — a proposal is the richer record.
    - **Discard** → drop, no record.
 
-   Deferred work stays discoverable through whichever path it took: `lorestrom:review` and the `propose-ship-*` orchestrators (0.3.0) read the followups record **and** open `minerva:followup` issues. Plain `lorestrom:propose` reads neither — do not claim otherwise.
+   Deferred work stays discoverable through whichever path it took: `lorestrom:review` and the `propose-ship-*` orchestrators read the followups record **and** open `minerva:followup` issues. Plain `lorestrom:propose` reads neither — do not claim otherwise.
 6. **Hard gate:** do not write any record or entry until the user — or, under `--auto=<orchestrator>`, that orchestrator's adjudication — has confirmed the partition, the TODO dispositions, **and the new entries** (each shown as its full text, including its `**Theme**`, its `**Summary**` and its forward `## Related` lines). Also show every edge that would touch an existing entry (a `supersedes` onto it): it is held until the unit merges. Promote is add-only (see [Wiki maintenance](#wiki-maintenance-add-only)).
 7. On confirmation:
    - **For each PROMOTE item:** determine its type (`decision`, `bug`, `pattern`, `constraint`, or `reference`) and its stem `<YYYY-MM-DD>-<type>-<slug>`, where the date is today (`date +%F`) — see [Entry naming](#entry-naming). Write the entry, using the knowledge entry template, with `storage:knowledge.write`: it is pending lore at once and becomes current when the unit releases. Each entry must stand alone.

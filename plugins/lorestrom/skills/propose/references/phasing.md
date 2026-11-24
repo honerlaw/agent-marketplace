@@ -121,7 +121,7 @@ trigger is the next phase, and the report is what makes its absence noticeable.
 
 ## The orchestrator loop
 
-The orchestrators (`propose-ship` and `propose-ship-auto`, arriving in 0.3.0) both end with: ship → poll the PR → on
+The orchestrators (`lorestrom:propose-ship` and `lorestrom:propose-ship-auto`) both end with: ship → poll the PR → on
 `MERGED`, run `lorestrom:cleanup` → report and exit. **On a phased unit that last step is wrong**,
 and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
 reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.

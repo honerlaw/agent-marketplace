@@ -34,8 +34,7 @@ A unit's records live in Lorestrom (`storage:unit.read`), never in files. With n
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator is driving
 this run and has substituted its own adjudication for the user gates below. Act on the argument —
 never on a judgment about who is calling: "an inline argument was passed" is observable; "the
-prior phase converged" is an opinion. **Inert until 0.3.0:** no lorestrom skill passes it until
-the orchestrators arrive (runtime contract, "Scope of this version").
+prior phase converged" is an opinion. `lorestrom:propose-ship-auto` passes it (its `## Delegated skills` table).
 
 When it is present:
 

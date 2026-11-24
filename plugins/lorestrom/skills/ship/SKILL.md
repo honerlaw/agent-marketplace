@@ -20,8 +20,7 @@ Close the lifecycle by committing outstanding work to a branch, opening a PR tit
 **Mode argument**: `--auto`
 
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator is driving this
-run. Act on the argument — never on a judgment about who is calling. **Inert until 0.3.0:** no lorestrom skill passes it until the orchestrators arrive (runtime
-contract, "Scope of this version"). It does three things:
+run. Act on the argument — never on a judgment about who is calling. `lorestrom:propose-ship-auto` passes it (its `## Delegated skills` table). It does three things:
 
 - **Hard gates #1 and #2** (commit message, PR title + body) accept their drafts without prompting.
 - **The CI-watch wake-up carries the caller**, so the orchestrator survives the wait.

@@ -13,7 +13,7 @@ user decisions when available, otherwise ask directly and wait.
 Use the `Agent` tool with fresh context, `subagent_type: general-purpose`, and
 `run_in_background: false`. Always wait for results. Do not reuse an author or
 previous reviewer for a fold-audit or an Adjudicator. Reviewer-tier agents
-(the 0.3.0 orchestrators' Skeptic, fold-audit, Adjudicator and Verifier) use `model: sonnet`,
+(`propose-ship-auto`'s Skeptic, fold-audit, Adjudicator and Verifier) use `model: sonnet`,
 preserving minerva's cost policy; ordinary code review leaves `model` unpinned. For a wave of independent
 decisions, issue all of its first-wave `Agent` calls in one message; calls in
 one message already run concurrently, so a wave needs no new capability. If any

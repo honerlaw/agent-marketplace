@@ -4,7 +4,7 @@ minerva's durable records, kept in [Lorestrom](https://www.lorestrom.com): a sha
 of linked docs that several repositories, people and agents read through its MCP server.
 There is no local file mode.
 
-## This version (0.2.0): lifecycle and handover
+## This version (0.3.0): lifecycle, handover and orchestrators
 
 - `lorestrom:init` links a Git repository to a Lorestrom project (found by the repository's
   remote, or created in a workspace you pick) and caches the link in the clone, or commits it
@@ -19,10 +19,12 @@ There is no local file mode.
   on live merge evidence.
 - Worktrees live under `.lorestrom/worktrees/`, checkpoints under
   `<git-common-dir>/lorestrom/runtime/`.
+- The orchestrators run the whole lifecycle on Lorestrom: `propose-ship` with a person
+  deciding at each transition, and `propose-ship-auto` with per-decision adjudication, passing
+  the `--auto` mode the lifecycle skills carry. Their cleanup gate releases the unit's gate
+  through `cleanup`, and asks the user whenever a merge cannot be proved.
 
-The orchestrators (`propose-ship`, `propose-ship-auto`) arrive in 0.3.0, and with them the
-`--auto` modes the lifecycle skills already carry (inert until then). Sweeping other clones'
-units and linting Lorestrom docs arrive in 0.4.0.
+Sweeping other clones' units and linting Lorestrom docs arrive in 0.4.0.
 
 ## Setup
 
@@ -33,7 +35,7 @@ units and linting Lorestrom docs arrive in 0.4.0.
 3. In a repository, run `lorestrom:init`.
 
 With minerva also installed, both plugins' skills are available. In a linked repository run
-the lifecycle with lorestrom's skills, one by one until 0.3.0, and never minerva's
+the lifecycle with lorestrom's skills and orchestrators, and never minerva's
 orchestrators: they would write records as `.minerva/` files that Lorestrom ignores. Disable
 minerva for that repository in the host's plugin settings.
 

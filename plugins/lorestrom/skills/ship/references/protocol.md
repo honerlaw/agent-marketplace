@@ -288,12 +288,11 @@ The recommendation:
 - CI still pending → state whether automatic re-entry is actually scheduled; otherwise print **pending — manual resume required** and the exact resume prompt.
 
 **Under `--auto=<orchestrator>`, the report may not be the end of the run** — and which of the two
-paths applies is decided by an observable fact, not a guess. **Inert until 0.3.0:** no lorestrom skill passes it until the orchestrators arrive (runtime
-contract, "Scope of this version").
+paths applies is decided by an observable fact, not a guess. `lorestrom:propose-ship-auto` passes it.
 
 - **Resumed from a CI-watch wake-up** (this invocation carried `--watch-iteration`): the orchestrator's
   turn ended when the watch was armed, so its Phase 6 will never resume. Hand back by invoking
-  `lorestrom:<orchestrator> --cleanup-only <date-slug>` via the skill loader — the re-entry the 0.3.0
+  `lorestrom:<orchestrator> --cleanup-only <date-slug>` via the skill loader — the re-entry the
   orchestrators document, which skips phases 1-6 and runs their cleanup gate.
 - **Returning synchronously** (no wake-up happened; the orchestrator's turn is still live): do **not**
   invoke it. Phase 6 continues to Phase 7 on its own, and invoking here as well runs the cleanup gate
