@@ -4,7 +4,7 @@ minerva's durable records, kept in [Lorestrom](https://www.lorestrom.com): a sha
 of linked docs that several repositories, people and agents read through its MCP server.
 There is no local file mode.
 
-## This version (0.3.0): lifecycle, handover and orchestrators
+## This version (0.4.0): lifecycle, handover, orchestrators, sweep and lint
 
 - `lorestrom:init` links a Git repository to a Lorestrom project (found by the repository's
   remote, or created in a workspace you pick) and caches the link in the clone, or commits it
@@ -24,7 +24,12 @@ There is no local file mode.
   the `--auto` mode the lifecycle skills carry. Their cleanup gate releases the unit's gate
   through `cleanup`, and asks the user whenever a merge cannot be proved.
 
-Sweeping other clones' units and linting Lorestrom docs arrive in 0.4.0.
+- `cleanup` with no argument sweeps every open unit of the project, including other clones'
+  and other people's: it fetches a unit's PR heads when this clone lacks them, releases only on
+  proven merge, asks before acting on a unit someone else opened, and never removes another
+  clone's worktree. `status` shows each unit's age, whether it is stale (no recorded head
+  after 14 days) and who opened it. `lint` health-checks the project's knowledge in Lorestrom,
+  read-only.
 
 ## Setup
 

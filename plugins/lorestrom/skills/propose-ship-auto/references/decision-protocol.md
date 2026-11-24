@@ -25,7 +25,7 @@ Operational decisions (commit messages, PR bodies, file paths) take no tier. The
 
 For a drafted decision, take the first step that applies, then clamp the result to the row's floor in the [Decision taxonomy](#decision-taxonomy):
 
-1. **Hardcoded trigger → user.** In-flight collision, open-issue match at intake, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), cleanup's wait on a confirmation of a merge it could not prove, global escalation counter at 3. See `references/governance.md`.
+1. **Hardcoded trigger → user.** In-flight collision, open-issue match at intake, worktree-creation failure, ship-phase failures (`other` classification, push rejection, `gh` auth failure), cleanup's wait on a confirmation of a merge it could not prove, cleanup's question on a unit whose `mine` is not true, global escalation counter at 3. See `references/governance.md`.
 2. **Scrutiny predicate → reviewer.** Route to the reviewer if **any** clause holds, **or if you are unsure whether it holds**, and name each clause that fired (or that you could not rule out) in the reviewer's CONTEXT:
    - **genuine ambiguity** — you enumerated ≥2 viable options and none is dominant on the stated criteria;
    - **high blast radius / irreversible** — hard to walk back, or a broad rather than bounded surface;
