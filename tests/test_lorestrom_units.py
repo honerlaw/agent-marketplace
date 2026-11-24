@@ -1037,3 +1037,8 @@ def test_unit_state_shares_reconciles_threshold():
 def test_unit_state_needs_a_declared_phase_count():
     with pytest.raises(backend.BackendError):
         backend.unit_state({}, "open", OLD, phases=0)
+
+
+def test_a_superseded_entry_with_its_successor_edge_is_clean():
+    docs = [kdoc(DOC_A, A_STEM), kdoc(DOC_B, B_STEM, status="superseded")]
+    assert lint(docs, [edge("supersedes", DOC_A, DOC_B)])["findings"] == []
