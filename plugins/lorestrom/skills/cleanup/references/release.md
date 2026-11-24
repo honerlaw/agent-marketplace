@@ -19,8 +19,8 @@ is a row of `skills/using-lorestrom/references/storage.md`.
    file and run the helper's `reconcile`. It validates every commit, finds the default branch
    itself, gathers the git evidence, and returns `release`, `confirm`, `abandon` or `wait`.
    `--abandon` sets `abandon`; `--merged <sha>` sets `merged` to `{"<phase>": "<sha>"}` for the
-   earliest unmerged phase. `age_days` is whole days since the unit doc was created, or 0 when
-   that is unknown; it only marks a headless unit stale. The sha is written into the file, never
+   earliest unmerged phase. `age_days` is `unit-state`'s (whole days since the unit's gate
+   opened, 0 when unknown); it only marks a headless unit stale. The sha is written into the file, never
    onto a command line, and the helper checks it is a commit on the default branch.
 4. **Act only on its answer.** Never release on a judgment that a unit "looks merged".
 
@@ -56,9 +56,10 @@ doc) on its Will release line by doc title, so the user sees which reference doc
 
 ## Units with no worktree
 
-A unit whose worktree was removed by hand, or that was cleaned up by an older run, can still
-hold an open gate. The no-argument sweep lists this project's units with open gates
-(`storage:unit.list`) alongside the worktrees, and runs the same decision for each.
+A unit whose worktree was removed by hand, or that another clone or person worked on, can
+still hold an open gate. The no-argument sweep lists this project's units with open gates
+alongside the worktrees and runs the same decision for each, with its own rules for a unit
+from elsewhere or opened by someone else: [sweep.md](sweep.md).
 
 **With no link or no server, nothing under `.lorestrom/worktrees/` is torn down.** Records are
 not committed, so a fresh unit branch equals its base and reads as merged to git, and a unit's

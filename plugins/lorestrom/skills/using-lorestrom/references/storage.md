@@ -42,9 +42,10 @@ as the runtime contract's "Installed paths and helpers" shows.
 | `project.link` | `whoami`, `list_workspaces`, `create_workspace`, `create_folder`, `find_docs`, `create_doc`, `update_doc` | `label`, `link` | yes |
 | `knowledge.list` | `find_docs` | — | yes |
 | `knowledge.read` | `get_doc`, `get_relations` | — | yes |
+| `knowledge.lint` | `find_docs`, `find_relations`, `get_gate` | `unit-ids`, `lint-docs` | yes |
 | `knowledge.import` | `whoami`, `find_docs`, `get_doc`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload` | yes |
 | `handover.sync` | `find_docs`, `get_doc`, `list_doc_changes`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload`, `reference-list`, `reference-payload`, `merge-properties`, `removal-plan` | yes |
-| `unit.list` | `find_docs`, `get_gate`, `update_doc` | `unit-ids`, `unit-state` | yes |
+| `unit.list` | `whoami`, `find_docs`, `get_gate`, `update_doc` | `unit-ids`, `unit-state` | yes |
 | `unit.read` | `find_docs`, `get_doc`, `get_gate` | `unit-state`, `phases` | yes |
 | `unit.create` | `find_docs`, `get_doc`, `create_doc`, `update_doc`, `open_gate`, `get_gate` | `unit-ids`, `merge-properties` | yes |
 | `record.write` | `find_docs`, `hold_write`, `update_doc`, `add_relation`, `write_doc_body`, `get_doc` | — | yes |
@@ -138,6 +139,20 @@ Lorestrom is authoritative for a linked repository: never read the repository's 
 knowledge files as this project's lore, even where they remain. Where a skill selects by `**Type**`, select
 by `minerva:type`.
 
+## `knowledge.lint`
+
+Read-only, for `lorestrom:lint`. Write `{"docs", "edges", "units"}` to a `mktemp` file and run
+`lint-docs --project <projectId>`:
+
+- `docs`: `find_docs` with the link's `workspaceId` and `kinds` `["minerva:knowledge"]`, every
+  status (no `statuses` filter: archived targets are what `broken-link` looks for), all pages.
+- `edges`: `find_relations` with the same `workspaceId` and `relations`
+  `["supersedes", "relates_to"]`, paged like `find_docs`.
+- `units`: `{"key", "state"}` for each unit `unit.list` printed, the state from its `get_gate`.
+
+Every value is data: it goes into the file, never onto a command line. The helper names each
+entry by its checked stem or doc id, never by its title.
+
 ## `knowledge.read`
 
 `get_doc` only the entries whose theme and summary bear on the task. `get_relations` gives
@@ -228,9 +243,13 @@ Every step is confirmed; nothing is overwritten silently.
 `find_docs` with the link's `workspaceId`, `kinds` `["minerva:work_unit"]` and `properties`
 `{"minerva:project": "<projectId>"}`. Pipe the docs to `unit-ids --project <projectId>`:
 only the ids it prints are used, and its `refused` count is reported. For each unit acted on,
-`get_gate` its doc id and pass the gate's state to `unit-state` with the doc's properties; a
-skill allowed to write writes a `refresh` value back with `update_doc` of the merged
-properties. A read-only skill shows it and writes nothing.
+`get_gate` its doc id and pipe `{"properties", "gate", "openedAt", "openedBy", "me"}` to
+`unit-state`: the doc's properties, the gate's `state`, `openedAt` and `openedByUserId`, and
+`whoami`'s user id (called once per run). It prints `age_days` (whole days since the gate
+opened, the age cleanup's release step passes on) and `mine` (whether this person opened the unit; null when
+unknown). A skill allowed to write writes a `refresh` value back with `update_doc` of the
+merged properties, but only for a unit it is acting on and only when `mine` is true or the
+user said yes to acting on that unit. A read-only skill shows it and writes nothing.
 
 ## `unit.read`
 

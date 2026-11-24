@@ -11,7 +11,7 @@ Tidy up after shipped work — release each merged unit's Lorestrom gate, then r
 
 ## Usage
 
-- `lorestrom:cleanup` — sweep all merged worktrees + branches in the current repo
+- `lorestrom:cleanup` — sweep this project's open units, other clones' included
 - `lorestrom:cleanup 005-add-payments` — clean up only the named work unit (a checked id)
 - `lorestrom:cleanup 005-add-payments --merged <sha>` — name the merge commit when no PR shows it
 - `lorestrom:cleanup 005-add-payments --abandon` — abandon the unit: discard its held writes
@@ -22,7 +22,7 @@ Tidy up after shipped work — release each merged unit's Lorestrom gate, then r
 Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`. **Keep all six blocks in sync if you edit one.** For `lorestrom:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
 
 1. **Explicit argument** (a checked id: one `storage:unit.list` or the runtime's `units` printed) → operate on just that work unit: its Lorestrom unit and `.lorestrom/worktrees/<date-slug>/`. Required: its branch merged into default (see Merge detection), except with `--abandon` or `--merged`.
-2. **No argument** → scan all `.lorestrom/worktrees/*/` directories and this project's units with open gates (`storage:unit.list`), and check each branch's merge state. Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and `NNN-<slug>`; a digit-anchored glob would silently skip date-named worktrees.
+2. **No argument** → the sweep: this project's open units, here or elsewhere, and all `.lorestrom/worktrees/*/` directories. **Read `references/sweep.md` first.** Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and `NNN-<slug>`; a digit-anchored glob would silently skip date-named worktrees.
 3. **Non-git repo** → report "not a git repo, nothing to clean up" and stop.
 
 ## Checkpoint entry
@@ -41,7 +41,7 @@ Bail with a clear message on any failure:
 
 1. **Git repo.** `git rev-parse --is-inside-work-tree` returns true.
 2. **`gh` CLI available** (optional but preferred). Falls back to local-only merge detection if `gh` is missing or unauthenticated.
-3. **Not currently inside a worktree being cleaned.** If invoked from inside `.lorestrom/worktrees/<date-slug>/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run. Cleanup always operates from the parent repo — its job is to remove worktrees, so it must never be running inside one. (No lifecycle skill makes a worktree its working directory: the others address worktrees by `.lorestrom/worktrees/<date-slug>/`-prefixed paths, while cleanup removes them outright.)
+3. **Not currently inside a worktree being cleaned.** If invoked from inside `.lorestrom/worktrees/<date-slug>/`, that worktree cannot be removed while it's the current working tree. Report and ask the user to `cd` out (back to the main repo root) and re-run. Cleanup always operates from the parent repo — its job is to remove worktrees, so it must never be running inside one.
 
 ## Default-branch detection
 
@@ -69,7 +69,7 @@ and doc and never re-applied automatically. A unit whose gate waits keeps its wo
 
 With an explicit single-unit argument `--yes` satisfies the confirmation gate below — how
 `lorestrom:propose-ship` and `lorestrom:propose-ship-auto` invoke cleanup. Act on the argument, not on who you think is calling.
-`--yes` never confirms a merge `reconcile` could not prove (`storage:unit.confirm`), and never abandons.
+`--yes` never confirms a merge `reconcile` could not prove (`storage:unit.confirm`), never abandons, and never acts on a unit someone else opened (`references/sweep.md`).
 
 ## Confirmation gate
 

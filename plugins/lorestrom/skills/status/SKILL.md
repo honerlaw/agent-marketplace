@@ -1,6 +1,6 @@
 ---
 name: status
-description: Prints the current overall status of a Lorestrom-linked project's workstream as markdown tables — every unit's lifecycle stage and gate, phase progress, branch/PR state and the next lifecycle step to run, plus knowledge health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `lorestrom:status`.
+description: Prints the current overall status of a Lorestrom-linked project's workstream as markdown tables — every unit's lifecycle stage and gate, its age and who opened it (other clones' and people's units included), phase progress, branch/PR state and the next lifecycle step to run, plus knowledge health and the deferred backlog. Read-only; mutates nothing. Use when the user asks where things stand, what's in flight, what to do next, what still needs shipping or cleaning up, or for a status check / summary / dashboard / overview of the work; when an agent resumes a project and needs to orient before picking up work ("pick up where we left off", "what were we doing"); or when they invoke `lorestrom:status`.
 allowed-tools:
   - Bash
   - Read
@@ -50,10 +50,14 @@ the `cd … && pwd` wrapper makes it absolute.
 ## Step 2 — Collect the units
 
 `storage:unit.list`: only ids `unit-ids` printed are used, and its `refused` count is reported.
-For each unit, `get_gate` its doc and pipe its properties and the gate's state to `unit-state`
-(`promoted`, `shipped`, `state`). **The gate is the authority**: a stale `minerva:state`
-property is shown as stale, never trusted, and never rewritten here. Note each unit's
-`.lorestrom/worktrees/<date-slug>/` presence.
+It lists every unit of this project in Lorestrom, whoever opened it and whichever clone it was
+worked in. Call `whoami` once. For each unit, `get_gate` its doc and pipe its properties, the
+gate's `state`, `openedAt` and `openedByUserId`, your user id and its phase count (`phases`'
+`total`, 1 when unphased; step 3) to `unit-state`: `promoted`, `shipped`, `state`, `age_days`,
+`stale` and `mine`. **The gate is the authority**: a stale `minerva:state` property is shown as
+stale, never trusted, and never rewritten here. `stale` (no recorded head after 14 days) is
+shown, never acted on. Note each unit's `.lorestrom/worktrees/<date-slug>/` presence: a unit
+with none here was worked on elsewhere, and that is not a cleanup signal.
 
 ## Step 3 — Phases and merges
 
@@ -99,6 +103,6 @@ to state here:
   the phase-first ordering in the Next step mapping.
 - **Re-deriving lifecycle state.** `unit-state` and `phases` own it. A status surface that
   restates either is a copy that drifts.
-- **Linting the knowledge.** Lint and sweep arrive in 0.4.0; this table counts, it does not judge.
+- **Linting the knowledge.** That is `lorestrom:lint`; this table counts, it does not judge.
 - **Updating a stale checkout.** The rollup prints HEAD beside `origin/<default>` so a stale
   tree is *visible* — but this skill never pulls.

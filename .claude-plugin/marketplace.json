@@ -20,7 +20,7 @@
     {
       "name": "lorestrom",
       "source": "./plugins/lorestrom",
-      "description": "minerva's lifecycle with its records kept in Lorestrom — link a repository to a shared Lorestrom workspace through its MCP server, hand its minerva files over, and run propose, work, review, promote, ship and cleanup there. No local file mode; propose-ship and propose-ship-auto run the whole lifecycle."
+      "description": "minerva's lifecycle with its records kept in Lorestrom — link a repository to a shared Lorestrom workspace through its MCP server, hand its minerva files over, and run propose, work, review, promote, ship and cleanup there. No local file mode; propose-ship and propose-ship-auto run the whole lifecycle, cleanup sweeps other clones' units, and lint checks the knowledge."
     }
   ]
 }

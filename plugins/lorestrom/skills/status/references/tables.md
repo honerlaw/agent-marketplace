@@ -11,10 +11,11 @@ step** column is what makes this a status *check* rather than a data dump.
 `abandoned` **and** it has no worktree on disk. Everything else belongs here. Finished units
 are counted in table 2, never listed.
 
-| Unit | Stage | Gate | Phase | Branch | PR | Next step |
-|---|---|---|---|---|---|---|
-| `2026-08-27-deferral-cost-model` | in-progress | open | 1 of 2 | `…-phase-2` | #101 merged | `lorestrom:work` — phase 2 |
-| `2026-08-28-status-skill` | promoted | open | — | `2026-08-28-status-skill` | — | `lorestrom:ship` |
+| Unit | Stage | Gate | Age | Phase | Branch | PR | Next step |
+|---|---|---|---|---|---|---|---|
+| `2026-08-27-deferral-cost-model` | in-progress | open | 3d | 1 of 2 | `…-phase-2` | #101 merged | `lorestrom:work` — phase 2 |
+| `2026-08-28-status-skill` | promoted | open | 1d | — | `2026-08-28-status-skill` | — | `lorestrom:ship` |
+| `2026-08-02-spike-cache` | in-progress | open | 26d **stale** · elsewhere · someone else's | — | `2026-08-02-spike-cache` | — | ask its owner; `lorestrom:cleanup` never abandons it unasked |
 
 - **Unit** — the `<date-slug>`. It is also the worktree directory name and the phase-1
   branch name, which is why one column serves all three.
@@ -22,6 +23,9 @@ are counted in table 2, never listed.
   `released` or `abandoned` (the gate's state).
 - **Gate** — the gate's own state from `get_gate`. When the unit doc's `minerva:state`
   disagrees, append `(doc says <value>)`: cleanup refreshes it, status does not.
+- **Age** — `unit-state`'s `age_days`, as `<n>d`; `—` when unknown. Append **stale** when
+  `unit-state` says so, `elsewhere` when this clone has no worktree for the unit, and
+  `someone else's` when `mine` is false. These describe; none is a next step by itself.
 - **Phase** — `merged + 1` of `total` from `phases` for a phased unit, `—` otherwise. Show the
   phase's `name` when the table has room.
 - **Branch** — for a phased unit, `next_branch`, because that is the one a reader is about to
@@ -33,6 +37,7 @@ are counted in table 2, never listed.
 | | |
 |---|---|
 | Units | 65 total · 2 open · 61 released · 2 abandoned (3 ids refused) |
+| Open elsewhere | 1 (1 opened by someone else) · 1 stale |
 | Worktrees on disk | 2 |
 | Phased units incomplete | 1 |
 | Checkout | `main` at `<sha>` (origin/main `<sha>` — **2 behind**) |
@@ -40,6 +45,8 @@ are counted in table 2, never listed.
 
 - **open** counts gates in state `open` (and `releasing`, named when present).
 - **ids refused** is `unit-ids`' count; omit the clause at zero.
+- **Open elsewhere** counts open units with no worktree in this clone, with how many someone
+  else opened and how many are stale. Omit the row at zero.
 - **Checkout** exists because phase merges are read from local refs: a not-yet-fetched
   checkout reports a merged phase as unmerged. Omit the "behind" clause when the two match.
 - **Open followups** come from `gh issue list --label "minerva:followup" --state open
@@ -73,6 +80,7 @@ from falling into the cleanup arm.
 | `promoted`, no open PR | `lorestrom:ship` |
 | `promoted`, PR open | wait for CI / merge — no action |
 | a PR `CLOSED` unmerged, gate open | `lorestrom:cleanup <unit>` (it will propose abandoning) |
+| `stale`, no PR | ask the unit's owner (`mine` false) or resume it with `lorestrom:work`; never abandon on age |
 | gate `open`, not promoted | `lorestrom:review`, then `lorestrom:promote` |
 
 **Why the phase arm comes first.** A phase-1-merged unit has a merged PR *and* a worktree on
