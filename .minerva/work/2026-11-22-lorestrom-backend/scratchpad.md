@@ -35,6 +35,15 @@
 - [reviewed — clean] completion, lorestrom phase 1: Verifier accept, criteria 1–6 and phase 1 scope met; non-blocking: the sync rule lives in lorestrom's README and the drift test only, since minerva's README cannot change (tier: reviewer; floor: completion is always a Verifier)
 - [solo] review triage, lorestrom phase 1: M1, M2, L1–L4 all FIX, no replan: defects inside the approved plan (tier: solo; each has one dominant disposition)
 
+## Decisions 2026-11-24
+- [user-directed] merge: the user had #152 merged and phase 2 started; phase 1 cleanup deferred teardown (phase 1 of 3 merged, counted from merged PRs because a squash merge hides the branch); the old draft branch is kept until the unit's final cleanup
+- [reviewed — folded] new-plan acceptance (replan 2026-11-24, split the lifecycle phase): Skeptic revise, 1–6 folded (grill-plan, explore, one-by-one and debug into 0.2.0; the disable instruction kept with the orchestrators-in-0.3.0 note; size estimate and copy-then-adapt commits; inert --auto hooks; the case for four phases; per-phase guard coverage) (tier: reviewer; floor: new-plan acceptance is always reviewed)
+- [rechecked — escalated] new-plan acceptance: 1–6 addressed; N1, debug's live reference write against a unit's held replace and the waiting-for-merge rule → Adjudicator
+- [adjudicated — proceed] new-plan acceptance: N1 resolved; Lorestrom's release fails a held replace STALE after a later live edit; amendment: a unit reads the doc in the same step as its hold and the contract states the remaining window; the rule change is stated explicitly; applied after the ruling
+- [reviewed — folded] completion, lorestrom phase 2: Verifier reject on B1 (a plain confirm never reaches reconcile), everything else met; B1 is an implementation defect against the unchanged Approach 6, not a criterion the plan cannot meet, so it is fixed in the review round with no replan (tier: reviewer; floor: completion is always a Verifier)
+- [solo] review triage, lorestrom phase 2: B1, the skill-text review's 2 high, 8 medium and 6 low, the scripts review's 3 high, 2 medium and 3 low, and the Verifier's notes N1–N4 all FIX, no replan: each is a defect inside the approved plan (tier: solo; each has one dominant disposition)
+- [solo] re-review triage, lorestrom phase 2: medium 1 (confirmation lost on the release path), medium 3 (resurrection with a local branch, or a complete phased unit) and lows 4–7 FIX; medium 2 resolved by reverting S6 instead of amending Approach 6: ship records a head only for a branch with its own commits, so an ancestor head on the mainline is a fast-forward merge the plan releases, and S6 cost that case a question while guarding a near-impossible one (tier: solo; reversible, keeps the approved plan unchanged)
+
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
 - `2026-08-07-pattern-deferred-work-needs-a-trigger-not-an-assumption` has a summary over Lorestrom's 1000-character property limit: import refuses and reports it, per Approach 2.
@@ -150,3 +159,66 @@
 - [FIX] L3 low — the UTF-8 re-exec dropped `-I`/`-E`/`-s`: carried over
 - [FIX] L4 low — property keys trimmed as Python, not as Lorestrom (JavaScript) trims: explicit set
 - Each fix reverted in turn: its test fails (5 of 5). Full suite green after.
+
+## Work notes (lorestrom phase 2)
+- Size check before porting: the 14 lifecycle skills are 35 files and about 4,000 lines of minerva prose, much of it shell snippets under the names-are-data guard. Phase 1's PR was 4,250 inserted lines across 31 files and needed review fixes. A full phase 2 PR would plausibly pass 7,000 lines, too large to review well. The work stopped at a foundation commit, and the split goes back to the orchestrator as a question (it changes the replan's phases).
+- Foundation, inside the replan and proposal Approach 4–6, and needed by any split. In `lorestrom_backend.py`:
+  - `unit_key`, `record_key`, `unit_state` (the gate is the authority, `refresh` when `minerva:state` lags), `release_outcome` (a CONFLICT is success only when `get_gate` shows the gate released) and `repair_flips` (failed `set_status current` writes whose entry is still `draft`);
+  - `reconcile_action` (pure safety table) and `merge_evidence` (git evidence: 40-hex shas only, default branch found, never input; `merge-tree --write-tree` needs git 2.38);
+  - `reference_payload`, `reference_list` and `read_repo_reference` (no symlinks followed, byte-faithful, digest confirmed);
+  - CLI commands `unit-state`, `release-outcome`, `repair-flips`, `reconcile`, `reference-list` and `reference-payload`.
+- `reconcile_action` choices: a CLOSED PR in any phase abandons, as Approach 6 says. `--merged <sha>` confirms one phase, and only when that commit is on the default branch. `--yes` has no input here, so it cannot confirm. Staleness (no head after 14 days) only flags.
+- Deletion pass 2026-11-23, 20 chosen mutations over the new rules: 18 caught at first. "Confirm needs no PR" is an equivalent mutant: OPEN already waits, MERGED counts as merged and CLOSED abandons, so the clause is defensive. "Reference read stays in its directory" survived because no test asked for an existing `.md` outside it; the test was added and the mutant is now caught. As before, this measures only the mutations chosen.
+- Not started at the foundation commit; done after the 2026-11-24 replan split (below).
+- Built to the 2026-11-24 split (phase 2 = 0.2.0 "Lifecycle and handover"). Commit order: verbatim copy of the 12 skills (6339c45; tree hashes equal minerva's at that commit), a mechanical rename (dc87483), then adaptations: runtime and contract (12a4572), intake skills (781a8a8), lifecycle skills (cb46328), status (a51aec4), handover and authority (a30b280), 0.2.0 and guards (7d7cddc), and small fixes.
+- Choices made inside the plan, not new plan:
+  - The GitHub label stays `minerva:followup` and the cross-session markers stay `[minerva pre-flight]` / `MINERVA-BUSY|IDLE`, so a minerva peer and a lorestrom peer interoperate. This follows the kept `minerva:` namespace.
+  - `work_status.py` is copied byte for byte (drift-tested like the knowledge files) for phase parsing; minerva's `knowledge_catalog.py` and `workstream_status.py` are not ported, since lore comes from `storage:knowledge.list` and status reads units from Lorestrom.
+  - Target resolution's fallback is "the only open unit" instead of "most recently modified": unit docs carry no mtime the contract relies on. An explicit id must be a checked one.
+  - Records never enter git: propose makes no initial commit, and the worktree's ignore check is `git check-ignore`, since init ignores worktrees in `.git/info/exclude` unless `--shared`.
+  - `find_docs` filters in the ground rules now include `properties`, `statuses`, `tags` and `gateId` (Lorestrom's public tool surface); the pinned safety clause was reworded deliberately.
+  - `--merged <sha>` and `--abandon` are new cleanup arguments, feeding `reconcile`.
+- Deletion pass 2026-11-24, 28 chosen mutations over the new helper, runtime and guard rules: 22 caught at first. Fixed by tests: `removal-plan` keeping refused files, `unit-ids` kind filter (the test's record shared a real unit's id), `phases` filtering unhashable names. The `removal-plan` single-doc check was an equivalent mutant (an earlier branch already keeps duplicates) and was simplified away. One survivor remains: a prose contradiction ("…also after a no") added beside an offer's "On a yes" passes the structural offer test; the "kept by default" and "No earlier yes…" pins still hold. After fixes: 26 of 27 caught. Safety clauses are exact-string pins: removing one fails its row by construction.
+
+## Review triage 2026-11-24 (lorestrom phase 2)
+Verifier and the two code reviews; every item FIX inside the approved plan, no replan. Each test below fails with its fix reverted in a throwaway worktree.
+- B1 fixed: `reconcile` takes `userConfirmed` (phase numbers), counted only for `phasesToConfirm`, others reported as `refusedConfirmations`; storage.md's `unit.confirm` passes it — `test_a_user_confirmation_reaches_reconcile_through_the_request`, `test_a_confirmation_counts_only_for_a_phase_reconcile_asked_about`.
+- S1 fixed: `phases` takes the unit's recorded `heads` and `base` and counts a local merge only for a head ≠ base that is an ancestor of default; storage, ship, cleanup, status and phasing pass them — `test_a_fresh_phase_branch_is_not_merged`, `test_a_recorded_head_on_the_default_branch_is_merged`.
+- S2 fixed: merged evidence first; a CLOSED PR abandons only an unmerged phase whose merge is not a no-op (CLOSED+noop asks) — CASES closed+confirmed, closed+ancestor, closed+noop, closed later phase.
+- S3 fixed: `lorestrom_scripts.load` restores `sys.path` — `test_loading_lorestroms_scripts_leaves_minervas_imports_alone`.
+- S4 fixed: `read_repo_reference` builds the path from the repository top — `test_reference_payload_reads_through_a_symlinked_cwd`.
+- S5 fixed: the guard list (`GUARDED`) adds debug, explore, grill-plan, one-by-one, using-minerva — `test_the_guard_covers_every_minerva_skill_but_status`.
+- S6 fixed: a head on `rev-list --first-parent <default>` is an ancestor only with a MERGED PR — `test_a_head_on_the_mainline_needs_a_merged_pr` (the fast-forward test now asks; a `--no-ff` merge releases).
+- S7 fixed: runtime `UNIT_ID_RE` is the helper's pattern; checkpoints also accept `bare-<sha256>` keys — `test_the_runtime_takes_the_helpers_unit_id_shape`, `test_the_runtime_and_the_helper_share_one_unit_id_pattern`, `test_a_bare_ship_key_is_still_a_checkpoint`.
+- S8 fixed: a token that is not 32 hex fails the read — `test_a_damaged_token_is_refused_not_read_as_empty`.
+- K1 fixed: issue title and body written to mktemp files with a file tool; `--title "$(cat "$T")" --body-file "$B"` — `test_no_skill_puts_text_into_a_shell_heredoc`, `test_promote_files_an_issue_from_two_temp_files`.
+- K2 fixed: Will abandon section; abandon only on a yes naming the unit, or an explicit `<unit> --abandon` — safety pins + `test_the_cleanup_gate_has_a_will_abandon_section`.
+- K3 fixed: on-approval step 2 resumes this clone's own aborted unit (token matches the doc's first line) under its original id — safety pin.
+- K4 fixed: with no link or server, nothing under `.lorestrom/worktrees/` is torn down — safety pin.
+- K5 fixed: cleanup's explicit argument exempts `--abandon` and `--merged` from "merged" — safety pin.
+- K6 fixed: the proposal rewrite uses `storage:record.write`; `storage:unit.finish` is Mode A's last step — `test_unit_finish_is_promotes_last_step`.
+- K7 fixed: `git commit -F <temp file>` — `test_ship_commits_from_a_message_file`, heredoc test.
+- K8 fixed: resurrection checks out `refs/remotes/origin/<branch>` (phased: `next_branch`), otherwise asks — safety pins.
+- K9 fixed: `removal-plan` also removes for superseded and deprecated docs; draft, archived and no match keep — `test_removal_plan_removes_a_file_whose_retired_doc_holds_its_digest`, archived case, `test_removal_keeps_retired_docs_removable`.
+- K10 fixed: debug shows the text and gets a yes before an inside-unit hold; cleanup's Will release line lists held reference writes — safety pins + gate test.
+- K11 fixed: `list_doc_changes` pages by `limit`/`before` until the import's own write — safety pins.
+- K12 fixed: `git diff --cached --quiet` first, then `git commit -F <temp file> -- <listed path>…` — safety pins.
+- K13 fixed: `checkout --no-track -b` on the phase cut — `test_the_phase_cut_does_not_track_the_default_branch`.
+- K14 fixed: `unit.ship` re-recorded after every push, including CI fixes — safety pins.
+- K15 fixed: runtime Scope states one rule (no orchestrator passes `--auto` until 0.3.0; a user-typed one changes only the gates it names) — safety pin, reworded deliberately.
+- K16 fixed: the five session-context steps drop a trailing `-phase-N` (cleanup's variant has no branch-name step) — `test_every_session_context_step_strips_the_phase_suffix`.
+- N1 fixed: rows gain `update_doc` (unit.list, record.write, reference.write) and `hold_write`/`reference-payload` (reference.update); `test_each_rows_columns_name_every_tool_and_helper_its_section_uses` checks completeness.
+- N2 fixed: work, grill-plan and one-by-one say records, not files — `test_no_skill_assumes_record_files`.
+- N3 fixed: every "`propose-ship-*` orchestrators" says (0.3.0) — `test_every_orchestrator_mention_says_it_arrives_in_0_3_0`.
+- N4 fixed: a minerva-begun unit finishes on minerva's skills run one by one, never its orchestrators — safety pin.
+- each fix reverted in turn: 29 of 29 caught
+
+## Re-review triage 2026-11-24 (lorestrom phase 2 fixes)
+- [FIX] medium 1 — `unit.release` re-ran reconcile without the user's confirmation: it acts on the `release` from `unit.confirm`'s re-run
+- [FIX] medium 2 — S6 changed Approach 6's release rule unrecorded: S6 reverted, a fast-forward merge releases again; test renamed to say so
+- [FIX] medium 3 — resurrection reuses an existing local branch (no `-b`, never `-B`) before origin's; a phased unit with every phase merged stops and asks
+- [FIX] low 4 — phases example keyed heads by PR; it is the phase number
+- [FIX] low 5 — an integer confirmation is refused with an error instead of being reported as the string form
+- [FIX] low 6 — ship's garbled head-recording sentence split
+- [FIX] low 7 — `T` and `B` set to the files' absolute paths in the same shell call
+- Each logic and safety fix reverted in turn: its test fails (5 of 5); 4 and 6 are wording.

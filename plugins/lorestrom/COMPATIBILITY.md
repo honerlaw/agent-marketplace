@@ -1,6 +1,6 @@
 # Claude Code and Codex compatibility
 
-Version 0.1.0 packages one canonical `skills/` tree for Claude Code and local Codex app,
+Version 0.2.0 packages one canonical `skills/` tree for Claude Code and local Codex app,
 CLI and IDE conversations. It needs Git, Python 3.9+, a POSIX shell, and a Lorestrom MCP
 server connected in the host for the organization being linked
 (`https://www.lorestrom.com/mcp/o/<org id>`, authenticated by the user through the host).
@@ -23,8 +23,8 @@ its applicable [Claude](skills/using-lorestrom/references/claude.md) or
 
 - The clone's link is untracked JSON under the Git common directory, `lorestrom/config.json`;
   `--shared` commits `.lorestrom/config.json` instead. Nothing the plugin keeps locally lives
-  where minerva looks: its worktrees will be under `.lorestrom/worktrees/` and its checkpoints
-  under `<git-common-dir>/lorestrom/runtime/` (0.2.0).
+  where minerva looks: its worktrees are under `.lorestrom/worktrees/` and its checkpoints
+  under `<git-common-dir>/lorestrom/runtime/<unit>/run.json`. Records live only in Lorestrom.
 - Helper paths derive from the loaded package, resolve symlinks, and reject stale or
   incomplete script directories. `LORESTROM_SCRIPTS` is the explicit override.
 - The helper always runs in Python's UTF-8 mode (`python3 -X utf8`, or it re-executes itself
@@ -32,8 +32,10 @@ its applicable [Claude](skills/using-lorestrom/references/claude.md) or
 
 ## Validation
 
-`tests/test_lorestrom_backend.py` and `tests/test_lorestrom_plugin.py` run in CI with the
+`tests/test_lorestrom_backend.py`, `tests/test_lorestrom_units.py` and `tests/test_lorestrom_plugin.py` run in CI with the
 repository's other tests, and the repository's skill guards (names are data, mutating
 commands, the runtime pointer, plugin-guard sites, the SKILL.md budget, installation) scan
 this plugin too. There are no behaviour evals yet: they need a reachable Lorestrom test
-server. Nothing in this version has been run against a live Lorestrom server by its tests.
+server. Nothing in this version has been run against a live Lorestrom server by its tests:
+the write rows map to Lorestrom's public tool surface, and the gate decisions (`reconcile`,
+`release-outcome`, `repair-flips`) are tested against real git repositories.

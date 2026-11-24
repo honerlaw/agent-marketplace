@@ -225,7 +225,7 @@ def test_lorestrom_installs_on_both_hosts_beside_minerva(repo, config, commands)
     assert settings["enabledPlugins"] == {"minerva@agent-marketplace": True,
                                           "lorestrom@agent-marketplace": True}
     installed = json.loads((config / "plugins/installed_plugins.json").read_text())["plugins"]
-    assert installed["lorestrom@agent-marketplace"][0]["version"] == "0.1.0"
+    assert installed["lorestrom@agent-marketplace"][0]["version"] == "0.2.0"
     assert installed["minerva@agent-marketplace"][0]["version"] == "4.0.1"
     assert (config / "plugins/lorestrom").resolve() == repo / "plugins/lorestrom"
     assert ["codex", "plugin", "add", "lorestrom@agent-marketplace"] in commands

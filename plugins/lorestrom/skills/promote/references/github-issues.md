@@ -1,0 +1,234 @@
+# TODO disposition — GitHub issues
+
+The **Keep** disposition in [Mode A step 5](modes.md) has two paths. On a GitHub repo whose
+issues this session can create, a kept item becomes an **issue** carrying an explicit
+priority. Everywhere else it becomes a bullet in the unit's followups record.
+
+The followups record is write-only: nothing in it ever marks an item done, so a backlog of them
+has to be re-read in full every time someone scopes work. An issue has the state the file
+lacks — it closes, and a closed issue drops out of every query below on its own.
+
+**Read this file before executing the Keep disposition.** Run the commands; do not
+paraphrase them.
+
+## Step 1 — Capability probe (once per promote run)
+
+```bash
+gh repo view --json nameWithOwner,hasIssuesEnabled
+```
+
+- **Non-zero exit** — no `gh` on PATH, not authenticated, or no GitHub remote → **record
+  path**. Take the followups record for every kept item and skip the rest of this file.
+- **`hasIssuesEnabled` is `false`** — issues are turned off for this repo → **record path**.
+- **Otherwise** → **issue path**. Record `nameWithOwner`; it names the repo in the report.
+
+Do **not** gate on `viewerPermission`. On GitHub anyone with read access can open an issue
+while issues are enabled, so requiring `WRITE` or above would wrongly push a capable
+outside contributor onto the record path. The creation attempt in step 4 is the real
+permission check, and step 5 catches it when it fails.
+
+Run the probe from wherever the skill is already operating. A lorestrom worktree shares its
+remotes with the parent repo, so `gh` resolves the same `nameWithOwner` from inside
+`.lorestrom/worktrees/<date-slug>/` as from the repo root — no `-C` juggling needed.
+
+## Step 2 — Priority
+
+Every item reaching this step has already cleared all three conditions in
+[deferral-bar.md](deferral-bar.md): it is a **defect with a writable failure scenario**, urgent
+enough to merit one of the levels below, and too large to absorb into the unit that found it.
+Priority therefore denotes *how urgent this defect is* — never whether it is worth having.
+
+Propose exactly one level per kept item. These definitions are the whole vocabulary; use
+them verbatim so two runs on the same item agree:
+
+| Level | Meaning |
+|---|---|
+| `critical` | We absolutely should do this before anything else. |
+| `high` | We should do this as soon as possible. |
+
+**There are two levels, and there is deliberately no `medium` or `low`.** `low` went first,
+defined as "It does not matter whether we do it" — a level that files a labelled issue for work
+it simultaneously declares pointless. `medium` ("We should eventually do this") followed for the
+same reason one step up: *eventually* is not a schedule, and it was the level most of the
+unwanted follow-ups carried. An item that feels like it wants `medium` or `low` fails
+condition 2 of the bar. If it is small, fix it now (outlet 0). Otherwise send it to outlet 2.
+
+The level is a **proposal**, not a fact. Show it alongside the item at Mode A's step-6 hard
+gate — that gate is where a wrong level gets corrected, before anything is created.
+There is no default level. An item that gives no urgency signal either way has not shown it
+merits `high`, so it does not clear condition 2. `critical` is for work that genuinely blocks
+everything else, not for emphasis.
+
+## Step 3 — Labels, and the duplicate check
+
+Bootstrap each needed label once. Check before creating so an existing label is left
+untouched — never `--force`, which would overwrite a repo's own colour and description:
+
+**Do not run this block under `set -e` or `set -u`.** Every call here is allowed to fail —
+`ensure_label` returns 1 rather than aborting, and `USABLE` is legitimately empty on a repo
+where no label could be created.
+
+```bash
+# Returns 0 if the label is usable (already present, or created just now), 1 if not.
+ensure_label() {  # $1 name, $2 hex colour, $3 description
+  gh label list --limit 200 --json name --jq '.[].name' | grep -qxF "$1" \
+    || gh label create "$1" --color "$2" --description "$3" \
+    || return 1
+}
+
+# Collect the flags for the labels that are actually usable. USABLE is what step 4 passes;
+# a label that could not be ensured simply contributes no flag.
+USABLE=()
+ensure_label "minerva:followup"   5319E7 "Deferred work recorded by lorestrom:promote" \
+  && USABLE+=(--label "minerva:followup")
+ensure_label "priority: $LEVEL"   "$COLOUR" "$DEFINITION" \
+  && USABLE+=(--label "priority: $LEVEL")
+```
+
+Colour and definition per level — `critical` `B60205`, `high` `D93F0B`, each described by its
+row in the step-2 table. Ensure only the level a given item actually uses; there is no reason to
+create both on a repo that needs one.
+
+If a label cannot be created — the caller can open issues but not manage labels, or the
+repo already runs its own `P0`-style taxonomy — **do not fail and do not force it**. Carry
+on without that label; the `**Priority**:` body line in step 4 still denotes the level.
+Note the degradation in the report.
+
+Then, before creating anything, ask whether this unit's followups are already filed.
+Creating an issue is the only externally-visible side effect promote has, and a duplicate
+is a notification on someone's repo — the same reason `lorestrom:ship` checks `gh pr view`
+before `gh pr create`. Check three sources, cheapest and most reliable first:
+
+1. **This run's own record** — issue numbers created earlier in this same promote run.
+2. **The proposal record's `## Deferred work` section** (step 6). Exact and
+   cheap — this is the authority for a re-run after a partial failure.
+3. **A repository search**, for a re-run from a different clone or session:
+
+   ```bash
+   U="<date-slug>"   # a checked id (runtime contract, "Names are data")
+   gh issue list --state all --limit 200 --search "\"$U\" in:body" \
+     --json number,title --jq '.[] | "\(.number)\t\(.title)"'
+   ```
+
+Skip any kept item whose headline already appears, and report it as `already filed as #N`.
+
+Source 3 alone is **not** sufficient: GitHub's search index is not synchronous with issue
+creation, so an issue filed seconds ago may not be searchable yet. That is exactly the
+window a retry-after-partial-failure lands in, which is why sources 1 and 2 come first.
+
+### Bar conformance on the live tracker (fail-soft)
+
+The source-3 query is already talking to the tracker, so ask it one more thing at zero extra
+cost — add `body` to its `--json` list and note any **open** `minerva:followup` issue with no
+`**Failure scenario**:` line:
+
+```bash
+gh issue list --label "minerva:followup" --state open --limit 200 --json number,title,body \
+  --jq '.[] | select(.body | test("\\*\\*Failure scenario\\*\\*:") | not) | "\(.number)\t\(.title)"'
+```
+
+Report them as a single line — `N open followup issues predate the failure-scenario bar` —
+and **do nothing else**. Specifically:
+
+- **Never fail a run over this.** The query is best-effort; a non-zero exit, a rate limit, or
+  no `gh` at all means skip it silently, exactly like every other step in this file.
+- **Never close or edit those issues automatically.** They are somebody's records, and the bar
+  is not retroactive ([deferral-bar.md](deferral-bar.md)).
+
+This is deliberately **not** a CI test. A check that shells out to `gh` would make the suite
+non-hermetic — broken offline, broken without auth, broken on a rate limit — and would make the
+build depend on a mutable external backlog. The hermetic half of the enforcement lives in the
+test suite against the template above; this half rides a call the run was making anyway.
+
+## Step 4 — Create the issue
+
+One issue per kept item. The **headline** is the item's one-line summary; the body carries
+the item's full prose so nothing is lost in compression. Both come from shared docs, so neither
+goes through the shell: make two `mktemp` files, then write the headline to the first and the
+body to the second **with a file tool**. The body is:
+
+```markdown
+<the item's full prose, verbatim from the scratchpad>
+
+**Failure scenario**: <specific inputs or state → wrong output, crash, data loss, or exposure>
+
+**Priority**: <level> — <that level's definition from step 2>
+
+Deferred from work unit `<date-slug>` by `lorestrom:promote`.
+```
+
+Then create the issue from the two files:
+
+```bash
+gh issue create \
+  --title "$(cat "$T")" \
+  "${USABLE[@]}" \
+  --body-file "$B"
+```
+
+Set `T` and `B` to the two files' absolute paths in this same shell call (`T=<absolute-title-file>`
+and `B=<absolute-body-file>`): shell variables do not survive from the call that made the files.
+The only text on the command line is those paths and the shell's own quoting, whatever the
+headline or prose holds.
+
+**The `**Failure scenario**:` line is mandatory and must not be padded to satisfy the
+template.** It is the bar from [deferral-bar.md](deferral-bar.md) made structural: an item for
+which that sentence cannot be written honestly is not a defect, and the correct response is to
+stop and send it to outlet 2 (a knowledge entry) rather than to soften the sentence until it
+fits. Writing "could cause problems later" here defeats the entire mechanism — that phrase is
+what the bar exists to refuse.
+
+The item's text is copied verbatim and you do not control it: **never** paste the headline
+or the body into a command, a shell variable assignment or a heredoc. A headline like
+`Fix the "foo" parser` breaks a quoted argument, and a line of prose can end a heredoc early.
+The file tool writes the bytes; the shell only reads them back.
+
+Keep the back-link line exactly as written — it is what the step-3 search matches on.
+
+Only **Keep** items become issues. A **Seed new proposal** item still goes to
+`lorestrom:propose`, which produces a full proposal — a richer record than a one-line
+issue. A **Discard** item is still dropped.
+
+## Step 5 — Fail-soft, per item
+
+If `gh issue create` fails for an item, that item falls back to the followups record verbatim,
+exactly as on the record path. **Never lose a kept item.** Do not abort the remaining items —
+a repo-wide failure will simply drop them all to the record, which is the correct outcome.
+
+## Step 6 — Record and report
+
+Write the created issues into the proposal record (`storage:record.write`: read it, then `mode: replace`) under a `## Deferred work` section:
+
+```markdown
+## Deferred work
+
+- #12 — retry handler drops the last item when the queue empties mid-flush (priority: high)
+- #13 — legacy id resolver returns None for dated slugs, crashing the index writer (priority: critical)
+```
+
+This is a historical fact — *this unit deferred that item to that issue* — so it cannot go
+stale the way a followups entry does once the work is finished. Do **not** also write
+the item's prose to the followups record; the issue is the record, and a second copy is what
+made minerva's `followups.md` files rot in the first place.
+
+The Mode A step-8 report then names, for each kept item: the issue URL, or `already filed
+as #N`, or `fell back to the followups record` with the reason. A report that omits an item it
+skipped lies by omission.
+
+## Reading deferred work back
+
+The skills that read the followups record read open followup issues alongside it —
+`lorestrom:review`, and the `propose-ship-*` orchestrators (0.3.0) at both their context-assembly and
+their TODO-disposition steps:
+
+```bash
+gh issue list --label "minerva:followup" --state open \
+  --json number,title,labels,url \
+  --jq '.[] | "\(.number)\t\(.title)\t\(.labels | map(.name) | join(","))"'
+```
+
+Closed issues fall out of that query by themselves, which is the entire point. Skip the
+query without comment when the step-1 probe says the repo has no issues.
+
+This applies to **new** items only. A repository's minerva `followups.md` files are not
+imported — they stay exactly as they are, and stay worth grepping.

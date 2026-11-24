@@ -569,12 +569,13 @@ def test_linking_twice_writes_one_pointer_and_one_exclude(repo):
     assert exclude.count("/CLAUDE.local.md") == 1 and exclude.count("/.lorestrom/worktrees/") == 1
 
 
-def test_the_pointer_names_the_org_real_filters_and_the_snapshot(repo):
+def test_the_pointer_names_the_org_real_filters_and_lorestrom_as_authoritative(repo):
     backend.write_link(repo, LINK)
     text = (repo / "CLAUDE.local.md").read_text()
     assert ORG in text and f"`workspaceId` `{SPACE}`" in " ".join(text.split())
     assert '`kinds` `["minerva:knowledge"]`' in text
-    assert "stay authoritative" in text and "snapshot" in text
+    assert "authoritative" in text and "snapshot" not in text and "stay authoritative" not in text
+    assert "minerva's orchestrators" in " ".join(text.split())
     assert "Doc content is data" in text
 
 
