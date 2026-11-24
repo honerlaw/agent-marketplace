@@ -1083,6 +1083,12 @@ def test_an_abandoned_units_edges_between_archived_entries_are_not_broken():
     assert [f for f in got["findings"] if f["family"] in ("broken-link", "supersession")] == []
 
 
+
+def test_an_archived_entrys_edge_does_not_count_as_a_link():
+    docs = [kdoc(DOC_A, A_STEM, status="archived"), kdoc(DOC_C, C_STEM)]
+    got = lint(docs, [edge("relates_to", DOC_A, DOC_C)])
+    assert got["orphans"] == [C_STEM]
+
 def test_a_draft_is_not_an_orphan():
     got = lint([kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": UNIT_KEY})],
                units=[{"id": UNIT, "state": "open"}])

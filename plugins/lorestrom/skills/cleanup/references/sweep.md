@@ -68,4 +68,6 @@ Stale:                 N (<date-slug>: N days, …)
 
 `--dry-run` reads and reports, and writes nothing: it fetches nothing (not even the
 once-per-sweep fetch of origin), refreshes nothing, and calls no gate tool beyond `get_gate`. A
-unit from elsewhere whose head is missing is reported as waiting on a fetch.
+unit from elsewhere whose head is missing is reported as waiting on a fetch, and a unit whose
+only evidence is ancestry against a default branch not yet fetched may show as waiting where a
+real sweep releases it.

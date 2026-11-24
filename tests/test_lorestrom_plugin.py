@@ -456,7 +456,7 @@ SAFETY = [
     ("using-lorestrom/SKILL.md", None, "with minerva's skills run one by one, never its orchestrators."),  # N4
     (RUNTIME, SCOPE, "**A flag changes only the gates its skill names**: `--yes` never confirms a merge cleanup could not prove and never abandons a gate."),
     # 0.3.0: the orchestrators.
-    ("propose-ship-auto/references/phases.md", "## Phase 7 — Cleanup gate", "`--yes` never confirms a merge cleanup could not prove and never abandons: a gate that waits on a confirmation is a **hardcoded user question**, counted as an escalation."),
+    ("propose-ship-auto/references/phases.md", "## Phase 7 — Cleanup gate", "`--yes` never confirms a merge cleanup could not prove and never abandons: a gate that waits on a confirmation, or a unit whose `mine` is not true (a resumed colleague's unit, or an unreadable opener), is a **hardcoded user question** carrying cleanup's own question, counted as an escalation."),
     ("propose-ship-auto/references/phases.md", "## Phase 7 — Cleanup gate", "leave the worktree and the unit's open gate in place;"),
     ("propose-ship-auto/references/phases.md", "## Phase 7 — Cleanup gate", "Never abandon from this gate."),
     ("propose-ship-auto/references/phases.md", "## Phase 1 — Propose (inline)", "stop before intake and name `lorestrom:init` — a unit cannot be created without them, and nothing is written to a file instead."),
@@ -465,8 +465,8 @@ SAFETY = [
     ("propose-ship-auto/references/phases.md", "## Phase 4 — Promote (inline)", "then, last, archive the scratchpad and mark the unit promoted with `storage:unit.finish`."),
     ("propose-ship-auto/references/phases.md", "## Phase 4 — Promote (inline)", "Pipe the unit doc's properties and its gate's state to the helper's `unit-state`;"),
     ("propose-ship-auto/references/governance.md", None, "At the cleanup gate, cleanup's wait on a confirmation of a merge it could not prove: `--yes` never confirms one"),
-    ("propose-ship-auto/references/decision-protocol.md", "## Tier-selection order", "cleanup's wait on a confirmation of a merge it could not prove, global escalation counter at 3."),
-    ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "`--yes` never confirms a merge cleanup could not prove: a gate that waits on a confirmation is reported with cleanup's own question, and the run asks the user."),
+    ("propose-ship-auto/references/decision-protocol.md", "## Tier-selection order", "cleanup's wait on a confirmation of a merge it could not prove, cleanup's question on a unit whose `mine` is not true, global escalation counter at 3."),
+    ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "`--yes` never confirms a merge cleanup could not prove: a gate that waits on a confirmation, or a unit whose `mine` is not true (a resumed colleague's unit, or an unreadable opener), is reported with cleanup's own question, and the run asks the user."),
     ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "Never abandon the gate from this gate."),
     ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "re-derive the phase progress with the helper's `phases` (`storage:unit.read`). If `complete` is false, follow the loop rules in `skills/propose/references/phasing.md`"),
     ("propose-ship-auto/SKILL.md", None, "the helper's `unit-state`, with the gate as the authority, never a property match"),
@@ -545,7 +545,7 @@ SAFETY = [
     # review round 2026-11-24 (phase 4)
     (RELEASE, None, "**Every cleanup computes `mine` this way, a single-unit one included.**"),  # P1
     (RELEASE, None, "`--yes` acts only on a unit whose `mine` is true"),  # P1
-    (RELEASE, None, "An orchestrator's own unit is `mine`, so its `--yes` proceeds."),  # P1
+    (RELEASE, None, "A unit the run opened is `mine`, so an orchestrator's `--yes` proceeds; a resumed colleague's unit, or one whose opener cannot be read, stops at that question."),  # P1
     (STORAGE, "## `unit.release`", "First `get_gate` the unit and `whoami`"),  # P1
     (STORAGE, "## `knowledge.lint`", "The helper builds each unit's key itself: never assemble one."),  # P2
     (SWEEP, None, "it fetches nothing (not even the once-per-sweep fetch of origin)"),  # dry-run note
@@ -831,3 +831,14 @@ def test_status_runs_unit_state_only_after_the_phase_count():
 
 def test_the_default_cleanup_is_the_sweep():
     assert "\"all merged worktrees\"" not in read("cleanup/SKILL.md")
+
+
+def test_a_cleanup_question_on_a_unit_not_mine_is_a_counted_trigger():
+    clause = "cleanup's question on a unit whose `mine` is not true"
+    for rel in ("propose-ship-auto/references/decision-protocol.md",
+                "propose-ship-auto/references/governance.md"):
+        assert flat(clause) in flat(read(rel)), rel
+    for rel in ("propose-ship-auto/references/phases.md", "propose-ship/references/phases.md"):
+        assert flat("or a unit whose `mine` is not true") in flat(read(rel)), rel
+    assert flat("a resumed colleague's unit, or one whose opener cannot be read, stops at that question") \
+        in flat(read("cleanup/references/release.md"))

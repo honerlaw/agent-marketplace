@@ -18,7 +18,7 @@ is a row of `skills/using-lorestrom/references/storage.md`.
    its `age_days` goes to `reconcile`, and its `mine` decides what `--yes` may do. **Every
    cleanup computes `mine` this way, a single-unit one included.** `--yes` acts only on a unit
    whose `mine` is true; `mine` false or null means a yes naming that unit
-   ([sweep.md](sweep.md)). An orchestrator's own unit is `mine`, so its `--yes` proceeds.
+   ([sweep.md](sweep.md)). A unit the run opened is `mine`, so an orchestrator's `--yes` proceeds; a resumed colleague's unit, or one whose opener cannot be read, stops at that question.
 2. For each recorded PR, read its state with `gh pr view <pr> --json state` (the number, all digits, comes
    from the unit doc, written there by `lorestrom:ship` from `gh` output). Never type a state.
 3. Write `{"phases", "heads", "base", "prs", "abandon", "merged", "age_days"}` to a `mktemp`

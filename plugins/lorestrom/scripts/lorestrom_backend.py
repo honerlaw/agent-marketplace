@@ -1337,13 +1337,16 @@ def _edge_findings(edges: list, every: dict, ours: dict) -> tuple:
         name = relation.get("relation")
         if name not in LINT_RELATIONS:
             continue
+        # An abandoned unit archives its entries and keeps their edges: such an edge is neither
+        # a link (orphans, supersession) nor a broken one.
+        if (every.get(source["id"]) or {}).get("status") == "archived":
+            continue
         linked.update({source["id"], target["id"]})
         target_doc = every.get(target.get("id"))
         if name == "supersedes":
             superseded.add(target.get("id"))
         where = ours.get(source["id"])
-        # An abandoned unit archives its entries and keeps their edges: not a broken link.
-        if where is None or where.get("status") == "archived":
+        if where is None:
             continue
         if target.get("kind") != KIND_KNOWLEDGE:
             found.append((where, "broken-link", "warning",

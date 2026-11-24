@@ -295,3 +295,9 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - V-note FIX: `--dry-run` fetches nothing, not even origin, and reports a unit from elsewhere as waiting on a fetch.
 - V-note FIX: a malformed edge is skipped and counted (`skippedEdges`), and a non-string `minerva:context` is a `pending` finding, not a crash.
 - each fix reverted in turn: 11 of 11 caught (V1 counted whole, as above). A first revert run printed CAUGHT for V1's second guard alone; rerun with exit codes and test counts, it passed, which is how the unreachable guard was found.
+
+## Re-review triage 2026-11-24 (lorestrom phase 4 fixes)
+- [FIX] medium — cleanup's question on a unit whose `mine` is not true (a resumed colleague's unit, an unreadable opener) stopped the autonomous run uncounted: it is now a hardcoded, counted trigger in propose-ship-auto and is named in both orchestrators' cleanup gates; release.md says only a unit the run opened is `mine`
+- [FIX] low — an archived entry's edge no longer counts as a link (orphans, supersession); live edges from other projects still count
+- [FIX] low — a dry run says a unit whose only evidence is ancestry against an unfetched default branch may show as waiting
+- Each logic fix reverted in turn: its test fails (2 of 2); the dry-run line is wording.

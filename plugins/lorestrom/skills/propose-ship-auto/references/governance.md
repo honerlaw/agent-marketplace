@@ -25,6 +25,7 @@ The worst case for one decision is therefore 3 dispatches — except a restarted
 - Worktree creation failure (git error, gitignore missing, slug collision).
 - Ship-phase failures classified as `other`, push rejection, `gh` auth failure.
 - At the cleanup gate, cleanup's wait on a confirmation of a merge it could not prove: `--yes` never confirms one (`lorestrom:cleanup`'s orchestrated mode).
+- At the cleanup gate, cleanup's question on a unit whose `mine` is not true (a resumed colleague's unit, or an unreadable opener): `--yes` acts only on the run's own unit.
 - Global escalation counter reaching 3.
 
 **Final report on bail.**
