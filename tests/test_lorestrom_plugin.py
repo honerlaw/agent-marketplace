@@ -477,7 +477,7 @@ SAFETY = [
     ("propose/references/phasing.md", "## The orchestrator loop", "promote (Mode B unless it is the final phase) and ship it."),  # R1
     ("propose-ship/references/phases.md", "## Execution", "never Mode A, so no `storage:unit.finish`"),  # R2
     ("propose-ship-auto/references/phases.md", "## Phase 4 — Promote (inline)", "never Mode A, so no `storage:unit.finish`"),  # R2
-    ("promote/references/modes.md", "### Mode A — no argument (end-of-work full pass)", "On a phased unit whose next phase is not its final one (`complete` false and `next_position` not `total`), **stop**"),  # R2
+    ("promote/references/modes.md", "### Mode A — no argument (end-of-work full pass)", "On a phased unit whose next phase is not its final one (`phased` true, `complete` false and `next_position` not `total`; an unphased unit never stops here), **stop**"),  # R2
     ("propose-ship/references/phases.md", "## Execution", "once ship reports, re-enter with `lorestrom:propose-ship --cleanup-only <date-slug>`."),  # R3
     ("propose-ship/references/phases.md", "## Phase 7 — cleanup gate", "Write that prompt yourself: this skill passes ship no `--auto`, so the checkpoint's caller is null"),  # R3
     (STORAGE, "## `record.write`", "An archived record still takes body writes, and its status stays archived"),  # R4
@@ -730,3 +730,20 @@ def test_resurrection_reuses_a_local_branch_and_stops_when_every_phase_merged():
     assert flat("with no `-b`, and never `-B`, which would reset it.") in text
     assert flat("whose `next_branch` is null has every phase merged: stop and ask") in text
     assert text.index(flat("**The branch exists locally**")) < text.index(flat("origin has the branch"))
+
+
+def test_the_verifier_reads_the_worktree_diff_and_a_phase_s_own_criteria():
+    brief = flat(read("propose-ship-auto/references/decision-protocol.md"))
+    assert 'git diff "${BASE:?}"...HEAD' not in brief
+    assert flat("the worktree's diff as `lorestrom:review`'s \"Diff resolution\" computes it") in brief
+    own = flat("On a phased unit the criteria are the current phase's own, from its `## Phases` entry")
+    assert own in brief
+    assert own in flat(read("propose-ship-auto/references/phases.md"))
+
+
+def test_every_final_phase_check_names_phased():
+    for rel in ("propose-ship/references/phases.md", "propose-ship-auto/references/phases.md",
+                "promote/references/modes.md"):
+        text = flat(read(rel))
+        assert "`next_position` is not `total`" not in text, rel
+        assert flat("`phased` true") in text, rel

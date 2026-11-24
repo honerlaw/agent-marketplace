@@ -39,7 +39,7 @@ Always start at `lorestrom:propose` after the pre-flight check passes. Do not at
 2. Invoke `lorestrom:propose` via the skill loader. Wait for it to complete.
 3. Invoke `lorestrom:work` via the skill loader. Stay engaged through the work phase per the handoff rule above.
 4. Invoke `lorestrom:review` via the skill loader. Wait for it to complete. If review routes to `lorestrom:replan`, return to step 3 after the replan lands.
-5. Invoke `lorestrom:promote` via the skill loader. Wait for it to complete. Before promote, run the helper's `phases` (`storage:unit.read`): on a phased unit whose next phase is not its final one (`next_position` is not `total`), run promote's **Mode B** for each durable finding only — never Mode A, so no `storage:unit.finish` — because Mode A belongs before the final phase's ship (`skills/propose/references/phasing.md`).
+5. Before promote, run the helper's `phases` (`storage:unit.read`): on a phased unit whose next phase is not its final one (`phased` true and `next_position` not `total`), run promote's **Mode B** for each durable finding only — never Mode A, so no `storage:unit.finish` — because Mode A belongs before the final phase's ship (`skills/propose/references/phasing.md`). Otherwise invoke `lorestrom:promote` via the skill loader. Wait for it to complete.
 6. Apply the promote → ship gate: summarize the promote result, then wait for explicit user confirmation.
 7. Invoke `lorestrom:ship` via the skill loader. First tell the user: if ship ends this turn on its CI watch, nothing hands back to this skill (it passes ship no `--auto`), so once ship reports, re-enter with `lorestrom:propose-ship --cleanup-only <date-slug>`.
 8. Run the cleanup gate ([Phase 7](#phase-7--cleanup-gate)).

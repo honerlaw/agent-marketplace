@@ -261,3 +261,11 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - Follow-up (left alone): `test_every_integer_phase_names_its_successor` accepts any mention of the next phase; the blind spot is shared with minerva.
 - Follow-up (minerva, reported): minerva's phasing rule loops back to the ship phase and its propose-ship has no phase loop.
 - each fix reverted in turn: 16 of 16 caught
+
+## Re-review triage 2026-11-24 (lorestrom phase 3 fixes)
+- [FIX] medium 1 — the Verifier brief still used `git diff BASE...HEAD`: it now uses review's Diff resolution, uncommitted and untracked work included
+- [FIX] low 2 — completion on a phased unit checks the current phase's own criteria from `## Phases`, in the brief and in Phase 2
+- [FIX] low 3 — every final-phase check names `phased` true, so an unphased unit never stops before Mode A
+- [FIX] low 4 — the scope check's cost line says phasing re-runs work, review, promote (Mode B) and ship
+- [FIX] low 5 — propose-ship's step 5 runs the phase check before invoking promote
+- Each logic fix reverted in turn: its test fails (3 of 3); 4 and 5 are wording.

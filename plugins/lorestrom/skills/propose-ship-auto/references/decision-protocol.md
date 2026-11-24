@@ -201,7 +201,7 @@ Output format:
 
 ### Verifier brief
 
-- **ARTIFACT:** the success-criteria checklist (each criterion + the main model's *claimed* evidence + its yes/no), `git diff "${BASE:?}"...HEAD` (with the runtime contract's default-branch snippet), and the proposal's `## Success criteria`.
+- **ARTIFACT:** the success-criteria checklist (each criterion + the main model's *claimed* evidence + its yes/no), the worktree's diff as `lorestrom:review`'s "Diff resolution" computes it (uncommitted and untracked work included), and the proposal's `## Success criteria`. On a phased unit the criteria are the current phase's own, from its `## Phases` entry (phase `next_position` of the helper's `phases`; `skills/propose/references/phasing.md`), not the whole unit's.
 - **Task:** for **each** criterion, independently determine whether it is honestly met. Do not trust the claimed evidence — reproduce it: read the named files; where a criterion names a test or an anchor, run a **read-only** command or `grep` to confirm the diff contains or passes it. Actively try to falsify "done": a criterion with no corresponding diff, a partial implementation, a claim the code does not support. Also check that the diff does not change an **existing** interface or contract beyond what the proposal approved; if it does, report that as an unmet criterion.
 - **Output:** per criterion, `{met: yes | no | unsure, evidence-or-gap: <one line>}`, then `accept` (all honestly met) / `revise` (gaps to close) / `reject`.
 
