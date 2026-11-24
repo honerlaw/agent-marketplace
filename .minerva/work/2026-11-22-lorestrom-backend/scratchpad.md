@@ -222,3 +222,26 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - [FIX] low 6 — ship's garbled head-recording sentence split
 - [FIX] low 7 — `T` and `B` set to the files' absolute paths in the same shell call
 - Each logic and safety fix reverted in turn: its test fails (5 of 5); 4 and 6 are wording.
+
+## Work notes (lorestrom phase 3)
+
+- Commits: verbatim copy of minerva's propose-ship and propose-ship-auto (tree hashes equal
+  minerva's at that commit), the same mechanical rename phase 2 used, one adaptation commit for
+  the orchestrators, one for the live `--auto` hooks and 0.3.0, one for tests.
+- Choices inside the plan:
+  - cleanup's `--yes` never confirms an unproven merge, so an orchestrator's cleanup gate that
+    meets one asks the user; in propose-ship-auto it is a new hardcoded trigger (counted).
+  - A closed PR leaves the unit's gate open; no orchestrator abandons a gate.
+  - propose-ship's cleanup gate gained the phased-unit loop phasing.md asks of every
+    orchestrator; minerva's propose-ship lacks it (a minerva follow-up to report).
+  - Decision lines keep minerva's telemetry format in the scratchpad record; lorestrom ships
+    no tally (minerva's `decision_telemetry.py` reads files only).
+  - The orchestrator contract tests (orchestrated mode, phase continuation, phasing) now run
+    over both plugins via `skills_corpus.PLUGIN_SKILLS`; minerva's assertions are unchanged.
+- Deletion pass: 20 of 21 mutations caught. Survivor: deleting "advance to Phase 3" from
+  Phase 2 passes, because `test_every_integer_phase_names_its_successor` accepts any mention of
+  Phase 3 in the section (Phase 2 cites "Phase 3 step 3"). The same blind spot exists for
+  minerva; it is the shared guard's, not this phase's.
+- Noted, unchanged: the runtime's ship resume prompt adds `--auto=<caller>` for any caller,
+  as minerva's does; propose-ship never passes `--auto` to ship, so its checkpoints carry
+  caller null.
