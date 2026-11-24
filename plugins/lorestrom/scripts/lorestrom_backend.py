@@ -22,6 +22,8 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -81,6 +83,9 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 STALE_DAYS = 14
 MERGE_TREE_GIT = (2, 38)  # `git merge-tree --write-tree`
 PR_STATES = ("OPEN", "MERGED", "CLOSED")
+# `get_gate`'s `openedAt`: an ISO datetime, fraction optional, `Z` or an offset.
+OPENED_AT_RE = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})")
+LINT_RELATIONS = ("supersedes", "relates_to")
 # Any of these in a `.git` directory claims a repository, readable by git or not.
 REPO_MEMBERS = {"HEAD", "config", "objects", "commondir", STATE_DIR}
 RETIRED = ("archived", "deprecated", "superseded")
@@ -800,12 +805,38 @@ def record_key(unit: str, record: str) -> str:
     return check_key(f"{unit}/{record}")
 
 
-def unit_state(properties: dict, gate_state=None) -> dict:
+def age_days(opened_at, today=None) -> int:
+    """Whole days, by UTC date, since a unit's gate opened (`get_gate`'s `openedAt`).
+
+    0 when the value is missing, malformed or in the future: age only ever marks a unit
+    stale, and an unknown age must not.
+    """
+    found = OPENED_AT_RE.fullmatch(opened_at) if isinstance(opened_at, str) else None
+    if not found:
+        return 0
+    zone = "+00:00" if found.group(3) == "Z" else found.group(3)
+    try:
+        opened = datetime.fromisoformat(f"{found.group(1)}T{found.group(2)}{zone}")
+    except ValueError:
+        return 0
+    now = today if today is not None else datetime.now(timezone.utc)
+    days = (now.astimezone(timezone.utc).date() - opened.astimezone(timezone.utc).date()).days
+    return max(0, days)
+
+
+def unit_state(properties: dict, gate_state=None, opened_at=None, opened_by=None, me=None,
+               phases=1, today=None) -> dict:
     """What a unit doc says about its lifecycle, with the gate as the authority on its state.
 
     Lorestrom refuses held writes to a gate's own doc, so `minerva:state` is a live property
     that can lag the gate. Read the gate (`get_gate`) before acting on a unit, and pass its
     state here: `refresh` is the value to write back when the property is stale.
+    `opened_at` and `opened_by` are the gate's `openedAt` and `openedByUserId`, `me` is
+    `whoami`'s user id: `age_days` is the unit's age (what `reconcile` takes) and `mine` says
+    whether this person opened it (None when either id is unknown). `stale` is the proposal's
+    rule, on recorded properties alone so a read-only caller needs no git: some declared phase
+    (`phases`, 1 when unphased) has no recorded head, or a head equal to the recorded base, and
+    the unit is `STALE_DAYS` old. Staleness is shown, never acted on.
     """
     if gate_state is not None and gate_state not in GATE_STATES:
         raise BackendError(f"not a gate state: {ascii(gate_state)}")
@@ -813,11 +844,19 @@ def unit_state(properties: dict, gate_state=None) -> dict:
     promoted = properties.get("minerva:promoted")
     recorded = properties.get("minerva:state")
     state = gate_state if gate_state is not None else recorded
+    age = age_days(opened_at, today)
+    base = properties.get("minerva:base")
+    headless = any(not (isinstance(head, str) and SHA_RE.fullmatch(head)) or head == base
+                   for head in (properties.get(f"minerva:head_{n}") for n in _phase_numbers(phases)))
     return {
         "promoted": isinstance(promoted, str) and bool(DATE_RE.fullmatch(promoted)),
         "shipped": isinstance(status, str) and status.startswith("Shipped ("),
         "state": state if state in GATE_STATES else None,
         "refresh": gate_state if gate_state is not None and recorded != gate_state else None,
+        "age_days": age,
+        "stale": headless and age >= STALE_DAYS,
+        "mine": (opened_by == me if all(isinstance(x, str) and UUID_RE.fullmatch(x)
+                                        for x in (opened_by, me)) else None),
     }
 
 
@@ -956,6 +995,12 @@ def reconcile_action(evidence: dict) -> dict:
     if closed:
         return {**base, "action": "abandon",
                 "reason": f"phase {closed[0]}'s PR was closed without merging"}
+    missing = [n for n in no_head if trees.get(n) == "missing"]
+    if missing:
+        # Another clone's unit: its heads were never fetched here. A PR keeps its head ref
+        # after the branch is deleted, so the caller fetches `refs/pull/<pr>/head` and asks again.
+        return {**base, "action": "wait", "fetch": missing,
+                "reason": f"phase {missing[0]}'s recorded head is not in this clone: fetch it"}
     if no_head:
         return {**base, "action": "wait",
                 "reason": f"phase {no_head[0]} has no recorded head, or its head is the base"}
@@ -1205,6 +1250,145 @@ def read_repo_reference(root, file) -> tuple:
     return _reference_relpath(rel.as_posix()), read_entry(path)
 
 
+# --- lint over Lorestrom docs ----------------------------------------------------------------
+
+
+def _props(doc: dict) -> dict:
+    value = doc.get("properties")
+    return value if isinstance(value, dict) else {}
+
+
+def _entry_stem(doc: dict):
+    stem = _props(doc).get("minerva:id")
+    if isinstance(stem, str) and SAFE_STEM_RE.fullmatch(stem) and ENTRY_RE.fullmatch(f"{stem}.md"):
+        return stem
+    return None
+
+
+def _entry_name(doc) -> str:
+    """How a finding names a doc: its checked stem, else its id. Never a title or free text."""
+    if not isinstance(doc, dict):
+        return "a doc you cannot see"
+    stem = _entry_stem(doc)
+    if stem:
+        return stem
+    doc_id = doc.get("id")
+    return f"doc {doc_id}" if isinstance(doc_id, str) and UUID_RE.fullmatch(doc_id) else "a doc"
+
+
+def _pending_findings(doc: dict, gates: dict) -> list:
+    """A draft entry: an incomplete import, or pending on a unit whose gate is closed."""
+    context = _props(doc).get("minerva:context")
+    if not context:
+        return [("pending", "warning",
+                 "draft with no minerva:context: an incomplete import; re-run lorestrom:init")]
+    unit = context.rsplit("/", 1)[-1] if isinstance(context, str) else ""
+    unit = unit if UNIT_ID_RE.fullmatch(unit) else "its unit"
+    state = gates.get(context)
+    if state == "released":
+        return [("pending", "error", f"still draft, but {unit}'s gate is released: its status "
+                 f"flip failed; lorestrom:cleanup {unit} repairs it")]
+    if state == "abandoned":
+        return [("pending", "error", f"still draft, but {unit}'s gate was abandoned: abandoning "
+                 "should have archived it")]
+    if state is None:
+        return [("pending", "warning", "pending on a unit this project does not list")]
+    return []
+
+
+def _doc_findings(project: str, doc: dict, gates: dict) -> list:
+    """The checks one entry carries by itself: id, key, metadata and pending state."""
+    stem = _entry_stem(doc)
+    if stem is None:
+        return [("id", "error", "minerva:id is not an entry stem (<id>-<type>-<slug>)")]
+    found = []
+    entry_id = ENTRY_RE.fullmatch(f"{stem}.md").group(1)
+    if not is_conforming_id(entry_id):
+        found.append(("id", "error", "its id is not a real calendar date"))
+    if doc.get("key") != knowledge_key(project, stem):
+        found.append(("key", "error", "its key is not minerva:k/<project id>/<stem>"))
+    if doc.get("status") == "archived":
+        return found
+    severity = "error" if is_date_id(entry_id) and entry_id >= METADATA_REQUIRED_FROM else "warning"
+    for field in ("theme", "summary"):
+        value = _props(doc).get(f"minerva:{field}")
+        if not (isinstance(value, str) and value.strip()):
+            found.append(("metadata", severity, f"no minerva:{field}"))
+    if doc.get("status") == "draft":
+        found += _pending_findings(doc, gates)
+    return found
+
+
+def _edge_findings(edges: list, every: dict, ours: dict) -> tuple:
+    """Broken and drifted edges from this project's entries, plus what the edges touch."""
+    found, linked, superseded = [], set(), set()
+    for edge in edges:
+        relation = (edge.get("relation") or {}) if isinstance(edge, dict) else {}
+        name = relation.get("relation")
+        source, target = edge.get("source") or {}, edge.get("target") or {}
+        if name not in LINT_RELATIONS:
+            continue
+        linked.update({source.get("id"), target.get("id")})
+        target_doc = every.get(target.get("id"))
+        if name == "supersedes":
+            superseded.add(target.get("id"))
+        if source.get("id") not in ours:
+            continue
+        where = ours[source["id"]]
+        if target.get("kind") != KIND_KNOWLEDGE:
+            found.append((where, "broken-link", "warning",
+                          f"a {name} edge points at a doc that is not a knowledge entry"))
+        elif target_doc is not None and target_doc.get("status") == "archived":
+            found.append((where, "broken-link", "error",
+                          f"a {name} edge points at an archived entry ({_entry_name(target_doc)})"))
+        elif name == "supersedes" and target_doc is not None \
+                and target_doc.get("status") != "superseded":
+            status = target_doc.get("status")
+            status = status if status in ("draft", "current", "deprecated") else "not superseded"
+            found.append((where, "supersession", "warning",
+                          f"supersedes {_entry_name(target_doc)}, which is {status}"))
+    return found, linked, superseded
+
+
+def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
+    """Deterministic checks over a project's knowledge docs in Lorestrom. Pure, read-only.
+
+    `docs` is `find_docs` (the workspace's `minerva:knowledge` docs, every status), `edges` is
+    `find_relations` (`supersedes` and `relates_to` in the workspace), `units` is this
+    project's units as `{key, state}` with each gate's state. A finding names an entry by its
+    checked stem or its doc id, never by its title or any other text it holds.
+    """
+    _project_id(project)
+    if not all(isinstance(x, list) for x in (docs, edges, units)):
+        raise BackendError("lint-docs takes {docs, edges, units}, each a list")
+    every = {d["id"]: d for d in docs
+             if isinstance(d, dict) and isinstance(d.get("id"), str) and UUID_RE.fullmatch(d["id"])}
+    ours = {i: d for i, d in every.items()
+            if d.get("kind") == KIND_KNOWLEDGE and _props(d).get("minerva:project") == project}
+    gates = {u.get("key"): u.get("state") for u in units if isinstance(u, dict)}
+    findings, themes = [], Counter()
+    for doc in ours.values():
+        findings += [(doc, *f) for f in _doc_findings(project, doc, gates)]
+        theme = _props(doc).get("minerva:theme")
+        if doc.get("status") != "archived" and isinstance(theme, str) and theme.strip():
+            themes[theme.strip()] += 1
+    for doc in ours.values():
+        theme = _props(doc).get("minerva:theme")
+        if doc.get("status") != "archived" and isinstance(theme, str) and themes[theme.strip()] == 1:
+            findings.append((doc, "theme", "warning", "its theme is used by no other entry"))
+    edge_found, linked, superseded = _edge_findings(edges, every, ours)
+    findings += edge_found
+    live = [d for d in ours.values() if d.get("status") != "archived"]
+    findings += [(d, "supersession", "warning", "superseded, but no supersedes edge points at it")
+                 for d in live if d.get("status") == "superseded" and d["id"] not in superseded]
+    rows = [{"entry": _entry_name(doc), "family": family, "severity": severity, "message": message}
+            for doc, family, severity, message in findings]
+    rows.sort(key=lambda r: (r["severity"] != "error", r["family"], r["entry"], r["message"]))
+    orphans = sorted(_entry_name(d) for d in live
+                     if d["id"] not in linked and d.get("status") != "superseded")
+    return {"entries": len(live), "findings": rows, "orphans": orphans}
+
+
 def _stdin_json():
     try:
         return json.load(sys.stdin)
@@ -1229,7 +1413,8 @@ def main(argv=None) -> int:
     entry.add_argument("--digest", help="the digest the user confirmed (required without --stem)")
     listing = commands.add_parser("import-list", help="what an import would send, with no bodies")
     listing.add_argument("--project", required=True)
-    commands.add_parser("unit-state", help="stdin: {properties, gate}")
+    commands.add_parser("unit-state",
+                        help="stdin: {properties, gate, openedAt, openedBy, me, phases}")
     plan = commands.add_parser("removal-plan", help="stdin: find_docs' knowledge and reference docs")
     plan.add_argument("--project", required=True)
     ids = commands.add_parser("unit-ids", help="stdin: find_docs' unit docs; the checked ids")
@@ -1241,6 +1426,8 @@ def main(argv=None) -> int:
     commands.add_parser("reconcile", help="stdin: {phases, heads, base, prs, abandon, merged, age_days}")
     refs = commands.add_parser("reference-list", help="what the handover would send, no bodies")
     refs.add_argument("--project", required=True)
+    lint = commands.add_parser("lint-docs", help="stdin: {docs, edges, units}; knowledge findings")
+    lint.add_argument("--project", required=True)
     ref = commands.add_parser("reference-payload", help="one reference doc as tool inputs")
     ref.add_argument("file")
     ref.add_argument("--project", required=True)
@@ -1273,7 +1460,9 @@ def main(argv=None) -> int:
             out = import_list(args.cwd, args.project)
         elif args.command == "unit-state":
             value = _stdin_json()
-            out = unit_state(value.get("properties") or {}, value.get("gate"))
+            out = unit_state(value.get("properties") or {}, value.get("gate"),
+                             value.get("openedAt"), value.get("openedBy"), value.get("me"),
+                             value.get("phases", 1))
         elif args.command == "removal-plan":
             out = removal_plan(args.cwd, args.project, _stdin_json())
         elif args.command == "unit-ids":
@@ -1290,6 +1479,9 @@ def main(argv=None) -> int:
             out = repair_flips(value["gate"], value["docs"])
         elif args.command == "reconcile":
             out = merge_evidence(args.cwd, _stdin_json())
+        elif args.command == "lint-docs":
+            value = _stdin_json()
+            out = lint_docs(args.project, value.get("docs"), value.get("edges"), value.get("units"))
         elif args.command == "reference-list":
             out = reference_list(args.cwd, args.project)
         elif args.path:
