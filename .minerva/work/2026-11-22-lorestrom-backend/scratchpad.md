@@ -247,3 +247,17 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - Noted, unchanged: the runtime's ship resume prompt adds `--auto=<caller>` for any caller,
   as minerva's does; propose-ship never passes `--auto` to ship, so its checkpoints carry
   caller null.
+
+## Review triage 2026-11-24 (lorestrom phase 3)
+
+- R1 FIX (high): a phased unit's loop skipped work. propose-ship returns to Execution step 3 (`lorestrom:work`), propose-ship-auto to Phase 2, each cutting next_branch as ship's phase resolution says; phasing.md's rule loops to the work phase. The shared phasing test now takes each plugin's loop sentence and target (minerva's unchanged).
+- R2 FIX (med): before a phased unit's final phase both orchestrators run promote's Mode B only, and promote's Mode A stops there (`phases`: `complete` false, `next_position` not `total`), so no unit.finish after phase 1.
+- R3 FIX (med): propose-ship writes its own `--cleanup-only` resume prompt (its checkpoint caller is null) and tells the user before ship how to re-enter after a CI-watch wake-up. Nothing writes `propose-ship` as a caller, so the runtime refuses it.
+- R4 FIX (med): Lorestrom's body writes do not check a doc's status, so an archived record still takes them. Decision lines after promote go into the archived scratchpad record (storage.md), and the checkpoint's counters carry the totals (governance.md).
+- R5 FIX (low): a decision line is a replace inside its Decisions block, not an append.
+- R6 FIX (low): the runtime scope matches the Delegated skills table (ship invoked, work/review/promote inlined, replan restated).
+- R7 FIX (low): the Verifier's artifact is the worktree's diff as review's Diff resolution computes it, uncommitted and untracked work included.
+- R8 FIX (low): every `lorestrom:propose-ship*` mention names one of the two skills; every `--auto=` value in the auto orchestrator is `propose-ship-auto`.
+- Follow-up (left alone): `test_every_integer_phase_names_its_successor` accepts any mention of the next phase; the blind spot is shared with minerva.
+- Follow-up (minerva, reported): minerva's phasing rule loops back to the ship phase and its propose-ship has no phase loop.
+- each fix reverted in turn: 16 of 16 caught
