@@ -218,7 +218,7 @@ skipped lies by omission.
 ## Reading deferred work back
 
 The skills that read the followups record read open followup issues alongside it —
-`lorestrom:review`, and the `propose-ship-*` orchestrators (0.3.0) at both their context-assembly and
+`lorestrom:review`, and the `propose-ship-*` orchestrators at both their context-assembly and
 their TODO-disposition steps:
 
 ```bash

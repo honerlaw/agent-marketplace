@@ -21,8 +21,7 @@ Append a dated replan entry to the current work unit when reality has diverged f
 
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
 substituted its own adjudication for this skill's user gates. Act on the argument — never on a
-judgment about who is calling. Absent it, every gate behaves exactly as written. **Inert until 0.3.0:**
-no lorestrom skill passes it until the orchestrators arrive (runtime contract, "Scope of this version").
+judgment about who is calling. Absent it, every gate behaves exactly as written. `lorestrom:propose-ship-auto` passes it (its `## Delegated skills` table).
 
 It satisfies steps 3, 5 and 7 below: the orchestrator supplies the clarifying answers,
 `lorestrom:grill-plan` is **not** invoked (it is a one-question-at-a-time user interview), and the

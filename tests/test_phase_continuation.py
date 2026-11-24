@@ -22,23 +22,28 @@ import pytest
 from tests.skills_corpus import (
     AUTONOMOUS_ORCHESTRATORS as AUTONOMOUS,
     PHASE_HEADER_RE,
-    SKILLS,
+    PLUGIN_SKILLS,
+    PLUGINS,
     phase_sections,
 )
 
+by_plugin = pytest.mark.parametrize("plugin", PLUGINS)
 
+
+@by_plugin
 @pytest.mark.parametrize("orch", AUTONOMOUS)
-def test_the_orchestrator_documents_a_full_phase_sequence(orch):
+def test_the_orchestrator_documents_a_full_phase_sequence(orch, plugin):
     """Guards the check itself: if the headers stop matching, every test below passes vacuously."""
-    labels = [l for l, _ in phase_sections(orch)]
+    labels = [l for l, _ in phase_sections(orch, plugin)]
     assert labels, f"{orch} exposes no `## Phase N` sections — the parser has gone blind"
     for expected in ["1", "2", "3", "4", "5", "6", "7"]:
         assert expected in labels, f"{orch} is missing `## Phase {expected}`"
 
 
+@by_plugin
 @pytest.mark.parametrize("orch", AUTONOMOUS)
-def test_every_integer_phase_names_its_successor(orch):
-    sections = phase_sections(orch)
+def test_every_integer_phase_names_its_successor(orch, plugin):
+    sections = phase_sections(orch, plugin)
     labels = {l for l, _ in sections}
     missing = []
     for label, body in sections:
@@ -52,11 +57,12 @@ def test_every_integer_phase_names_its_successor(orch):
     assert not missing, f"{orch} has a phase that stops instead of continuing:\n  " + "\n  ".join(missing)
 
 
+@by_plugin
 @pytest.mark.parametrize("orch", AUTONOMOUS)
-def test_conditional_phases_name_a_return_target(orch):
+def test_conditional_phases_name_a_return_target(orch, plugin):
     """A side-branch such as Phase 2.5 must say where control goes back to."""
     bad = []
-    for label, body in phase_sections(orch):
+    for label, body in phase_sections(orch, plugin):
         if "." not in label:
             continue
         base = label.split(".")[0]
@@ -65,14 +71,15 @@ def test_conditional_phases_name_a_return_target(orch):
     assert not bad, f"{orch}:\n  " + "\n  ".join(bad)
 
 
-def test_the_human_gated_orchestrator_is_out_of_scope_for_a_reason():
+@by_plugin
+def test_the_human_gated_orchestrator_is_out_of_scope_for_a_reason(plugin):
     """Asserted, not assumed: propose-ship really does document only the cleanup gate.
 
     If it ever grows the full inlined 1-7 sequence it becomes subject to this contract, and this
     test fails to say so rather than leaving it silently unchecked
     (`2026-08-11-pattern-a-gate-blind-to-what-it-checks`).
     """
-    text = (SKILLS / "propose-ship" / "references" / "phases.md").read_text()
+    text = (PLUGIN_SKILLS[plugin] / "propose-ship" / "references" / "phases.md").read_text()
     labels = [m.group(1) for m in PHASE_HEADER_RE.finditer(text)]
     assert labels == ["7"], (
         f"propose-ship now documents phases {labels} — it inlines a phase sequence and must be "

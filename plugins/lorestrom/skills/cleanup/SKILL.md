@@ -67,8 +67,8 @@ and doc and never re-applied automatically. A unit whose gate waits keeps its wo
 
 **Mode argument**: `--yes`
 
-With an explicit single-unit argument `--yes` satisfies the confirmation gate below — how the
-autonomous orchestrators (0.3.0) invoke cleanup. Act on the argument, not on who you think is calling.
+With an explicit single-unit argument `--yes` satisfies the confirmation gate below — how
+`lorestrom:propose-ship` and `lorestrom:propose-ship-auto` invoke cleanup. Act on the argument, not on who you think is calling.
 `--yes` never confirms a merge `reconcile` could not prove (`storage:unit.confirm`), and never abandons.
 
 ## Confirmation gate

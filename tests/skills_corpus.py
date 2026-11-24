@@ -1,4 +1,4 @@
-"""Shared locators for the minerva skill corpus.
+"""Shared locators for the minerva and lorestrom skill corpora.
 
 Three test modules independently hard-coded the autonomous-orchestrator list and two of them
 hand-rolled "find a phase's section in phases.md" — one carefully, one not. Two derivations plus
@@ -13,6 +13,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
 
+# Each plugin whose orchestrators these contracts govern, and its skill tree. lorestrom ports
+# minerva's orchestrators, so the same contracts are asked of both; a skill is named
+# `<plugin>:<skill>` in its own tree.
+PLUGIN_SKILLS = {"minerva": SKILLS, "lorestrom": REPO_ROOT / "plugins" / "lorestrom" / "skills"}
+PLUGINS = tuple(PLUGIN_SKILLS)
+
 # The orchestrators that replace human gates with their own adjudication. `propose-ship` is
 # deliberately absent: a human decides at each of its transitions. `propose-ship-quick` and
 # `propose-ship-balanced` were folded into `propose-ship-auto`'s per-decision tiers on 2026-09-23.
@@ -21,13 +27,13 @@ AUTONOMOUS_ORCHESTRATORS = ["propose-ship-auto"]
 PHASE_HEADER_RE = re.compile(r"^## Phase (\d+(?:\.\d+)?)\s*[—-].*$", re.M)
 
 
-def phases_text(orch: str) -> str:
-    return (SKILLS / orch / "references" / "phases.md").read_text()
+def phases_text(orch: str, plugin: str = "minerva") -> str:
+    return (PLUGIN_SKILLS[plugin] / orch / "references" / "phases.md").read_text()
 
 
-def phase_sections(orch: str) -> list[tuple[str, str]]:
+def phase_sections(orch: str, plugin: str = "minerva") -> list[tuple[str, str]]:
     """[(label, body)] for each `## Phase X` section, in document order."""
-    text = phases_text(orch)
+    text = phases_text(orch, plugin)
     hits = [(m.group(1), m.start()) for m in PHASE_HEADER_RE.finditer(text)]
     out = []
     for i, (label, start) in enumerate(hits):
@@ -36,13 +42,13 @@ def phase_sections(orch: str) -> list[tuple[str, str]]:
     return out
 
 
-def phase_body(orch: str, label: str) -> str:
+def phase_body(orch: str, label: str, plugin: str = "minerva") -> str:
     """One phase's section. Asserts rather than raising ValueError from a bare .index(),
     so a reworded heading fails with a readable message instead of a stack trace."""
-    for got, body in phase_sections(orch):
+    for got, body in phase_sections(orch, plugin):
         if got == label:
             return body
-    raise AssertionError(f"{orch} has no `## Phase {label}` section")
+    raise AssertionError(f"{plugin}:{orch} has no `## Phase {label}` section")
 
 
 def slice_between(text: str, start_anchor: str, end_anchor: str, what: str) -> str:

@@ -134,8 +134,8 @@ State lives under the Git common directory at `lorestrom/runtime/<unit>/run.json
 apart from minerva's. It survives worktree removal and stays out of Lorestrom and commits.
 It records progress, not new permission. Existing flags still determine mode.
 Validate branch/PR identity against live Git/GitHub evidence on every resume;
-an unrelated branch or changed caller stops automatic continuation. Until the
-orchestrators arrive in 0.3.0 every checkpoint's caller is null.
+an unrelated branch or changed caller stops automatic continuation. A checkpoint's
+caller is the orchestrator its skill's `--auto=` named, or null.
 
 Use `write --unit <slug>` with JSON supplied through stdin. For the first write
 include `revision: 0`, `branch`, `caller` (null or the orchestrator's name), and
@@ -190,16 +190,17 @@ protects checkpoint writes, not the goal or remote actions: it is not a fleet lo
 
 ## Scope of this version
 
-0.2.0 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
+0.3.0 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
 repository: propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore,
-one-by-one and debug write and read their records as the storage contract says, never as files.
-Worktrees live under `.lorestrom/worktrees/`, checkpoints under
-`<git-common-dir>/lorestrom/runtime/`.
+one-by-one, debug and the orchestrators propose-ship and propose-ship-auto write and read their
+records as the storage contract says, never as files. Worktrees live under
+`.lorestrom/worktrees/`, checkpoints under `<git-common-dir>/lorestrom/runtime/`.
 
-- The orchestrators (`propose-ship`, `propose-ship-auto`) arrive in 0.3.0. Until then run the
-  lifecycle skill by skill. The `--auto` mode arguments in ship, work, replan, review and promote
-  are kept as minerva wrote them, under one rule: **no orchestrator passes `--auto` until
-  0.3.0; a user-typed `--auto` changes only the gates it names.**
+- `lorestrom:propose-ship-auto` invokes ship with `--auto=propose-ship-auto`, reads work,
+  review and promote in that mode (it inlines them), and restates replan's protocol without
+  running it; both orchestrators pass `--yes` to cleanup. The auto orchestrator's
+  `## Delegated skills` table is the authority. **A flag changes only the gates its skill
+  names**: `--yes` never confirms a merge cleanup could not prove and never abandons a gate.
 - minerva's orchestrators must not run in a linked repository: they would write records as files
   that Lorestrom ignores.
 - A read-side skill in a repository with no link, no server or no project carries on without

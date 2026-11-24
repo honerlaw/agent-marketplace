@@ -44,14 +44,13 @@ Promote writes no file: entries, the proposal rewrite and the scratchpad archive
 
 `--auto=<orchestrator>` is an **observable** signal that an autonomous orchestrator has
 substituted its own adjudication for this skill's user gates. Act on the argument — never on a
-judgment about who is calling. Absent it, every gate behaves exactly as written. **Inert until 0.3.0:**
-no lorestrom skill passes it until the orchestrators arrive (runtime contract, "Scope of this version").
+judgment about who is calling. Absent it, every gate behaves exactly as written. `lorestrom:propose-ship-auto` passes it (its `## Delegated skills` table).
 
 It satisfies the Mode A and Mode B hard gates in `references/modes.md`.
 
 ## Two modes
 
-The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Theme**` and `**Summary**` fields), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any knowledge entry.** **What may be deferred at all — the three-condition bar, its outlets (fix now / tracker issue / `reference` knowledge entry / neither, for documentation), the one-issue-per-unit soft cap, and why the bar exists — lives in `references/deferral-bar.md`. Read it before disposing of any forward-looking item.** It is the single statement of that rule; `lorestrom:review` and the `propose-ship-*` orchestrators (0.3.0) point at the same file rather than restating it. The mechanics of the issue path — the capability probe, the `critical`/`high` priority vocabulary, the required `**Failure scenario**:` body line, label bootstrap, the duplicate check, and the per-item fail-soft to the followups record — live in `references/github-issues.md`. **Read it before filing anything.**
+The full mode protocols — **Mode A (end-of-work)**, the default full-scratchpad partition, and **Mode B (single-item)**, the mid-work immediate promotion — live verbatim in `references/modes.md`. **Read it before executing either mode.** The knowledge-entry template (including the required `**Theme**` and `**Summary**` fields), the add-only wiki-maintenance protocol, and entry naming live in `references/wiki-maintenance.md`. **Read it before writing any knowledge entry.** **What may be deferred at all — the three-condition bar, its outlets (fix now / tracker issue / `reference` knowledge entry / neither, for documentation), the one-issue-per-unit soft cap, and why the bar exists — lives in `references/deferral-bar.md`. Read it before disposing of any forward-looking item.** It is the single statement of that rule; `lorestrom:review` and the `propose-ship-*` orchestrators point at the same file rather than restating it. The mechanics of the issue path — the capability probe, the `critical`/`high` priority vocabulary, the required `**Failure scenario**:` body line, label bootstrap, the duplicate check, and the per-item fail-soft to the followups record — live in `references/github-issues.md`. **Read it before filing anything.**
 
 ## Idempotency summary
 

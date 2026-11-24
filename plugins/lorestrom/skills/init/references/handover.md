@@ -47,9 +47,9 @@ Tell the user, in one short paragraph, how to stop minerva's skills from running
 example by disabling the minerva plugin for this project in the host's plugin settings — and
 that a plugin never edits host settings, so they do it themselves. Say why it matters now:
 
-- the orchestrators (`propose-ship`, `propose-ship-auto`) arrive in lorestrom 0.3.0; until
-  then run the lifecycle skill by skill — `lorestrom:propose`, `work`, `review`, `promote`,
-  `ship`, `cleanup`;
+- run the lifecycle with lorestrom's skills — one by one (`lorestrom:propose`, `work`,
+  `review`, `promote`, `ship`, `cleanup`) or through `lorestrom:propose-ship` and
+  `lorestrom:propose-ship-auto`;
 - minerva's orchestrators must not run in a linked repository: they would write records as
   `.minerva/` files that Lorestrom ignores.
 

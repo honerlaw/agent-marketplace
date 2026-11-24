@@ -121,7 +121,7 @@ trigger is the next phase, and the report is what makes its absence noticeable.
 
 ## The orchestrator loop
 
-The orchestrators (`propose-ship` and `propose-ship-auto`, arriving in 0.3.0) both end with: ship → poll the PR → on
+The orchestrators (`lorestrom:propose-ship` and `lorestrom:propose-ship-auto`) both end with: ship → poll the PR → on
 `MERGED`, run `lorestrom:cleanup` → report and exit. **On a phased unit that last step is wrong**,
 and wrong in the silent direction: phase 1 merges, cleanup correctly defers teardown, the run
 reports success, and phases 2..N never ship. The unit stalls at a report that says it finished.
@@ -129,9 +129,10 @@ reports success, and phases 2..N never ship. The unit stalls at a report that sa
 So every orchestrator's cleanup gate gains one branch, before it reports:
 
 > After `lorestrom:cleanup` returns on a `MERGED` phase, re-derive the phase progress (`phases`). If
-> `complete` is false, **loop back to the ship phase** for `next_branch` — cut it from the
-> freshly fetched default branch and ship it. Only when `complete` is true does the run report
-> and exit.
+> `complete` is false, **loop back to the work phase** for `next_branch` — cut it from the
+> freshly fetched default branch, do that phase's work against its own criteria, then review,
+> promote (Mode B unless it is the final phase) and ship it. Only when `complete` is true does
+> the run report and exit.
 
 Two rules ride with the loop:
 

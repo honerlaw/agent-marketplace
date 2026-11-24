@@ -265,8 +265,12 @@ project node's folder, kind `minerva:record`, the record key, a title and the ma
 applies at once and is recorded on the gate). Then `update_doc` its property `minerva:record`,
 and `add_relation` `minerva:part_of` from the record to the unit. A retry finds the record by
 key among `find_docs` `gateId` and finishes the missing steps. Later writes are live
-`write_doc_body`: `mode: append` to add (a scratchpad note, a decision line), `mode: replace`
-only after reading the record in the same step, since anything markdown cannot express is lost.
+`write_doc_body`: `mode: append` to add (a scratchpad note), `mode: replace` only after reading
+the record in the same step, since anything markdown cannot express is lost. A decision line is
+a replace: it goes inside the record's `## Decisions YYYY-MM-DD` block, not at its end. An
+archived record still takes body writes, and its status stays archived: after promote archives
+the scratchpad (`unit.finish`), the orchestrator's later decision lines (ship, cleanup gate) go
+into that archived record the same way.
 
 ## `knowledge.write`
 

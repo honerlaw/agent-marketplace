@@ -43,6 +43,8 @@
 - [reviewed — folded] completion, lorestrom phase 2: Verifier reject on B1 (a plain confirm never reaches reconcile), everything else met; B1 is an implementation defect against the unchanged Approach 6, not a criterion the plan cannot meet, so it is fixed in the review round with no replan (tier: reviewer; floor: completion is always a Verifier)
 - [solo] review triage, lorestrom phase 2: B1, the skill-text review's 2 high, 8 medium and 6 low, the scripts review's 3 high, 2 medium and 3 low, and the Verifier's notes N1–N4 all FIX, no replan: each is a defect inside the approved plan (tier: solo; each has one dominant disposition)
 - [solo] re-review triage, lorestrom phase 2: medium 1 (confirmation lost on the release path), medium 3 (resurrection with a local branch, or a complete phased unit) and lows 4–7 FIX; medium 2 resolved by reverting S6 instead of amending Approach 6: ship records a head only for a branch with its own commits, so an ancestor head on the mainline is a fast-forward merge the plan releases, and S6 cost that case a question while guarding a near-impossible one (tier: solo; reversible, keeps the approved plan unchanged)
+- [reviewed — clean] completion, lorestrom phase 3: Verifier accept, every criterion reproduced, 6 of 6 mutations caught; notes on the phase loop's target and two weak tests folded into the review round (tier: reviewer; floor: completion is always a Verifier)
+- [solo] review triage, lorestrom phase 3: the code review's 1 high, 3 medium and 4 low, plus the Verifier's notes, all FIX, no replan: each is a defect against phasing.md and the storage contract as approved (the loop returns to work, Mode A waits for the final phase); the shared successor-test blind spot is left as a follow-up because tightening it changes minerva's tests (tier: solo; each has one dominant disposition)
 
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
@@ -222,3 +224,48 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - [FIX] low 6 — ship's garbled head-recording sentence split
 - [FIX] low 7 — `T` and `B` set to the files' absolute paths in the same shell call
 - Each logic and safety fix reverted in turn: its test fails (5 of 5); 4 and 6 are wording.
+
+## Work notes (lorestrom phase 3)
+
+- Commits: verbatim copy of minerva's propose-ship and propose-ship-auto (tree hashes equal
+  minerva's at that commit), the same mechanical rename phase 2 used, one adaptation commit for
+  the orchestrators, one for the live `--auto` hooks and 0.3.0, one for tests.
+- Choices inside the plan:
+  - cleanup's `--yes` never confirms an unproven merge, so an orchestrator's cleanup gate that
+    meets one asks the user; in propose-ship-auto it is a new hardcoded trigger (counted).
+  - A closed PR leaves the unit's gate open; no orchestrator abandons a gate.
+  - propose-ship's cleanup gate gained the phased-unit loop phasing.md asks of every
+    orchestrator; minerva's propose-ship lacks it (a minerva follow-up to report).
+  - Decision lines keep minerva's telemetry format in the scratchpad record; lorestrom ships
+    no tally (minerva's `decision_telemetry.py` reads files only).
+  - The orchestrator contract tests (orchestrated mode, phase continuation, phasing) now run
+    over both plugins via `skills_corpus.PLUGIN_SKILLS`; minerva's assertions are unchanged.
+- Deletion pass: 20 of 21 mutations caught. Survivor: deleting "advance to Phase 3" from
+  Phase 2 passes, because `test_every_integer_phase_names_its_successor` accepts any mention of
+  Phase 3 in the section (Phase 2 cites "Phase 3 step 3"). The same blind spot exists for
+  minerva; it is the shared guard's, not this phase's.
+- Noted, unchanged: the runtime's ship resume prompt adds `--auto=<caller>` for any caller,
+  as minerva's does; propose-ship never passes `--auto` to ship, so its checkpoints carry
+  caller null.
+
+## Review triage 2026-11-24 (lorestrom phase 3)
+
+- R1 FIX (high): a phased unit's loop skipped work. propose-ship returns to Execution step 3 (`lorestrom:work`), propose-ship-auto to Phase 2, each cutting next_branch as ship's phase resolution says; phasing.md's rule loops to the work phase. The shared phasing test now takes each plugin's loop sentence and target (minerva's unchanged).
+- R2 FIX (med): before a phased unit's final phase both orchestrators run promote's Mode B only, and promote's Mode A stops there (`phases`: `complete` false, `next_position` not `total`), so no unit.finish after phase 1.
+- R3 FIX (med): propose-ship writes its own `--cleanup-only` resume prompt (its checkpoint caller is null) and tells the user before ship how to re-enter after a CI-watch wake-up. Nothing writes `propose-ship` as a caller, so the runtime refuses it.
+- R4 FIX (med): Lorestrom's body writes do not check a doc's status, so an archived record still takes them. Decision lines after promote go into the archived scratchpad record (storage.md), and the checkpoint's counters carry the totals (governance.md).
+- R5 FIX (low): a decision line is a replace inside its Decisions block, not an append.
+- R6 FIX (low): the runtime scope matches the Delegated skills table (ship invoked, work/review/promote inlined, replan restated).
+- R7 FIX (low): the Verifier's artifact is the worktree's diff as review's Diff resolution computes it, uncommitted and untracked work included.
+- R8 FIX (low): every `lorestrom:propose-ship*` mention names one of the two skills; every `--auto=` value in the auto orchestrator is `propose-ship-auto`.
+- Follow-up (left alone): `test_every_integer_phase_names_its_successor` accepts any mention of the next phase; the blind spot is shared with minerva.
+- Follow-up (minerva, reported): minerva's phasing rule loops back to the ship phase and its propose-ship has no phase loop.
+- each fix reverted in turn: 16 of 16 caught
+
+## Re-review triage 2026-11-24 (lorestrom phase 3 fixes)
+- [FIX] medium 1 — the Verifier brief still used `git diff BASE...HEAD`: it now uses review's Diff resolution, uncommitted and untracked work included
+- [FIX] low 2 — completion on a phased unit checks the current phase's own criteria from `## Phases`, in the brief and in Phase 2
+- [FIX] low 3 — every final-phase check names `phased` true, so an unphased unit never stops before Mode A
+- [FIX] low 4 — the scope check's cost line says phasing re-runs work, review, promote (Mode B) and ship
+- [FIX] low 5 — propose-ship's step 5 runs the phase check before invoking promote
+- Each logic fix reverted in turn: its test fails (3 of 3); 4 and 5 are wording.
