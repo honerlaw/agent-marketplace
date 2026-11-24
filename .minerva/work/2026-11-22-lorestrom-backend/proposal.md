@@ -1,134 +1,111 @@
 # Proposal: lorestrom-backend
 
 **Date**: 2026-11-22
-**Status**: Draft
+**Status**: Shipped (2026-11-23)
 
 ## Goal
 
-An opt-in **Lorestrom backend** for minerva. A project linked to Lorestrom keeps its knowledge entries and work-unit records (proposal, scratchpad, replan, followups) as docs in one Lorestrom workspace, reached through the Lorestrom MCP tools, so several repos, people and agents share one body of lore.
+A plugin named **`lorestrom`**, in this marketplace, that runs minerva's lifecycle with every record stored in **Lorestrom** instead of the repository: knowledge entries, reference docs and work-unit records (proposal, scratchpad, replans, followups) are docs in one Lorestrom workspace, reached through the Lorestrom MCP tools, so several repos, people and agents share one body of lore.
 
-- **Nothing has to be committed to the project's repo.** The link lives in Lorestrom, and a clone with the Lorestrom MCP server connected discovers it. A team may opt in to a committed marker.
-- **Live, but labelled.** New lore is visible before merge, marked pending. Changes to existing lore wait for the merge.
-- **Release on merge, observed by minerva.** Lorestrom never talks to git or GitHub. The author's clone (push) or any teammate's (pull) reports the merge, so self-hosted GitHub works.
-- **The `files` backend is the default and does not change.** An unlinked project, this repo included, behaves as 4.0.0. Worktrees, branches, PRs and runtime checkpoints stay local and in git under both backends.
+- **Nothing record-shaped is committed to the project's repo.** Code still moves through a git worktree, branch and PR per unit.
+- **Live, but labelled.** New lore is visible before merge, marked pending on the unit's gate. It becomes current when the merge is observed.
+- **Release on merge, observed by the plugin.** Lorestrom never talks to git or GitHub; any clone's cleanup reports the merge, so self-hosted GitHub works.
+- **minerva is unchanged and stays files-only.** No file under `plugins/minerva/` changed in any phase.
 
 ## Why
 
 The user, exploring this on 2026-11-21: "cross repo and cross user / cross agent usage. I want to be able to at least store context around my changes / my stuff even if folks dont want me to check it in … Imagine a team using it type of deal across branches". On setup: "Ideally, we can wire this up in such a way that people dont need to do anything in their github repo, and only in lorestrom (or even better, set it up entirely through skills / mcp for lorestrom)". The user also chose "live, but labelled", hosted Lorestrom, and storing knowledge and work units.
 
-Lorestrom now has the primitives: kinds, namespaced properties, keys, find, gates with held writes, release and abandon.
+Lorestrom has the primitives: kinds, namespaced properties, keys, find, gates with held writes, release and abandon.
+
+The unit began as an opt-in backend inside minerva. On 2026-11-23 the user chose a separate Lorestrom-only plugin instead (`replan.md`): most of phase 1's complexity came from holding two backends in one plugin, and a separate plugin breaks neither existing projects nor this repo's CI.
 
 ## Approach
 
-A backend adapter, resolved once per skill like the host adapter, with mechanical guards so a skill that misses it fails loudly instead of writing files.
+What was built, in `plugins/lorestrom/` (0.1.0 → 0.4.0).
 
-### 1. The project node and discovery
+### 1. Packaging and local state
 
-The user chose discovery on 2026-11-22.
+- Plugin `lorestrom`, listed in both marketplace files, with both host manifests, a README and COMPATIBILITY. Seventeen skills: `init`, `using-lorestrom`, the twelve lifecycle skills ported from minerva (propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore, one-by-one, debug), `lint`, and the two orchestrators.
+- Local state uses lorestrom's own names, never where minerva looks: worktrees in `.lorestrom/worktrees/`, the link cache in `<git-common-dir>/lorestrom/config.json`, checkpoints under `<git-common-dir>/lorestrom/runtime/`. `--shared` commits `.lorestrom/config.json`.
+- Kinds, keys and properties keep the `minerva:` namespace: it names the record format, not the storage, and an import keeps an entry's identity. The GitHub follow-up label and the cross-session markers are kept too, so peers of both plugins interoperate.
 
-- **Project node.** A doc of kind `minerva:project` in the linked workspace, keyed `minerva:p/<first remote label>`. Its doc id is the **project id**: stable across renames, and the scope of every other key. Its `minerva:remotes` property lists the repo's remote labels (aliases). A repo with no remote is linked by asking at init.
-- **Resolution order:**
-  1. The clone's link cache, `<git-common-dir>/minerva/config.json` (never committed). It may also record an explicit `files` opt-out (`minerva:init --backend files`).
-  2. A committed `.minerva/config.json`, present only after `minerva:init --backend lorestrom --shared`.
-  3. Discovery: for each connected Lorestrom server, `find_docs` kind `minerva:project`, matched on the normalised `origin`. One match is the link, and a skill allowed to write caches it. Several matches are an ask.
-  4. Otherwise `files`.
-- **Fail closed once known.** A linked or marked clone whose server is missing or failing stops with an error. So does a malformed config, and so does a failed lookup on a connected server. None of these falls back to `files`.
-- **Renames, transfers, forks.** A linked clone whose `origin` is not an alias offers to add it. An unlinked clone whose repo name matches a project under another owner or host asks whether it is that project. A fork is a separate project unless the user links it.
-- **Agents outside skills.** Init, and the first discovery by a writing skill, put a short pointer in `CLAUDE.local.md` and list it in `info/exclude`. A tracked `CLAUDE.local.md` is left alone. `.minerva/worktrees/` is excluded the same way, and the lorestrom branch of propose's pre-flight accepts it through `git check-ignore`. `--shared` writes the committed marker and an AGENTS.md routing section instead.
-- **Accepted gap.** Without a marker, a clone with no Lorestrom MCP connection uses files, and Codex finds the lore only through skills. Init says both.
+### 2. Linking a repository
 
-### 2. One pure module, for small deterministic inputs
+- **Project node.** A doc of kind `minerva:project`, keyed `minerva:p/<first remote label>`; its doc id scopes every other key. A remote label strips user, token, port and query; an SSH path under a home directory, and a local path, get none. Reusing an existing project always asks.
+- **Discovery.** For each connected server, `find_docs` kind `minerva:project` matched on the normalised `origin`; several matches are an ask. A broken link raises; it never reads as unlinked.
+- **Unlinked repositories.** Read-side skills carry on without lore and say so in one line; only init and record writes stop, naming `lorestrom:init`.
+- `init` puts a short pointer in `CLAUDE.local.md` (excluded locally) and leaves `git status --porcelain` empty by default.
 
-`plugins/minerva/scripts/minerva_backend.py` (root symlink, in `REQUIRED_MODULES`):
+### 3. Helper and storage contract
 
-- `load_config` and CLI `resolve` (`files | lorestrom | discover`), `repo_label`, `match_project`.
-- Keys: `minerva:k/<project id>/<stem>` (entry), `minerva:u/<project id>/<unit>` (unit), `<unit key>/<record>` (record), checked against Lorestrom's `NodeKey` rule.
-- `entry_payload(stem, text, project, context)`: today's entry markdown to key, title, kind `minerva:knowledge`, namespaced properties (id, type, theme, summary, date, context, project), body and related edges. It imports the `knowledge_lint` and `knowledge_spans` grammar. It refuses what lint refuses and what Lorestrom would: a property value over 1000 characters, over 64 keys or 16 KiB of properties, a body over 100,000 characters. The agent writes the entry to a `mktemp` file and passes the small payload on.
-- `merge_properties(existing, changes)`: `update_doc` replaces the whole map, so every property write reads first and merges.
-- `stray_records` and CLI `check-tree`: under lorestrom, record paths added or modified on the branch give a non-zero exit.
-- `unit_state`, `reconcile_action`, `repair_flips`.
+- `scripts/lorestrom_backend.py` holds the deterministic parts: link resolution and keys, `entry_payload` and `reference_payload`, `merge_properties`, `unit_state`, `release_outcome`, `repair_flips`, `reconcile_action` and `merge_evidence`, `removal_plan`, `lint_docs`. Doc text reaches it through a `mktemp` file on stdin, never a command line or Python source; only 40-hex shas reach git. It re-execs itself in UTF-8 mode and runs on Python 3.9.
+- `knowledge_lint.py`, `knowledge_spans.py` and `work_status.py` are byte-identical copies of minerva's, with a drift test; a minerva PR touching one syncs the copy and bumps lorestrom's patch version. `lorestrom_runtime.py` and `plugin_guard.py` are adapted copies.
+- `skills/using-lorestrom/references/storage.md` maps every `storage:<op>` a skill names to Lorestrom tools and helper commands (link, discover, list, read, import, handover, unit create/read/list/ship/finish/release/confirm/abandon/repair, record, knowledge and reference writes, lint). A test fails on an operation with no row, a row tool outside the vendored tool list, or a tool a row's section uses but its row omits.
 
-There is no catalog renderer: `find_docs` results stay in the model's context. The contract gives the line format (`theme | id | summary`, plus the project when it is another one, `(superseded)` and `(pending: <unit>)`) and the paging rule.
+### 4. Writes and pending state
 
-### 3. One storage contract, with a tested inventory
+- `upsert_doc` and held upserts are never used. Writes are a keyed create, then `update_doc` with merged properties; key, status and properties are read back with `find_docs`, a gate's state with `get_gate`.
+- **Unit.** A `minerva:work_unit` doc carrying an operation token, with its own gate (`archive` on abandon); records are created under the gate. A half-created unit resumes when the token matches.
+- **Knowledge.** A new entry is `draft` plus a held `set_status current` on the unit's gate; edges between new entries are live, edges onto existing entries held. After a release, `repair_flips` repairs a failed flip only on an entry still `draft`.
+- **Reference docs** (`minerva:reference`, keyed by path) change in place: inside a unit, a held `write_body` replace built from a read in the same step; debug's confirmed live update outside any unit checks open gates first. A held replace on a doc changed after the hold fails STALE, so a live edit is never silently overwritten.
+- **Promote** replaces the proposal body, archives the scratchpad record and sets `minerva:status` and `minerva:promoted` (`unit.finish`) as its last step. On a phased unit, Mode A waits for the final phase; earlier phases use Mode B.
 
-`runtime.md`, which every skill reads, gains "Storage backend". Under `files` the skill text applies as it is. Under `lorestrom` the skill reads `skills/using-minerva/references/lorestrom.md`, whose table maps each record operation to Lorestrom tools. A preamble does not bind a write step, so:
+### 5. Release on observed merge
 
-- `BACKEND_SITES` classes every skill file naming a `.minerva/work` or `.minerva/knowledge` path as `branched` (names its operation at that step), `read`, or `not-applicable` (lint, migrate, migrate-fix). A test finds the sites by scanning. It fails on an unregistered site, a branched file naming no operation, an operation absent from the table, or a table tool absent from the vendored tool list.
-- propose, promote and ship run `check-tree` before committing.
+Records are not committed, so a fresh unit branch equals the default branch. ship records each phase's branch, PR and pushed head (again after every later push). `reconcile` answers from that record plus live git evidence:
 
-### 4. Writes
+- `release`: every phase has a MERGED PR or a recorded head that is an ancestor of the default branch (a fast-forward merge included).
+- `confirm`: no PR evidence, but merging the head changes nothing (a squash merge `gh` cannot see). The user's yes travels in the request (`userConfirmed`), counts only for phases it lists in `phasesToConfirm`, and carries through to the release. `--yes` never confirms. `--merged <sha>` names the commit instead.
+- `abandon`: a CLOSED PR whose head is not merged, or `--abandon`. A head this clone lacks is fetched first.
+- otherwise `wait`; a unit with no recorded head after 14 days is flagged stale, never acted on.
 
-`upsert_doc` and held upserts are never used: on an existing key they overwrite, or queue an overwrite.
+A CONFLICT on release that `get_gate` shows as released is success.
 
-- **Keyed create, then update.** Create carries key, kind, title and markdown, and the key is the atomic backstop. `update_doc` then sets properties. Key, status and properties are read back with `find_docs` (`get_doc` over MCP returns none of them). Whether a doc is a gate, and its state, comes from `get_gate`.
-- **Unit.** Before creating, save an operation token in the unit's runtime directory and put it in the unit doc's markdown. Then `create_doc` kind `minerva:work_unit`; properties (`minerva:state`, `project`, `branch`, `base`); `open_gate` with `archive`. **A half-created unit resumes:** on a taken key, a matching token means finish the missing steps; any other holder is a duplicate slug, shown to the user.
-- **Records.** `hold_write` op `create` under the gate (live), linked `minerva:part_of`, then written live with `write_doc_body`.
-- **Entry.** `hold_write` op `create` (live, `draft`), `update_doc` properties, then a held `set_status current`. A retry recognises its own doc by key among `find_docs({gateId})` and finishes the missing steps; otherwise the slug is taken.
-- **Edges.** Between entries new in this unit, live. Touching an existing entry, held. `supersedes` is the core relation; any other label is `relates_to` with `minerva:label`. `[[stem]]` resolves in this project, then uniquely in the workspace; an ambiguous one is reported.
-- **Promote.**
-  - New entries and edges as above.
-  - The proposal body is replaced.
-  - The scratchpad doc's status becomes `archived`.
-  - The unit gets `minerva:status` (`Shipped (YYYY-MM-DD)`) and `minerva:promoted` (the date), which is what `unit_state` reads.
-  - Followups go to the followups record wherever files mode would write `followups.md`.
-- **Import.** Outside any gate: keyed create, `current`, edges last. It resumes incomplete entries and never rewrites complete ones, so a re-run un-supersedes nothing. An entry whose file differs from its doc is reported as changed, not overwritten. Import sends project content to an external service, so it first shows destination, count and paths and waits for explicit confirmation. No orchestrator flag satisfies that.
+### 6. Handover from minerva files
 
-### 5. Pending and unit state
+From 0.2.0 Lorestrom is authoritative for a linked repo. `init` runs one confirmed sync (new entries, confirmed replaces of changed ones, reference docs, and anything edited in Lorestrom since its import shown, never overwritten), then separate offers, each kept unless the user says yes: replace the AGENTS.md minerva section, and one commit removing the imported files (a file whose digest no longer matches is skipped and named). It says how to disable minerva in that repository and never edits host settings.
 
-- Pending is status `draft` plus `minerva:context` (the unit key). Release applies the held `set_status current`; abandon archives.
-- After a release, `repair_flips` lists failed flips whose entry is **still `draft`**, never one superseded or changed meanwhile. Cleanup sets those current and reports each repair and each it cannot make.
-- Lorestrom refuses held writes to a gate's own doc, so `minerva:state` is a live property, confirmed with `get_gate` before any action (one call per unit acted on) and refreshed when stale.
+### 7. Orchestrators, sweep, status and lint
 
-### 6. Merge evidence
-
-Records are not committed, so a fresh unit's branch equals the default branch and `git branch --merged` reads it as merged. Therefore:
-
-- ship records branch, PR and head commit per phase (`minerva:branch_<n>`, `pr_<n>`, `head_<n>`, all namespaced). No recorded head, or a head equal to the base, is always `wait`: nothing is released and that worktree is not removed.
-- `release`: every declared phase has a recorded head and either a MERGED PR or a head that is an ancestor of the fetched default branch. The unit gets `minerva:merge_commit`, then the gate is released.
-- `confirm`: no PR evidence, but merging the head changes nothing. The tree from `git merge-tree --write-tree <default> <head>` equals the default branch's tree, and the head's tree differs from the base's. The user confirms, or names the commit with `minerva:cleanup <unit> --merged <sha>` (checked to be on the default branch). `--yes` never confirms it. A conflict, or git older than 2.38, is `wait`.
-- `abandon`: a PR observed CLOSED unmerged, or an explicit `minerva:cleanup <unit> --abandon`.
-- Anything else is `wait`. status lists open units with age and action, and flags one with no recorded head after 14 days as stale. Staleness never abandons. Pending can lag a merge until a cleanup runs, and the docs say so.
-- Releasing needs `edit` on the unit. Failed held writes are reported. A CONFLICT that `get_gate` confirms as released is success.
-- `2026-10-01-decision-knowledge-aggregates-are-derived-on-read` still holds for `files`. Cleanup's text scopes its no-post-merge rule to that backend, and promote records the narrowing as a new entry linking the old one.
-
-### 7. Host-neutral naming and pinned facts
-
-Skills name Lorestrom tools and the host adapters map them. Vendored tool names, `NodeKey`, statuses, limits, and the `Gate`, `HeldWrite` and find-result shapes are pinned to the Lorestrom version they were checked against, named in the test module.
+- **`propose-ship` and `propose-ship-auto`** keep their records and decision logs in Lorestrom and invoke only `lorestrom:` skills. A phased unit loops back through work, review, promote and ship for each later phase, checked against that phase's own criteria. At merge they run `lorestrom:cleanup <unit> --yes`, which acts only on the run's own unit; an unproven merge or a unit not the run's own is a user question (counted in the autonomous run), and neither orchestrator abandons a gate.
+- **Cleanup's sweep** (no argument) covers this project's open units in Lorestrom, including other clones'. It fetches a missing head by its recorded PR number, releases only on `reconcile`'s answer, needs a yes naming the unit to act on one someone else opened or to abandon, and removes only this clone's worktrees.
+- **Status** lists units with phase progress, gate state and age (stale, worked on elsewhere, opened by someone else), read-only.
+- **Lint** runs `lint-docs` over the project's knowledge docs (ids and keys, Theme and Summary, broken or drifted edges, supersession, pending entries on closed gates, orphans) plus minerva's judged advisories, read-only. A finding names a doc only by its checked stem or id.
 
 ### Rejected
 
+- **A backend inside minerva** (the original plan): two backends in one plugin carried most of phase 1's complexity.
+- **A fork repository, or renaming minerva:** the user chose a new plugin in this marketplace.
 - **Mirror** (files canonical, synced after merge): records must be committed, and there is no pre-merge view.
-- **Lorestrom only:** breaks every existing project and this repo's CI.
 - **A direct client:** needs a Lorestrom change (no API tokens; pre-registered OAuth clients only).
-- **An always-committed marker, or local-only setup:** the user chose discovery over both.
 
 ## Success criteria
 
-1. An unlinked project behaves as 4.0.0: `pytest tests/ -q` and the dry-run evals pass with no existing assertion weakened or deleted, and the only added step is the discovery read when a Lorestrom server is connected.
-2. `tests/test_minerva_backend.py` covers, as each phase lands:
-   - resolution: every step, opt-out, malformed config, failing server;
-   - `match_project`: alias, several matches, renamed repo, no remote;
-   - keys and repo labels;
-   - `entry_payload` over every entry in this repo, with edges matching `knowledge_catalog`'s, and each size refusal;
-   - `merge_properties` and `check-tree`;
-   - `unit_state` from promote's properties, and half-created unit resume;
-   - `repair_flips`, including an entry no longer draft;
-   - a table-driven `reconcile_action`: fresh branch, squash without `gh`, conflict, closed PR, stale, phased units.
-3. The inventory test exists, and a deletion pass shows it fails for each of the four cases in Approach 3.
-4. A test in a temporary git repo shows that default lorestrom setup and first discovery leave `git status --porcelain` empty.
-5. Each phase bumps the version (both plugin.json files, pinned tests, COMPATIBILITY, README, pages/index.md) and keeps the catalog surfaces in sync.
-6. Every SKILL.md stays at or under 9216 bytes.
+As the replan of 2026-11-23 states them, met in every phase:
+
+1. minerva unchanged: no diff under `plugins/minerva/`; its tests and dry-run evals pass with no assertion weakened.
+2. Helper tests, including names-as-data, the Python 3.9 import check, and a subprocess locale test that keeps "Café" under a non-UTF-8 locale.
+3. The inventory, drift and parametrized guards exist, and a deletion pass shows each fails.
+4. Default init leaves `git status --porcelain` empty.
+5. Each phase bumps lorestrom's version everywhere it is pinned.
+6. Every SKILL.md in both plugins at or under 9216 bytes.
 
 ## Phases
 
 As replanned on 2026-11-23 (a separate Lorestrom-only plugin) and 2026-11-24 (the lifecycle split); `replan.md` holds the plans these replace.
 
-1. **Connect and publish (lorestrom 0.1.0)** — plugin skeleton, helper, `using-lorestrom` with the storage contract, `init` with a confirmed knowledge import; the repo's minerva files stay authoritative.
-2. **Lifecycle and handover (lorestrom 0.2.0)** — every skill that writes records (propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore, one-by-one, debug), checkpoints, the contract's write rows, and init's handover; Lorestrom becomes authoritative.
-3. **Orchestrators (lorestrom 0.3.0)** — propose-ship and propose-ship-auto; the `--auto` hooks become live.
+1. **Connect and publish (lorestrom 0.1.0)** — plugin skeleton, helper, `using-lorestrom` with the storage contract, `init` with a confirmed knowledge import; the repo's minerva files stay authoritative. PR #152.
+2. **Lifecycle and handover (lorestrom 0.2.0)** — every skill that writes records, checkpoints, the contract's write rows, and init's handover; Lorestrom becomes authoritative. PR #153.
+3. **Orchestrators (lorestrom 0.3.0)** — propose-ship and propose-ship-auto; the `--auto` hooks become live. PR #154.
 4. **Sweep and lint (lorestrom 0.4.0)** — cleanup's sweep of other clones' units, status ages, and lint over Lorestrom docs.
 
-## Open Questions
+## Known limits
 
-- No live end-to-end check is possible in the authoring session, which has no Lorestrom MCP connection. Verification uses vendored shapes, contract tests and temporary git repos; the user can run init against www.lorestrom.com once phase 1 merges.
+- No live Lorestrom server was reachable from the authoring session: verification used vendored tool shapes, contract tests and temporary git repositories. lorestrom has no behaviour evals yet.
+- Pending knowledge can lag a merge until some clone runs cleanup.
+- Status judges staleness from recorded heads; cleanup's `reconcile` also treats a head whose tree equals the base's as headless, which status cannot see.
+
+## Deferred work
+
+- #155 — minerva phased units: the orchestrators' phase loop never runs work for phases 2..N (priority: high). Found while porting the orchestrators; fixed in lorestrom's copies.
