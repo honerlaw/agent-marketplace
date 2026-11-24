@@ -1,0 +1,81 @@
+# Phase protocols — full walkthroughs
+
+Read this file in full before executing the lifecycle; the SKILL.md core names the phases, this file is the protocol.
+
+## Pre-flight: detect in-flight work
+
+Before invoking `minerva:propose`, check whether the user's intent is **already in flight** — in this checkout, in another clone, or in a available live peer session.
+
+**Read `skills/propose/references/in-flight-check.md` and run it.** It reads four evidence sources — local work units (via the `in_flight` predicate, never a string match), local and remote branches, open PRs, and available live peer sessions — each failing soft, so a repo with no remote, no tracker and no siblings passes through silently. It is **detection, not a lock**: `git worktree add -b` serializes only sessions choosing the *same slug*, so a clean result means no evidence was found, not that nobody else is working the goal.
+
+A collision stops the run and asks. Only proceed to `minerva:propose` after the user confirms a fresh start.
+
+This avoids the foot-cannon where a user mid-flow says "ok run the whole thing" and accidentally spawns a parallel work unit.
+
+## Handoff rules
+
+- **propose → work**: hand off automatically once `minerva:propose` reaches its natural completion point (proposal written, self-reviewed, and user-approved).
+
+- **work → review**: this is the trickiest handoff. `minerva:work` is session-spanning and has no discrete completion event. Advance to `minerva:review` only when the user explicitly signals work is done. Recognized signals:
+  - The phrase `done`, `complete`, `ready to review`, `ready to ship`, `wrap it up`, `promote it`, or `ship it` in user input.
+  - The user invoking `minerva:review`, `minerva:promote`, or `minerva:ship` directly.
+  - The `minerva:work` skill itself signaling completion (success criteria checked off, surfaced as "ready for promote").
+
+  The signal list is illustrative, not closed — any unambiguous completion statement (e.g. "looks good, let's move on") counts as an explicit signal. Absent such a signal, stay in work mode; do not advance silently or prompt the user repeatedly.
+
+- **review → promote**: hand off automatically once `minerva:review` reaches its natural completion point AND triage is clean (zero pending, all FIX items applied). If review surfaced findings the user routed back to `minerva:replan`, return control to work and re-enter review afterward.
+
+- **promote → ship gate**: this is the single explicit gate. After `minerva:promote` completes, briefly summarize what was promoted, what was merged into the proposal, and what was discarded. There is no catalog or overview to refresh: both are derived on read from the entries promote just wrote. Wait for explicit user confirmation (`ship it`, `proceed`, `yes`) before invoking `minerva:ship`. If review found issues serious enough that the user has unresolved concerns about the implementation, pause here for explicit confirmation regardless.
+
+- **ship → cleanup**: after `minerva:ship` returns, the PR may be `OPEN` (auto-merge pending), `MERGED`, or `CLOSED`. Cleanup runs only on `MERGED`. See [Phase 7](#phase-7--cleanup-gate) for the polling rules.
+
+## Entry point
+
+Always start at `minerva:propose` after the pre-flight check passes. Do not attempt to detect or resume mid-lifecycle state beyond the in-flight collision check above. If the user already has a work unit in progress and they actually want to resume it (not start a new one), they should invoke the individual skills directly — the pre-flight will surface this.
+
+## Execution
+
+1. Run pre-flight in-flight detection. Stop or proceed based on user response.
+2. Invoke `minerva:propose` via the skill loader. Wait for it to complete.
+3. Invoke `minerva:work` via the skill loader. Stay engaged through the work phase per the handoff rule above.
+4. Invoke `minerva:review` via the skill loader. Wait for it to complete. If review routes to `minerva:replan`, return to step 3 after the replan lands.
+5. Invoke `minerva:promote` via the skill loader. Wait for it to complete.
+6. Apply the promote → ship gate: summarize the promote result, then wait for explicit user confirmation.
+7. Invoke `minerva:ship` via the skill loader.
+8. Run the cleanup gate ([Phase 7](#phase-7--cleanup-gate)).
+
+## Phase 7 — cleanup gate
+
+**Runtime continuation.** Read the saved checkpoint before this gate; preserve
+caller, escalation/decision/reviewer counters, cleanup retries and its absolute
+deadline. Save phase `cleanup` before waiting. The scheduled resume operation is
+conditional on a real re-entry capability: without it, checkpoint and report
+**pending — manual resume required**, with the exact host-correct
+`--cleanup-only <date-slug> --retry=N` prompt. Count each retry before waiting;
+cap at 12 or the original one-hour deadline, whichever comes first. Never reset
+these limits when switching sessions.
+
+
+After `minerva:ship` returns, check PR merge state and decide what to do with the worktree:
+
+1. Read the PR state by the number ship reported (on resume, the checkpoint's PR number): `gh pr view <pr-number> --json state,mergedAt 2>/dev/null`. No branch name is typed.
+2. **`MERGED`** → invoke `minerva:cleanup <date-slug> --yes` via the skill loader. The work unit is fully shipped and the worktree is safe to remove. Report the cleanup result and exit.
+3. **`OPEN`, auto-merge enabled** → the PR will merge on its own when CI passes. When a scheduler supports re-entry, schedule a wake-up:
+   - the scheduled resume operation with `delaySeconds: 300` and a `prompt` of `minerva:propose-ship --cleanup-only <date-slug> --retry=N` so the next firing re-enters this gate.
+   - Cap the retries at **12** (~1 hour total). Carry the retry count in the wake-up `prompt`.
+
+   **Why a constant here, when `minerva:ship`'s CI watch refuses to guess an interval.**
+   The two waits are shaped by different things. Ship waits on *checks settling*, whose
+   duration is unknowable in advance — measured at ~10-26s in a docs-only repo and ~1000s
+   for a full suite — so it lets `gh` report completion rather than polling on a guess.
+   This gate waits on *auto-merge landing*, which does not track CI duration at all: it can
+   queue behind a required review or a merge queue long after checks are green. There is no
+   completion signal to subscribe to, so a constant is the honest shape, and 300s x the cap
+   above is exactly what makes the ~1 hour bound a bound rather than an estimate
+   ([[2026-07-29-pattern-wait-shape-matches-what-is-awaited]]).
+   - On cap exhaustion, surface "auto-merge still pending after ~1 hour — run `minerva:cleanup <date-slug>` manually once the PR merges" and exit.
+4. **`OPEN`, auto-merge declined / not enabled** → no automatic merge is coming. Surface "merge the PR manually when ready, then run `minerva:cleanup <date-slug>`" and exit. Do **not** schedule a wake-up — the gate has no signal to wait on.
+5. **`CLOSED` (not merged)** → the PR was closed without merging. Surface "PR closed without merging — worktree left in place at `.minerva/worktrees/<date-slug>/` for manual review. Run `minerva:cleanup <date-slug>` if you want to discard it." Exit.
+6. **No PR found** → ship must have bailed before opening one. Skip cleanup and exit.
+
+This phase is also the entry point when `propose-ship` is re-invoked via the wake-up (`--cleanup-only` flag) — in that mode, skip phases 1–7 and re-run phase 7 directly.
