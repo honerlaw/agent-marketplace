@@ -166,8 +166,10 @@ gh issue create \
   --body-file "$B"
 ```
 
-`$T` and `$B` are the two `mktemp` paths: the only text on the command line is those paths
-and the shell's own quoting, whatever the headline or prose holds.
+Set `T` and `B` to the two files' absolute paths in this same shell call (`T=<absolute-title-file>`
+and `B=<absolute-body-file>`): shell variables do not survive from the call that made the files.
+The only text on the command line is those paths and the shell's own quoting, whatever the
+headline or prose holds.
 
 **The `**Failure scenario**:` line is mandatory and must not be padded to satisfy the
 template.** It is the bar from [deferral-bar.md](deferral-bar.md) made structural: an item for

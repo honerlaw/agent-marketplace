@@ -237,7 +237,7 @@ properties. A read-only skill shows it and writes nothing.
 Find the unit doc by key (`find_docs`, `kinds` `["minerva:work_unit"]`, compare `key`), then
 its records with `find_docs` `gateId` the unit's doc id and `kinds` `["minerva:record"]`, and
 `get_doc` the record needed. A unit's phases come from its proposal: write
-`{"proposal": <markdown>, "mergedPrs": [<head names of MERGED PRs>], "heads": {"<pr>": <sha>},
+`{"proposal": <markdown>, "mergedPrs": [<head names of MERGED PRs>], "heads": {"<n>": <sha>},
 "base": <sha>}` to a `mktemp` file and run `phases --unit <date-slug>`. The head names come
 from `gh pr list --state merged --json headRefName`, run for each phase branch `phases` names,
 never typed. `heads` maps each phase number to the unit doc's `minerva:head_<n>` and `base` is
@@ -341,7 +341,9 @@ scratchpad record's status `archived` (`update_doc`), and
 
 From `lorestrom:cleanup`. Write the unit's recorded `"phases"`, `"heads"`, `"base"` and PR states to
 a `mktemp` file and run `reconcile`: it gathers git evidence itself (only 40-hex shas reach git)
-and returns `release`, `confirm`, `abandon` or `wait`. Act only on its answer.
+and returns `release`, `confirm`, `abandon` or `wait`. Act only on its answer. Coming from
+`unit.confirm`, act on the `release` that its re-run with `userConfirmed` returned: do not run
+`reconcile` again without the confirmation, or it asks the same question twice.
 1. **release:** `update_doc` the unit's merged properties with `minerva:merge_commit`, then
    `release_gate`. On a refusal, `get_gate` and pass the code and the gate's state to
    `release-outcome`: a CONFLICT with the gate released is success. Then `unit.repair`.

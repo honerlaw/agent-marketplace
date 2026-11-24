@@ -42,6 +42,7 @@
 - [adjudicated — proceed] new-plan acceptance: N1 resolved; Lorestrom's release fails a held replace STALE after a later live edit; amendment: a unit reads the doc in the same step as its hold and the contract states the remaining window; the rule change is stated explicitly; applied after the ruling
 - [reviewed — folded] completion, lorestrom phase 2: Verifier reject on B1 (a plain confirm never reaches reconcile), everything else met; B1 is an implementation defect against the unchanged Approach 6, not a criterion the plan cannot meet, so it is fixed in the review round with no replan (tier: reviewer; floor: completion is always a Verifier)
 - [solo] review triage, lorestrom phase 2: B1, the skill-text review's 2 high, 8 medium and 6 low, the scripts review's 3 high, 2 medium and 3 low, and the Verifier's notes N1–N4 all FIX, no replan: each is a defect inside the approved plan (tier: solo; each has one dominant disposition)
+- [solo] re-review triage, lorestrom phase 2: medium 1 (confirmation lost on the release path), medium 3 (resurrection with a local branch, or a complete phased unit) and lows 4–7 FIX; medium 2 resolved by reverting S6 instead of amending Approach 6: ship records a head only for a branch with its own commits, so an ancestor head on the mainline is a fast-forward merge the plan releases, and S6 cost that case a question while guarding a near-impossible one (tier: solo; reversible, keeps the approved plan unchanged)
 
 ## Work notes (phase 1)
 - `entry_payload` must mirror all three catalog supersession sources: `superseded by` labels and legacy banners become reversed `supersedes` edges; an inverted `supersedes` becomes `relates_to`.
@@ -211,3 +212,13 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - N3 fixed: every "`propose-ship-*` orchestrators" says (0.3.0) — `test_every_orchestrator_mention_says_it_arrives_in_0_3_0`.
 - N4 fixed: a minerva-begun unit finishes on minerva's skills run one by one, never its orchestrators — safety pin.
 - each fix reverted in turn: 29 of 29 caught
+
+## Re-review triage 2026-11-24 (lorestrom phase 2 fixes)
+- [FIX] medium 1 — `unit.release` re-ran reconcile without the user's confirmation: it acts on the `release` from `unit.confirm`'s re-run
+- [FIX] medium 2 — S6 changed Approach 6's release rule unrecorded: S6 reverted, a fast-forward merge releases again; test renamed to say so
+- [FIX] medium 3 — resurrection reuses an existing local branch (no `-b`, never `-B`) before origin's; a phased unit with every phase merged stops and asks
+- [FIX] low 4 — phases example keyed heads by PR; it is the phase number
+- [FIX] low 5 — an integer confirmation is refused with an error instead of being reported as the string form
+- [FIX] low 6 — ship's garbled head-recording sentence split
+- [FIX] low 7 — `T` and `B` set to the files' absolute paths in the same shell call
+- Each logic and safety fix reverted in turn: its test fails (5 of 5); 4 and 6 are wording.

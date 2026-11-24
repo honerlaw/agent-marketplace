@@ -272,18 +272,14 @@ def test_a_merged_head_releases(repo):
     assert evidence(repo, heads={"1": head}, base=base)["decision"]["action"] == "release"
 
 
-def test_a_head_on_the_mainline_needs_a_merged_pr(repo):
-    # A fast-forward leaves the head a default-branch commit, which a head copied from the
-    # default branch also is: only the PR tells them apart, and without one the user is asked.
+def test_a_fast_forward_merge_releases_without_a_pr_record(repo):
+    # Approach 6: a recorded head that is an ancestor of the default branch is merged.
     base = git(repo, "rev-parse", "HEAD")
     head = branch_with_change(repo, "unit")
     git(repo, "merge", "-q", "--ff-only", "unit")
     got = evidence(repo, heads={"1": head}, base=base)
-    assert got["evidence"]["ancestors"]["1"] is False
-    assert got["decision"]["action"] == "confirm"
-    merged = evidence(repo, heads={"1": head}, base=base, prs={"1": "MERGED"})
-    assert merged["evidence"]["ancestors"]["1"] is True
-    assert merged["decision"]["action"] == "release"
+    assert got["evidence"]["ancestors"]["1"] is True
+    assert got["decision"]["action"] == "release"
 
 
 def test_a_squash_merge_without_gh_asks_for_confirmation(repo):
@@ -409,6 +405,14 @@ def test_a_confirmation_counts_only_for_a_phase_reconcile_asked_about(repo):
     assert got["refusedConfirmations"] == ["1", "2"]
     assert "1" not in got["evidence"]["confirmed"]
 
+
+
+def test_a_confirmation_must_name_phases_as_strings(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    head = branch_with_change(repo, "unit")
+    request = {"phases": 1, "heads": {"1": head}, "base": base, "userConfirmed": [1]}
+    result = run(repo, "reconcile", stdin=json.dumps(request))
+    assert result.returncode == 2 and "as strings" in result.stderr
 
 # --- reference docs --------------------------------------------------------------------------
 

@@ -1007,9 +1007,6 @@ def merge_evidence(root, request: dict) -> dict:
         raise BackendError("the unit's recorded base is not a commit in this clone")
     new_enough = _git_version(top) >= MERGE_TREE_GIT
     default_tree = _tree(top, default)
-    # Commits the default branch made itself: a head among them is a mainline commit, not a
-    # merged unit branch, unless its PR says it merged (a fast-forward merge).
-    mainline = set(_git(top, "rev-list", "--first-parent", default).stdout.split())
     evidence = {"phases": request["phases"], "abandon": request.get("abandon") is True,
                 "age_days": request.get("age_days") or 0, "heads": {}, "prs": {},
                 "ancestors": {}, "differs": {}, "merge_tree": {}, "confirmed": {}}
@@ -1025,9 +1022,10 @@ def merge_evidence(root, request: dict) -> dict:
             evidence["merge_tree"][n] = "missing"
             continue
         evidence["differs"][n] = head != base and _tree(top, head) != _tree(top, base)
-        evidence["ancestors"][n] = (
-            (head not in mainline or evidence["prs"][n] == "MERGED")
-            and _git(top, "merge-base", "--is-ancestor", head, default, ok=(0, 1)).returncode == 0)
+        # A fast-forward merge leaves the head on the default branch's first-parent line; ship
+        # records a head only for a branch with its own commits, so an ancestor head is merged.
+        evidence["ancestors"][n] = _git(top, "merge-base", "--is-ancestor", head, default,
+                                        ok=(0, 1)).returncode == 0
         named = merged.get(n)
         if isinstance(named, str) and SHA_RE.fullmatch(named) and _commit(top, named):
             evidence["confirmed"][n] = _git(top, "merge-base", "--is-ancestor", named, default,
@@ -1043,8 +1041,8 @@ def merge_evidence(root, request: dict) -> dict:
             evidence["merge_tree"][n] = "noop" if tree == default_tree else "changes"
     decision = reconcile_action(evidence)
     said_yes = request.get("userConfirmed") or []
-    if not isinstance(said_yes, list):
-        raise BackendError("userConfirmed must be a list of phase numbers")
+    if not isinstance(said_yes, list) or not all(isinstance(n, str) for n in said_yes):
+        raise BackendError('userConfirmed must be a list of phase numbers as strings ("1")')
     askable = set(decision.get("phasesToConfirm") or [])
     refused = [n for n in said_yes if n not in askable]
     for n in said_yes:

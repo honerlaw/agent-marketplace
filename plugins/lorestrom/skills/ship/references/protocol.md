@@ -34,7 +34,7 @@ branch-derived key and never interprets it as a work unit.
 
 After creating/reusing a PR, record it on the unit (`storage:unit.ship`: the phase's branch, PR
 number and pushed head), and again after **every later push** to the PR branch (each CI fix):
-`minerva:head_<n>` must be the last pushed commit, or cleanup judges a stale head, then write phase `ship`, status `pending`, its PR number,
+`minerva:head_<n>` must be the last pushed commit, or cleanup judges a stale head. Then write phase `ship`, status `pending`, its PR number,
 branch, caller, and current counters. Checkpoint each attempted fix before
 performing it and before every wait/yield. Before returning to cleanup, write
 phase `cleanup`; only confirmed completion marks this run done.
