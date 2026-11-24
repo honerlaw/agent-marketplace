@@ -19,7 +19,7 @@ Tidy up after shipped work — release each merged unit's Lorestrom gate, then r
 
 ## Target resolution
 
-Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`. **Keep all six blocks in sync if you edit one.** For `lorestrom:cleanup` specifically, the default mode (no argument) is "all merged worktrees" rather than a single target — but resolution rules apply when an argument is passed.
+Same pattern used by `lorestrom:work`, `lorestrom:replan`, `lorestrom:promote`, `lorestrom:review`, `lorestrom:ship`. **Keep all six blocks in sync if you edit one.** For `lorestrom:cleanup` specifically, the default mode (no argument) is the sweep rather than a single target — but resolution rules apply when an argument is passed.
 
 1. **Explicit argument** (a checked id: one `storage:unit.list` or the runtime's `units` printed) → operate on just that work unit: its Lorestrom unit and `.lorestrom/worktrees/<date-slug>/`. Required: its branch merged into default (see Merge detection), except with `--abandon` or `--merged`.
 2. **No argument** → the sweep: this project's open units, here or elsewhere, and all `.lorestrom/worktrees/*/` directories. **Read `references/sweep.md` first.** Use only checked ids (`units`, runtime contract "Names are data"): skip any other directory and report how many were refused. Match **both** id forms — `YYYY-MM-DD-<slug>` and `NNN-<slug>`; a digit-anchored glob would silently skip date-named worktrees.

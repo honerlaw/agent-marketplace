@@ -10,8 +10,8 @@ and every operation is a row of `skills/using-lorestrom/references/storage.md`.
 1. `storage:unit.list`: this project's units, by checked id (`unit-ids`; its `refused` count is
    reported). `whoami` once for this person's user id.
 2. For each unit whose gate is `open` or `releasing`: `get_gate`, then `unit-state` with the
-   gate's `state`, `openedAt` and `openedByUserId` and that user id. It prints `age_days` and
-   `mine`. A released or abandoned gate is done: only its worktree, if any, is a candidate.
+   gate's `state`, `openedAt` and `openedByUserId`, that user id and the unit's phase count
+   (`storage:unit.list`). It prints `age_days`, `stale` and `mine`. A released or abandoned gate is done: only its worktree, if any, is a candidate.
 3. A unit is **here** when `.lorestrom/worktrees/<date-slug>/` exists in this clone, and
    **elsewhere** otherwise: another clone's unit, or one whose worktree was removed by hand.
    A worktree here whose id no listed unit has is listed under Will skip ("no unit found"),
@@ -66,5 +66,6 @@ Units elsewhere:       released N   waiting N (<date-slug>: reason, …)   needs
 Stale:                 N (<date-slug>: N days, …)
 ```
 
-`--dry-run` reads and reports, and writes nothing: no fetch of a PR head, no refresh, no gate
-call beyond `get_gate`.
+`--dry-run` reads and reports, and writes nothing: it fetches nothing (not even the
+once-per-sweep fetch of origin), refreshes nothing, and calls no gate tool beyond `get_gate`. A
+unit from elsewhere whose head is missing is reported as waiting on a fetch.

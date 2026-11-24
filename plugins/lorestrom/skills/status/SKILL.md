@@ -51,10 +51,8 @@ the `cd … && pwd` wrapper makes it absolute.
 
 `storage:unit.list`: only ids `unit-ids` printed are used, and its `refused` count is reported.
 It lists every unit of this project in Lorestrom, whoever opened it and whichever clone it was
-worked in. Call `whoami` once. For each unit, `get_gate` its doc and pipe its properties, the
-gate's `state`, `openedAt` and `openedByUserId`, your user id and its phase count (`phases`'
-`total`, 1 when unphased; step 3) to `unit-state`: `promoted`, `shipped`, `state`, `age_days`,
-`stale` and `mine`. **The gate is the authority**: a stale `minerva:state` property is shown as
+worked in. Call `whoami` once, and `get_gate` each unit's doc; step 3 pipes them to
+`unit-state` once it has the unit's phase count. **The gate is the authority**: a stale `minerva:state` property is shown as
 stale, never trusted, and never rewritten here. `stale` (no recorded head after 14 days) is
 shown, never acted on. Note each unit's `.lorestrom/worktrees/<date-slug>/` presence: a unit
 with none here was worked on elsewhere, and that is not a cleanup signal.
@@ -72,6 +70,10 @@ For each open unit, run the helper's `phases --unit <date-slug>` on its proposal
 head names of MERGED PRs and the unit doc's recorded heads and base (`storage:unit.read`). Join PRs on each phase's `branch`, never by
 string equality with the slug: a phased unit ships phases 2+ on `<date-slug>-phase-N`. The
 unit doc's `minerva:pr_<n>` is the PR ship recorded; prefer it when it is a number.
+
+Then, for each unit, pipe its properties, the gate's `state`, `openedAt` and `openedByUserId`,
+your user id and its phase count (`phases`' `total`, 1 when unphased) to `unit-state`:
+`promoted`, `shipped`, `state`, `age_days`, `stale` and `mine` (`storage:unit.list`).
 
 If `gh` is unavailable, unauthenticated, or the repo has no GitHub remote — run the probe in
 `lorestrom:promote`'s "Step 1 — Capability probe" exactly as written there, then **skip the PR

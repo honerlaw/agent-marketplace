@@ -280,3 +280,18 @@ Verifier and the two code reviews; every item FIX inside the approved plan, no r
 - Another clone's unit: its heads may be absent here, which reconcile used to report as "no recorded head". It now answers `wait` with `fetch` (the phases whose head is missing), and the sweep fetches `refs/pull/<pr>/head` by the recorded all-digit PR number, which GitHub keeps after the branch is deleted, then asks once more.
 - The sweep's rules (`cleanup/references/sweep.md`): releases only on reconcile's answer; a unit someone else opened (or whose opener is unknown) needs a yes naming it for any action, and `--yes` never covers one; abandon keeps the K2 rule; staleness is shown, never acted on; only this clone's worktrees are removed, and the owning clone tears its own down later (release-outcome reads the released gate as success). cleanup/SKILL.md went down to 9057 bytes (one parenthetical moved out, the protocol into the reference).
 - Deletion pass, in a throwaway copy: 24 mutations over the helper's new functions, the sweep's and lint's safety clauses, the contract row and the deferral wording. 23 caught on the first run; the survivor (dropping the record of `supersedes` targets) gained `test_a_superseded_entry_with_its_successor_edge_is_clean` and is caught now: 24 of 24.
+
+## Review triage 2026-11-24 (lorestrom phase 4)
+
+- V1/P4 FIX (blocking): a closed PR with an unfetched head abandoned before the fetch. The missing-head `wait` with `fetch` now comes before the closed check, and the closed check also excludes `missing`. That second guard is unreachable after the reorder (a missing head is always headless), so it is defence in depth that no test can isolate; reverting V1 whole is caught.
+- P1 FIX (high): every cleanup, a single-unit one included, computes `mine` and `age_days` in release.md's Decide step (`get_gate`, `whoami`, `unit-state`); `--yes` acts only on a unit whose `mine` is true. `unit.release` gains `whoami`; both orchestrators say their `--yes` covers only the run's own unit.
+- P2 FIX (med): lint-docs takes units as `{id, state}` and builds each key with `unit_key`; a hand-made key or a malformed id is ignored.
+- P3 FIX (med): an edge whose source entry is archived (an abandoned unit's) is not a broken link.
+- P5 FIX (low): a draft entry is not an orphan: its edges may still be held.
+- P6 FIX (low): status pipes `unit-state` in step 3, after `phases`; `unit.list` and the sweep pass the phase count.
+- P7 FIX (low): `unit-state` reads `openedByUserId`, get_gate's own field (the older `openedBy` is still accepted); the contract text uses `openedByUserId`.
+- P8 FIX (low): the fetch test builds the PR head in a second clone used as origin, so the head must be fetched; the false comment is gone.
+- P9 FIX (low): cleanup's Target resolution says the default is the sweep.
+- V-note FIX: `--dry-run` fetches nothing, not even origin, and reports a unit from elsewhere as waiting on a fetch.
+- V-note FIX: a malformed edge is skipped and counted (`skippedEdges`), and a non-string `minerva:context` is a `pending` finding, not a crash.
+- each fix reverted in turn: 11 of 11 caught (V1 counted whole, as above). A first revert run printed CAUGHT for V1's second guard alone; rerun with exit codes and test counts, it passed, which is how the unreachable guard was found.

@@ -990,17 +990,19 @@ def reconcile_action(evidence: dict) -> dict:
         prs.get(n) == "MERGED" or ancestors.get(n) is True or confirmed.get(n) is True)]
     # A closed PR abandons only a phase no other evidence shows merged, and whose head does
     # not already merge cleanly as a no-op (its changes may have landed another way: ask).
-    closed = [n for n in numbers if prs.get(n) == "CLOSED" and n not in merged
-              and trees.get(n) != "noop"]
-    if closed:
-        return {**base, "action": "abandon",
-                "reason": f"phase {closed[0]}'s PR was closed without merging"}
     missing = [n for n in no_head if trees.get(n) == "missing"]
     if missing:
         # Another clone's unit: its heads were never fetched here. A PR keeps its head ref
-        # after the branch is deleted, so the caller fetches `refs/pull/<pr>/head` and asks again.
+        # after the branch is deleted, so the caller fetches `refs/pull/<pr>/head` and asks
+        # again. This comes before a closed PR: without the head, a no-op merge (changes that
+        # landed another way) cannot be told apart from abandoned work.
         return {**base, "action": "wait", "fetch": missing,
                 "reason": f"phase {missing[0]}'s recorded head is not in this clone: fetch it"}
+    closed = [n for n in numbers if prs.get(n) == "CLOSED" and n not in merged
+              and trees.get(n) not in ("noop", "missing")]
+    if closed:
+        return {**base, "action": "abandon",
+                "reason": f"phase {closed[0]}'s PR was closed without merging"}
     if no_head:
         return {**base, "action": "wait",
                 "reason": f"phase {no_head[0]} has no recorded head, or its head is the base"}
@@ -1282,7 +1284,9 @@ def _pending_findings(doc: dict, gates: dict) -> list:
     if not context:
         return [("pending", "warning",
                  "draft with no minerva:context: an incomplete import; re-run lorestrom:init")]
-    unit = context.rsplit("/", 1)[-1] if isinstance(context, str) else ""
+    if not isinstance(context, str):
+        return [("pending", "warning", "its minerva:context is not a unit key")]
+    unit = context.rsplit("/", 1)[-1]
     unit = unit if UNIT_ID_RE.fullmatch(unit) else "its unit"
     state = gates.get(context)
     if state == "released":
@@ -1321,20 +1325,26 @@ def _doc_findings(project: str, doc: dict, gates: dict) -> list:
 
 def _edge_findings(edges: list, every: dict, ours: dict) -> tuple:
     """Broken and drifted edges from this project's entries, plus what the edges touch."""
-    found, linked, superseded = [], set(), set()
+    found, linked, superseded, skipped = [], set(), set(), 0
     for edge in edges:
-        relation = (edge.get("relation") or {}) if isinstance(edge, dict) else {}
+        parts = [edge.get(k) if isinstance(edge, dict) else None
+                 for k in ("relation", "source", "target")]
+        relation, source, target = parts
+        if not all(isinstance(x, dict) for x in parts) \
+                or not all(isinstance(x.get("id"), str) for x in (source, target)):
+            skipped += 1
+            continue
         name = relation.get("relation")
-        source, target = edge.get("source") or {}, edge.get("target") or {}
         if name not in LINT_RELATIONS:
             continue
-        linked.update({source.get("id"), target.get("id")})
+        linked.update({source["id"], target["id"]})
         target_doc = every.get(target.get("id"))
         if name == "supersedes":
             superseded.add(target.get("id"))
-        if source.get("id") not in ours:
+        where = ours.get(source["id"])
+        # An abandoned unit archives its entries and keeps their edges: not a broken link.
+        if where is None or where.get("status") == "archived":
             continue
-        where = ours[source["id"]]
         if target.get("kind") != KIND_KNOWLEDGE:
             found.append((where, "broken-link", "warning",
                           f"a {name} edge points at a doc that is not a knowledge entry"))
@@ -1347,7 +1357,7 @@ def _edge_findings(edges: list, every: dict, ours: dict) -> tuple:
             status = status if status in ("draft", "current", "deprecated") else "not superseded"
             found.append((where, "supersession", "warning",
                           f"supersedes {_entry_name(target_doc)}, which is {status}"))
-    return found, linked, superseded
+    return found, linked, superseded, skipped
 
 
 def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
@@ -1355,7 +1365,8 @@ def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
 
     `docs` is `find_docs` (the workspace's `minerva:knowledge` docs, every status), `edges` is
     `find_relations` (`supersedes` and `relates_to` in the workspace), `units` is this
-    project's units as `{key, state}` with each gate's state. A finding names an entry by its
+    project's units as `{id, state}`: an id `unit-ids` printed and its gate's state (keys are
+    built here, never by hand). A finding names an entry by its
     checked stem or its doc id, never by its title or any other text it holds.
     """
     _project_id(project)
@@ -1365,7 +1376,8 @@ def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
              if isinstance(d, dict) and isinstance(d.get("id"), str) and UUID_RE.fullmatch(d["id"])}
     ours = {i: d for i, d in every.items()
             if d.get("kind") == KIND_KNOWLEDGE and _props(d).get("minerva:project") == project}
-    gates = {u.get("key"): u.get("state") for u in units if isinstance(u, dict)}
+    gates = {unit_key(project, u["id"]): u.get("state") for u in units
+             if isinstance(u, dict) and isinstance(u.get("id"), str) and UNIT_ID_RE.fullmatch(u["id"])}
     findings, themes = [], Counter()
     for doc in ours.values():
         findings += [(doc, *f) for f in _doc_findings(project, doc, gates)]
@@ -1376,7 +1388,7 @@ def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
         theme = _props(doc).get("minerva:theme")
         if doc.get("status") != "archived" and isinstance(theme, str) and themes[theme.strip()] == 1:
             findings.append((doc, "theme", "warning", "its theme is used by no other entry"))
-    edge_found, linked, superseded = _edge_findings(edges, every, ours)
+    edge_found, linked, superseded, skipped = _edge_findings(edges, every, ours)
     findings += edge_found
     live = [d for d in ours.values() if d.get("status") != "archived"]
     findings += [(d, "supersession", "warning", "superseded, but no supersedes edge points at it")
@@ -1384,9 +1396,10 @@ def lint_docs(project: str, docs: list, edges: list, units: list) -> dict:
     rows = [{"entry": _entry_name(doc), "family": family, "severity": severity, "message": message}
             for doc, family, severity, message in findings]
     rows.sort(key=lambda r: (r["severity"] != "error", r["family"], r["entry"], r["message"]))
+    # A draft's edges may still be held on its unit's gate: it is not an orphan yet.
     orphans = sorted(_entry_name(d) for d in live
-                     if d["id"] not in linked and d.get("status") != "superseded")
-    return {"entries": len(live), "findings": rows, "orphans": orphans}
+                     if d["id"] not in linked and d.get("status") not in ("superseded", "draft"))
+    return {"entries": len(live), "findings": rows, "orphans": orphans, "skippedEdges": skipped}
 
 
 def _stdin_json():
@@ -1414,7 +1427,7 @@ def main(argv=None) -> int:
     listing = commands.add_parser("import-list", help="what an import would send, with no bodies")
     listing.add_argument("--project", required=True)
     commands.add_parser("unit-state",
-                        help="stdin: {properties, gate, openedAt, openedBy, me, phases}")
+                        help="stdin: {properties, gate, openedAt, openedByUserId, me, phases}")
     plan = commands.add_parser("removal-plan", help="stdin: find_docs' knowledge and reference docs")
     plan.add_argument("--project", required=True)
     ids = commands.add_parser("unit-ids", help="stdin: find_docs' unit docs; the checked ids")
@@ -1461,7 +1474,8 @@ def main(argv=None) -> int:
         elif args.command == "unit-state":
             value = _stdin_json()
             out = unit_state(value.get("properties") or {}, value.get("gate"),
-                             value.get("openedAt"), value.get("openedBy"), value.get("me"),
+                             value.get("openedAt"),
+                             value.get("openedByUserId", value.get("openedBy")), value.get("me"),
                              value.get("phases", 1))
         elif args.command == "removal-plan":
             out = removal_plan(args.cwd, args.project, _stdin_json())

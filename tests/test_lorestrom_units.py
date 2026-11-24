@@ -867,13 +867,23 @@ def test_another_clones_unfetched_head_asks_for_a_fetch(repo):
     assert "not in this clone" in got["decision"]["reason"]
 
 
-def test_a_fetched_pr_head_then_releases(repo):
+def test_a_pr_head_from_another_clone_must_be_fetched_then_releases(repo, tmp_path):
     base = git(repo, "rev-parse", "HEAD")
-    head = branch_with_change(repo, "unit")
-    git(repo, "update-ref", "refs/pull/7/head", head)  # what `git fetch refs/pull/7/head` leaves
-    git(repo, "merge", "-q", "--squash", "unit")
-    commit(repo, "squash")
-    git(repo, "branch", "-D", "unit")
+    upstream = tmp_path / "upstream"
+    git(tmp_path, "clone", "-q", str(repo), str(upstream))
+    for key, value in (("user.name", "Test"), ("user.email", "test@example.invalid"),
+                       ("commit.gpgsign", "false")):
+        git(upstream, "config", key, value)
+    head = branch_with_change(upstream, "unit")
+    git(upstream, "update-ref", "refs/pull/7/head", head)  # GitHub's ref for PR 7's head
+    git(upstream, "merge", "-q", "--squash", "unit")
+    commit(upstream, "squash")
+    git(upstream, "branch", "-D", "unit")
+    git(repo, "remote", "add", "origin", str(upstream))
+    git(repo, "fetch", "-q", "origin")  # the default branch, not the PR ref
+    asked = evidence(repo, heads={"1": head}, base=base, prs={"1": "MERGED"})
+    assert asked["decision"]["action"] == "wait" and asked["decision"]["fetch"] == ["1"]
+    git(repo, "fetch", "-q", "origin", "refs/pull/7/head")  # the sweep's fetch
     got = evidence(repo, heads={"1": head}, base=base, prs={"1": "MERGED"})
     assert "fetch" not in got["decision"] and got["decision"]["action"] == "release"
 
@@ -918,7 +928,7 @@ def families(result):
 def test_a_clean_linked_corpus_has_no_findings():
     docs = [kdoc(DOC_A, A_STEM), kdoc(DOC_B, B_STEM)]
     got = lint(docs, [edge("relates_to", DOC_B, DOC_A)])
-    assert got == {"entries": 2, "findings": [], "orphans": []}
+    assert got == {"entries": 2, "findings": [], "orphans": [], "skippedEdges": 0}
 
 
 def test_missing_metadata_errors_from_the_cutoff_and_warns_before_it():
@@ -946,7 +956,7 @@ def test_a_single_entry_theme_warns():
 @pytest.mark.parametrize("state,severity", [("released", "error"), ("abandoned", "error"),
                                             (None, "warning")])
 def test_a_draft_pending_on_a_closed_or_unknown_unit(state, severity):
-    units = [{"key": UNIT_KEY, "state": state}] if state else []
+    units = [{"id": UNIT, "state": state}] if state else []
     got = lint([kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": UNIT_KEY}),
                 kdoc(DOC_B, B_STEM)], [edge("relates_to", DOC_A, DOC_B)], units)
     assert families(got) == {(A_STEM, "pending", severity)}
@@ -957,7 +967,7 @@ def test_a_draft_pending_on_a_closed_or_unknown_unit(state, severity):
 def test_a_draft_pending_on_an_open_unit_is_fine_and_one_without_context_is_an_import():
     got = lint([kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": UNIT_KEY}),
                 kdoc(DOC_B, B_STEM, status="draft")], [edge("relates_to", DOC_A, DOC_B)],
-               [{"key": UNIT_KEY, "state": "open"}])
+               [{"id": UNIT, "state": "open"}])
     assert families(got) == {(B_STEM, "pending", "warning")}
     assert "incomplete import" in got["findings"][0]["message"]
 
@@ -1042,3 +1052,65 @@ def test_unit_state_needs_a_declared_phase_count():
 def test_a_superseded_entry_with_its_successor_edge_is_clean():
     docs = [kdoc(DOC_A, A_STEM), kdoc(DOC_B, B_STEM, status="superseded")]
     assert lint(docs, [edge("supersedes", DOC_A, DOC_B)])["findings"] == []
+
+
+
+# --- review round 2026-11-24 (phase 4) --------------------------------------------------------
+
+
+def test_a_closed_pr_with_an_unfetched_head_asks_for_the_fetch_before_abandoning():
+    got = backend.reconcile_action({"phases": 1, "heads": {"1": H1}, "prs": {"1": "CLOSED"},
+                                    "merge_tree": {"1": "missing"}})
+    assert got["action"] == "wait" and got["fetch"] == ["1"]
+
+
+def test_lint_builds_unit_keys_from_checked_ids():
+    draft = kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": UNIT_KEY})
+    docs = [draft, kdoc(DOC_B, B_STEM)]
+    edges = [edge("relates_to", DOC_A, DOC_B)]
+    assert lint(docs, edges, [{"id": UNIT, "state": "open"}])["findings"] == []
+    released = lint(docs, edges, [{"id": UNIT, "state": "released"}])
+    assert families(released) == {(A_STEM, "pending", "error")}
+    # A key passed by hand, or an id of the wrong shape, is not a unit.
+    hand = lint(docs, edges, [{"key": UNIT_KEY, "state": "open"}, {"id": "../x", "state": "open"}])
+    assert families(hand) == {(A_STEM, "pending", "warning")}
+
+
+def test_an_abandoned_units_edges_between_archived_entries_are_not_broken():
+    docs = [kdoc(DOC_A, A_STEM, status="archived"), kdoc(DOC_B, B_STEM, status="archived"),
+            kdoc(DOC_C, C_STEM)]
+    got = lint(docs, [edge("relates_to", DOC_A, DOC_B), edge("supersedes", DOC_A, DOC_C)])
+    assert [f for f in got["findings"] if f["family"] in ("broken-link", "supersession")] == []
+
+
+def test_a_draft_is_not_an_orphan():
+    got = lint([kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": UNIT_KEY})],
+               units=[{"id": UNIT, "state": "open"}])
+    assert got["orphans"] == []
+
+
+def test_unit_state_cli_takes_get_gates_own_opener_field():
+    stdin = {"properties": {}, "gate": "open", "openedByUserId": OTHER, "me": ME}
+    result = subprocess.run([sys.executable, "-X", "utf8", str(SCRIPT), "unit-state"],
+                            input=json.dumps(stdin), capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["mine"] is False
+
+
+@pytest.mark.parametrize("bad", [
+    "not an edge", {"relation": "supersedes", "source": {}, "target": {}},
+    {"relation": {"relation": "relates_to"}, "source": {"id": ["x"]}, "target": {"id": DOC_B}},
+    {"relation": {"relation": "relates_to"}, "source": None, "target": {"id": DOC_B}},
+])
+def test_a_malformed_edge_is_skipped_and_counted_not_a_crash(bad):
+    got = lint([kdoc(DOC_A, A_STEM), kdoc(DOC_B, B_STEM)],
+               [edge("relates_to", DOC_A, DOC_B), bad])
+    assert got["skippedEdges"] == 1 and got["findings"] == []
+
+
+@pytest.mark.parametrize("context", [["a", "b"], {"k": 1}, 7])
+def test_a_malformed_context_is_a_finding_not_a_crash(context):
+    got = lint([kdoc(DOC_A, A_STEM, status="draft", **{"minerva:context": context}),
+                kdoc(DOC_B, B_STEM)], [edge("relates_to", DOC_A, DOC_B)])
+    assert families(got) == {(A_STEM, "pending", "warning")}
+    assert "not a unit key" in got["findings"][0]["message"]

@@ -13,6 +13,12 @@ is a row of `skills/using-lorestrom/references/storage.md`.
 1. Read the unit doc (`storage:unit.read`): its recorded `minerva:base` and, for each phase,
    `minerva:head_<n>` and `minerva:pr_<n>`. The phase count comes from the proposal's
    `## Phases` (1 when unphased). A phase with no recorded head has not shipped: it waits.
+   Then `get_gate` the unit and call `whoami`, and pipe the gate's `state`, `openedAt` and
+   `openedByUserId`, your user id and the phase count to `unit-state` (`storage:unit.list`):
+   its `age_days` goes to `reconcile`, and its `mine` decides what `--yes` may do. **Every
+   cleanup computes `mine` this way, a single-unit one included.** `--yes` acts only on a unit
+   whose `mine` is true; `mine` false or null means a yes naming that unit
+   ([sweep.md](sweep.md)). An orchestrator's own unit is `mine`, so its `--yes` proceeds.
 2. For each recorded PR, read its state with `gh pr view <pr> --json state` (the number, all digits, comes
    from the unit doc, written there by `lorestrom:ship` from `gh` output). Never type a state.
 3. Write `{"phases", "heads", "base", "prs", "abandon", "merged", "age_days"}` to a `mktemp`

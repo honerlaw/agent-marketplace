@@ -542,6 +542,13 @@ SAFETY = [
     ("status/SKILL.md", "## Step 2 — Collect the units", "shown, never acted on"),
     ("status/SKILL.md", "## Step 2 — Collect the units", "that is not a cleanup signal"),
     ("status/references/tables.md", None, "never abandon on age"),
+    # review round 2026-11-24 (phase 4)
+    (RELEASE, None, "**Every cleanup computes `mine` this way, a single-unit one included.**"),  # P1
+    (RELEASE, None, "`--yes` acts only on a unit whose `mine` is true"),  # P1
+    (RELEASE, None, "An orchestrator's own unit is `mine`, so its `--yes` proceeds."),  # P1
+    (STORAGE, "## `unit.release`", "First `get_gate` the unit and `whoami`"),  # P1
+    (STORAGE, "## `knowledge.lint`", "The helper builds each unit's key itself: never assemble one."),  # P2
+    (SWEEP, None, "it fetches nothing (not even the once-per-sweep fetch of origin)"),  # dry-run note
 ]
 
 
@@ -807,3 +814,20 @@ def test_status_and_cleanup_pass_the_gate_opener_to_unit_state():
         text = flat(read(rel))
         assert "openedAt" in text and "openedByUserId" in text, rel
         assert "`whoami`" in text, rel
+
+
+
+def test_both_orchestrators_say_their_yes_covers_only_their_own_unit():
+    for rel in ("propose-ship/references/phases.md", "propose-ship-auto/references/phases.md"):
+        assert flat("Its `--yes` acts only on the run's own unit (`mine`, release.md).") in flat(read(rel)), rel
+
+
+def test_status_runs_unit_state_only_after_the_phase_count():
+    text = read("status/SKILL.md")
+    step2, step3 = section(text, "## Step 2 — Collect the units"), section(text, "## Step 3 — Phases and merges")
+    assert "pipe its properties" not in step2
+    assert step3.index("phases --unit") < step3.index("to `unit-state`")
+
+
+def test_the_default_cleanup_is_the_sweep():
+    assert "\"all merged worktrees\"" not in read("cleanup/SKILL.md")
