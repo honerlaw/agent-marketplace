@@ -12,6 +12,8 @@
 - [rechecked — residual folded] approach: C4 partially (changed records still landed in keep with no path out) — wired to the leftovers offer; new spec gaps (minerva-branches unlisted, gh absent) folded
 - [reviewed — folded] whole-proposal: C1 removal statuses, C2 unit-state criterion, C3 batched in-flight yes, C4 clean agent file/.gitignore, C5 goal reworded + final report, C6 id/collision checks, C7 branches (tier: reviewer — scrutiny: blast radius not ruled out; parallel wave; restart check: approach pick unchanged, no scope/approach fold touched Goal or criteria — kept)
 - [rechecked — residual folded] whole-proposal: removal offered per run over done units; changed-record wording; unit_file_key added beside an unchanged record_key so lifecycle writers keep their restriction
+- [reviewed — clean] completion verification: Verifier reproduced all 10 criteria, no interface change beyond the approved ones (tier: reviewer floor; code review dispatched alongside)
+- [solo] review triage: all 11 code-review findings FIX in-unit (each a defect inside the approved design, none load-bearing on the approach, so no replan-vs-FIX escalation); my own audit's taken-unit defect is finding 8. Fixes re-reviewed below.
 
 ## Work notes 2026-11-25
 

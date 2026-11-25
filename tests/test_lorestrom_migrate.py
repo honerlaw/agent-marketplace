@@ -323,10 +323,59 @@ def test_an_abandoned_import_is_done_with_archived_records(repo):
     assert row["removable"] == [f".minerva/work/{DRAFT}/proposal.md"]
 
 
-def test_a_released_record_not_current_is_not_removable(repo):
+def test_a_released_record_not_current_is_changed_with_its_status(repo):
     row = plan(repo, [{"id": DONE, "docs": [unit_doc()], "gate": "released",
                        "records": records(repo, status="draft")}])[DONE]
-    assert row["action"] == "done" and row["removable"] == []
+    assert row["action"] == "changed" and row["removable"] == []
+    assert {f["reason"] for f in row["changed"]} == {"its record is draft"}
+
+
+def test_an_imported_in_flight_unit_is_decided_without_a_new_yes(repo):
+    """Removal reads the plan with no `abandon` list: a closed import is still done."""
+    lookup = [{"id": DRAFT, "docs": [unit_doc(unit=DRAFT)], "gate": "abandoned",
+               "records": records(repo, unit=DRAFT, status="archived")}]
+    assert plan(repo, lookup)[DRAFT]["action"] == "done"
+    result = backend.migration_removal_plan(repo, PROJECT, [], lookup)
+    assert f".minerva/work/{DRAFT}/proposal.md" in result["remove"]
+
+
+def test_an_open_import_of_an_in_flight_unit_stays_blocked_without_the_yes(repo):
+    lookup = [{"id": DRAFT, "docs": [unit_doc(unit=DRAFT)], "gate": "open",
+               "records": []}]
+    row = plan(repo, lookup)[DRAFT]
+    assert row["action"] == "blocked" and row["send"] == [] and row["unitDoc"] == UNIT_DOC
+
+
+def test_what_a_removal_leaves_of_a_unit_is_not_live_work(repo):
+    work = f".minerva/work/{DONE}"
+    git(repo, "rm", "-q", "-r", f"{work}/proposal.md", f"{work}/scratchpad.md", f"{work}/archive")
+    commit(repo, "remove")
+    listing = backend.unit_import_list(repo, PROJECT, batch=100)
+    assert DONE not in listing["inFlight"]
+    row = plan(repo, [{"id": DONE, "docs": [unit_doc()], "gate": "released", "records": []}])
+    assert row[DONE]["action"] == "done"
+
+
+def test_an_unfinished_record_is_finished_and_a_finished_one_on_an_open_gate_is_related(repo):
+    found = records(repo, digests={"scratchpad": None})
+    row = plan(repo, [{"id": DONE, "docs": [unit_doc()], "gate": "open", "records": found}])[DONE]
+    assert [f["record"] for f in row["finish"]] == ["scratchpad"]
+    assert [f["record"] for f in row["relate"]] == ["archive/scratchpad", "proposal"]
+    assert all(f["docId"] == RECORD_DOC for f in row["finish"] + row["relate"])
+
+
+def test_an_unfinished_record_after_the_gate_closed_is_changed(repo):
+    found = records(repo, digests={"scratchpad": None})
+    row = plan(repo, [{"id": DONE, "docs": [unit_doc()], "gate": "released",
+                       "records": found}])[DONE]
+    reasons = {f["record"]: f["reason"] for f in row["changed"]}
+    assert reasons == {"scratchpad": "its record was never finished"}
+
+
+def test_a_marker_needs_the_unit_doc_it_came_from(repo):
+    with pytest.raises(backend.BackendError):
+        plan(repo, [{"id": DONE, "docs": [], "gate": None, "records": [],
+                     "marker": "minerva-import: " + "f" * 40}])
 
 
 @pytest.mark.parametrize("value", [{"units": [{"id": "../x"}]}, {"units": "x"},
@@ -379,6 +428,40 @@ def test_removal_of_an_unimported_unit_removes_nothing(repo):
     assert result["remove"] == [] and result["unitsRemaining"] == 2
 
 
+def test_removal_keeps_untracked_and_edited_files_out_of_the_commit(repo):
+    write(repo, f".minerva/work/{DONE}/notes.md", "# Notes\n")
+    lookup = [{"id": DONE, "docs": [unit_doc()], "gate": "released", "records": records(repo)}]
+    write(repo, f".minerva/work/{DONE}/proposal.md", PROPOSAL + "\nedit\n")
+    lookup[0]["records"] = records(repo)
+    result = backend.migration_removal_plan(repo, PROJECT, [], lookup)
+    reasons = {row["path"]: row["reason"] for row in result["keep"]}
+    assert reasons[f".minerva/work/{DONE}/notes.md"].startswith("untracked")
+    assert reasons[f".minerva/work/{DONE}/proposal.md"].startswith("uncommitted edits")
+    assert result["remove"] == [f".minerva/work/{DONE}/archive/scratchpad.md",
+                                f".minerva/work/{DONE}/scratchpad.md"]
+    removable = {row["path"]: row["removable"] for row in result["keep"]}
+    assert not removable[f".minerva/work/{DONE}/notes.md"]
+    assert removable[f".minerva/work/{DONE}/spike.py"]
+
+
+def test_a_later_batch_skips_units_an_earlier_commit_removed(repo):
+    lookup = [{"id": DONE, "docs": [unit_doc()], "gate": "released", "records": records(repo)}]
+    git(repo, "rm", "-q", "-r", f".minerva/work/{DONE}")
+    commit(repo, "batch 1")
+    result = backend.migration_removal_plan(repo, PROJECT, [], lookup)
+    assert result["remove"] == [] and result["unitsRemaining"] == 1
+
+
+def test_a_taken_unit_is_final_and_its_files_are_kept(repo):
+    lookup = [{"id": DONE, "docs": [unit_doc(imported=False)], "gate": "open", "records": []},
+              {"id": DRAFT, "docs": [unit_doc(unit=DRAFT)], "gate": "abandoned",
+               "records": records(repo, unit=DRAFT, status="archived")}]
+    result = backend.migration_removal_plan(repo, PROJECT, [], lookup)
+    reasons = {row["path"]: row["reason"] for row in result["keep"]}
+    assert reasons[f".minerva/work/{DONE}/proposal.md"] == backend.TAKEN_REASON
+    assert result["unitsRemaining"] == 0
+
+
 def test_the_old_removal_plan_input_is_unchanged(repo):
     out = run(repo, "removal-plan", "--project", PROJECT, stdin="[]")
     assert out.returncode == 0, out.stderr
@@ -407,6 +490,16 @@ def test_the_current_branch_is_not_listed(repo):
     git(repo, "checkout", "-q", "-b", "feature")
     write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# P\n")
     commit(repo, "unit")
+    assert backend.minerva_branches(repo)["branches"] == []
+
+
+def test_a_squash_merged_branch_is_not_listed(repo):
+    git(repo, "checkout", "-q", "-b", "squashed")
+    write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# P\n")
+    commit(repo, "unit")
+    git(repo, "checkout", "-q", "main")
+    git(repo, "merge", "-q", "--squash", "squashed")
+    commit(repo, "squash")
     assert backend.minerva_branches(repo)["branches"] == []
 
 

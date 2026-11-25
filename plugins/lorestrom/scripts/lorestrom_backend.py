@@ -1273,6 +1273,7 @@ IMPORTED = "minerva:imported"
 # records were set current; an in-flight unit imported as abandoned had its records archived.
 CLOSED_RECORD_STATUS = {"released": "current", "abandoned": "archived"}
 DEFAULT_BATCH = 25
+IN_FLIGHT = "in flight in minerva: finish it there, or say yes to importing it as abandoned"
 
 
 def unit_file_key(unit: str, name: str) -> str:
@@ -1387,7 +1388,9 @@ def _unit_listing(path: Path, unit: str, project: str, source) -> dict:
     archive = path / "archive"
     promoted = (is_post_promote(scratchpad) if scratchpad is not None
                 else archive.is_dir() and not archive.is_symlink())
-    in_flight = (status or "").startswith("Draft") or not promoted
+    # minerva's own check reads only units holding a proposal; once the removal took it, what
+    # is left (a script, a kept file) is no live work.
+    in_flight = proposal is not None and ((status or "").startswith("Draft") or not promoted)
     properties = {"minerva:project": project, "minerva:unit": unit, "minerva:state": "open",
                   IMPORTED: source or "uncommitted"}
     if status:
@@ -1524,20 +1527,27 @@ def _found_unit(row: dict) -> dict:
 
 def _import_decision(listing: dict, found: dict, abandon: set) -> dict:
     """What the import does next for one unit: `create`, `resume`, `done`, `changed`,
-    `taken` or `blocked`. Never `create` over a key a doc already holds."""
+    `taken` or `blocked`. Never `create` over a key a doc already holds.
+
+    A unit the import already closed is decided from Lorestrom alone: once its gate is
+    released or abandoned, the local minerva state (which the removal itself changes) no
+    longer matters, so it is never `blocked`.
+    """
     unit, key = listing["id"], listing["doc"]["key"]
     close = "abandon" if listing["inFlight"] else "release"
     decision = {"id": unit, "action": None, "unitDoc": None, "close": None, "properties": False,
-                "openGate": False, "send": [], "finish": [], "changed": [], "removable": [], "reason": None}
+                "openGate": False, "send": [], "finish": [], "relate": [], "changed": [],
+                "removable": [], "reason": None}
+    blocked = listing["inFlight"] and unit not in abandon
     docs = [doc for doc in found.get("docs") or []
             if isinstance(doc, dict) and doc.get("key") == key]
-    if listing["inFlight"] and unit not in abandon:
-        decision.update(action="blocked", reason="in flight in minerva: finish it there, or "
-                        "say yes to importing it as abandoned")
-        if not docs:
-            return decision
     if not docs:
-        decision.update(action="create", close=close, openGate=True, send=listing["files"])
+        if found.get("marker") is not None:
+            raise BackendError(f"{unit}: a marker comes with the unit doc it was read from")
+        if blocked:
+            decision.update(action="blocked", reason=IN_FLIGHT)
+        else:
+            decision.update(action="create", close=close, openGate=True, send=listing["files"])
         return decision
     doc = docs[0]
     ours = (len(docs) == 1 and doc.get("kind") == KIND_UNIT
@@ -1550,6 +1560,7 @@ def _import_decision(listing: dict, found: dict, abandon: set) -> dict:
     decision["unitDoc"] = doc.get("id")
     decision["properties"] = not _props(doc).get(IMPORTED)
     state = _gate_state(found.get("gate"))
+    closed = state in CLOSED_RECORD_STATUS
     records = {}
     for record in found.get("records") or []:
         if isinstance(record, dict) and record.get("kind") == KIND_RECORD:
@@ -1557,25 +1568,31 @@ def _import_decision(listing: dict, found: dict, abandon: set) -> dict:
     for row in listing["files"]:
         held = records.get(row["key"], [])
         digest = _props(held[0]).get("minerva:digest") if len(held) == 1 else None
+        status = held[0].get("status") if len(held) == 1 else None
         if not held:
-            decision["send"].append(row)
+            decision["changed" if closed else "send"].append(
+                {**row, "reason": "no record holds it"} if closed else row)
         elif len(held) > 1:
             decision["changed"].append({**row, "reason": "more than one record holds its key"})
-        elif digest is None and state in (None, "open", "releasing"):
+        elif digest is None and not closed:
+            # Created, never finished: its body may predate the file, so finishing rewrites it.
             decision["finish"].append({**row, "docId": held[0].get("id")})
         elif digest != row["digest"]:
-            decision["changed"].append({**row, "reason": "changed in Lorestrom since import"})
-        elif held[0].get("status") == CLOSED_RECORD_STATUS.get(state):
+            decision["changed"].append({**row, "reason": "changed in Lorestrom since import"
+                                        if digest else "its record was never finished"})
+        elif not closed:
+            decision["relate"].append({**row, "docId": held[0].get("id")})
+        elif status == CLOSED_RECORD_STATUS[state]:
             decision["removable"].append(row["path"])
-    if decision["action"] == "blocked":
-        return decision
-    if state in CLOSED_RECORD_STATUS:
-        missing = [{**row, "reason": "no record holds it"} for row in decision["send"]]
-        decision.update(send=[], changed=decision["changed"] + missing + decision["finish"],
-                        finish=[])
+        else:
+            decision["changed"].append({**row, "reason": f"its record is {ascii(status)[1:-1]}"})
+    if closed:
         decision["action"] = "changed" if decision["changed"] else "done"
-        if decision["action"] == "changed":
+        if decision["changed"]:
             decision["reason"] = "Lorestrom's copy is authoritative: nothing is re-sent"
+        return decision
+    if blocked:
+        decision.update(action="blocked", reason=IN_FLIGHT, send=[], finish=[], relate=[])
         return decision
     decision.update(action="resume", close=close, openGate=state is None)
     return decision
@@ -1624,18 +1641,39 @@ def _tracked(root, path: Path) -> list:
     return sorted(name for name in out.split("\0") if name)
 
 
+TAKEN_REASON = "its key is held by a unit this import did not create"
+
+
 def _unit_removal(root, project: str, units: list) -> tuple:
-    """`(remove, keep, checked ids, remaining)` for the units the agent looked up this run."""
+    """`(remove, keep, checked ids, remaining)` for the units the agent looked up this run,
+    every batch included. A unit whose directory an earlier commit of this run removed has
+    nothing left here, so it is skipped. A `taken` unit is final: its files are kept."""
+    present = set(_unit_dirs(root)[0])
+    units = [row for row in units if isinstance(row, dict) and row.get("id") in present]
     plan = unit_import_plan(root, project, {"units": units, "abandon": []})
     remove, keep, checked, remaining = [], [], set(), 0
     for decision in plan["units"]:
         checked.add(decision["id"])
+        if decision["action"] == "taken":
+            prefix = f"{UNITS_DIR.as_posix()}/{decision['id']}/"
+            keep.extend({"path": path, "reason": TAKEN_REASON}
+                        for path in _tracked(root, MINERVA_DIR) if path.startswith(prefix))
+            continue
         if decision["action"] not in ("done", "changed"):
             remaining += 1
             continue
         remove.extend(decision["removable"])
         keep.extend({"path": row["path"], "reason": row["reason"]} for row in decision["changed"])
     return remove, keep, checked, remaining
+
+
+def _dirty(root, path: Path) -> set:
+    """Paths under `path` whose working-tree or staged content differs from HEAD."""
+    top = _top(root)
+    if top is None:
+        return set()
+    out = _git(top, "diff", "--name-only", "-z", "HEAD", "--", path.as_posix(), ok=(0, 128))
+    return {name for name in out.stdout.split("\0") if name} if out.returncode == 0 else set()
 
 
 def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
@@ -1646,6 +1684,7 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
     this run are counted, not listed; every other tracked file under `.minerva/` is kept.
     """
     base = removal_plan(root, project, docs)
+    tracked, dirty = set(_tracked(root, MINERVA_DIR)), _dirty(root, MINERVA_DIR)
     # A refused file's row names only its file name: the tracked walk below keeps it.
     remove = list(base["remove"])
     keep = [row for row in base["keep"] if row["path"].startswith(f"{MINERVA_DIR.as_posix()}/")]
@@ -1657,7 +1696,7 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
     not_checked = {"units": 0, "files": 0}
     unchecked_ids = set(ids) - checked
     not_checked["units"] = len(unchecked_ids)
-    for path in _tracked(root, MINERVA_DIR):
+    for path in sorted(tracked):
         if path in covered:
             continue
         parts = path.split("/")
@@ -1667,6 +1706,17 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
         else:
             keep.append({"path": path, "reason": "not in Lorestrom: removing it leaves it only "
                                                  "in git history"})
+    # `git rm` works on the index: an untracked or edited file is never in a removal commit.
+    for path in sorted(set(remove)):
+        if path not in tracked:
+            keep.append({"path": path, "reason": "untracked: no commit can remove it; delete "
+                                                 "it by hand once you are sure"})
+        elif path in dirty:
+            keep.append({"path": path, "reason": "uncommitted edits: commit or discard them, "
+                                                 "then re-run"})
+    remove = [path for path in remove if path in tracked and path not in dirty]
+    for row in keep:
+        row["removable"] = row["path"] in tracked and row["path"] not in dirty
     return {
         "remove": sorted(set(remove)),
         "keep": sorted(keep, key=lambda row: row["path"]),
@@ -1682,7 +1732,11 @@ def write_paths(target, paths: list) -> None:
         return
     if any("\n" in path or "\r" in path for path in paths):
         raise BackendError("a path holds a line break: remove it by hand")
-    Path(target).write_text("".join(f"{path}\n" for path in paths), encoding="utf-8")
+    try:
+        data = "".join(f"{path}\n" for path in paths).encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise BackendError("a path is not UTF-8: remove it by hand") from error
+    Path(target).write_bytes(data)
 
 
 def minerva_branches(root) -> dict:
@@ -1715,7 +1769,13 @@ def minerva_branches(root) -> dict:
         if names.returncode != 0:
             failed.append(shown)
             continue
-        paths = [path for path in names.stdout.split("\0") if path]
+        # A squash-merged branch still differs from its old merge base: only paths whose
+        # content this checkout lacks are pending.
+        here = _git(top, "diff", "--name-only", "-z", "HEAD", ref, "--", MINERVA_DIR.as_posix(),
+                    ok=(0, 128))
+        lacking = set(here.stdout.split("\0")) if here.returncode == 0 else None
+        paths = [path for path in names.stdout.split("\0")
+                 if path and (lacking is None or path in lacking)]
         if not paths:
             continue
         units = sorted({path.split("/")[2] for path in paths
@@ -1976,7 +2036,8 @@ def main(argv=None) -> int:
                 out = migration_removal_plan(args.cwd, args.project, value.get("docs") or [],
                                              value.get("units") or [])
                 write_paths(args.write_remove, out["remove"])
-                write_paths(args.write_keep, [row["path"] for row in out["keep"]])
+                write_paths(args.write_keep, [row["path"] for row in out["keep"]
+                                              if row["removable"]])
             else:
                 out = removal_plan(args.cwd, args.project, value)
         elif args.command == "unit-import-list":

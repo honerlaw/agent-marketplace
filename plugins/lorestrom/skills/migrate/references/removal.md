@@ -12,14 +12,18 @@ plan.
 - `remove` — every file whose content Lorestrom now holds: a knowledge entry or reference
   doc whose doc holds its exact `minerva:digest` and is current, superseded or deprecated,
   and a unit file whose record holds its exact digest under the import's own closed gate.
-- `keep` — every other tracked file under `.minerva/`, with why: not markdown, in a
-  directory the import does not read, refused, changed in Lorestrom since import, or a doc
-  the user kept. A file whose digest differs from its doc's is never removed by this commit.
+- `keep` — every other file under `.minerva/`, with why: not markdown, in a directory the
+  import does not read, refused, changed in Lorestrom since import, a doc the user kept, a
+  unit whose key another unit holds, or untracked or with uncommitted edits. A file whose
+  digest differs from its doc's is never removed by this commit. Each row says whether a
+  commit can remove it (`removable`): an untracked or edited file never goes in one.
 - `notChecked` — units not looked up this run, counted. Later batches cover them.
 - `unitsRemaining` — units not yet imported. At 0 the migration's import is complete.
 
+The plan reads every unit this run looked up, all batches so far, not only the last one.
 Write the plan's paths with `--write-remove` and `--write-keep` (two `mktemp` files, one path
-per line): the commits below take their paths only from those files, never typed.
+per line; the keep file holds only its `removable` rows): the commits below take their paths
+only from those files, never typed.
 
 ## 2. The removal commit
 
@@ -27,7 +31,8 @@ Show the count of `remove` paths and the paths themselves (grouped by directory 
 many), and every `keep` path with its reason. When `unitsRemaining` is 0, also show:
 
 - **The agent file.** When `AGENTS.md` (or `CLAUDE.md`) has a minerva routing section, the
-  diff that replaces it with the `## Lorestrom` section from `skills/init/references/link.md`.
+  diff that replaces it with the `## Lorestrom` section from `skills/init/references/link.md`,
+  or that deletes it when the file already has a `## Lorestrom` section.
 - **`.gitignore`.** The diff that drops its `.minerva/worktrees/` line, when it has one.
 
 Either file with uncommitted changes (`git diff --quiet HEAD -- <file>` fails) is left alone
