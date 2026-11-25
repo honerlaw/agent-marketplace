@@ -1720,7 +1720,9 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
         if path not in tracked:
             keep.append({"path": path, "reason": "untracked: no commit can remove it; delete "
                                                  "it by hand once you are sure"})
-        elif dirty is None or path in dirty:
+        elif dirty is None:
+            keep.append({"path": path, "reason": "no commit yet: commit first, then re-run"})
+        elif path in dirty:
             keep.append({"path": path, "reason": "uncommitted edits: commit or discard them, "
                                                  "then re-run"})
         elif not _utf8(path):
@@ -1763,8 +1765,9 @@ def _pending(top, ref: str, paths: list) -> list:
     """The paths whose content on `ref` this checkout's history never held.
 
     A squash-merged branch still differs from its old merge base, and after the migration's
-    removal it differs from HEAD too: a path is pending only when HEAD lacks its content now
-    and no commit of HEAD's history ever had that exact blob at that path.
+    removal it differs from HEAD too. A path HEAD no longer has is hidden only when a commit of
+    HEAD's history had that exact blob there (the removal case); a path HEAD still has with
+    other content is always pending, even when its branch content is an older version.
     """
     if not paths:
         return []
@@ -1780,10 +1783,13 @@ def _pending(top, ref: str, paths: list) -> list:
         meta, _, name = line.partition("\t")
         if name:
             blobs[name] = meta.split()[-1]
+    present = _git(top, "ls-tree", "-z", "--name-only", "--full-tree", "-r", "HEAD", "--",
+                   MINERVA_DIR.as_posix(), ok=(0, 128))
+    here_now = set(present.stdout.split("\0")) if present.returncode == 0 else set(lacking)
     pending = []
     for path in lacking:
         blob = blobs.get(path)
-        seen = blob and _git(top, "--literal-pathspecs", "log", "-1", "--format=%H",
+        seen = blob and path not in here_now and _git(top, "--literal-pathspecs", "log", "-1", "--format=%H",
                              f"--find-object={blob}", "HEAD", "--", path,
                              ok=(0, 128)).stdout.strip()
         if not seen:

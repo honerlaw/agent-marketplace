@@ -518,6 +518,18 @@ def test_a_squash_merged_branch_stays_unlisted_after_the_removal(repo):
     assert backend.minerva_branches(repo)["branches"] == []
 
 
+def test_a_branch_holding_an_older_version_of_a_file_is_listed(repo):
+    git(repo, "checkout", "-q", "-b", "older")
+    write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# v1\n")
+    commit(repo, "v1 on the branch")
+    git(repo, "checkout", "-q", "main")
+    write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# v1\n")
+    commit(repo, "v1")
+    write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# v2\n")
+    commit(repo, "v2")
+    assert [row["branch"] for row in backend.minerva_branches(repo)["branches"]] == ["older"]
+
+
 def test_a_refused_draft_proposal_still_reads_in_flight(repo):
     write(repo, f".minerva/work/{DRAFT}/proposal.md",
           "# Proposal: draft\n\n**Status**: Draft\n" + "x" * (backend.MAX_MARKDOWN + 1))
@@ -536,6 +548,8 @@ def test_nothing_is_removable_before_the_first_commit(tmp_path):
                "records": records(root)}]
     result = backend.migration_removal_plan(root, PROJECT, [], lookup)
     assert result["remove"] == [] and not any(row["removable"] for row in result["keep"])
+    reasons = {row["path"]: row["reason"] for row in result["keep"]}
+    assert reasons[f".minerva/work/{DONE}/proposal.md"].startswith("no commit yet")
 
 
 def test_branches_outside_a_repository_are_unchecked(tmp_path):
