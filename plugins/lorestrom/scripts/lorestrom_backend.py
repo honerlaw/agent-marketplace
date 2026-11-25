@@ -1675,6 +1675,16 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
     }
 
 
+def write_paths(target, paths: list) -> None:
+    """Write helper-printed paths to the agent's temp file, one per line, for git's
+    `--pathspec-from-file`. A path a line cannot hold is refused, never split."""
+    if target is None:
+        return
+    if any("\n" in path or "\r" in path for path in paths):
+        raise BackendError("a path holds a line break: remove it by hand")
+    Path(target).write_text("".join(f"{path}\n" for path in paths), encoding="utf-8")
+
+
 def minerva_branches(root) -> dict:
     """Branches holding `.minerva/` changes the default branch lacks: their units are not
     imported from this checkout, and a removal commit here will conflict with them.
@@ -1747,7 +1757,7 @@ def _pending_findings(doc: dict, gates: dict) -> list:
     context = _props(doc).get("minerva:context")
     if not context:
         return [("pending", "warning",
-                 "draft with no minerva:context: an incomplete import; re-run lorestrom:init")]
+                 "draft with no minerva:context: an incomplete import; re-run lorestrom:migrate")]
     if not isinstance(context, str):
         return [("pending", "warning", "its minerva:context is not a unit key")]
     unit = context.rsplit("/", 1)[-1]
@@ -1899,6 +1909,8 @@ def main(argv=None) -> int:
                                help="stdin: find_docs' knowledge and reference docs, or "
                                     "{docs, units} for the migration")
     plan.add_argument("--project", required=True)
+    plan.add_argument("--write-remove", help="a temp file to get the remove paths, one per line")
+    plan.add_argument("--write-keep", help="a temp file to get the keep paths, one per line")
     units = commands.add_parser("unit-import-list",
                                 help="what a unit import would send, with no bodies")
     units.add_argument("--project", required=True)
@@ -1963,6 +1975,8 @@ def main(argv=None) -> int:
             if isinstance(value, dict):
                 out = migration_removal_plan(args.cwd, args.project, value.get("docs") or [],
                                              value.get("units") or [])
+                write_paths(args.write_remove, out["remove"])
+                write_paths(args.write_keep, [row["path"] for row in out["keep"]])
             else:
                 out = removal_plan(args.cwd, args.project, value)
         elif args.command == "unit-import-list":

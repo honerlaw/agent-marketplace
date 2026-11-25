@@ -60,7 +60,7 @@ findings. The families:
   (its status flip failed: `lorestrom:cleanup <unit>` repairs it), and so is one on an
   **abandoned** gate (abandoning should have archived it). Pending on a unit this project does
   not list warns; with no `minerva:context` it is an incomplete import (re-run
-  `lorestrom:init`). Pending on an open gate is lore that has not merged, not a finding.
+  `lorestrom:migrate`). Pending on an open gate is lore that has not merged, not a finding.
 
 `lint-docs` also prints `orphans` and `entries`, the count of entries that are not archived.
 

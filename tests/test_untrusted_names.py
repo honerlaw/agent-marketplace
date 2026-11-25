@@ -100,6 +100,8 @@ LORESTROM_INERT = {
     "project id", "unit key", "record", "path without .md", "token", "temp file", "sha",
     "phase", "entry id", "markdown", "the draft", "the proposal record",
     "head names of MERGED PRs", "value", "list with reason", "unit — doc — code",
+    # 0.5.0: the migration's temp files, holding paths `removal-plan` wrote and a message
+    "remove file", "message file",
 }
 LORESTROM_VARS = {
     "LORESTROM_PLUGIN_ROOT", "LORESTROM_SKILL_FILE", "LORESTROM_SCRIPTS",

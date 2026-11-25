@@ -34,7 +34,7 @@ apply it:
   new.
 - **`pending`** on a released gate — `lorestrom:cleanup <unit>` (its repair step sets a still
   `draft` entry current). On an abandoned gate — the entry should be archived; a person
-  archives it in Lorestrom. With no `minerva:context` — re-run `lorestrom:init`, which resumes
+  archives it in Lorestrom. With no `minerva:context` — re-run `lorestrom:migrate`, which resumes
   an incomplete import.
 - **`broken-link`, `supersession`** — a person fixes the edge or the target's status in
   Lorestrom, or a new entry from `lorestrom:promote` records the supersession.

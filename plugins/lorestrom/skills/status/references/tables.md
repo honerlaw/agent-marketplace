@@ -62,7 +62,7 @@ this project"* — and no table.
 | Entries | 82 (decision 27 · constraint 25 · pattern 24 · bug 5 · reference 1) |
 | Themes | 14 · 2 entries unthemed |
 | Pending | 3 entries, held by 2 open units |
-| Incomplete imports | 1 — re-run `lorestrom:init` |
+| Incomplete imports | 1 — re-run `lorestrom:migrate` |
 | Reference docs | 6 |
 
 Omit any row at zero except Entries. Name the skill that closes each gap; do not run it.

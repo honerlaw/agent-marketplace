@@ -190,12 +190,14 @@ protects checkpoint writes, not the goal or remote actions: it is not a fleet lo
 
 ## Scope of this version
 
-0.4.0 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
+0.5.0 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
 repository: propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore,
 one-by-one, debug, lint and the orchestrators propose-ship and propose-ship-auto write and read
 their records as the storage contract says, never as files. cleanup's no-argument sweep covers
 other clones' and other people's units (`skills/cleanup/references/sweep.md`). Worktrees live under
 `.lorestrom/worktrees/`, checkpoints under `<git-common-dir>/lorestrom/runtime/`.
+`lorestrom:migrate` imports a minerva repository's `.minerva/` records, work units included,
+and removes them; `lorestrom:init` only links.
 
 - `lorestrom:propose-ship-auto` invokes ship with `--auto=propose-ship-auto`, reads work,
   review and promote in that mode (it inlines them), and restates replan's protocol without

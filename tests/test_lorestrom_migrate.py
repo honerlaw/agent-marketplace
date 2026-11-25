@@ -412,3 +412,19 @@ def test_the_current_branch_is_not_listed(repo):
 
 def test_branches_outside_a_repository_are_unchecked(tmp_path):
     assert backend.minerva_branches(tmp_path)["unchecked"] == "not a git working tree"
+
+
+def test_removal_writes_its_paths_for_git(repo, tmp_path):
+    lookup = [{"id": DONE, "docs": [unit_doc()], "gate": "released", "records": records(repo)}]
+    remove, keep = tmp_path / "remove", tmp_path / "keep"
+    out = run(repo, "removal-plan", "--project", PROJECT, "--write-remove", str(remove),
+              "--write-keep", str(keep), stdin=json.dumps({"docs": [], "units": lookup}))
+    assert out.returncode == 0, out.stderr
+    assert remove.read_text().splitlines() == json.loads(out.stdout)["remove"]
+    assert keep.read_text().splitlines() == [".minerva/adrs/001-x.md",
+                                             f".minerva/work/{DONE}/spike.py"]
+
+
+def test_a_path_with_a_line_break_is_never_written(tmp_path):
+    with pytest.raises(backend.BackendError):
+        backend.write_paths(tmp_path / "out", ["a\nb"])

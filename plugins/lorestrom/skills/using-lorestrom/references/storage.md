@@ -21,7 +21,8 @@ as the runtime contract's "Installed paths and helpers" shows.
   Never interpolate them into a shell command or Python source: write JSON or markdown to a
   `mktemp` file with a file tool and give the helper that path, or redirect it to the
   helper's stdin. The only file names that go on a command line are paths `import-list`,
-  `reference-list` or `removal-plan` printed, and the agent's own `mktemp` paths. No branch or ref name goes on
+  `reference-list`, `unit-import-list` or `removal-plan` printed, and the agent's own `mktemp`
+  paths; a removal takes its paths from the files `removal-plan` wrote, never typed. No branch or ref name goes on
   one: the helper finds the default branch itself. A unit id goes on one only once checked
   (runtime contract, "Names are data").
 - `find_docs` filters are `workspaceId`, the **list** `kinds`, `properties` (exact values),
@@ -44,6 +45,8 @@ as the runtime contract's "Installed paths and helpers" shows.
 | `knowledge.read` | `get_doc`, `get_relations` | — | yes |
 | `knowledge.lint` | `find_docs`, `find_relations`, `get_gate` | `unit-ids`, `lint-docs` | yes |
 | `knowledge.import` | `whoami`, `find_docs`, `get_doc`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload` | yes |
+| `unit.import` | `find_docs`, `get_doc`, `get_gate`, `create_doc`, `update_doc`, `open_gate`, `hold_write`, `add_relation`, `get_relations`, `list_doc_changes`, `release_gate`, `abandon_gate` | `unit-import-list`, `minerva-branches`, `unit-import-plan`, `record-payload`, `merge-properties`, `release-outcome` | yes |
+| `migrate.remove` | `find_docs`, `get_gate` | `removal-plan` | yes |
 | `handover.sync` | `find_docs`, `get_doc`, `list_doc_changes`, `create_doc`, `write_doc_body`, `update_doc`, `get_relations`, `add_relation` | `import-list`, `entry-payload`, `reference-list`, `reference-payload`, `merge-properties`, `removal-plan` | yes |
 | `unit.list` | `whoami`, `find_docs`, `get_gate`, `update_doc` | `unit-ids`, `unit-state`, `phases` | yes |
 | `unit.read` | `find_docs`, `get_doc`, `get_gate` | `unit-state`, `phases` | yes |
@@ -60,7 +63,8 @@ as the runtime contract's "Installed paths and helpers" shows.
 | `unit.abandon` | `find_docs`, `get_gate`, `update_doc`, `abandon_gate` | `reconcile`, `unit-state`, `merge-properties` | yes |
 | `unit.repair` | `find_docs`, `get_gate`, `update_doc` | `repair-flips` | yes |
 
-`project.link` is `lorestrom:init`'s protocol (`skills/init/references/link.md`). Any record
+`project.link` is `lorestrom:init`'s protocol (`skills/init/references/link.md`), which
+`lorestrom:migrate` also runs on an unlinked repository. Any record
 write with no row here stops as "Ground rules" says.
 
 ## Keys, kinds and properties
@@ -75,7 +79,8 @@ Every key is built by the helper and checked; never assemble one by hand.
   The unit doc is its own gate (`open_gate`, `onAbandon` `archive`), so a held write never
   targets it: every unit property is a live `update_doc` of the merged map.
 - **Records:** kind `minerva:record`, key `<unit key>/<record>` for `proposal`, `scratchpad`,
-  `replan` and `followups`, property `minerva:record`, created under the unit's gate and
+  `replan` and `followups` (an imported unit's other files are records keyed by their path in
+  the unit, `<unit key>/archive/scratchpad`), property `minerva:record`, created under the unit's gate and
   linked `minerva:part_of` to the unit. Records are live: they are working notes, not lore.
 - **Knowledge:** a `minerva:knowledge` doc, as `knowledge.import` builds it, with
   `minerva:context` the unit key when a unit promotes it.
@@ -161,7 +166,7 @@ both directions of an entry's links. Cite an entry by id and doc id.
 
 ## `knowledge.import`
 
-Only from `lorestrom:init`, outside any gate, as the first part of `handover.sync`. It copies
+Only from `lorestrom:migrate`, outside any gate, as the first part of `handover.sync`. It copies
 this repository's minerva knowledge entries, the files in `.minerva/knowledge/`, and never
 writes them.
 
@@ -214,7 +219,7 @@ writes them.
 
 ## `handover.sync`
 
-Only from `lorestrom:init`, once per repository, before Lorestrom is authoritative for it.
+Only from `lorestrom:migrate`, before Lorestrom is authoritative for it.
 Every step is confirmed; nothing is overwritten silently.
 
 1. `knowledge.import` for new entries, as above.
@@ -235,9 +240,87 @@ Every step is confirmed; nothing is overwritten silently.
    - **Another digest:** as step 2: show its change log, and replace only on a yes.
    Run `reference-payload <listed path> --project <projectId> --digest <listed digest>` for each
    doc sent; a refusal means the file is not what was confirmed: send nothing for it.
-4. Report what was created, replaced, kept and refused. The files stay in place: init's
-   offers follow (`skills/init/references/handover.md`), and the removal offer lists its paths
+4. Report what was created, replaced, kept and refused. The files stay in place: the
+   removal is `migrate.remove`'s own confirmed step, and the removal offer lists its paths
    with `removal-plan`, never by hand.
+
+## `unit.import`
+
+Only from `lorestrom:migrate`, after `handover.sync`. It copies this repository's minerva work
+units, each `.minerva/work/<unit>/` directory with its markdown files as the unit's records,
+and never writes them. Each run imports one batch at a time.
+
+1. Run `unit-import-list --project <projectId>` (`--batch <n>`; `--after <date-slug>` for a
+   later batch of the same run, the last id of the batch before). It reads every unit's state and
+   lists this batch's files with their keys and digests, without any body, and refuses
+   symlinks, unsafe names, files that are not markdown or not UTF-8, and record names that
+   differ only in case. Never build the list yourself, and never open or send a file it
+   refused.
+2. **Live minerva work blocks.** A `worktrees` entry is a minerva checkout still on disk:
+   stop, and say to finish or remove it with minerva first. Show every `inFlight` unit (Draft,
+   or never promoted) and ask: finish them with minerva and re-run, or import them as
+   **abandoned**, archived in Lorestrom and never resumable there. One yes may name the whole
+   list. Without a yes that covers every in-flight unit, stop before anything is sent.
+3. **Other branches.** Run `minerva-branches` and show each branch it lists with its units, and
+   the open PRs from `gh pr list --state open --json number,title,files` that touch
+   `.minerva/`, as data: their units are not in this checkout, so they are not imported, and
+   the removal commit will conflict with them; advise merging or dropping them first. Without
+   `gh`, a remote or a fetch, say what was not checked. The user may go on.
+4. **Look up the batch.** For each unit: `find_docs` with the link's `workspaceId`, `kinds`
+   `["minerva:work_unit"]` and `properties` `{"minerva:project": "<projectId>",
+   "minerva:unit": "<id>"}`; for a doc found, its gate's state from `get_gate` (null when the
+   doc is no gate), and `find_docs` with that `gateId` and `kinds` `["minerva:record"]`. Write
+   `{"units": [{"id", "docs", "gate", "records"}], "abandon": [the ids the user said yes to]}`
+   to a `mktemp` file and pipe it to `unit-import-plan --project <projectId>`. Act only on its
+   answer: `create`, `resume`, `done`, `changed`, `taken` or `blocked`.
+5. **Confirm before sending anything.** Import sends the repository's work history to an
+   external service. Show the server, organization and workspace, the batch's unit ids by
+   action, each refused file, the in-flight answer and the other branches, and say that
+   finished units arrive released, as finished lorestrom units, and in-flight ones abandoned.
+   Then wait for an explicit yes. No orchestrator flag, earlier approval or argument
+   satisfies this.
+6. **Send,** unit by unit:
+   - `create`: `create_doc` in the project node's folder with the plan's `doc` key, kind,
+     title and markdown, then `update_doc` its `properties`, then `open_gate` (`onAbandon`
+     `archive`). If `create_doc` is refused as bad input, page `find_docs` with the
+     `workspaceId` and no `kinds` for the key: a `minerva:work_unit` doc there is read with
+     `get_doc`, and its first line goes back to `unit-import-plan` as the unit's `marker`.
+     Anything else: report the unit as refused and go on.
+   - `resume`: `update_doc` the merged properties (`merge-properties` with the plan's
+     `doc` properties) when `properties` is true, and `open_gate` when `openGate` is.
+   - Each `send` file: `record-payload <listed path> --project <projectId> --digest <listed
+     digest>` (a refusal means the file is not what was listed: report it, send nothing for
+     it, and leave the gate open), then `hold_write` on the unit's gate, `op` `create`, with
+     the project node's folder and the payload's kind, key, title and markdown (it applies at
+     once), then `update_doc` its properties and status `current`, and `add_relation`
+     `minerva:part_of` from it to the unit. Each `finish` row: `record-payload` the same way,
+     `update_doc` that `docId`, and add its `minerva:part_of` edge unless `get_relations`
+     shows it.
+   - **Close** once every file was sent or finished: `release_gate` when `close` is
+     `release` (on a refusal, `get_gate` and `release-outcome`), `abandon_gate` when it is
+     `abandon`. Then `update_doc` the unit's merged properties with `minerva:state` the
+     gate's state.
+   - `done`: nothing. `changed`: show each file with its reason, and for one changed in
+     Lorestrom its change log (`list_doc_changes`) once; Lorestrom's copy is authoritative and
+     nothing is re-sent. `taken`: its key is held by a unit this import did not create;
+     report it. `blocked`: never sent.
+7. Report each unit's action, the refused files, and `next`.
+
+## `migrate.remove`
+
+Only from `lorestrom:migrate`, as each run's last step, after `unit.import`; its own confirmed
+step (`skills/migrate/references/removal.md`).
+1. Read this project's knowledge and reference docs with `find_docs` (paged, `kinds`
+   `["minerva:knowledge", "minerva:reference"]`), and look up the run's units again as
+   `unit.import` step 4 does, since closing changed their gates and records.
+2. Write `{"docs", "units"}` to a `mktemp` file and pipe it to `removal-plan --project
+   <projectId> --write-remove <temp file> --write-keep <temp file>`. It removes a knowledge or
+   reference file only when its doc holds its exact `minerva:digest` and is current,
+   superseded or deprecated, and a unit file only when its record holds its exact digest,
+   `current` under a released gate or `archived` under an abandoned one, on a unit this import
+   created. Every other tracked file under `.minerva/` is kept and named with why; units not
+   looked up this run are counted under `notChecked`.
+3. The paths given to git come only from the files it wrote.
 
 ## `unit.list`
 

@@ -6,12 +6,10 @@ helper as the runtime contract shows, from the repository's root.
 1. **Say what linking does before linking**, then ask whether to go on:
    - once linked, Lorestrom is authoritative for this repository's work units, knowledge and
      reference docs, and the lorestrom skills run its lifecycle; a repository that used minerva
-     is handed over after the link, every change confirmed and every removal offered, never made
-     by default;
+     moves its records over with `lorestrom:migrate`, every send and every removal confirmed;
    - without `--shared`, only this clone knows the link, and another clone finds it only by
      discovery with a Lorestrom MCP server connected; Codex finds the lore only through skills;
-   - linking sends the repository's remote label, and import its knowledge entries, to the
-     chosen Lorestrom organization.
+   - linking sends the repository's remote label to the chosen Lorestrom organization.
 2. **Server.** Git and a connected Lorestrom server are required. With no server, stop and
    point at the organization's endpoint, `https://www.lorestrom.com/mcp/o/<org id>`, to be
    connected as that organization's Lorestrom setup instructions say. With several, ask, and
@@ -53,8 +51,8 @@ helper as the runtime contract shows, from the repository's root.
      `{"orgId": …, "workspaceId": …, "projectId": …}`, check that it is not ignored, and add
      `.lorestrom/worktrees/` to `.gitignore`;
    - offer, with a diff, the section below for `AGENTS.md`, replacing an existing
-     `## Lorestrom` section only on confirmation. Replacing a minerva routing section is the
-     handover's separate offer (`references/handover.md`).
+     `## Lorestrom` section only on confirmation. Replacing a minerva routing section is
+     `lorestrom:migrate`'s removal commit.
 
    Run `resolve` afterwards. Only an existing link in the clone hides the marker: in that
    case, or if `resolve` fails on that link, also run `link`.
@@ -71,11 +69,8 @@ helper as the runtime contract shows, from the repository's root.
    instructions.
    ```
 
-6. **Import.** When `.minerva/knowledge/` holds entries, offer `storage:knowledge.import` as
-   the first part of the handover (`references/handover.md`). Its confirmation is separate from
-   linking's.
+6. **minerva records.** When `.minerva/` holds tracked files, init names
+   `lorestrom:migrate` and offers to continue into it (`SKILL.md`); linking imports nothing.
 7. **Report** the organization, workspace, project id, pointer result (saying when agents
-   outside skills got no pointer), whether `.lorestrom/worktrees/` is ignored, the import
-   result and the limits from step 1. Only `--shared` offers a commit, of exactly the files it
-   changed. The handover's own offers follow, each separately confirmed
-   (`references/handover.md`).
+   outside skills got no pointer), whether `.lorestrom/worktrees/` is ignored, and the limits
+   from step 1. Only `--shared` offers a commit, of exactly the files it changed.
