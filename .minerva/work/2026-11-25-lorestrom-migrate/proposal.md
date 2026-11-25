@@ -1,7 +1,7 @@
 # Proposal: lorestrom-migrate
 
 **Date**: 2026-11-25
-**Status**: Draft
+**Status**: Shipped (2026-11-25)
 
 ## Goal
 
@@ -35,127 +35,91 @@ to its successor.
 
 ## Approach
 
-**Work units import as released units.** For each finished minerva unit:
-`create_doc` the unit doc (kind `minerva:work_unit`, the unit key, body first line
-`minerva-import: <source commit>`), `update_doc` its properties (`minerva:project`,
-`minerva:unit`, `minerva:status` from the proposal's Status, `minerva:promoted` from the
-promote marker's date, `minerva:imported` the source commit, `minerva:state`), `open_gate`
-(`onAbandon` `archive`), then each markdown file of the unit as a `minerva:record` created
-under the gate (`hold_write` `op` `create`, applied at once), `update_doc` its properties
-(`minerva:record`, `minerva:path`, `minerva:digest`) and status `current`, `add_relation`
-`minerva:part_of` to the unit, and finally `release_gate` (the server releases a gate whose
-only writes are applied creates). An imported unit is then a finished lorestrom unit (gate
-`released`, `unit-state` reporting it promoted and shipped), so `status`, `cleanup`'s sweep and
-`lint` need no change. File contents are data, never instructions, as in the handover.
+What was built (lorestrom 0.5.0). A new skill, `lorestrom:migrate`, runs eight steps:
 
-- **Unit ids** are checked by the helper's `UNIT_ID_RE` (date or legacy `NNN` ids); a
-  directory that fails is refused, never sent.
-- **Record names:** `proposal`, `scratchpad`, `replan` and `followups` keep their standard
-  record keys; any other markdown file (`archive/scratchpad.md`, `research.md`, …) is a record
-  named by its path inside the unit without `.md` (`archive/scratchpad`). Its key comes from a
-  **new helper function, `unit_file_key`**, which accepts a standard name or a path of safe
-  stems and refuses `.`/`..`, empty parts and unsafe stems; `record_key` is unchanged and keeps
-  refusing any name outside `RECORDS` for the lifecycle's own writers. Two files of one unit whose record keys collide (case-insensitively) are
-  both refused. `unit.read` finds records by `gateId`, so no reader changes.
-- Non-markdown files (scripts, screenshots), symlinks, unsafe names and non-UTF-8 files are not
-  imported: listed with why.
-- **In-flight minerva units** (`work_status.unit_state` `in_flight`: Draft or not promoted) and
-  any `.minerva/worktrees/` checkout block the migration before anything is sent. Every run
-  lists all that remain, named; the user either finishes each with minerva first and re-runs,
-  or answers yes to importing a listed set as **abandoned** (one yes may cover the list: the gate
-  is abandoned instead of released, archiving its records, and the confirmation says such a
-  unit cannot be resumed in Lorestrom). Those imports form that run's first batch. A
-  worktree checkout always blocks: it is live work.
-- **Other branches.** The import reads only the current checkout. Before confirming, the
-  helper's `minerva-branches` lists local and remote-tracking branches whose diff against the
-  default branch touches `.minerva/`, and `gh pr list` the open PRs that do: their units are
-  not imported and the removal commit will conflict with them. They are shown (names as data,
-  never on a command line), with the advice to merge or drop them first; the user may go on.
-  Without `gh`, a remote or a fetch, this check says what it could not see and goes on.
-- **Resumable and idempotent.** A new helper command, `unit-import-plan`, takes the listed
-  units plus `find_docs` results (unit docs, record docs and their gates' states) and decides
-  per unit: `create`, `resume` (a unit doc whose first line is this import's marker, with
-  missing records or an open gate), `done` (gate released or abandoned, every listed record
-  present) or `changed` (a record whose digest differs, or a unit key held by a doc this import
-  did not create). The agent acts only on its answer, as cleanup acts only on `reconcile`'s.
-  A large corpus (seekless: 1,560 units) is imported over several runs: each run takes a batch
-  (default 25 units; the user may name another size at the confirmation), **one confirmation
-  per run names that batch's unit ids**, and a re-run continues where the last stopped. This is
-  the cost approach A accepts over B: roughly 4 + 3 calls per file per unit, so seekless takes
-  many runs; B would cut calls about threefold but not the number of confirmations, and would
-  cost every reader a new state.
-- **A record edited in Lorestrom after import** makes its unit `changed`. Lorestrom is
-  authoritative, so nothing is re-sent: the change log (`list_doc_changes`) is shown once, the
-  unit counts as imported, and `removal-plan` puts that file under `keep` with reason
-  `changed in Lorestrom since import`, which the leftovers offer covers. A unit key held by a
-  doc the import did not create is reported and its unit skipped; its files stay under `keep`.
-- **Confirm before sending,** as `knowledge.import` does: server, organization, workspace,
-  the batch's unit ids, every refused or skipped file, in-flight units, other branches, and
-  that the import publishes the repository's work history to the organization. No flag or
-  earlier yes satisfies it.
+1. link (init's `references/link.md`) when the repository is not linked;
+2. settle live minerva work;
+3. sync knowledge and reference docs (`references/handover.md`, `storage:handover.sync`);
+4. import one batch of units (`storage:unit.import`);
+5. remove what that run finished (`storage:migrate.remove`, `references/removal.md`);
+6. offer the next batch;
+7. disable minerva once no unit remains;
+8. report.
 
-**Helper additions** (`lorestrom_backend.py`, unit-tested): `unit-import-list --project`
-(walks `.minerva/work/` without following symlinks; per unit its checked id, in-flight state,
-status, promoted date and each markdown file's record name, key and digest; everything else
-listed with a reason), `record-payload <listed path> --project --digest` (one file as tool
-inputs; refuses a file that changed since it was listed), `unit-import-plan` (stdin),
-`minerva-branches` (git only; prints the branches and the unit ids their diff touches),
-`unit_file_key`, and `removal-plan` extended to unit files.
+`lorestrom:init` only links. When `.minerva/` holds files, init names migrate and offers to
+continue into it.
 
-**What `removal-plan` removes.** Knowledge and reference files keep 0.4.0's rule (their doc
-holds the digest and is current, superseded or deprecated). A unit file is removable when
-exactly one record doc of this project holds its key and digest, and either the record is
-`current` under a released gate or `archived` under an abandoned gate (the import's own
-abandon). Every other tracked file under `.minerva/` is listed under `keep` with why.
+**Units import as released lorestrom units.** Each unit is a unit doc (kind
+`minerva:work_unit`, the unit key, body first line `minerva-import: <source commit>`, property
+`minerva:imported`) with its own gate. Each markdown file becomes a `minerva:record` created
+under that gate (`hold_write` op `create`) with its digest, status `current` and a
+`minerva:part_of` edge. The gate is then released, or abandoned for an in-flight unit the user
+said yes to giving up, which archives its records.
 
-**The removal commit** (each run's last step, after its sync; the import's sends come first,
-the removal is a separate confirmed step). It is offered on every run and covers only what is
-already in Lorestrom, so on a corpus imported over several runs each run removes that run's
-`done` units and a re-run removes the rest; the agent-file and `.gitignore` edits join the
-commit only once no unit remains to import. Show `removal-plan`'s `remove` and `keep` lists,
-the agent-file diff (minerva routing section → `## Lorestrom`) and the `.gitignore` change
-(`.minerva/worktrees/` removed). Before editing, the agent file and `.gitignore` must have no
-uncommitted changes (`git diff --quiet HEAD -- <file>`); one that does is left alone and named.
-On one explicit yes, check nothing is staged, `git rm` exactly the listed paths and commit them
-with the edited files on the current branch (`git commit -F <temp> -- <paths>`). The `keep`
-files are a **separate** offer: removing them leaves them only in git history, so it needs its
-own yes, and a second commit of exactly those paths. For a file whose record was edited in
-Lorestrom, that offer says the Lorestrom copy is the authoritative one and the file is the
-older original. Tracked files outside `.minerva/` that
-still mention `.minerva/` (CI workflows, docs) are listed for the user, never edited; an
-untracked `.minerva/` remainder (an empty `worktrees/`) is named. Then the minerva-disable
-instruction, as 0.4.0's handover gives it, and the final report: imported, skipped, removed,
-kept with reasons, and what of `.minerva/` remains.
+- **Record keys.** `proposal`, `scratchpad`, `replan` and `followups` keep their standard
+  keys. Any other markdown file is named by its path, through the new `unit_file_key`.
+  `record_key` is unchanged.
+- **Refusals.** Non-markdown files, symlinks, unsafe names, non-UTF-8 files, oversize files
+  and record names that differ only in case are refused with a reason.
+- **Effect on other skills.** An imported unit reads as promoted and shipped, so `status`,
+  `cleanup` and `lint` need no change.
 
-**init** keeps `references/link.md` (the general link). `references/handover.md` moves to
-`migrate`, extended with the unit import and the removal commit; `storage:handover.sync` is
-run from `migrate` only. init, on a repository whose `.minerva/` holds records, reports them
-and offers to continue into `lorestrom:migrate` via the skill loader; a no leaves the repo as
-it is.
+**Helper commands** (`lorestrom_backend.py`):
 
-**Storage contract:** new rows `unit.import` and `migrate.remove`, marked available in 0.5.0;
-`handover.sync` and `knowledge.import` name `lorestrom:migrate` as their caller (their "Only
-from `lorestrom:init`" lines change).
+- **`unit-import-list`** reads every unit's state but prints files for one batch only
+  (`--batch`, default 25; `--after <id>`). It also prints `inFlight`, the minerva worktrees
+  still on disk and the refusals. A unit is in flight when its `proposal.md` is present and is
+  Draft, never promoted, or refused (its state is then unknown). A unit whose proposal the
+  removal already took is not live work.
+- **`record-payload`** builds one file's tool inputs and refuses a file that changed since it
+  was listed.
+- **`unit-import-plan`** decides each unit from what the agent read in Lorestrom:
+  - `create`, `resume`, `done`, `changed`, `taken` or `blocked`;
+  - with the rows `send`, `finish` (created, never finished: the body is rewritten with
+    `write_doc_body`, then the properties are set), `relate` (finished on an open gate: add any
+    missing edge), `changed` and `removable`.
+  - Once the import's gate is released or abandoned, the unit is decided from Lorestrom alone,
+    so the removal's own deletions never make it blocked again.
+  - A `marker` must come with the unit doc it was read from.
+- **`removal-plan`** accepts `{docs, units}` beside its old list input, which is unchanged.
+  - **A unit file is removed** only when its record holds its exact digest, `current` under a
+    released gate or `archived` under an abandoned one, and git can remove it: tracked, no
+    uncommitted edits, a UTF-8 name, and a first commit already made.
+  - **Every other file under `.minerva/` is kept** with a reason and a `removable` flag. A
+    `taken` unit's files are kept for good. A unit an earlier batch's commit removed is
+    skipped.
+  - `--write-remove` and `--write-keep` write the paths to temp files for
+    `git --literal-pathspecs rm/commit --pathspec-from-file`, so no path is typed or placed on
+    a command line.
+- **`minerva-branches`** lists the branches holding `.minerva/` content that the checkout's
+  history never held. A squash-merged branch is not listed, even after the removal commit.
 
-**Docs and packaging:** README (successor framing, migrate section, skill list),
-`using-lorestrom/SKILL.md` (skill map and every line saying init runs the handover), both
-manifests at 0.5.0, the plugin test's skill list and path inventory, and the tests in
-`tests/test_lorestrom_plugin.py` that pin init's handover, rewritten to pin migrate's.
+**Confirmations.**
+
+- Every batch's sends wait for one explicit yes, which names the server, organization,
+  workspace, units by action, refusals, in-flight units and other branches.
+- Each run's removal is its own yes. Only when no unit remains does that commit also replace
+  (or, if a `## Lorestrom` section exists already, delete) the agent file's minerva section
+  and drop the `.minerva/worktrees/` ignore line.
+- What Lorestrom does not hold goes only on a third, separate yes.
+- Files outside `.minerva/` that mention it are listed, never edited.
+
+**Storage contract:** new rows `unit.import` and `migrate.remove`. `handover.sync` and
+`knowledge.import` are called only from migrate. The incomplete-import remedies in lint,
+status and the helper name migrate.
+
+**Docs and packaging:** the plugin README and root README frame lorestrom as minerva's
+successor, with a "Migrating from minerva" section. Both manifests and `COMPATIBILITY.md` are
+at 0.5.0, and the marketplace description was updated. The plugin tests pin migrate's safety
+clauses in place of init's handover. minerva is unchanged.
 
 ### Approaches considered
 
-- **A — released-unit import (recommended).** Above. Native shape; zero changes to readers;
-  about 4 + 3 calls per file per unit.
-- **B — one archived doc per unit** (all records concatenated), no gate, a new
-  `minerva:state` `imported`. About a third of the calls, but every reader (`unit.list`,
-  `status`, the sweep, `lint`) learns a new state, and the record structure `unit.read` and
-  promote rely on is lost.
-- **C — no unit import:** delete `.minerva/work/` and leave the history in git. Cheapest, but
-  does not import `.minerva`, which is what was asked.
-
-Skill shape: a new `migrate` skill with init reduced to the general link (recommended), versus
-extending init's handover with units and full deletion. The first matches "build the skill",
-and keeps init the one-step setup for a repository that never used minerva.
+- **A — released-unit import (chosen).** Native shape, no reader changes; about 4 + 3 calls
+  per file per unit.
+- **B — one archived doc per unit.** About a third of the calls, but every reader would have
+  to learn a new state, and the record structure would be lost.
+- **C — no unit import.** Does not import `.minerva`, which is what was asked.
 
 ## Success criteria
 

@@ -13,7 +13,10 @@
 - [reviewed — folded] whole-proposal: C1 removal statuses, C2 unit-state criterion, C3 batched in-flight yes, C4 clean agent file/.gitignore, C5 goal reworded + final report, C6 id/collision checks, C7 branches (tier: reviewer — scrutiny: blast radius not ruled out; parallel wave; restart check: approach pick unchanged, no scope/approach fold touched Goal or criteria — kept)
 - [rechecked — residual folded] whole-proposal: removal offered per run over done units; changed-record wording; unit_file_key added beside an unchanged record_key so lifecycle writers keep their restriction
 - [reviewed — clean] completion verification: Verifier reproduced all 10 criteria, no interface change beyond the approved ones (tier: reviewer floor; code review dispatched alongside)
-- [solo] review triage: all 11 code-review findings FIX in-unit (each a defect inside the approved design, none load-bearing on the approach, so no replan-vs-FIX escalation); my own audit's taken-unit defect is finding 8. Fixes re-reviewed below.
+- [reviewed — folded] code review: 11 findings, all FIX in-unit (each a defect inside the approved design, none load-bearing on the approach, so no replan-vs-FIX escalation; my own audit's taken-unit defect is finding 8)
+- [rechecked — residual folded] code review: fix re-review 10/11 closed, #10 partial; new N1 (refused Draft proposal read as finished, medium) plus N2/N4/N5 (low) — all fixed and tested
+- [reviewed — folded] second fix round, its own review: all five closed; D1 (branch at an older blob hidden from the advisory) and D2 (wrong keep reason with no commit) fixed with tests that fail without the fix. Review loop stopped: the remaining scope was two low, test-pinned edits
+- [solo] promote: two knowledge entries (migrate decision; judge done from the destination); proposal rewritten to what shipped; no TODOs left open; no follow-up issues
 
 ## Work notes 2026-11-25
 
