@@ -39,7 +39,15 @@ from knowledge_lint import (
     parse_entry,
 )
 from knowledge_spans import unfenced
-from work_status import phase_branch, phase_name, phase_numbering_gaps, phase_progress, read_phases
+from work_status import (
+    is_post_promote,
+    phase_branch,
+    phase_name,
+    phase_numbering_gaps,
+    phase_progress,
+    read_phases,
+    read_status,
+)
 
 
 class BackendError(ValueError):
@@ -1119,20 +1127,30 @@ def _reference_relpath(relpath: str) -> str:
     return relpath
 
 
+def _short(text: str, limit: int) -> str:
+    """`text` cut to `limit` UTF-16 code units, an ellipsis marking the cut."""
+    if _units(text) <= limit:
+        return text
+    text = text[:limit]
+    while _units(text) > limit - 1:
+        text = text[:-1]
+    return text + "…"
+
+
+def _heading(text: str, fallback: str) -> str:
+    """A doc's title: its first `# ` heading outside code, else `fallback`."""
+    title = next((line[2:].strip() for _, line in unfenced(text.splitlines())
+                  if line.startswith("# ") and line[2:].strip()), None)
+    return _short(title or fallback, MAX_TITLE)
+
+
 def reference_payload(relpath: str, text: str, project: str) -> dict:
     """One `.minerva/reference/` doc as tool inputs. Present tense: no edges, never superseded."""
     relpath = _reference_relpath(relpath)
     _storable(text, relpath)
     if _units(text) > MAX_MARKDOWN:
         raise BackendError(f"{relpath} is over {MAX_MARKDOWN} characters")
-    title = next((line[2:].strip() for _, line in unfenced(text.splitlines())
-                  if line.startswith("# ") and line[2:].strip()), None)
-    title = title or Path(relpath).stem
-    if _units(title) > MAX_TITLE:
-        title = title[:MAX_TITLE]
-        while _units(title) > MAX_TITLE - 1:
-            title = title[:-1]
-        title += "…"
+    title = _heading(text, Path(relpath).stem)
     return {
         "key": reference_key(project, relpath),
         "kind": KIND_REFERENCE,
@@ -1164,17 +1182,9 @@ def reference_list(root, project: str) -> dict:
     docs, refused = [], []
     if not directory.is_dir():
         return {"docs": docs, "refused": refused}
-    found = []
-    for here, dirs, files in os.walk(directory, followlinks=False):
-        for name in sorted(dirs):
-            if (Path(here) / name).is_symlink():
-                found.append((Path(here) / name, "a symlinked directory"))
-        dirs[:] = sorted(d for d in dirs if not (Path(here) / d).is_symlink())
-        for name in sorted(files):
-            path = Path(here) / name
-            if name.endswith(".md") or path.is_symlink():
-                found.append((path, None))
-    for path, problem in sorted(found, key=lambda item: item[0].as_posix()):
+    found = [(path, problem) for path, problem in _walk(directory)
+             if problem or path.name.endswith(".md") or path.is_symlink()]
+    for path, problem in found:
         relpath = path.relative_to(directory).as_posix()
         try:
             if problem:
@@ -1250,6 +1260,460 @@ def read_repo_reference(root, file) -> tuple:
         if probe.is_symlink():
             raise BackendError(f"{ascii(path.name)}: the handover does not follow symlinks")
     return _reference_relpath(rel.as_posix()), read_entry(path)
+
+
+# --- migrating a minerva repository (lorestrom:migrate) --------------------------------------
+
+MINERVA_DIR = Path(".minerva")
+UNITS_DIR = MINERVA_DIR / "work"  # the unit import's source, never written
+MINERVA_WORKTREES = MINERVA_DIR / "worktrees"
+IMPORT_MARKER = "minerva-import: "
+IMPORTED = "minerva:imported"
+# The status an imported record holds for good once its unit's gate closed: released units'
+# records were set current; an in-flight unit imported as abandoned had its records archived.
+CLOSED_RECORD_STATUS = {"released": "current", "abandoned": "archived"}
+DEFAULT_BATCH = 25
+
+
+def unit_file_key(unit: str, name: str) -> str:
+    """The record key of one markdown file of an imported unit: the unit's key, then the
+    file's path inside the unit without `.md` (`proposal`, `archive/scratchpad`).
+
+    Only the import builds these: `record_key` keeps the lifecycle's own writers to the
+    four standard records.
+    """
+    if not isinstance(unit, str) or not unit.startswith("minerva:u/"):
+        raise BackendError("a record key extends a unit key")
+    parts = name.split("/") if isinstance(name, str) else [""]
+    if not all(SAFE_STEM_RE.fullmatch(part) for part in parts):
+        raise BackendError(f"not a record path: {ascii(name)}")
+    return check_key(f"{unit}/{name}")
+
+
+def _walk(directory: Path) -> list:
+    """`(path, problem)` for every file under `directory`, sorted, without following a
+    symlink: a symlinked directory is listed with its problem and not entered."""
+    found = []
+    for here, dirs, files in os.walk(directory, followlinks=False):
+        for name in sorted(dirs):
+            if (Path(here) / name).is_symlink():
+                found.append((Path(here) / name, "a symlinked directory"))
+        dirs[:] = sorted(d for d in dirs if not (Path(here) / d).is_symlink())
+        found.extend((Path(here) / name, None) for name in sorted(files))
+    return sorted(found, key=lambda item: item[0].as_posix())
+
+
+def distinct_records(rows: list) -> tuple:
+    """`(kept, refused)`: files of one unit whose record names differ only in case would share
+    a doc on a case-insensitive checkout, so both are refused."""
+    groups = {}
+    for row in rows:
+        groups.setdefault(row["record"].lower(), []).append(row)
+    kept, refused = [], []
+    for group in groups.values():
+        if len(group) == 1:
+            kept.append(group[0])
+        else:
+            refused.extend({"file": ascii(row["path"])[1:-1], "record": row["record"],
+                            "reason": "its record key collides with another file's"}
+                           for row in group)
+    return kept, refused
+
+
+def _units_dir(root) -> Path:
+    top = _top(root)
+    base = (top or Path(root).resolve()) / MINERVA_DIR
+    directory = base / UNITS_DIR.name
+    if base.is_symlink() or directory.is_symlink():
+        raise BackendError(f"{directory}: the import does not follow symlinks")
+    return directory
+
+
+def _promoted_date(scratchpad, status, unit: str):
+    """The date a unit was promoted: its promote marker's, else its Shipped status's, else
+    its id's. None when none holds one."""
+    for _, line in unfenced(scratchpad.splitlines()) if scratchpad else ():
+        if is_post_promote(line):
+            found = DATE_RE.search(line)
+            if found:
+                return found.group(0)
+            break
+    found = DATE_RE.search(status or "")
+    if found:
+        return found.group(0)
+    return unit[:10] if DATE_RE.fullmatch(unit[:10]) else None
+
+
+def _source(root):
+    """The commit an import reads: HEAD, or None in a repository with no commit yet."""
+    top = _top(root)
+    if top is None:
+        return None
+    found = _git(top, "rev-parse", "-q", "--verify", "HEAD^{commit}", ok=(0, 1))
+    return found.stdout.strip() if found.returncode == 0 else None
+
+
+def _unit_listing(path: Path, unit: str, project: str, source) -> dict:
+    """One `.minerva/work/<unit>/` directory: its state and the files the import would send."""
+    key = unit_key(project, unit)
+    prefix = f"{UNITS_DIR.as_posix()}/{unit}"
+    refused, texts, names = [], {}, {}
+    for file, problem in _walk(path):
+        rel = file.relative_to(path).as_posix()
+        shown = ascii(f"{prefix}/{rel}")[1:-1]
+        try:
+            if problem or file.is_symlink():
+                raise BackendError(f"{problem or 'a symlink'}: the import does not follow it")
+            if not rel.endswith(".md"):
+                raise BackendError("not markdown: Lorestrom stores markdown only")
+            name = rel[:-3]
+            record = unit_file_key(key, name)
+            text = _storable(read_entry(file), rel)
+            if _units(text) > MAX_MARKDOWN:
+                raise BackendError(f"over {MAX_MARKDOWN} characters")
+        except (BackendError, OSError, UnicodeError) as error:
+            refused.append({"file": shown, "reason": str(error)})
+            continue
+        texts[name] = text
+        names.setdefault(name, []).append(
+            {"path": f"{prefix}/{rel}", "record": name, "key": record,
+             "digest": hashlib.sha256(text.encode()).hexdigest()})
+    files, collided = distinct_records([row for group in names.values() for row in group])
+    refused += collided
+    for row in collided:
+        texts.pop(row["record"], None)
+    proposal, scratchpad = texts.get("proposal"), texts.get("scratchpad")
+    status = read_status(proposal) if proposal is not None else None
+    archive = path / "archive"
+    promoted = (is_post_promote(scratchpad) if scratchpad is not None
+                else archive.is_dir() and not archive.is_symlink())
+    in_flight = (status or "").startswith("Draft") or not promoted
+    properties = {"minerva:project": project, "minerva:unit": unit, "minerva:state": "open",
+                  IMPORTED: source or "uncommitted"}
+    if status:
+        properties["minerva:status"] = _short(status, MAX_PROPERTY_VALUE)
+    date = _promoted_date(scratchpad, status, unit) if promoted else None
+    if date:
+        properties["minerva:promoted"] = date
+    title = _heading(proposal, unit) if proposal is not None else unit
+    return {
+        "id": unit, "inFlight": in_flight, "status": status, "promoted": date,
+        "doc": {"key": key, "kind": KIND_UNIT, "title": title,
+                "markdown": f"{IMPORT_MARKER}{source or 'uncommitted'}\n\nImported from "
+                            f"minerva's `{prefix}/`.\n",
+                "properties": check_properties(properties)},
+        "files": sorted(files, key=lambda row: row["path"]), "refused": refused,
+    }
+
+
+def _unit_dirs(root) -> tuple:
+    """`(checked unit ids, refused entries of the work directory)`."""
+    directory = _units_dir(root)
+    units, refused = [], []
+    for name in sorted(os.listdir(directory)) if directory.is_dir() else ():
+        path = directory / name
+        shown = ascii(f"{UNITS_DIR.as_posix()}/{name}")[1:-1]
+        if path.is_symlink():
+            refused.append({"file": shown, "reason": "a symlink: the import does not follow it"})
+        elif not path.is_dir():
+            refused.append({"file": shown, "reason": "not a unit directory"})
+        elif not UNIT_ID_RE.fullmatch(name):
+            refused.append({"file": shown, "reason": "not a work-unit id"})
+        else:
+            units.append(name)
+    return units, refused
+
+
+def minerva_worktrees(root) -> list:
+    """The `.minerva/worktrees/` checkouts still on disk: live minerva work."""
+    top = _top(root) or Path(root).resolve()
+    directory = top / MINERVA_WORKTREES
+    if directory.is_symlink() or not directory.is_dir():
+        return []
+    return sorted(ascii(name)[1:-1] for name in os.listdir(directory)
+                  if (directory / name).is_dir() or (directory / name).is_symlink())
+
+
+def unit_import_list(root, project: str, batch=DEFAULT_BATCH, after=None) -> dict:
+    """What a unit import would send, without any body: every unit's state, and the files of
+    the next `batch` units after `after` (a checked id) in id order."""
+    _project_id(project)
+    if after is not None and not UNIT_ID_RE.fullmatch(after):
+        raise BackendError(f"not a work-unit id: {ascii(after)}")
+    if not isinstance(batch, int) or batch < 1:
+        raise BackendError("a batch is at least one unit")
+    source = _source(root)
+    directory = _units_dir(root)
+    ids, refused = _unit_dirs(root)
+    listed = [_unit_listing(directory / unit, unit, project, source) for unit in ids]
+    pending = [row for row in listed if after is None or row["id"] > after]
+    chosen = pending[:batch]
+    return {
+        "source": source,
+        "units": len(listed),
+        "inFlight": [row["id"] for row in listed if row["inFlight"]],
+        "worktrees": minerva_worktrees(root),
+        "refused": refused,
+        "batch": chosen,
+        "next": pending[batch]["id"] if len(pending) > batch else None,
+    }
+
+
+def read_repo_unit_file(root, file) -> tuple:
+    """`(unit id, record name, text)` of a markdown file in this project's `.minerva/work/`
+    unit directories, and no other file. No symlink is followed."""
+    directory = Path(os.path.abspath(_units_dir(root)))
+    top = _top(root) or Path(os.path.realpath(root))
+    path = Path(os.path.abspath(top / file))
+    try:
+        rel = path.relative_to(directory)
+    except ValueError as error:
+        raise BackendError(f"{ascii(path.name)} is not in {UNITS_DIR.as_posix()}") from error
+    if len(rel.parts) < 2 or not UNIT_ID_RE.fullmatch(rel.parts[0]):
+        raise BackendError(f"{ascii(path.name)} is not in a work-unit directory")
+    probe = directory
+    for part in rel.parts[:-1]:
+        probe = probe / part
+        if probe.is_symlink():
+            raise BackendError(f"{ascii(path.name)}: the import does not follow symlinks")
+    inner = Path(*rel.parts[1:]).as_posix()
+    if not inner.endswith(".md"):
+        raise BackendError(f"{ascii(path.name)} is not markdown")
+    return rel.parts[0], inner[:-3], read_entry(path)
+
+
+def record_payload(unit: str, name: str, text: str, project: str) -> dict:
+    """One file of a minerva unit as the tool inputs of its `minerva:record` doc."""
+    _storable(text, name)
+    if _units(text) > MAX_MARKDOWN:
+        raise BackendError(f"{ascii(name)} is over {MAX_MARKDOWN} characters")
+    unit_doc = unit_key(project, unit)
+    return {
+        "key": unit_file_key(unit_doc, name),
+        "kind": KIND_RECORD,
+        "title": _short(f"{unit}: {name}", MAX_TITLE),
+        "unit": unit_doc,
+        "properties": check_properties({
+            "minerva:record": name,
+            "minerva:project": project,
+            "minerva:unit": unit,
+            "minerva:path": f"{UNITS_DIR.as_posix()}/{unit}/{name}.md",
+            "minerva:digest": hashlib.sha256(text.encode()).hexdigest(),
+        }),
+        "markdown": text,
+    }
+
+
+def _gate_state(value):
+    state = value.get("state") if isinstance(value, dict) else value
+    if state is not None and state not in GATE_STATES:
+        raise BackendError(f"not a gate state: {ascii(state)}")
+    return state
+
+
+def _found_unit(row: dict) -> dict:
+    """The checked lookup of one unit: `{id, docs, gate, records, marker}` as the agent read it."""
+    if not isinstance(row, dict) or not UNIT_ID_RE.fullmatch(str(row.get("id") or "")):
+        raise BackendError("each unit needs a checked work-unit id")
+    for name in ("docs", "records"):
+        if not isinstance(row.get(name) or [], list):
+            raise BackendError(f"{name} must be a list of find_docs results")
+    _gate_state(row.get("gate"))
+    return row
+
+
+def _import_decision(listing: dict, found: dict, abandon: set) -> dict:
+    """What the import does next for one unit: `create`, `resume`, `done`, `changed`,
+    `taken` or `blocked`. Never `create` over a key a doc already holds."""
+    unit, key = listing["id"], listing["doc"]["key"]
+    close = "abandon" if listing["inFlight"] else "release"
+    decision = {"id": unit, "action": None, "unitDoc": None, "close": None, "properties": False,
+                "openGate": False, "send": [], "finish": [], "changed": [], "removable": [], "reason": None}
+    docs = [doc for doc in found.get("docs") or []
+            if isinstance(doc, dict) and doc.get("key") == key]
+    if listing["inFlight"] and unit not in abandon:
+        decision.update(action="blocked", reason="in flight in minerva: finish it there, or "
+                        "say yes to importing it as abandoned")
+        if not docs:
+            return decision
+    if not docs:
+        decision.update(action="create", close=close, openGate=True, send=listing["files"])
+        return decision
+    doc = docs[0]
+    ours = (len(docs) == 1 and doc.get("kind") == KIND_UNIT
+            and (_props(doc).get(IMPORTED) or str(found.get("marker") or "")
+                 .startswith(IMPORT_MARKER)))
+    if not ours:
+        decision.update(action="taken", reason="its key is held by a unit this import did not "
+                        "create: nothing is sent or removed")
+        return decision
+    decision["unitDoc"] = doc.get("id")
+    decision["properties"] = not _props(doc).get(IMPORTED)
+    state = _gate_state(found.get("gate"))
+    records = {}
+    for record in found.get("records") or []:
+        if isinstance(record, dict) and record.get("kind") == KIND_RECORD:
+            records.setdefault(record.get("key"), []).append(record)
+    for row in listing["files"]:
+        held = records.get(row["key"], [])
+        digest = _props(held[0]).get("minerva:digest") if len(held) == 1 else None
+        if not held:
+            decision["send"].append(row)
+        elif len(held) > 1:
+            decision["changed"].append({**row, "reason": "more than one record holds its key"})
+        elif digest is None and state in (None, "open", "releasing"):
+            decision["finish"].append({**row, "docId": held[0].get("id")})
+        elif digest != row["digest"]:
+            decision["changed"].append({**row, "reason": "changed in Lorestrom since import"})
+        elif held[0].get("status") == CLOSED_RECORD_STATUS.get(state):
+            decision["removable"].append(row["path"])
+    if decision["action"] == "blocked":
+        return decision
+    if state in CLOSED_RECORD_STATUS:
+        missing = [{**row, "reason": "no record holds it"} for row in decision["send"]]
+        decision.update(send=[], changed=decision["changed"] + missing + decision["finish"],
+                        finish=[])
+        decision["action"] = "changed" if decision["changed"] else "done"
+        if decision["action"] == "changed":
+            decision["reason"] = "Lorestrom's copy is authoritative: nothing is re-sent"
+        return decision
+    decision.update(action="resume", close=close, openGate=state is None)
+    return decision
+
+
+def unit_import_plan(root, project: str, value: dict) -> dict:
+    """The import's next step per unit, from what the agent read in Lorestrom for each.
+
+    `value` is `{"units": [{id, docs, gate, records, marker}], "abandon": [ids]}`: `docs` is
+    `find_docs` of unit docs with that `minerva:unit`, `gate` the unit doc's `get_gate` state
+    (null when it is no gate), `records` `find_docs` with that `gateId`, `marker` the unit
+    doc's first body line when the agent read it. `abandon` lists the in-flight units the user
+    said yes to importing as abandoned. The local files are listed again here, never taken
+    from the input.
+    """
+    if not isinstance(value, dict) or not isinstance(value.get("units"), list):
+        raise BackendError("stdin must be {units: [...], abandon: [...]}")
+    abandon = value.get("abandon") or []
+    if not isinstance(abandon, list) or not all(UNIT_ID_RE.fullmatch(str(u)) for u in abandon):
+        raise BackendError("abandon must be a list of work-unit ids")
+    source, directory = _source(root), _units_dir(root)
+    ids = set(_unit_dirs(root)[0])
+    decisions, seen = [], set()
+    for row in value["units"]:
+        found = _found_unit(row)
+        unit = found["id"]
+        if unit in seen:
+            raise BackendError(f"{unit} is listed twice")
+        seen.add(unit)
+        if unit not in ids:
+            raise BackendError(f"{unit} is not a unit directory here")
+        listing = _unit_listing(directory / unit, unit, project, source)
+        decision = _import_decision(listing, found, set(abandon))
+        decision["doc"] = listing["doc"] if decision["action"] in ("create", "resume") else None
+        decision["refused"] = listing["refused"]
+        decisions.append(decision)
+    counts = Counter(decision["action"] for decision in decisions)
+    return {"units": decisions, "counts": dict(sorted(counts.items()))}
+
+
+def _tracked(root, path: Path) -> list:
+    top = _top(root)
+    if top is None:
+        return []
+    out = _git(top, "ls-files", "-z", "--full-name", "--", path.as_posix()).stdout
+    return sorted(name for name in out.split("\0") if name)
+
+
+def _unit_removal(root, project: str, units: list) -> tuple:
+    """`(remove, keep, checked ids, remaining)` for the units the agent looked up this run."""
+    plan = unit_import_plan(root, project, {"units": units, "abandon": []})
+    remove, keep, checked, remaining = [], [], set(), 0
+    for decision in plan["units"]:
+        checked.add(decision["id"])
+        if decision["action"] not in ("done", "changed"):
+            remaining += 1
+            continue
+        remove.extend(decision["removable"])
+        keep.extend({"path": row["path"], "reason": row["reason"]} for row in decision["changed"])
+    return remove, keep, checked, remaining
+
+
+def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
+    """Which tracked `.minerva/` files the migration may remove, and every other one with why.
+
+    Knowledge and reference files follow `removal_plan`. A unit file goes only when its
+    record holds its exact digest under the import's own closed gate. Units not looked up
+    this run are counted, not listed; every other tracked file under `.minerva/` is kept.
+    """
+    base = removal_plan(root, project, docs)
+    # A refused file's row names only its file name: the tracked walk below keeps it.
+    remove = list(base["remove"])
+    keep = [row for row in base["keep"] if row["path"].startswith(f"{MINERVA_DIR.as_posix()}/")]
+    unit_remove, unit_keep, checked, remaining = _unit_removal(root, project, units)
+    remove += unit_remove
+    keep += unit_keep
+    ids, _ = _unit_dirs(root)
+    covered = set(remove) | {row["path"] for row in keep}
+    not_checked = {"units": 0, "files": 0}
+    unchecked_ids = set(ids) - checked
+    not_checked["units"] = len(unchecked_ids)
+    for path in _tracked(root, MINERVA_DIR):
+        if path in covered:
+            continue
+        parts = path.split("/")
+        if path.startswith(f"{UNITS_DIR.as_posix()}/") and len(parts) > 3 \
+                and parts[2] in unchecked_ids:
+            not_checked["files"] += 1
+        else:
+            keep.append({"path": path, "reason": "not in Lorestrom: removing it leaves it only "
+                                                 "in git history"})
+    return {
+        "remove": sorted(set(remove)),
+        "keep": sorted(keep, key=lambda row: row["path"]),
+        "notChecked": not_checked,
+        "unitsRemaining": remaining + len(unchecked_ids),
+    }
+
+
+def minerva_branches(root) -> dict:
+    """Branches holding `.minerva/` changes the default branch lacks: their units are not
+    imported from this checkout, and a removal commit here will conflict with them.
+
+    Refs come from git itself and are printed escaped, as data; none is read from input.
+    A ref whose tip this checkout already holds (merged, or this branch's own upstream) has
+    nothing pending and is skipped.
+    """
+    top = _top(root)
+    if top is None:
+        return {"branches": [], "unchecked": "not a git working tree"}
+    default = _default_branch(top)
+    if default is None:
+        return {"branches": [], "unchecked": "no default branch found"}
+    head = _git(top, "symbolic-ref", "-q", "HEAD", ok=(0, 1)).stdout.strip()
+    refs = _git(top, "for-each-ref", "--format=%(refname)", "refs/heads",
+                "refs/remotes").stdout.split("\n")
+    branches, failed = [], []
+    for ref in refs:
+        if not ref or ref in (default, head) or ref.endswith("/HEAD"):
+            continue
+        shown = ascii(ref.split("/", 2)[2])[1:-1]  # `main`, `origin/main`
+        held = _git(top, "merge-base", "--is-ancestor", ref, "HEAD", ok=(0, 1, 128))
+        if held.returncode == 0:
+            continue
+        names = _git(top, "diff", "--name-only", "-z", f"{default}...{ref}", "--",
+                     MINERVA_DIR.as_posix(), ok=(0, 128))
+        if names.returncode != 0:
+            failed.append(shown)
+            continue
+        paths = [path for path in names.stdout.split("\0") if path]
+        if not paths:
+            continue
+        units = sorted({path.split("/")[2] for path in paths
+                        if path.startswith(f"{UNITS_DIR.as_posix()}/")
+                        and len(path.split("/")) > 3
+                        and UNIT_ID_RE.fullmatch(path.split("/")[2])})
+        branches.append({"branch": shown, "units": units, "files": len(paths)})
+    return {"branches": branches, "unchecked": failed or None}
 
 
 # --- lint over Lorestrom docs ----------------------------------------------------------------
@@ -1431,8 +1895,22 @@ def main(argv=None) -> int:
     listing.add_argument("--project", required=True)
     commands.add_parser("unit-state",
                         help="stdin: {properties, gate, openedAt, openedByUserId, me, phases}")
-    plan = commands.add_parser("removal-plan", help="stdin: find_docs' knowledge and reference docs")
+    plan = commands.add_parser("removal-plan",
+                               help="stdin: find_docs' knowledge and reference docs, or "
+                                    "{docs, units} for the migration")
     plan.add_argument("--project", required=True)
+    units = commands.add_parser("unit-import-list",
+                                help="what a unit import would send, with no bodies")
+    units.add_argument("--project", required=True)
+    units.add_argument("--batch", type=int, default=DEFAULT_BATCH)
+    units.add_argument("--after", help="the last unit id of the previous batch")
+    unit_plan = commands.add_parser("unit-import-plan", help="stdin: {units, abandon}; next steps")
+    unit_plan.add_argument("--project", required=True)
+    record = commands.add_parser("record-payload", help="one unit file as tool inputs")
+    record.add_argument("file")
+    record.add_argument("--project", required=True)
+    record.add_argument("--digest", required=True, help="the digest unit-import-list printed")
+    commands.add_parser("minerva-branches", help="branches with .minerva/ changes main lacks")
     ids = commands.add_parser("unit-ids", help="stdin: find_docs' unit docs; the checked ids")
     ids.add_argument("--project", required=True)
     phases = commands.add_parser("phases", help="stdin: {proposal, mergedPrs, heads, base}; phase progress")
@@ -1481,7 +1959,23 @@ def main(argv=None) -> int:
                              value.get("openedByUserId", value.get("openedBy")), value.get("me"),
                              value.get("phases", 1))
         elif args.command == "removal-plan":
-            out = removal_plan(args.cwd, args.project, _stdin_json())
+            value = _stdin_json()
+            if isinstance(value, dict):
+                out = migration_removal_plan(args.cwd, args.project, value.get("docs") or [],
+                                             value.get("units") or [])
+            else:
+                out = removal_plan(args.cwd, args.project, value)
+        elif args.command == "unit-import-list":
+            out = unit_import_list(args.cwd, args.project, args.batch, args.after)
+        elif args.command == "unit-import-plan":
+            out = unit_import_plan(args.cwd, args.project, _stdin_json())
+        elif args.command == "record-payload":
+            unit, name, text = read_repo_unit_file(args.cwd, args.file)
+            if args.digest != hashlib.sha256(text.encode()).hexdigest():
+                raise BackendError(f"{ascii(name)} is not what was listed: list it again")
+            out = record_payload(unit, name, text, args.project)
+        elif args.command == "minerva-branches":
+            out = minerva_branches(args.cwd)
         elif args.command == "unit-ids":
             out = unit_ids(_stdin_json(), args.project)
         elif args.command == "phases":
