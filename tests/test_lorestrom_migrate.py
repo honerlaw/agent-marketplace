@@ -460,6 +460,9 @@ def test_a_taken_unit_is_final_and_its_files_are_kept(repo):
     reasons = {row["path"]: row["reason"] for row in result["keep"]}
     assert reasons[f".minerva/work/{DONE}/proposal.md"] == backend.TAKEN_REASON
     assert result["unitsRemaining"] == 0
+    removable = {row["path"]: row["removable"] for row in result["keep"]}
+    assert removable[f".minerva/work/{DONE}/proposal.md"] is False
+    assert all("final" not in row for row in result["keep"])
 
 
 def test_the_old_removal_plan_input_is_unchanged(repo):
@@ -501,6 +504,38 @@ def test_a_squash_merged_branch_is_not_listed(repo):
     git(repo, "merge", "-q", "--squash", "squashed")
     commit(repo, "squash")
     assert backend.minerva_branches(repo)["branches"] == []
+
+
+def test_a_squash_merged_branch_stays_unlisted_after_the_removal(repo):
+    git(repo, "checkout", "-q", "-b", "squashed")
+    write(repo, ".minerva/work/2026-02-01-elsewhere/proposal.md", "# P\n")
+    commit(repo, "unit")
+    git(repo, "checkout", "-q", "main")
+    git(repo, "merge", "-q", "--squash", "squashed")
+    commit(repo, "squash")
+    git(repo, "rm", "-q", "-r", ".minerva/work/2026-02-01-elsewhere")
+    commit(repo, "migrated")
+    assert backend.minerva_branches(repo)["branches"] == []
+
+
+def test_a_refused_draft_proposal_still_reads_in_flight(repo):
+    write(repo, f".minerva/work/{DRAFT}/proposal.md",
+          "# Proposal: draft\n\n**Status**: Draft\n" + "x" * (backend.MAX_MARKDOWN + 1))
+    commit(repo, "big")
+    assert DRAFT in backend.unit_import_list(repo, PROJECT, batch=100)["inFlight"]
+
+
+def test_nothing_is_removable_before_the_first_commit(tmp_path):
+    root = tmp_path / "fresh"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    write(root, f".minerva/work/{DONE}/proposal.md", PROPOSAL)
+    write(root, f".minerva/work/{DONE}/scratchpad.md", SCRATCHPAD)
+    git(root, "add", "-A")
+    lookup = [{"id": DONE, "docs": [unit_doc()], "gate": "released",
+               "records": records(root)}]
+    result = backend.migration_removal_plan(root, PROJECT, [], lookup)
+    assert result["remove"] == [] and not any(row["removable"] for row in result["keep"])
 
 
 def test_branches_outside_a_repository_are_unchecked(tmp_path):

@@ -1389,8 +1389,11 @@ def _unit_listing(path: Path, unit: str, project: str, source) -> dict:
     promoted = (is_post_promote(scratchpad) if scratchpad is not None
                 else archive.is_dir() and not archive.is_symlink())
     # minerva's own check reads only units holding a proposal; once the removal took it, what
-    # is left (a script, a kept file) is no live work.
-    in_flight = proposal is not None and ((status or "").startswith("Draft") or not promoted)
+    # is left (a script, a kept file) is no live work. A proposal present but refused leaves
+    # the unit's state unknown, so it counts as live.
+    has_proposal = os.path.lexists(path / "proposal.md")
+    in_flight = has_proposal and (proposal is None or (status or "").startswith("Draft")
+                                  or not promoted)
     properties = {"minerva:project": project, "minerva:unit": unit, "minerva:state": "open",
                   IMPORTED: source or "uncommitted"}
     if status:
@@ -1656,7 +1659,7 @@ def _unit_removal(root, project: str, units: list) -> tuple:
         checked.add(decision["id"])
         if decision["action"] == "taken":
             prefix = f"{UNITS_DIR.as_posix()}/{decision['id']}/"
-            keep.extend({"path": path, "reason": TAKEN_REASON}
+            keep.extend({"path": path, "reason": TAKEN_REASON, "final": True}
                         for path in _tracked(root, MINERVA_DIR) if path.startswith(prefix))
             continue
         if decision["action"] not in ("done", "changed"):
@@ -1667,13 +1670,15 @@ def _unit_removal(root, project: str, units: list) -> tuple:
     return remove, keep, checked, remaining
 
 
-def _dirty(root, path: Path) -> set:
-    """Paths under `path` whose working-tree or staged content differs from HEAD."""
+def _dirty(root, path: Path):
+    """Paths under `path` whose working-tree or staged content differs from HEAD, or None when
+    git cannot say (no commit yet): then nothing counts as clean."""
     top = _top(root)
     if top is None:
-        return set()
-    out = _git(top, "diff", "--name-only", "-z", "HEAD", "--", path.as_posix(), ok=(0, 128))
-    return {name for name in out.stdout.split("\0") if name} if out.returncode == 0 else set()
+        return None
+    out = _git(top, "diff", "--no-renames", "--name-only", "-z", "HEAD", "--", path.as_posix(),
+               ok=(0, 128))
+    return {name for name in out.stdout.split("\0") if name} if out.returncode == 0 else None
 
 
 def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
@@ -1706,23 +1711,38 @@ def migration_removal_plan(root, project: str, docs: list, units: list) -> dict:
         else:
             keep.append({"path": path, "reason": "not in Lorestrom: removing it leaves it only "
                                                  "in git history"})
-    # `git rm` works on the index: an untracked or edited file is never in a removal commit.
+    # `git rm` works on the index: an untracked or edited file is never in a removal commit,
+    # and a name a line of UTF-8 cannot hold never reaches git's path file.
+    def committable(path):
+        return path in tracked and dirty is not None and path not in dirty and _utf8(path)
+
     for path in sorted(set(remove)):
         if path not in tracked:
             keep.append({"path": path, "reason": "untracked: no commit can remove it; delete "
                                                  "it by hand once you are sure"})
-        elif path in dirty:
+        elif dirty is None or path in dirty:
             keep.append({"path": path, "reason": "uncommitted edits: commit or discard them, "
                                                  "then re-run"})
-    remove = [path for path in remove if path in tracked and path not in dirty]
+        elif not _utf8(path):
+            keep.append({"path": path, "reason": "its name is not UTF-8: remove it by hand"})
+    remove = [path for path in remove if committable(path)]
     for row in keep:
-        row["removable"] = row["path"] in tracked and row["path"] not in dirty
+        final = row.pop("final", False)
+        row["removable"] = not final and committable(row["path"])
     return {
         "remove": sorted(set(remove)),
         "keep": sorted(keep, key=lambda row: row["path"]),
         "notChecked": not_checked,
         "unitsRemaining": remaining + len(unchecked_ids),
     }
+
+
+def _utf8(path: str) -> bool:
+    try:
+        path.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return "\n" not in path and "\r" not in path
 
 
 def write_paths(target, paths: list) -> None:
@@ -1737,6 +1757,38 @@ def write_paths(target, paths: list) -> None:
     except UnicodeEncodeError as error:
         raise BackendError("a path is not UTF-8: remove it by hand") from error
     Path(target).write_bytes(data)
+
+
+def _pending(top, ref: str, paths: list) -> list:
+    """The paths whose content on `ref` this checkout's history never held.
+
+    A squash-merged branch still differs from its old merge base, and after the migration's
+    removal it differs from HEAD too: a path is pending only when HEAD lacks its content now
+    and no commit of HEAD's history ever had that exact blob at that path.
+    """
+    if not paths:
+        return []
+    here = _git(top, "diff", "--no-renames", "--name-only", "-z", "HEAD", ref, "--",
+                MINERVA_DIR.as_posix(), ok=(0, 128))
+    if here.returncode != 0:
+        return paths
+    lacking = [path for path in paths if path in set(here.stdout.split("\0"))]
+    blobs = {}
+    listing = _git(top, "ls-tree", "-z", "--full-tree", "-r", ref, "--",
+                   MINERVA_DIR.as_posix(), ok=(0, 128))
+    for line in listing.stdout.split("\0") if listing.returncode == 0 else ():
+        meta, _, name = line.partition("\t")
+        if name:
+            blobs[name] = meta.split()[-1]
+    pending = []
+    for path in lacking:
+        blob = blobs.get(path)
+        seen = blob and _git(top, "--literal-pathspecs", "log", "-1", "--format=%H",
+                             f"--find-object={blob}", "HEAD", "--", path,
+                             ok=(0, 128)).stdout.strip()
+        if not seen:
+            pending.append(path)
+    return pending
 
 
 def minerva_branches(root) -> dict:
@@ -1769,13 +1821,7 @@ def minerva_branches(root) -> dict:
         if names.returncode != 0:
             failed.append(shown)
             continue
-        # A squash-merged branch still differs from its old merge base: only paths whose
-        # content this checkout lacks are pending.
-        here = _git(top, "diff", "--name-only", "-z", "HEAD", ref, "--", MINERVA_DIR.as_posix(),
-                    ok=(0, 128))
-        lacking = set(here.stdout.split("\0")) if here.returncode == 0 else None
-        paths = [path for path in names.stdout.split("\0")
-                 if path and (lacking is None or path in lacking)]
+        paths = _pending(top, ref, [path for path in names.stdout.split("\0") if path])
         if not paths:
             continue
         units = sorted({path.split("/")[2] for path in paths
