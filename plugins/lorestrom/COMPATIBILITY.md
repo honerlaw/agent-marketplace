@@ -1,9 +1,10 @@
 # Claude Code and Codex compatibility
 
-Version 0.5.0 packages one canonical `skills/` tree for Claude Code and local Codex app,
+Version 0.5.1 packages one canonical `skills/` tree for Claude Code and local Codex app,
 CLI and IDE conversations. It needs Git, Python 3.9+, a POSIX shell, and a Lorestrom MCP
-server connected in the host for the organization being linked
-(`https://www.lorestrom.com/mcp/o/<org id>`, authenticated by the user through the host).
+server connected in the host for the organization being linked: its command and address are
+on the organization's Agents page, `https://www.lorestrom.com/agents`, and the user signs in
+through the host with their Lorestrom account.
 There is no API key or script login: CI and scripts cannot reach Lorestrom.
 
 ## Capabilities

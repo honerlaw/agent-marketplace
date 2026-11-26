@@ -190,7 +190,7 @@ protects checkpoint writes, not the goal or remote actions: it is not a fleet lo
 
 ## Scope of this version
 
-0.5.0 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
+0.5.1 runs the lifecycle on Lorestrom, and Lorestrom is authoritative for a linked
 repository: propose, work, replan, review, promote, ship, cleanup, status, grill-plan, explore,
 one-by-one, debug, lint and the orchestrators propose-ship and propose-ship-auto write and read
 their records as the storage contract says, never as files. cleanup's no-argument sweep covers

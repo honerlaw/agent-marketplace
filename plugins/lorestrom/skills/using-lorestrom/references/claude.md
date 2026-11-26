@@ -48,7 +48,20 @@ A connected Lorestrom MCP server's tools appear as `mcp__<server>__<tool>`, wher
 is whatever name the user gave it (for example `mcp__lorestrom__find_docs`). Find the server
 by its tools, as the storage contract says, never by its name alone. If no such tools are
 listed, they may be deferred: search the tool list for `find_docs` before deciding that no
-server is connected. Connecting one is the user's step:
-`claude mcp add --transport http --client-id <client id> --callback-port 53682 lorestrom https://www.lorestrom.com/mcp/o/<org id>`,
-then `/mcp` to authenticate, with the client id from their organization's Lorestrom setup
-instructions.
+server is connected. Connecting one is the user's step, in this order:
+
+1. **An account and an organization.** Sign in at `https://www.lorestrom.com`, or create an
+   account there, then create an organization or accept an invitation to one.
+2. **The command.** Open the organization's **Agents** page, `https://www.lorestrom.com/agents`
+   (also in the web app's organization switcher), with that organization chosen in the
+   switcher; under a link, the link's organization. It shows a `claude mcp add` command
+   already filled in with the organization's address and client id: run it in a terminal.
+3. **Sign in.** In Claude Code, run `/mcp`, choose the Lorestrom server and sign in with the
+   same account. An agent acts as that person, with their role in the organization.
+
+When no Lorestrom tools exist, deferred or not, tell the user: if `/mcp` lists a Lorestrom
+server that needs authentication, step 3; if it lists none, steps 1 to 3. A call refused as
+unauthorized (a lapsed sign-in, or a person no longer in the organization) also means step 3,
+then step 1's membership if it is refused again. When Agents says Claude Code can't connect
+to this server yet, that Lorestrom is not set up for Claude Code: the user tells whoever runs
+it, and nothing in the plugin works around it.

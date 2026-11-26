@@ -1,6 +1,6 @@
 {
   "name": "lorestrom",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "minerva's durable records, kept in Lorestrom, in Claude Code and Codex.",
   "author": {"name": "Derek Honerlaw"},
   "skills": "./skills/",

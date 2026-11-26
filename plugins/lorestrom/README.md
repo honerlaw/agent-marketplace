@@ -5,7 +5,7 @@
 repositories, people and agents read through its MCP server. There is no local file mode. A
 repository that uses minerva moves over with `lorestrom:migrate`.
 
-## This version (0.5.0): lifecycle, migration, orchestrators, sweep and lint
+## This version (0.5.1): lifecycle, migration, orchestrators, sweep and lint
 
 - `lorestrom:init` links any Git repository to a Lorestrom project (found by the repository's
   remote, or created in a workspace you pick) and caches the link in the clone, or commits it
@@ -19,6 +19,10 @@ repository that uses minerva moves over with `lorestrom:migrate`.
   `debug` keep work units, their records, knowledge entries and reference docs in Lorestrom.
   A unit's knowledge is held on its gate and becomes current when `cleanup` releases the gate
   on live merge evidence.
+- **Connecting** (0.5.1): wherever a skill finds no Lorestrom server, or a sign-in that
+  lapsed, it sends the person to their organization's Agents page,
+  <https://www.lorestrom.com/agents>, for the filled-in command, then to sign in. See
+  [Setup](#setup).
 - Worktrees live under `.lorestrom/worktrees/`, checkpoints under
   `<git-common-dir>/lorestrom/runtime/`.
 - The orchestrators run the whole lifecycle on Lorestrom: `propose-ship` with a person
@@ -35,9 +39,12 @@ repository that uses minerva moves over with `lorestrom:migrate`.
 
 ## Setup
 
-1. Connect your organization's Lorestrom MCP server in your host and authenticate. In Claude
-   Code: `claude mcp add --transport http --client-id <client id> --callback-port 53682 lorestrom https://www.lorestrom.com/mcp/o/<org id>`,
-   then `/mcp`. The client id is in your organization's Lorestrom setup instructions.
+1. Connect your organization's Lorestrom MCP server in your host and sign in. Sign in at
+   <https://www.lorestrom.com> (or create an account) and create or join an organization.
+   Then open its **Agents** page, <https://www.lorestrom.com/agents>, with that organization
+   chosen in the switcher. In Claude Code, run the `claude mcp add` command it shows, already
+   filled in, then `/mcp` and sign in with the same account. Another MCP client connects to
+   the address it shows.
 2. Install this plugin: `./install.sh lorestrom --host both`.
 3. In a repository, run `lorestrom:init`, or `lorestrom:migrate` in one that uses minerva.
 
