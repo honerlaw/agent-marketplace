@@ -40,8 +40,9 @@ Then select `$minerva:using-minerva` in a new Codex conversation and run
 See [Minerva compatibility and validation](plugins/minerva/COMPATIBILITY.md) for
 host capabilities, resume behavior, and the regression checks.
 
-The lorestrom plugin keeps minerva's records in Lorestrom instead of files. Install it the
-same way (`./install.sh lorestrom --host both`) and see
+The lorestrom plugin is minerva's successor: the same lifecycle, with its records kept in
+Lorestrom instead of files. Install it the same way (`./install.sh lorestrom --host both`),
+move a minerva repository over with `lorestrom:migrate`, and see
 [its README](plugins/lorestrom/README.md) for connecting the Lorestrom MCP server.
 
 ## Update
@@ -59,7 +60,7 @@ git pull  # symlink keeps the plugin live immediately
 |--------|--------|-------------|
 | utils | `humanizer` | Miscellaneous utility skills |
 | minerva | `minerva:init` `minerva:explore` `minerva:propose` `minerva:replan` `minerva:grill-plan` `minerva:one-by-one` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` `minerva:cleanup` `minerva:propose-ship` `minerva:propose-ship-auto` `minerva:debug` `minerva:lint` `minerva:migrate` `minerva:migrate-fix` `minerva:status` `minerva:using-minerva` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads. `propose-ship` conducts the whole lifecycle with user gates; `propose-ship-auto` runs it without human gates, giving each decision the tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer whose fixes are re-checked, with a narrow Adjudicator before anything reaches the user — and no multi-agent voting. |
-| lorestrom | `lorestrom:init` `lorestrom:using-lorestrom` `lorestrom:propose` `lorestrom:work` `lorestrom:replan` `lorestrom:review` `lorestrom:promote` `lorestrom:ship` `lorestrom:cleanup` `lorestrom:status` `lorestrom:grill-plan` `lorestrom:explore` `lorestrom:one-by-one` `lorestrom:debug` `lorestrom:propose-ship` `lorestrom:propose-ship-auto` `lorestrom:lint` | minerva's lifecycle with its records kept in Lorestrom, with no local file mode. 0.4.0 links a repository to a shared Lorestrom workspace through its MCP server, hands its minerva files over with every change confirmed, runs the lifecycle skill by skill or through its orchestrators, sweeps other clones' units, and lints the knowledge. See [its README](plugins/lorestrom/README.md). |
+| lorestrom | `lorestrom:init` `lorestrom:migrate` `lorestrom:using-lorestrom` `lorestrom:propose` `lorestrom:work` `lorestrom:replan` `lorestrom:review` `lorestrom:promote` `lorestrom:ship` `lorestrom:cleanup` `lorestrom:status` `lorestrom:grill-plan` `lorestrom:explore` `lorestrom:one-by-one` `lorestrom:debug` `lorestrom:propose-ship` `lorestrom:propose-ship-auto` `lorestrom:lint` | minerva's successor: its lifecycle with its records kept in Lorestrom, with no local file mode. 0.5.0 links a repository to a shared Lorestrom workspace through its MCP server, migrates a minerva repository's `.minerva/` records (work units included) there and then removes them, every step confirmed, runs the lifecycle skill by skill or through its orchestrators, sweeps other clones' units, and lints the knowledge. See [its README](plugins/lorestrom/README.md). |
 
 ## MCP servers
 
