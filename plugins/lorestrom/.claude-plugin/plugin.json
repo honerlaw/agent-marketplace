@@ -1,6 +1,6 @@
 {
   "name": "lorestrom",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "minerva's successor: its lifecycle with every durable record kept in Lorestrom. Link a repository to a shared Lorestrom workspace, migrate its .minerva records there, and run the lifecycle there, read across repositories, people and agents.",
   "author": {
     "name": "Derek Honerlaw"

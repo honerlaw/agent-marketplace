@@ -15,7 +15,7 @@ The lorestrom plugin runs minerva's lifecycle with its records in **Lorestrom**,
 workspace of linked docs reached through its MCP server, so several repositories, people and
 agents read one body of lore. It has no local file mode.
 
-## This version (0.5.0): lifecycle, migration, orchestrators, sweep and lint
+## This version (0.5.1): lifecycle, migration, orchestrators, sweep and lint
 
 - **Lorestrom is authoritative** for a linked repository: its work units, their records
   (proposal, scratchpad, replan, followups), its knowledge entries and its reference docs live

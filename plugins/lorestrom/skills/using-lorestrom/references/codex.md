@@ -59,5 +59,10 @@ branch and PR collision evidence regardless of peer capability.
 
 Call a connected Lorestrom MCP server's tools by the names the storage contract uses, through
 however the host exposes MCP tools. Find the server by its tools, never by its name alone.
-Connecting one is the user's step, following their organization's Lorestrom setup
-instructions for the endpoint `https://www.lorestrom.com/mcp/o/<org id>`.
+Connecting one is the user's step: an account at `https://www.lorestrom.com` (sign in or
+create one, then create an organization or accept an invitation to one); then the address
+shown on the organization's **Agents** page, `https://www.lorestrom.com/agents` (choose the
+organization in the web app's organization switcher first; under a link, choose the link's
+organization), added as an MCP server and signed in with OAuth with the same account, as
+Codex's MCP settings allow. A call refused as unauthorized means signing in again, then
+checking that the person is still a member of the organization if it is refused again.

@@ -16,7 +16,7 @@ SCRIPTS = lorestrom_scripts.SCRIPTS
 BACKEND = lorestrom_scripts.backend()
 MINERVA_SCRIPTS = ROOT / "plugins" / "minerva" / "scripts"
 MINERVA_SKILLS = ROOT / "plugins" / "minerva" / "skills"
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 
 STORAGE = "using-lorestrom/references/storage.md"
 RUNTIME = "using-lorestrom/references/runtime.md"
@@ -703,6 +703,49 @@ def test_no_instruction_uses_a_filter_find_docs_drops(rel):
     text = flat(read(rel))
     assert not re.search(r"(?<!unknown name such as )`kind` `?\[?\"?minerva:", text)
     assert "kind `minerva:knowledge`" not in text
+
+
+# --- connecting a Lorestrom MCP server ------------------------------------------
+
+AGENTS_PAGE = "https://www.lorestrom.com/agents"
+CLAUDE = "using-lorestrom/references/claude.md"
+CODEX = "using-lorestrom/references/codex.md"
+
+
+def plugin_texts():
+    return sorted(p for p in PLUGIN.rglob("*")
+                  if p.is_file() and "__pycache__" not in p.parts
+                  and p.suffix in (".md", ".py", ".json"))
+
+
+@pytest.mark.parametrize("path", plugin_texts(), ids=lambda p: str(p.relative_to(PLUGIN)))
+def test_no_file_sends_a_person_to_setup_instructions_or_a_client_id_placeholder(path):
+    text = flat(path.read_text(encoding="utf-8"))
+    assert "setup instructions" not in text
+    assert "<client id>" not in text
+
+
+@pytest.mark.parametrize("path", [SKILLS / CLAUDE, SKILLS / CODEX, SKILLS / STORAGE, SKILLS / LINK,
+                                  PLUGIN / "README.md", PLUGIN / "COMPATIBILITY.md"],
+                         ids=lambda p: str(p.relative_to(PLUGIN)))
+def test_the_connect_guidance_names_the_agents_page(path):
+    assert AGENTS_PAGE in path.read_text(encoding="utf-8")
+
+
+def test_the_claude_adapter_covers_the_account_the_command_and_the_sign_in():
+    text = flat(section(read(CLAUDE), "## Lorestrom tools"))
+    for clause in ("create an account", "accept an invitation", AGENTS_PAGE,
+                   "`claude mcp add` command", "run `/mcp`", "refused as unauthorized",
+                   "can't connect to this server yet"):
+        assert clause in text, clause
+    # The deferred-tool search comes before any advice to sign in.
+    assert text.index("deferred") < text.index("run `/mcp`")
+
+
+def test_the_codex_adapter_covers_the_account_and_the_address():
+    text = flat(section(read(CODEX), "## Lorestrom tools"))
+    for clause in ("create an organization", AGENTS_PAGE, "signed in with OAuth"):
+        assert clause in text, clause
 
 
 # --- what this version says about itself ----------------------------------------
