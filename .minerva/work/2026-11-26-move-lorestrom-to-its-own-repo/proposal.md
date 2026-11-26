@@ -1,7 +1,7 @@
 # Proposal: move-lorestrom-to-its-own-repo
 
 **Date**: 2026-11-26
-**Status**: Draft
+**Status**: Shipped (2026-11-26)
 
 ## Goal
 
@@ -42,18 +42,27 @@ location change: `lorestrom@agent-marketplace` becomes `lorestrom@lorestrom-plug
 
 **A (recommended): history-preserving split, tests ported with minerva parity pinned.**
 
-1. **History.** `git subtree split --prefix=plugins/lorestrom` in agent-marketplace gives a
-   branch of the plugin's commits with the plugin at its root. The new repository starts
-   from an initial commit (README, LICENSE, `.gitignore`, manifests), then
-   `git subtree add --prefix=plugins/lorestrom <split>` (no squash), so `git log --
-   plugins/lorestrom` shows the release commits. Tests, installer and CI arrive in later
-   commits that name where they came from.
+1. **History (as built).** `git subtree split --prefix=plugins/lorestrom` gave the six release
+   commits with the plugin at their root. `git subtree add` of that split kept them, but
+   `git log -- plugins/lorestrom` stopped at the merge, so instead the split was rewritten
+   (`git filter-branch --tree-filter`) to hold the files under `plugins/lorestrom/` in every
+   commit, and the new `main` starts from it: the six releases, then a commit adding the
+   licence, `.gitignore` and README stub, then the scaffolding and 0.6.0 commits. Path log and
+   blame reach 0.1.0; the plugin tree was byte-identical to agent-marketplace's before 0.6.0.
 2. **Tests.** Move `tests/test_lorestrom_{plugin,backend,units,migrate}.py` and
    `tests/lorestrom_scripts.py`. Port the lorestrom halves of the shared tests
    (`skills_corpus.py`, `test_phasing.py`, `test_skill_snippets.py`'s helper-block tests,
    `test_untrusted_names.py`, `test_plugin_guard_sites.py`, `test_host_adapters.py`,
    `test_skill_budget.py`, `test_install_plugin.py`'s lorestrom case), copying only the helper
-   code they need.
+   code they need. As built: `test_orchestrator_mode.py` and `test_phase_continuation.py`
+   also covered lorestrom, through `skills_corpus.PLUGIN_SKILLS` rather than by name, and port
+   verbatim once `skills_corpus` is lorestrom-only. `test_untrusted_names.py` cannot load
+   agent-marketplace's module from the checkout (it imports `tests.*`, which resolves to the
+   new repository's package), so its scanner and minerva's classifications are copied and
+   `test_the_copied_classifications_are_minervas` compares the copy with the checkout's by
+   `ast.literal_eval`. `test_skill_snippets.py` keeps the read-only extractor whole. Every
+   lorestrom test id in agent-marketplace has a counterpart (1386 → 1464) except the installer
+   case that installed lorestrom beside minerva, which has no minerva to install.
 
    **Minerva in the new repository: required, never skipped.** Many tests need minerva: the
    parity checks (shared scripts byte-identical to minerva's, the guard covering minerva's
@@ -101,7 +110,8 @@ location change: `lorestrom@agent-marketplace` becomes `lorestrom@lorestrom-plug
    would gate the minerva PR itself; it is out of scope (Open Questions). A knowledge entry in agent-marketplace
    records the change and links the 2026-11-23 decision.
 3. **Installer.** Copy `install.sh` and `scripts/install_plugin.py`; its known-marketplace
-   source becomes `onerlaw/lorestrom-plugins`.
+   source becomes `onerlaw/lorestrom-plugins`, and the dependency and Playwright step for
+   plugins with a `requirements.txt` is dropped (lorestrom has none), with its test.
 4. **CI.** `.github/workflows/tests.yml`: Python 3.11 and 3.13, agent-marketplace checked out
    into `minerva/` (at `tests/minerva.ref`, or `main` in the drift job), `MINERVA_ROOT` set,
    then `python -m pytest tests/ -q -rs`.
@@ -166,6 +176,15 @@ location change: `lorestrom@agent-marketplace` becomes `lorestrom@lorestrom-plug
 7. Nothing secret is published: the step-5 scan of the new repository's full history finds
    no token or key shape, no `.env` or credentials file and no `/Users/` path, before the
    first push.
+
+## Outcome
+
+- New repository: public, `main` pushed; CI's pinned job passed on 3.11 and 3.13, and the
+  drift job, run by hand, passed against agent-marketplace `main`. 1464 tests, none skipped.
+- Live installs from `onerlaw/lorestrom-plugins` into throwaway configurations: Claude Code
+  and Codex both installed 0.6.0, enabled.
+- agent-marketplace without lorestrom: `pytest tests/` 1178 passed, both eval dry-runs and
+  knowledge lint pass.
 
 ## Open Questions
 

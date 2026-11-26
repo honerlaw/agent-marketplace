@@ -1,18 +1,1 @@
-# Scratchpad: move-lorestrom-to-its-own-repo
-
-## Decisions 2026-11-26
-
-- [reviewed — clean] scope: one unit, one agent-marketplace PR; the new repository is created, pushed and green (and installed from live) during work, before the removal PR (Skeptic: accept; non-blocking README-paragraph, old-install guidance, live-install gate and minerva.ref-on-main folded) (tier: reviewer — high blast radius: a new public repository and a removal from a public marketplace)
-- [reviewed — folded] approach A, history-preserving split with tests ported: Skeptic revise (blocking: moved tests need minerva's scripts on sys.path; a minerva pin silently weakens the enforced sync rule) → folded (conftest + pinned and daily drift jobs) → fold-audit not clean (blocking: `test_lorestrom_units` loads `lorestrom_runtime` at import, which needs `plugin_guard`; the backend test reads agent-marketplace's own knowledge corpus) → revised to "minerva required, never skipped" with the corpus read from the minerva checkout → Adjudicator: settled (wording notes folded) (tier: reviewer — existing interface change and knowledge tension with 2026-11-23-decision-lorestrom-is-a-separate-lorestrom-only-plugin)
-- [reviewed — folded] whole proposal: Skeptic accept with non-blocking concerns (old-install pointer with commands, grep-based criterion 6, Codex owner/repo syntax — verified `codex plugin marketplace add` takes owner/repo[@ref] — named secret scan, six-commit wording, why 0.6.0) → folded; the approach gate's fold-audit and Adjudicator covered the revised text (tier: reviewer — high blast radius)
-
-## Work notes
-
-- Repo `onerlaw/lorestrom-plugins` is free; the gh account is an admin of `onerlaw`.
-- `git subtree split --prefix=plugins/lorestrom` (scratch clone) yields the six release commits, 0.1.0 to 0.5.1; the history scan finds no token or key shapes, no secret files and no `/Users/` paths.
-- `git subtree add` keeps the split commits with the files at the plugin's root, so `git log -- plugins/lorestrom` in the new repository showed only the merge. Rewrote the split instead (`git filter-branch --tree-filter` moving each commit's tree under `plugins/lorestrom/`) and built `main` on it: a linear history where the path log lists all six releases and the plugin is byte-identical to agent-marketplace's.
-- Two shared modules the first grep missed: `test_orchestrator_mode.py` and `test_phase_continuation.py` cover lorestrom through `skills_corpus.PLUGIN_SKILLS`, not by name. They port verbatim once `skills_corpus` is lorestrom-only.
-- `test_untrusted_names` cannot load agent-marketplace's module from the checkout (it imports `tests.*`, which resolves to the new repository's own package), so the scanner and minerva's classifications are copied, and a new test compares the copied sets with the checkout's by `ast.literal_eval`.
-- The installer test that installed lorestrom beside minerva has no counterpart (no minerva in the new marketplace); the both-hosts and Codex-command tests cover lorestrom alone. Every other lorestrom test id in agent-marketplace exists in the new repository (1386 → 1464; the extra are the copied scanner and extractor self-tests and the checkout tests).
-- New repository: CI green on main (pinned, 3.11 and 3.13). Live installs from `onerlaw/lorestrom-plugins` into throwaway configurations: Claude Code (`claude plugin marketplace add` + `install`, 0.6.0 enabled) and Codex (`codex plugin marketplace add` + `add`, 0.6.0 enabled).
-- History scan before the first push: no token or key shapes, no secret files; the only `/Users/` hits are `/Users/someone/...` fixtures in the backend tests.
+Summarized at minerva:promote on 2026-11-26 — see archive/.
