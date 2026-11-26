@@ -11,10 +11,9 @@ helper as the runtime contract shows, from the repository's root.
      discovery with a Lorestrom MCP server connected; Codex finds the lore only through skills;
    - linking sends the repository's remote label to the chosen Lorestrom organization.
 2. **Server.** Git and a connected Lorestrom server are required. With no server, stop and
-   say how to connect one, as the host adapter's Lorestrom tools section does: the command
-   or address is on the organization's Agents page, `https://www.lorestrom.com/agents`. With
-   several, ask, and
-   use only the chosen one below. `whoami` gives the `orgId`.
+   say how to connect one, as the host adapter's Lorestrom tools section does: the command or
+   address is on the organization's Agents page, `https://www.lorestrom.com/agents`. With
+   several servers, ask, and use only the chosen one below. `whoami` gives the `orgId`.
 3. **Existing project.** Run `label` for the `remote`. It reads no link, so a broken link
    does not stop it. Change nothing in the clone before step 5. Then run only steps 1 and 2
    of `storage:project.discover` (not its caching step 3) on the chosen server only, whatever

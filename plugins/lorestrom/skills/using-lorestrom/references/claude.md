@@ -52,10 +52,10 @@ server is connected. Connecting one is the user's step, in this order:
 
 1. **An account and an organization.** Sign in at `https://www.lorestrom.com`, or create an
    account there, then create an organization or accept an invitation to one.
-2. **The command.** Open the organization's **Agents** page, `https://www.lorestrom.com/agents`
-   (also in the web app's organization switcher), with that organization chosen in the
-   switcher; under a link, the link's organization. It shows a `claude mcp add` command
-   already filled in with the organization's address and client id: run it in a terminal.
+2. **The command.** In the web app, choose the organization in the organization switcher
+   (under a link, choose the link's organization), then open **Agents** from the switcher's
+   menu, or go to `https://www.lorestrom.com/agents`. It shows a `claude mcp add` command
+   already filled in with that organization's address and client id: run it in a terminal.
 3. **Sign in.** In Claude Code, run `/mcp`, choose the Lorestrom server and sign in with the
    same account. An agent acts as that person, with their role in the organization.
 
