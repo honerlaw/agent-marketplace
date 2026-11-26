@@ -1,7 +1,7 @@
 # Proposal: lorestrom-connect-via-agents-page
 
 **Date**: 2026-11-26
-**Status**: Draft
+**Status**: Shipped (2026-11-26)
 
 ## Goal
 
@@ -36,50 +36,47 @@ the filled command for the organization chosen in its switcher, so the plugin ca
 
 ## Approach
 
-**A (recommended): one canonical connect block per host adapter; every other mention points
-at it.**
+**A, as built: one canonical connect block per host adapter; every other mention points at
+it.** Lorestrom plugin 0.5.1.
 
-- `skills/using-lorestrom/references/claude.md`, section "Lorestrom tools": replace the
-  placeholder command and "setup instructions" sentence with the three-situation guidance
-  above (account → Agents page command → `/mcp` sign-in). It describes the command in prose
-  ("copy the `claude mcp add` command Agents shows") rather than showing it with
-  placeholders. The order of checks: search the tool list for deferred `find_docs` first (the
-  existing step); only when no Lorestrom tools exist, deferred or not, and the server is listed
-  under `/mcp` does it suggest signing in there; a call refused as unauthorized means signing
-  in again with `/mcp`. When Agents says Claude Code can't connect to this server yet, the
-  person tells whoever runs their Lorestrom; the plugin cannot work around it.
-- `skills/using-lorestrom/references/codex.md`, section "Lorestrom tools": the same three
-  situations for Codex: the account, then the address shown on Agents, connected and signed
-  in as Codex's MCP settings allow (OAuth). No Codex command is named.
-- `skills/using-lorestrom/references/storage.md` ground rules: the remedy a stopped write
-  names becomes "connect the organization's Lorestrom MCP server from the Agents page
-  (`https://www.lorestrom.com/agents`), as the host adapter's Lorestrom tools section says, or
-  run `lorestrom:init`".
-- `skills/init/references/link.md` step 2: with no server, point at the Agents page for the
-  organization instead of the endpoint placeholder and "setup instructions".
-- `README.md` setup step 1 and `COMPATIBILITY.md`: the Agents page as the source of the
-  command; the account step; COMPATIBILITY drops its `/mcp/o/<org id>` endpoint placeholder.
+- `skills/using-lorestrom/references/claude.md`, "Lorestrom tools": after the existing
+  deferred-tool search, three ordered steps. (1) An account and an organization at
+  `https://www.lorestrom.com` (create an account; create an organization or accept an
+  invitation). (2) In the web app, choose the organization in the switcher (under a link, the
+  link's organization), open **Agents** from the switcher's menu or go to
+  `https://www.lorestrom.com/agents`, and run the `claude mcp add` command it shows, already
+  filled in (described in prose, no placeholder). (3) `/mcp`, choose the server, sign in with
+  the same account; the agent acts as that person with their role. Then: with no Lorestrom
+  tools, deferred or not, a server `/mcp` lists as needing authentication means step 3 and
+  none means steps 1–3; a call refused as unauthorized means step 3, then membership if
+  refused again; "Claude Code can't connect to this server yet" on Agents means telling
+  whoever runs that Lorestrom.
+- `codex.md`, "Lorestrom tools": the account, then the address on Agents (organization chosen
+  first), added as an MCP server and signed in with OAuth as Codex's MCP settings allow; an
+  unauthorized call means signing in again, then checking membership. No Codex command named.
+- `storage.md`'s write-stop remedy: connect from the Agents page, or sign in again after an
+  unauthorized call, as the host adapter says, or run `lorestrom:init`. `init/references/link.md`
+  step 2: say how to connect, as the adapter does, the command or address being on Agents.
+- Plugin `README.md` Setup step 1 and a "Connecting (0.5.1)" bullet in "This version";
+  `COMPATIBILITY.md` names the Agents page and the account sign-in and drops its
+  `/mcp/o/<org id>` placeholder.
 - Unchanged, because they already defer to the host adapter or to `lorestrom:init`:
-  `init/SKILL.md` and `migrate/SKILL.md` ("say how to connect one, as the host adapter
-  shows"), and the skills that stop with "no connected Lorestrom server" and name
-  `lorestrom:init` (propose's `on-approval.md`, status, lint, the orchestrators).
-- Version 0.5.1 in both manifests, the plugin README and COMPATIBILITY headings,
-  `using-lorestrom/SKILL.md`, `runtime.md`'s "0.5.0 runs the lifecycle on Lorestrom" line
-  (it states the current version), the top-level README table row,
-  `tests/test_lorestrom_plugin.py`'s `VERSION` and `tests/test_install_plugin.py`'s installed
-  version assertion. `tests/test_untrusted_names.py`'s "0.5.0:" comment dates a past change
-  and stays.
-- Tests (`tests/test_lorestrom_plugin.py`): no file under `plugins/lorestrom/` says "setup
-  instructions" or holds the `<client id>` placeholder (`<org id>` stays where it names a
-  link's org); both host adapters, storage.md's remedy, link.md and the
-  README name `https://www.lorestrom.com/agents`; the Claude adapter names `/mcp` sign-in and
-  the account step.
-- minerva and every other plugin are unchanged. No reference to the Lorestrom app's source
-  repository (it is private): only the public URL.
+  `init/SKILL.md` and `migrate/SKILL.md`, and the skills that stop with "no connected Lorestrom
+  server" (propose's `on-approval.md`, status, lint, the orchestrators).
+- Version 0.5.1 in both manifests, the plugin README and COMPATIBILITY, `using-lorestrom/SKILL.md`,
+  `runtime.md`'s "runs the lifecycle" line, the top-level README row,
+  `tests/test_lorestrom_plugin.py`'s `VERSION` and `tests/test_install_plugin.py`; the dated
+  "0.5.0:" comment in `tests/test_untrusted_names.py` stays.
+- Tests in `tests/test_lorestrom_plugin.py`: no `.md`/`.py`/`.json` file under
+  `plugins/lorestrom/` says "setup instructions" or holds `<client id>`; the two adapters,
+  storage.md, link.md, README and COMPATIBILITY name the Agents page; the Claude adapter
+  covers the account, the command, `/mcp`, the unauthorized and can't-connect cases, with the
+  deferred-tool search first; the Codex adapter covers the account, the page and OAuth.
+- minerva and every other plugin are unchanged; only the public URL is named.
 
 ### Approaches considered
 
-- **A — point at the Agents page from one canonical block per host** (above).
+- **A — point at the Agents page from one canonical block per host** (chosen, above).
 - **B — the plugin builds the command itself**, asking the person for their org id and
   reading a client id from plugin config. The client id is per deployment and not public in
   the plugin; asking for an org id is the same unanswerable question. Rejected.
@@ -99,7 +96,8 @@ at it.**
 5. Version 0.5.1 everywhere the plugin states its current version, including
    `tests/test_install_plugin.py`; `test_lorestrom_plugin.py` and `test_install_plugin.py`
    pass.
-6. The repository's full test suite passes (`pytest`).
+6. CI's suite passes: `python -m pytest tests/`, the skill and compatibility eval dry-runs and
+   knowledge lint (the evals workflow).
 7. Before ship, `https://www.lorestrom.com/agents` no longer answers 404 (a 200, or a
    redirect to sign in, both count: the deploy that carries it has finished); checked by hand
    with `curl`, not in `pytest`.
@@ -111,3 +109,5 @@ at it.**
 - Whether production's `MCP_CLIENT_IDS` lists the Lorestrom MCP client id first is an operator
   step in the app's runbook; until it does, Agents says Claude Code can't connect and still
   shows the address. The plugin's guidance stays correct either way.
+- Whether Codex can complete OAuth against Lorestrom, which admits only pre-registered client
+  ids, was not verified; codex.md hedges with "as Codex's MCP settings allow".
