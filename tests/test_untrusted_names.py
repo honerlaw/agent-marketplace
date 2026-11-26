@@ -86,29 +86,6 @@ PYTHON_C = re.compile(r"python3?\s+(?:-[A-Za-z]+\s+)*-c\s+(\S)")
 PYTHON_HEREDOC = re.compile(r"python3?\s[^\n]*?<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n(.*?)^\s*\1\s*$", re.S | re.M)
 BRANCH_CUT = re.compile(r"worktree\s+add\b|checkout\b[^\n|;&]*\s-[bB]\b|switch\b[^\n|;&]*\s-[cC]\b"
                         r"|\bbranch\s+(?:-\S+\s+)*[^-\s\"]\S*\s+\"?\$\{BASE")
-# The lorestrom plugin's skills are scanned by the same rules, with its own classifications.
-# None holds a branch or ref name: ids from Lorestrom's tools, paths and digests
-# `import-list` printed, the helper's normalized remote label, and template fields.
-LORESTROM_SKILLS = SKILLS.parents[1] / "lorestrom" / "skills"
-LORESTROM_RUNTIME = LORESTROM_SKILLS / "using-lorestrom" / "references" / "runtime.md"
-LORESTROM_INERT = {
-    "org id", "workspace id", "client id", "projectId", "listed path", "listed digest",
-    "label", "server", "tool", "operation", "git-common-dir",
-    "minerva:theme", "minerva:id", "minerva:summary",
-    # 0.2.0: Lorestrom ids and keys, a commit the helper checks as 40 hex digits (never a ref),
-    # a phase number, a temp file the agent made, and report and template fields
-    "project id", "unit key", "record", "path without .md", "token", "temp file", "sha",
-    "phase", "entry id", "markdown", "the draft", "the proposal record",
-    "head names of MERGED PRs", "value", "list with reason", "unit — doc — code",
-    # 0.5.0: the migration's temp files, holding paths `removal-plan` wrote and a message
-    "remove file", "message file",
-}
-LORESTROM_VARS = {
-    "LORESTROM_PLUGIN_ROOT", "LORESTROM_SKILL_FILE", "LORESTROM_SCRIPTS",
-    "F",  # a mktemp file the agent made
-    "T", "B",  # promote's issue title and body mktemp files
-    "lorestrom",  # Codex's `$lorestrom:<name>` skill prefix, not a shell variable
-}
 # Lines that name a ref placeholder in prose or in a report the user reads, never in a
 # command: (file, the exact line or inline span) -> why.
 PROSE_EXEMPT = {
@@ -256,24 +233,6 @@ def corpus_violations(skills=SKILLS, runtime=RUNTIME, extra_inert=frozenset(),
 
 def test_no_skill_types_a_name_into_a_command_or_python_source():
     assert corpus_violations() == []
-
-
-def test_no_lorestrom_skill_types_a_name_into_a_command_or_python_source():
-    assert list(LORESTROM_SKILLS.rglob("*.md"))
-    assert corpus_violations(LORESTROM_SKILLS, LORESTROM_RUNTIME, frozenset(LORESTROM_INERT),
-                             frozenset(LORESTROM_VARS)) == []
-
-
-def test_lorestroms_classifications_do_not_widen_minervas():
-    assert not LORESTROM_INERT & (UNIT | REF | AMBIGUOUS)
-    assert not LORESTROM_VARS & NAME_VARS
-
-
-@pytest.mark.parametrize("text", ["git log <name>", "gh pr view <a-new-placeholder>",
-                                  "git push origin <branch>", 'echo "$UNKNOWN"'])
-def test_the_lorestrom_scan_still_fails_closed(text):
-    assert violations("sample", "inline", text, extra_inert=frozenset(LORESTROM_INERT),
-                      extra_vars=frozenset(LORESTROM_VARS))
 
 
 @pytest.mark.parametrize("kind,text", [

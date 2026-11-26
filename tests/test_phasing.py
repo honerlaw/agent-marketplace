@@ -22,13 +22,11 @@ from tests.skills_corpus import AUTONOMOUS_ORCHESTRATORS as ORCHESTRATORS, PLUGI
 
 by_plugin = pytest.mark.parametrize("plugin", PLUGINS)
 
-# The predicate that re-derives phase progress, as each plugin's skills name it: minerva calls
-# `work_status.phase_progress`, lorestrom its helper's `phases` command, which wraps it.
-PROGRESS = {"minerva": "phase_progress", "lorestrom": "helper's `phases`"}
-# Where the loop goes back to. lorestrom loops to the work phase, so a later phase is built
-# before it is reviewed and shipped; minerva's rule names the ship phase.
-LOOP = {"minerva": "loop back to the ship phase", "lorestrom": "loop back to the work phase"}
-LOOP_TARGET = {"minerva": "Phase 6", "lorestrom": "Phase 2 (work)"}
+# The predicate that re-derives phase progress, as each plugin's skills name it.
+PROGRESS = {"minerva": "phase_progress"}
+# Where the loop goes back to: minerva's rule names the ship phase.
+LOOP = {"minerva": "loop back to the ship phase"}
+LOOP_TARGET = {"minerva": "Phase 6"}
 
 
 def _phasing(plugin):

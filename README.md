@@ -40,10 +40,23 @@ Then select `$minerva:using-minerva` in a new Codex conversation and run
 See [Minerva compatibility and validation](plugins/minerva/COMPATIBILITY.md) for
 host capabilities, resume behavior, and the regression checks.
 
-The lorestrom plugin is minerva's successor: the same lifecycle, with its records kept in
-Lorestrom instead of files. Install it the same way (`./install.sh lorestrom --host both`),
-move a minerva repository over with `lorestrom:migrate`, and see
-[its README](plugins/lorestrom/README.md) for connecting the Lorestrom MCP server.
+## lorestrom moved
+
+The lorestrom plugin, minerva's successor (the same lifecycle with its records kept in
+Lorestrom instead of files), moved to its own marketplace,
+[onerlaw/lorestrom-plugins](https://github.com/onerlaw/lorestrom-plugins), at 0.6.0. Install
+it from there:
+
+- Claude Code: `/plugin marketplace add onerlaw/lorestrom-plugins`, then
+  `/plugin install lorestrom@lorestrom-plugins`.
+- Codex: `codex plugin marketplace add onerlaw/lorestrom-plugins`, then
+  `codex plugin add lorestrom@lorestrom-plugins`.
+
+An install from this repository (`lorestrom@agent-marketplace`, up to 0.5.1) no longer
+updates. Remove it first: `/plugin uninstall lorestrom@agent-marketplace` in Claude Code, or,
+for an `./install.sh lorestrom` install, delete the `~/.claude/plugins/lorestrom` link and the
+`lorestrom@agent-marketplace` entry under `enabledPlugins` in `~/.claude/settings.json`; in
+Codex, `codex plugin remove lorestrom@agent-marketplace`.
 
 ## Update
 
@@ -60,7 +73,6 @@ git pull  # symlink keeps the plugin live immediately
 |--------|--------|-------------|
 | utils | `humanizer` | Miscellaneous utility skills |
 | minerva | `minerva:init` `minerva:explore` `minerva:propose` `minerva:replan` `minerva:grill-plan` `minerva:one-by-one` `minerva:work` `minerva:promote` `minerva:review` `minerva:ship` `minerva:cleanup` `minerva:propose-ship` `minerva:propose-ship-auto` `minerva:debug` `minerva:lint` `minerva:migrate` `minerva:migrate-fix` `minerva:status` `minerva:using-minerva` | Durable record discipline for software work — proposal → work → replan → promote → review → ship, with a `.minerva/` persistence hierarchy of knowledge artifacts, proposals, and scratchpads. `propose-ship` conducts the whole lifecycle with user gates; `propose-ship-auto` runs it without human gates, giving each decision the tier it earns — the main model alone when provably small, otherwise one fresh-context reviewer whose fixes are re-checked, with a narrow Adjudicator before anything reaches the user — and no multi-agent voting. |
-| lorestrom | `lorestrom:init` `lorestrom:migrate` `lorestrom:using-lorestrom` `lorestrom:propose` `lorestrom:work` `lorestrom:replan` `lorestrom:review` `lorestrom:promote` `lorestrom:ship` `lorestrom:cleanup` `lorestrom:status` `lorestrom:grill-plan` `lorestrom:explore` `lorestrom:one-by-one` `lorestrom:debug` `lorestrom:propose-ship` `lorestrom:propose-ship-auto` `lorestrom:lint` | minerva's successor: its lifecycle with its records kept in Lorestrom, with no local file mode. 0.5.1 links a repository to a shared Lorestrom workspace through its MCP server, migrates a minerva repository's `.minerva/` records (work units included) there and then removes them, every step confirmed, runs the lifecycle skill by skill or through its orchestrators, sweeps other clones' units, and lints the knowledge. See [its README](plugins/lorestrom/README.md). |
 
 ## MCP servers
 

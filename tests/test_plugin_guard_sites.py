@@ -41,17 +41,9 @@ REGISTERED_SITES = {
 _RESOLVE_RE = re.compile(r'PLUGIN_SCRIPTS="\$\(python3 "\$MINERVA_PLUGIN_ROOT/scripts/minerva_runtime\.py" resolve')
 _GUARD_RE = re.compile(r'python3 "\$PLUGIN_SCRIPTS/plugin_guard\.py"')
 
-# The lorestrom plugin carries its own guard and resolves its scripts in one place: the
-# helper block of its runtime contract, which every lorestrom skill repeats.
-LORESTROM_SKILLS = REPO / "plugins" / "lorestrom" / "skills"
-LORESTROM_SITES = {"using-lorestrom/references/runtime.md"}
-_LORESTROM_RESOLVE_RE = re.compile(
-    r'PLUGIN_SCRIPTS="\$\(python3 "\$LORESTROM_PLUGIN_ROOT/scripts/lorestrom_runtime\.py" resolve')
-
 # plugin -> (skills directory, registered sites, resolution pattern)
 PLUGINS = {
     "minerva": (SKILLS, REGISTERED_SITES, _RESOLVE_RE),
-    "lorestrom": (LORESTROM_SKILLS, LORESTROM_SITES, _LORESTROM_RESOLVE_RE),
 }
 CASES = [(plugin, rel) for plugin, (_, sites, _) in PLUGINS.items() for rel in sorted(sites)]
 
@@ -133,9 +125,3 @@ def test_no_guard_reintroduces_the_root_interpolation(plugin):
             # in its own `ROOT=` assignment and in the program body it feeds.
             assert "$ROOT" not in m.group(0), (
                 f"{p.relative_to(skills)}: guard reintroduced $ROOT: {m.group(0)}")
-
-
-def test_each_plugin_resolves_through_its_own_runtime():
-    """Lorestrom's sites never resolve minerva's scripts, and minerva's never lorestrom's."""
-    assert not _resolving_files(LORESTROM_SKILLS, _RESOLVE_RE)
-    assert not _resolving_files(SKILLS, _LORESTROM_RESOLVE_RE)

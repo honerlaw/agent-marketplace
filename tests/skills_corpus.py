@@ -1,4 +1,4 @@
-"""Shared locators for the minerva and lorestrom skill corpora.
+"""Shared locators for the minerva skill corpus.
 
 Three test modules independently hard-coded the autonomous-orchestrator list and two of them
 hand-rolled "find a phase's section in phases.md" — one carefully, one not. Two derivations plus
@@ -13,10 +13,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS = REPO_ROOT / "plugins" / "minerva" / "skills"
 
-# Each plugin whose orchestrators these contracts govern, and its skill tree. lorestrom ports
-# minerva's orchestrators, so the same contracts are asked of both; a skill is named
+# Each plugin whose orchestrators these contracts govern, and its skill tree; a skill is named
 # `<plugin>:<skill>` in its own tree.
-PLUGIN_SKILLS = {"minerva": SKILLS, "lorestrom": REPO_ROOT / "plugins" / "lorestrom" / "skills"}
+PLUGIN_SKILLS = {"minerva": SKILLS}
 PLUGINS = tuple(PLUGIN_SKILLS)
 
 # The orchestrators that replace human gates with their own adjudication. `propose-ship` is

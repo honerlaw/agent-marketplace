@@ -28,10 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "plugins" / "minerva" / "skills"
 # Every plugin whose skills these checks cover. minerva's pinned assertions below stay
 # on SKILLS_DIR; the per-skill checks run over each plugin's tree.
-PLUGIN_SKILLS = {
-    "minerva": SKILLS_DIR,
-    "lorestrom": REPO_ROOT / "plugins" / "lorestrom" / "skills",
-}
+PLUGIN_SKILLS = {"minerva": SKILLS_DIR}
 
 # 9 KB. The number is the work unit's approved budget — see
 # .minerva/work/035-skill-progressive-disclosure/proposal.md.

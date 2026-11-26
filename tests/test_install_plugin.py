@@ -18,8 +18,6 @@ def repo(tmp_path):
     dest = tmp_path / "marketplace with spaces"
     for relative in ("plugins/minerva/.claude-plugin/plugin.json",
                      "plugins/minerva/.codex-plugin/plugin.json",
-                     "plugins/lorestrom/.claude-plugin/plugin.json",
-                     "plugins/lorestrom/.codex-plugin/plugin.json",
                      ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"):
         path = dest / relative
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -216,16 +214,3 @@ def test_existing_unversioned_utils_plugin_keeps_default_claude_install(repo, co
     entries = json.loads((config / "plugins/installed_plugins.json").read_text())["plugins"]
     assert entries["utils@agent-marketplace"][0]["version"] == "1.0.0"
     assert not any(command[0] == "codex" for command in commands)
-
-
-def test_lorestrom_installs_on_both_hosts_beside_minerva(repo, config, commands):
-    installer.install(repo, "minerva", "claude", config)
-    installer.install(repo, "lorestrom", "both", config)
-    settings = json.loads((config / "settings.json").read_text())
-    assert settings["enabledPlugins"] == {"minerva@agent-marketplace": True,
-                                          "lorestrom@agent-marketplace": True}
-    installed = json.loads((config / "plugins/installed_plugins.json").read_text())["plugins"]
-    assert installed["lorestrom@agent-marketplace"][0]["version"] == "0.5.1"
-    assert installed["minerva@agent-marketplace"][0]["version"] == "4.0.1"
-    assert (config / "plugins/lorestrom").resolve() == repo / "plugins/lorestrom"
-    assert ["codex", "plugin", "add", "lorestrom@agent-marketplace"] in commands

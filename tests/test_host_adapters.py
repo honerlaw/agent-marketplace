@@ -12,7 +12,6 @@ REFERENCES = SKILLS / "using-minerva/references"
 # that owns its runtime contract and the files allowed to name Claude-only tools.
 PLUGINS = {
     "minerva": ("using-minerva", {REFERENCES / "claude.md", SKILLS / "init/references/steps.md"}),
-    "lorestrom": ("using-lorestrom", {REPO / "plugins/lorestrom/skills/using-lorestrom/references/claude.md"}),
 }
 ALL_SKILLS = sorted(path for plugin in PLUGINS
                     for path in (REPO / "plugins" / plugin / "skills").glob("*/SKILL.md"))
